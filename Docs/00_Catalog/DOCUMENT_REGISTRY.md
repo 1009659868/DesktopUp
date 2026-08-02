@@ -39,6 +39,7 @@
 | `C_Workstreams/DesktopHostFeasibility/20_Log/2026-08/2026-08-02_position_and_display_recovery.md` | C/Log | 原生位置持久化、工作区约束和显示/Shell 恢复 | `IN PROGRESS` |
 | `C_Workstreams/DesktopHostFeasibility/20_Log/2026-08/2026-08-02_runtime_auto_pause_foundation.md` | C/Log | 全屏/最大化、锁屏与显示器关闭事件驱动暂停基础 | `IN PROGRESS` |
 | `C_Workstreams/DesktopHostFeasibility/20_Log/2026-08/2026-08-03_startup_hang_recovery.md` | C/Log | 启动与单实例回呼的状态锁/托盘 UI 互等修复 | `FIX VERIFIED` |
+| `C_Workstreams/DesktopHostFeasibility/20_Log/2026-08/2026-08-03_tray_pause_state_preservation.md` | C/Log | 托盘临时前台错误清除最大化/全屏暂停修复 | `USER RETEST PENDING` |
 | `C_Workstreams/DesktopHostFeasibility/30_Sync/COLD_START.md` | C/Sync | C 工作流接手阅读入口 | `ACTIVE` |
 | `C_Workstreams/DesktopHostFeasibility/30_Sync/CURRENT_HANDOFF.md` | C/Sync | 当前可执行位置 | `ACTIVE` |
 | `Reference/RELATED_PROJECTS.md` | Reference | 同类项目调研 | `REFERENCE` |

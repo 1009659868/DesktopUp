@@ -135,6 +135,7 @@ mod platform {
     const RUNTIME_WINDOW_SUBCLASS_ID: usize = 0x4455_5032;
     const EVENT_SETTLE_MS: u64 = 80;
     const STARTUP_RECHECK_MS: u64 = 1_500;
+    const FOREGROUND_PROBE_PRESERVED: u32 = 1 << 11;
     const RUNTIME_PAUSE_PROPERTY: windows::core::PCWSTR = w!("DesktopUp.RuntimePauseFlags");
     const RUNTIME_FOREGROUND_PROPERTY: windows::core::PCWSTR = w!("DesktopUp.ForegroundProbeFlags");
     const RUNTIME_CAPABILITIES_PROPERTY: windows::core::PCWSTR =
@@ -157,6 +158,13 @@ mod platform {
         session_locked: bool,
         display_off: bool,
         foreground_hint: Option<isize>,
+    }
+
+    struct ForegroundMeasurement {
+        coverage: ForegroundCoverage,
+        class_name: Option<String>,
+        probe: u32,
+        preserve_previous: bool,
     }
 
     fn poster_window() -> Option<HWND> {
@@ -251,23 +259,76 @@ mod platform {
             && rect.bottom >= target.bottom - tolerance
     }
 
-    fn foreground_coverage(
-        foreground_hint: Option<isize>,
+    fn is_desktop_surface(class_name: Option<&str>) -> bool {
+        matches!(class_name, Some("Progman" | "WorkerW"))
+    }
+
+    fn is_transient_shell_surface(class_name: Option<&str>) -> bool {
+        matches!(
+            class_name,
+            Some(
+                "Shell_TrayWnd"
+                    | "Shell_SecondaryTrayWnd"
+                    | "NotifyIconOverflowWindow"
+                    | "TopLevelWindowForOverflowXamlIsland"
+                    | "Windows.UI.Composition.DesktopWindowContentBridge"
+                    | "#32768"
+            )
+        )
+    }
+
+    fn resolve_foreground_measurement(
+        measurement: ForegroundMeasurement,
+        previous: Option<&RuntimeVisibilitySnapshot>,
     ) -> (ForegroundCoverage, Option<String>, u32) {
+        if measurement.preserve_previous {
+            let probe = measurement.probe | FOREGROUND_PROBE_PRESERVED;
+            if let Some(previous) = previous {
+                return (
+                    previous.foreground_coverage,
+                    previous.foreground_class.clone(),
+                    probe,
+                );
+            }
+            return (ForegroundCoverage::None, measurement.class_name, probe);
+        }
+        (
+            measurement.coverage,
+            measurement.class_name,
+            measurement.probe,
+        )
+    }
+
+    fn foreground_coverage(foreground_hint: Option<isize>) -> ForegroundMeasurement {
         let mut probe = 0u32;
         let Some(poster) = poster_window() else {
-            return (ForegroundCoverage::None, None, probe);
+            return ForegroundMeasurement {
+                coverage: ForegroundCoverage::None,
+                class_name: None,
+                probe,
+                preserve_previous: false,
+            };
         };
         probe |= 1;
         let foreground = foreground_hint
             .map(|raw| HWND(raw as *mut core::ffi::c_void))
             .unwrap_or_else(|| unsafe { GetForegroundWindow() });
         if foreground.0.is_null() || foreground == poster {
-            return (ForegroundCoverage::None, None, probe);
+            return ForegroundMeasurement {
+                coverage: ForegroundCoverage::None,
+                class_name: None,
+                probe,
+                preserve_previous: true,
+            };
         }
         probe |= 2;
         if !unsafe { IsWindowVisible(foreground).as_bool() } {
-            return (ForegroundCoverage::None, None, probe);
+            return ForegroundMeasurement {
+                coverage: ForegroundCoverage::None,
+                class_name: class_name(foreground),
+                probe,
+                preserve_previous: true,
+            };
         }
         probe |= 4;
 
@@ -278,29 +339,54 @@ mod platform {
             GetWindowThreadProcessId(foreground, Some(&mut foreground_process));
         }
         if poster_process != 0 && poster_process == foreground_process {
-            return (ForegroundCoverage::None, class_name(foreground), probe);
+            return ForegroundMeasurement {
+                coverage: ForegroundCoverage::None,
+                class_name: class_name(foreground),
+                probe,
+                preserve_previous: true,
+            };
         }
         probe |= 8;
 
         let foreground_class = class_name(foreground);
-        if matches!(
-            foreground_class.as_deref(),
-            Some("Progman" | "WorkerW" | "Shell_TrayWnd")
-        ) {
-            return (ForegroundCoverage::None, foreground_class, probe);
+        if is_desktop_surface(foreground_class.as_deref()) {
+            return ForegroundMeasurement {
+                coverage: ForegroundCoverage::None,
+                class_name: foreground_class,
+                probe,
+                preserve_previous: false,
+            };
+        }
+        if is_transient_shell_surface(foreground_class.as_deref()) {
+            return ForegroundMeasurement {
+                coverage: ForegroundCoverage::None,
+                class_name: foreground_class,
+                probe,
+                preserve_previous: true,
+            };
         }
         probe |= 16;
 
         let foreground_monitor = unsafe { MonitorFromWindow(foreground, MONITOR_DEFAULTTONEAREST) };
         let poster_monitor = unsafe { MonitorFromWindow(poster, MONITOR_DEFAULTTONEAREST) };
         if !same_monitor(foreground_monitor, poster_monitor) {
-            return (ForegroundCoverage::None, foreground_class, probe);
+            return ForegroundMeasurement {
+                coverage: ForegroundCoverage::None,
+                class_name: foreground_class,
+                probe,
+                preserve_previous: false,
+            };
         }
         probe |= 32;
 
         let mut rect = RECT::default();
         if unsafe { GetWindowRect(foreground, &mut rect) }.is_err() {
-            return (ForegroundCoverage::None, foreground_class, probe);
+            return ForegroundMeasurement {
+                coverage: ForegroundCoverage::None,
+                class_name: foreground_class,
+                probe,
+                preserve_previous: true,
+            };
         }
         probe |= 64;
         let mut monitor = MONITORINFO {
@@ -308,7 +394,12 @@ mod platform {
             ..MONITORINFO::default()
         };
         if !unsafe { GetMonitorInfoW(foreground_monitor, &mut monitor).as_bool() } {
-            return (ForegroundCoverage::None, foreground_class, probe);
+            return ForegroundMeasurement {
+                coverage: ForegroundCoverage::None,
+                class_name: foreground_class,
+                probe,
+                preserve_previous: true,
+            };
         }
         probe |= 128;
 
@@ -324,7 +415,12 @@ mod platform {
         } else {
             ForegroundCoverage::None
         };
-        (coverage, foreground_class, probe)
+        ForegroundMeasurement {
+            coverage,
+            class_name: foreground_class,
+            probe,
+            preserve_previous: false,
+        }
     }
 
     fn run_runtime_worker<F>(receiver: Receiver<RuntimeSignal>, on_change: F)
@@ -340,8 +436,10 @@ mod platform {
                 apply_signal(&mut inputs, pending);
             }
 
-            let (coverage, foreground_class, foreground_probe) =
-                foreground_coverage(inputs.foreground_hint);
+            let (coverage, foreground_class, foreground_probe) = resolve_foreground_measurement(
+                foreground_coverage(inputs.foreground_hint),
+                previous.as_ref(),
+            );
             let mut snapshot = RuntimeVisibilitySnapshot::from_inputs(
                 coverage,
                 foreground_class,
@@ -547,7 +645,11 @@ mod platform {
 
     #[cfg(test)]
     mod tests {
-        use super::{covers, RECT};
+        use super::{
+            covers, is_desktop_surface, is_transient_shell_surface, resolve_foreground_measurement,
+            ForegroundMeasurement, RECT,
+        };
+        use crate::runtime_monitor::{ForegroundCoverage, RuntimeVisibilitySnapshot};
 
         #[test]
         fn monitor_coverage_allows_small_native_border_tolerance() {
@@ -581,6 +683,58 @@ mod platform {
                 bottom: 900,
             };
             assert!(!covers(&small_window, &monitor, 2));
+        }
+
+        #[test]
+        fn tray_and_shell_overlays_preserve_the_covered_window_pause() {
+            assert!(is_transient_shell_surface(Some("Shell_TrayWnd")));
+            assert!(is_transient_shell_surface(Some("NotifyIconOverflowWindow")));
+            assert!(!is_desktop_surface(Some("Shell_TrayWnd")));
+
+            let previous = RuntimeVisibilitySnapshot::from_inputs(
+                ForegroundCoverage::Maximized,
+                Some("Chrome_WidgetWin_1".to_string()),
+                false,
+                false,
+            );
+            let (coverage, class_name, probe) = resolve_foreground_measurement(
+                ForegroundMeasurement {
+                    coverage: ForegroundCoverage::None,
+                    class_name: Some("Shell_TrayWnd".to_string()),
+                    probe: 8,
+                    preserve_previous: true,
+                },
+                Some(&previous),
+            );
+
+            assert_eq!(coverage, ForegroundCoverage::Maximized);
+            assert_eq!(class_name.as_deref(), Some("Chrome_WidgetWin_1"));
+            assert_ne!(probe & super::FOREGROUND_PROBE_PRESERVED, 0);
+        }
+
+        #[test]
+        fn actual_desktop_foreground_clears_previous_coverage() {
+            assert!(is_desktop_surface(Some("Progman")));
+            assert!(is_desktop_surface(Some("WorkerW")));
+
+            let previous = RuntimeVisibilitySnapshot::from_inputs(
+                ForegroundCoverage::Fullscreen,
+                Some("GameWindow".to_string()),
+                false,
+                false,
+            );
+            let (coverage, class_name, _) = resolve_foreground_measurement(
+                ForegroundMeasurement {
+                    coverage: ForegroundCoverage::None,
+                    class_name: Some("Progman".to_string()),
+                    probe: 8,
+                    preserve_previous: false,
+                },
+                Some(&previous),
+            );
+
+            assert_eq!(coverage, ForegroundCoverage::None);
+            assert_eq!(class_name.as_deref(), Some("Progman"));
         }
     }
 }

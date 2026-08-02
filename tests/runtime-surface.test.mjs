@@ -4,6 +4,7 @@ import test from "node:test";
 
 const tauriConfig = JSON.parse(readFileSync("src-tauri/tauri.conf.json", "utf8"));
 const rustShell = readFileSync("src-tauri/src/lib.rs", "utf8");
+const rustEntry = readFileSync("src-tauri/src/main.rs", "utf8");
 const desktopHostAdapter = readFileSync("src-tauri/src/desktop_host.rs", "utf8");
 const runtimeMonitor = readFileSync("src-tauri/src/runtime_monitor.rs", "utf8");
 const placementStore = readFileSync("src-tauri/src/placement.rs", "utf8");
@@ -28,6 +29,14 @@ test("cold start exposes only the poster surface", () => {
   assert.match(desktopHostAdapter, /DWMNCRP_DISABLED/);
   assert.match(desktopHostAdapter, /DWMWA_BORDER_COLOR/);
   assert.match(posterStyles, /backdrop-filter:\s*none/);
+});
+
+test("release executable uses the Windows GUI subsystem", () => {
+  assert.match(
+    rustEntry,
+    /cfg_attr\(not\(debug_assertions\),\s*windows_subsystem\s*=\s*"windows"\)/,
+    "release builds must not create a console or Windows Terminal window"
+  );
 });
 
 test("control center remains available through explicit native entry points", () => {
@@ -111,6 +120,9 @@ test("fullscreen lock and display-off pause through event-driven runtime policy"
   assert.match(runtimeMonitor, /SetPropW/);
   assert.match(runtimeMonitor, /ForegroundCoverage::Fullscreen/);
   assert.match(runtimeMonitor, /ForegroundCoverage::Maximized/);
+  assert.match(runtimeMonitor, /Shell_TrayWnd/);
+  assert.match(runtimeMonitor, /preserve_previous/);
+  assert.match(runtimeMonitor, /is_desktop_surface/);
   assert.match(runtimeMonitor, /STARTUP_RECHECK_MS/);
   assert.match(rustShell, /runtime-pause-state/);
   assert.match(rustShell, /runtime_monitor::reevaluate_foreground\(\)/);

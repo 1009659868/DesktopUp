@@ -37,6 +37,9 @@
 - 当前 Release PID `74264` 的三类监视器能力位为 `7/7`，14 项 Node/契约测试、6 项 Rust 测试、Release 构建均通过；自动化桌面会话无法替代真实全屏/锁屏/熄屏操作，证据和待测矩阵见 [`C-DHF-05 自动暂停基础记录`](../20_Log/2026-08/2026-08-02_runtime_auto_pause_foundation.md)。
 - Windows 应用日志确认旧 Release PID `74264` 于 `2026-08-02 23:58:52` 发生 Event 1002 Application Hang；定位到自动暂停后台线程持有 `RuntimeState` 时同步托盘 UI 与主线程形成互等风险，现已改为释放状态锁后统一投递主线程；
 - 15 项 Node/契约测试、6 项 Rust 测试、`cargo check` 与 Release 重建通过；首轮修复 PID `63628` 的冷启动连续采样和第二实例回呼均保持单实例、`Responding=True`，最终对齐重建 PID `70600` 也持续响应，证据见 [`启动与单实例回呼挂起修复`](../20_Log/2026-08/2026-08-03_startup_hang_recovery.md)。
+- C-DHF-05 人工矩阵发现“Codex 最大化后右键托盘仍显示静态待机”失败；原因是 `Shell_TrayWnd` 被旧逻辑与 `Progman/WorkerW` 一同视为真正回桌面，托盘打开时错误清除覆盖暂停；
+- 临时托盘/系统弹层现会继承上一个有效覆盖，真正桌面仍清除覆盖；16 项 Node/契约测试、8 项 Rust 测试与 Release 重建通过，修复版 PID `71836` 已运行，等待用户复测，详见 [`托盘前台切换暂停状态修复`](../20_Log/2026-08/2026-08-03_tray_pause_state_preservation.md)；
+- Release 入口已切换为 Windows GUI 子系统，PE 标记为 `Subsystem 2`，启动不应再出现 Windows Terminal 命令窗口。
 
 ## 尚未完成
 
