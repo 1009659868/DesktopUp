@@ -26,6 +26,8 @@ DesktopUp.exe
 │  ├─ Layout Service
 │  ├─ Theme Package Validator
 │  ├─ Runtime Policy / Pause State Machine
+│  ├─ Tray and Quick Access Coordinator
+│  ├─ AI Provider / Tool-call Validator (optional)
 │  ├─ Windows Shell Adapter
 │  └─ Persistence / Migration
 ├─ Desktop Host (single WebView2)
@@ -37,6 +39,17 @@ uninstall.exe
 ```
 
 主程序保持单实例。设置中心关闭后释放其窗口；桌面宿主保留一个实例，不按海报创建独立 WebView。
+
+### 2.1 运行表面边界
+
+权威生命周期见 [`RUNTIME_SURFACE_MODEL_V0.1.md`](RUNTIME_SURFACE_MODEL_V0.1.md)。技术实现必须维持以下边界：
+
+- `Desktop Host` 是普通启动后唯一默认可见的产品表面；
+- `Control Center`、设置和 Agent 按需创建或显示，不参与桌面宿主挂载；
+- 控制中心中的桌面画布是预览消费者，桌面宿主是已提交状态的运行消费者；
+- 两者共用 `DesktopCommand`、持久状态和事件通道，但不共用窗口焦点、装饰或显隐生命周期；
+- 首选单显示器共享一个宿主并渲染多张海报，不为每张海报常驻独立 WebView2；
+- 即使控制中心从未创建，托盘、桌面宿主、暂停状态机和恢复协调器仍必须完整工作。
 
 ## 3. 桌面宿主策略
 
@@ -117,6 +130,8 @@ trust_level, runtime_policy, asset_cache_version
 
 ## 6. 快捷方式处理
 
+本节的实现顺序、事务状态和阶段门以 [`快捷方式导入与安全收纳模型 V0.1`](SHORTCUT_IMPORT_AND_COLLECTION_MODEL_V0.1.md) 为准；A0 不启用真实桌面扫描或移动。
+
 - 使用 Shell COM API 解析 `.lnk`，保留参数、工作目录和图标位置；
 - `.url` 使用受限协议白名单；
 - `.exe` 只作为启动目标登记，不复制程序；
@@ -157,7 +172,7 @@ trust_level, runtime_policy, asset_cache_version
 └─ logs\
 ```
 
-数据库与恢复账本属于关键数据；缓存可随时重建。升级前生成小型迁移备份，最多保留有限版本。
+数据库与恢复账本属于关键数据；缓存可随时重建。升级前生成小型迁移备份，最多保留有限版本。API Key 不进入该目录，必须保存到 Windows Credential Manager。
 
 ## 10. 安装和卸载架构
 
@@ -200,10 +215,66 @@ Acquire lock
 - NSIS 定制能否完全满足卸载恢复顺序；必要时使用独立 Rust bootstrap uninstaller；
 - 代码主题采用隔离 WebView、QuickJS 还是 WASM 组件模型；
 - WebView2 Evergreen 缺失时采用在线引导还是固定运行时包。
+- 单全局宿主与每显示器共享宿主的最终拓扑；不考虑每海报一个永久 WebView2 作为默认生产方案。
+
+## 13. 原生托盘与快捷菜单
+
+托盘由 Rust/Tauri 原生层拥有，不依赖控制中心 WebView 常驻。托盘协调器维护只读的 `TraySnapshot`：
+
+```text
+posters_visible, edit_mode, animation_paused, autostart,
+selected_poster, active_theme, available_quick_themes,
+desktop_host_state, ai_configured
+```
+
+菜单动作转换为与控制中心相同的本地 Command，不建立第二套业务路径。主页和设置复用单实例窗口；主题菜单使用缓存摘要，打开菜单时不读取磁盘或启动 AI。
+
+Windows Shell/Explorer 重启后通过 `TaskbarCreated` 恢复通知图标。应用不能保证图标位于主通知区域还是“∧”折叠栏，也不修改该系统偏好。
+
+## 14. 可选 AI Provider 与 Agent
+
+```text
+Agent Panel
+  -> Context Builder
+  -> AiProvider
+     -> OpenAI
+     -> DeepSeek
+     -> OpenAI-Compatible
+  -> ToolCall Parser
+  -> Schema + Semantic Validator
+  -> ChangePlan Preview
+  -> Unified Command / Undo Stack
+```
+
+### 14.1 Provider 契约
+
+```text
+test_connection(config_ref)
+stream_chat(conversation, tools, cancellation)
+cancel(request_id)
+capabilities()
+```
+
+配置只保存 Provider 类型、Base URL、Model 和非敏感选项。Key 使用 Windows Credential Manager 的资源名引用；Rust 请求层按需读取，用后缩短内存驻留时间，绝不返回前端。
+
+### 14.2 启动约束
+
+- 未配置 Key 时不构造 Provider 客户端、不启动会话、不联网；
+- 用户打开 Agent 并提交请求后才建立网络请求；
+- 关闭 Agent、退出应用或切换 Provider 时取消流式请求；
+- 全屏暂停不强制终止用户主动发出的请求，但退出和卸载必须终止；
+- API 错误不能进入桌面宿主主循环。
+
+### 14.3 工具与主题草稿
+
+AI 调用与手动 UI 共用 `DesktopCommand`、`ChangePlan`、预览和撤销接口。模型没有 Shell、文件或 Tauri 通用 IPC 权限。主题草稿进入独立临时目录，完成路径、大小、类型、CSP 和脚本权限检查后才进入隔离预览。
+
+详细设计见 [`AI_ASSISTANT_DESIGN_V0.1.md`](AI_ASSISTANT_DESIGN_V0.1.md) 与 [`TRAY_AND_QUICK_ACCESS_DESIGN_V0.1.md`](TRAY_AND_QUICK_ACCESS_DESIGN_V0.1.md)。
 
 ## 修订记录
 
 | 日期 | 版本 | 内容 |
 | --- | --- | --- |
 | 2026-08-02 | V0.1 | 建立首版架构、数据、安全、宿主和卸载方案 |
-
+| 2026-08-02 | V0.1 | 增加原生托盘快捷菜单与本地 BYOK AI Provider 架构 |
+| 2026-08-02 | V0.1 | 固化桌面收纳层默认可见、控制中心按需独立的运行表面边界 |

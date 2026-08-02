@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#07090d" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2307090d'/%3E%3Cpath d='M8 9h7v14H8zm9 0h7v6h-7zm0 8h7v6h-7z' fill='%23c8ff3d'/%3E%3C/svg%3E" />
+    <title>Desktop-Up · A0 Demo</title>
+    <link rel="stylesheet" href="./src/styles.css" />
+  </head>
+  <body>
+    <main class="app-shell" id="app">
+      <header class="app-bar">
+        <a class="brand" href="#" aria-label="Desktop-Up 首页">
+          <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+          <span class="brand-copy">
+            <strong>DESKTOP<span>//</span>UP</strong>
+            <small>POSTERIZED GAME SPACE</small>
+          </span>
+        </a>
+
+        <div class="stage-pill">
+          <span class="signal-dot"></span>
+          <span>A0 INTERACTIVE PROTOTYPE</span>
+        </div>
+
+        <nav class="top-actions" aria-label="Demo 操作">
+          <button class="ghost-button" id="reset-layout" type="button">重置画布</button>
+          <button class="icon-button" id="pause-toggle" type="button" aria-label="暂停动态效果" aria-pressed="false">
+            <span class="pause-icon" aria-hidden="true"></span>
+          </button>
+          <button class="mode-button" id="edit-toggle" type="button" aria-pressed="false">
+            <span class="mode-light"></span>
+            <span>进入编辑</span>
+          </button>
+        </nav>
+      </header>
+
+      <section class="workspace">
+        <section class="desktop-stage" id="desktop-stage" aria-label="海报桌面预览">
+          <div class="wallpaper-noise"></div>
+          <div class="aurora aurora-one"></div>
+          <div class="aurora aurora-two"></div>
+
+          <header class="desktop-meta">
+            <div>
+              <span class="eyebrow">MONDAY / 02 AUG</span>
+              <h1>Good afternoon.</h1>
+            </div>
+            <div class="runtime-chip" id="runtime-chip">
+              <span></span>
+              <strong>STATIC</strong>
+              <small>按需绘制</small>
+            </div>
+          </header>
+
+          <div class="snap-grid" aria-hidden="true"></div>
+          <div class="poster-layer" id="poster-layer"></div>
+
+          <footer class="desktop-footer">
+            <span><kbd>双击</kbd> 启动项目</span>
+            <span><kbd>E</kbd> 编辑布局</span>
+            <span><kbd>Space</kbd> 暂停动效</span>
+          </footer>
+        </section>
+
+        <aside class="inspector" aria-label="海报参数">
+          <div class="inspector-heading">
+            <div>
+              <span class="eyebrow">LIVE PARAMETERS</span>
+              <h2>海报调色台</h2>
+            </div>
+            <span class="selection-index" id="selection-index">01</span>
+          </div>
+
+          <div class="selection-summary">
+            <div class="mini-cover" id="mini-cover"><span>NO</span></div>
+            <div>
+              <strong id="selected-title">NIGHT OPS</strong>
+              <span id="selected-count">6 个游戏</span>
+            </div>
+          </div>
+
+          <section class="control-group">
+            <header><span>风格预设</span><small>STYLE</small></header>
+            <div class="theme-list" id="theme-list">
+              <button class="theme-option is-active" data-theme="nocturne" type="button">
+                <i class="theme-swatch swatch-nocturne"></i><span>深夜行动</span><small>NOCTURNE</small>
+              </button>
+              <button class="theme-option" data-theme="ember" type="button">
+                <i class="theme-swatch swatch-ember"></i><span>余烬档案</span><small>EMBER</small>
+              </button>
+              <button class="theme-option" data-theme="glass" type="button">
+                <i class="theme-swatch swatch-glass"></i><span>玻璃陈列</span><small>GLASS</small>
+              </button>
+            </div>
+          </section>
+
+          <section class="control-group sliders">
+            <header><span>视觉参数</span><small>PARAMETERS</small></header>
+            <label>
+              <span>强调色 <output id="accent-output">#72E4FF</output></span>
+              <input id="accent-control" type="color" value="#72e4ff" />
+            </label>
+            <label>
+              <span>海报透明度 <output id="opacity-output">94%</output></span>
+              <input id="opacity-control" type="range" min="72" max="100" value="94" />
+            </label>
+            <label>
+              <span>图标密度 <output id="density-output">舒展</output></span>
+              <input id="density-control" type="range" min="0" max="2" value="1" />
+            </label>
+          </section>
+
+          <section class="control-group compact-controls">
+            <header><span>行为</span><small>BEHAVIOR</small></header>
+            <label class="switch-row">
+              <span><strong>自动收起</strong><small>鼠标离开后保持封面</small></span>
+              <input id="auto-collapse" type="checkbox" />
+              <i></i>
+            </label>
+            <label class="switch-row">
+              <span><strong>开机自启</strong><small>Demo 中仅展示设置</small></span>
+              <input id="autostart-control" type="checkbox" />
+              <i></i>
+            </label>
+          </section>
+
+          <button class="primary-action" id="add-game" type="button">
+            <span>＋</span>
+            添加一个游戏并自动排版
+          </button>
+
+          <p class="inspector-note">当前为安全视觉 Demo，不会读取、移动或启动真实桌面快捷方式。</p>
+        </aside>
+      </section>
+
+      <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    </main>
+
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>

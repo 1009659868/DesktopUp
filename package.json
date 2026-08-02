@@ -1,0 +1,14 @@
+{
+  "name": "desktop-up",
+  "version": "0.0.1",
+  "packageManager": "pnpm@11.18.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build-ui.mjs",
+    "dev": "node scripts/serve-ui.mjs",
+    "check": "node --check app/src/model.js && node --check app/src/main.js && node --check app/src/poster-surface.js && node --test tests/*.test.mjs && node scripts/check-doc-links.mjs",
+    "tauri:dev": "cargo tauri dev",
+    "tauri:build": "cargo tauri build"
+  }
+}

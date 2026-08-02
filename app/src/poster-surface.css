@@ -1,0 +1,61 @@
+html.poster-page,
+body.poster-page {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: transparent;
+}
+
+.poster-surface {
+  --surface-gutter: 10px;
+  width: 100vw;
+  height: 100vh;
+  padding: var(--surface-gutter);
+  background: transparent;
+}
+
+.poster-surface .poster {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform: none;
+  backdrop-filter: none;
+  animation: surface-arrival 360ms cubic-bezier(.2,.8,.2,1) both;
+}
+
+.poster-surface .poster:not(.is-locked) .poster-header {
+  cursor: grab;
+}
+
+.poster-surface .poster:not(.is-locked) .poster-header:active {
+  cursor: grabbing;
+}
+
+.poster-surface .poster.is-collapsed {
+  height: 100%;
+}
+
+.poster-surface .poster.is-collapsed .poster-copy h2 {
+  font-size: 26px;
+}
+
+.poster-surface.is-runtime-paused .poster,
+.poster-surface.is-runtime-paused .poster-atmosphere i {
+  animation-play-state: paused !important;
+}
+
+.poster-toast {
+  right: 16px;
+  bottom: 14px;
+  max-width: calc(100vw - 32px);
+  pointer-events: none;
+}
+
+@keyframes surface-arrival {
+  from { opacity: 0; transform: translateY(8px) scale(.985); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .poster-surface .poster { animation: none; }
+}

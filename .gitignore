@@ -1,0 +1,26 @@
+# Frontend dependencies and generated output
+/node_modules/
+/.pnpm-store/
+/dist/
+/artifacts/
+
+# Rust / Tauri generated output
+/src-tauri/target/
+/src-tauri/gen/
+
+# Local runtime data and diagnostics
+/.desktop-up/
+*.log
+
+# Local-only validation captures containing third-party game/user imagery
+/Docs/C_Workstreams/DesktopHostFeasibility/20_Log/2026-08/assets/a0-caption-removed.png
+/Docs/C_Workstreams/DesktopHostFeasibility/20_Log/2026-08/assets/a0-host-hit-probe.png
+/Docs/C_Workstreams/DesktopHostFeasibility/20_Log/2026-08/assets/a0-host-sizing-fixed.png
+/Docs/C_Workstreams/DesktopHostFeasibility/20_Log/2026-08/assets/a0-native-title-empty.png
+/Docs/C_Workstreams/DesktopHostFeasibility/20_Log/2026-08/assets/win-d-current-screen.png
+
+# IDE and OS metadata
+/.idea/
+/.vscode/
+.DS_Store
+Thumbs.db

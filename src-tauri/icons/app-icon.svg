@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Desktop-Up A0 icon">
+  <rect x="24" y="24" width="464" height="464" rx="112" fill="#07090d"/>
+  <rect x="36" y="36" width="440" height="440" rx="100" fill="none" stroke="#202733" stroke-width="8"/>
+  <path d="M126 124h152l-34 264H92z" fill="#0c1118" stroke="#f4f7fb" stroke-width="24" stroke-linejoin="round"/>
+  <path d="M244 124h152l-34 264H210z" fill="#10170d" stroke="#c8ff3d" stroke-width="24" stroke-linejoin="round"/>
+  <path d="M255 176h76l-8 64h-76zm-16 120h76l-8 64h-76z" fill="#c8ff3d"/>
+</svg>

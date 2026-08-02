@@ -25,8 +25,13 @@ A: Desktop-Up 产品主线 / A0 可行性与体验定型
 - [技术架构设计 V0.1](A_Project/10_Plan/TECHNICAL_ARCHITECTURE_V0.1.md)
 - [项目主线](A_Project/10_Plan/PROJECT_MAINLINE.md)
 - [制作与交付计划 V0.1](A_Project/10_Plan/DELIVERY_PLAN_V0.1.md)
+- [通知区域与快捷访问设计 V0.1](A_Project/10_Plan/TRAY_AND_QUICK_ACCESS_DESIGN_V0.1.md)
+- [运行表面模型 V0.1](A_Project/10_Plan/RUNTIME_SURFACE_MODEL_V0.1.md)
+- [快捷方式导入与安全收纳模型 V0.1](A_Project/10_Plan/SHORTCUT_IMPORT_AND_COLLECTION_MODEL_V0.1.md)
+- [本地 BYOK AI 助手设计 V0.1](A_Project/10_Plan/AI_ASSISTANT_DESIGN_V0.1.md)
 - [项目更迭记录](A_Project/20_Log/PROJECT_CHANGELOG.md)
 - [发布与一键卸载规则](Rules/RELEASE_AND_UNINSTALL_POLICY.md)
+- [Git 与分支同步策略](Rules/GIT_STRATEGY.md)
 
 ## 目录职责
 
