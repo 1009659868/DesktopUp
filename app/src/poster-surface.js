@@ -269,29 +269,158 @@ surface.addEventListener("dblclick", (event) => {
 });
 
 // ── Resize handle drag (§5.2: EDITING + EXPANDED right-edge drag) ──
+let resizeState = null;
 surface.addEventListener("pointerdown", (event) => {
   if (!event.target.closest(".poster-resize-handle")) return;
   if (poster.locked) return;
   event.preventDefault();
+  event.stopPropagation();
 
   const startX = event.clientX;
   const startWidth = poster.width;
-  const onMove = (e) => {
-    const delta = e.clientX - startX;
-    const newWidth = Math.max(240, Math.min(1200, startWidth + delta));
-    // Live preview: update CSS variable on the poster element
-    const el = surface.querySelector(".poster");
-    if (el) el.style.width = `${newWidth}px`;
+  resizeState = { startX, startWidth };
+  surface.setPointerCapture(event.pointerId);
+});
+surface.addEventListener("pointermove", (event) => {
+  if (!resizeState) return;
+  const delta = event.clientX - resizeState.startX;
+  const newWidth = Math.max(240, Math.min(1200, resizeState.startWidth + delta));
+  const el = surface.querySelector(".poster");
+  if (el) el.style.width = `${newWidth}px`;
+});
+surface.addEventListener("pointerup", (event) => {
+  if (!resizeState) return;
+  const delta = event.clientX - resizeState.startX;
+  const newWidth = Math.max(240, Math.min(1200, resizeState.startWidth + delta));
+  resizeState = null;
+  persistPoster({ width: newWidth });
+});
+
+// ── Context menus (§4.3 of POSTER_INTERACTION_MAP) ──
+let contextMenuEl = null;
+
+function dismissContextMenu() {
+  if (contextMenuEl) { contextMenuEl.remove(); contextMenuEl = null; }
+}
+
+function showContextMenu(x, y, items) {
+  dismissContextMenu();
+  const menu = document.createElement("div");
+  menu.className = "poster-context-menu";
+  menu.style.left = `${x}px`;
+  menu.style.top = `${y}px`;
+  menu.innerHTML = items.map(item =>
+    item.separator
+      ? `<div class="poster-context-separator"></div>`
+      : `<div class="poster-context-item${item.disabled ? " is-disabled" : ""}"
+            data-action="${item.action || ""}">${item.label}</div>`
+  ).join("");
+  document.body.appendChild(menu);
+  contextMenuEl = menu;
+
+  // Auto-dismiss
+  const onDown = (e) => {
+    if (!menu.contains(e.target)) { dismissContextMenu(); document.removeEventListener("pointerdown", onDown); }
   };
-  const onUp = (e) => {
-    window.removeEventListener("pointermove", onMove);
-    window.removeEventListener("pointerup", onUp);
-    const delta = e.clientX - startX;
-    const newWidth = Math.max(240, Math.min(1200, startWidth + delta));
-    persistPoster({ width: newWidth });
-  };
-  window.addEventListener("pointermove", onMove);
-  window.addEventListener("pointerup", onUp);
+  setTimeout(() => document.addEventListener("pointerdown", onDown), 0);
+
+  // Item clicks
+  menu.addEventListener("click", (e) => {
+    const itemEl = e.target.closest(".poster-context-item");
+    if (!itemEl || itemEl.classList.contains("is-disabled")) return;
+    const action = itemEl.dataset.action;
+    dismissContextMenu();
+    handleContextAction(action);
+  });
+}
+
+function handleContextAction(action) {
+  switch (action) {
+    case "toggle-edit":
+      interactionMode = interactionMode === "editing" ? "using" : "editing";
+      if (interactionMode === "editing") showToast("编辑布局模式");
+      else showToast("已锁定布局");
+      render();
+      scheduleNativeSurfaceSync();
+      break;
+    case "toggle-lock":
+      persistPoster({ locked: !poster.locked });
+      showToast(poster.locked ? "海报已锁定" : "海报已解锁");
+      break;
+    case "toggle-collapse":
+      presentationMode = presentationMode === "expanded" ? "collapsed" : "expanded";
+      persistPoster({ collapsed: presentationMode === "collapsed" });
+      break;
+    case "refresh-item":
+      showToast("活跃度已刷新");
+      break;
+    case "remove-item":
+      showToast("Demo：从海报移除");
+      break;
+    case "open-properties":
+      showToast("Demo：游戏属性");
+      break;
+    case "open-location":
+      showToast("Demo：打开文件位置");
+      break;
+    case "switch-template-neon":
+      currentTemplateKey = "neon-hud";
+      render();
+      scheduleNativeSurfaceSync();
+      showToast("已切换至 Neon HUD");
+      break;
+    case "switch-template-cinema":
+      currentTemplateKey = "cinema-lightbox";
+      render();
+      scheduleNativeSurfaceSync();
+      showToast("已切换至 Cinema Lightbox");
+      break;
+  }
+}
+
+surface.addEventListener("contextmenu", (event) => {
+  event.preventDefault();
+  const tile = event.target.closest('[data-action="launch"]');
+  const isCollapsed = presentationMode === "collapsed";
+  const isEditing = interactionMode === "editing";
+  const isLocked = poster.locked;
+
+  if (tile && !isCollapsed) {
+    const itemIndex = Number(tile.dataset.itemIndex);
+    const item = poster.items[itemIndex];
+    const items = [
+      { label: `启动 ${item?.title ?? ""}`, action: "launch-item" },
+      { label: "打开文件位置", action: "open-location" },
+      { separator: true },
+      { label: "固定到当前位置", action: "pin-item" },
+      { label: "刷新活跃度状态", action: "refresh-item" },
+      { separator: true },
+      { label: "从海报中移除", action: "remove-item" },
+      { label: "属性…", action: "open-properties" }
+    ];
+    if (isEditing) {
+      items.splice(4, 0, { label: "进入手动整理模式", action: "manual-sort", disabled: true });
+    }
+    showContextMenu(event.clientX, event.clientY, items);
+    return;
+  }
+
+  // Poster background context menu
+  const items = [
+    { label: "打开控制中心", action: "open-control" },
+    { separator: true },
+    { label: isEditing ? "锁定布局" : "编辑布局", action: "toggle-edit" },
+    { label: isLocked ? "解锁海报" : "锁定海报", action: "toggle-lock" },
+    { label: isCollapsed ? "展开海报" : "收起海报", action: "toggle-collapse" },
+    { separator: true },
+    { label: "切换模板", action: "", disabled: true },
+    { label: "  Neon HUD", action: "switch-template-neon" },
+    { label: "  Cinema Lightbox", action: "switch-template-cinema" },
+    { separator: true },
+    { label: "显示设置…", action: "open-settings", disabled: true },
+    { label: "海报属性…", action: "open-properties" }
+  ];
+  showContextMenu(event.clientX, event.clientY, items);
 });
 
 // ── Window events ──────────────────────────────────────────────────────
