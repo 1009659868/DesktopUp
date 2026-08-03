@@ -1,4 +1,11 @@
 import { gridColumns, normalizedPoster } from "./model.js";
+import {
+  interpolate,
+  injectTemplateCSSVariables,
+  switchTemplateCSSClass,
+  applyUserSlotOverrides,
+  SCHEMA_CACHE
+} from "./template/engine.js";
 
 // ── Constants ──────────────────────────────────────────────────────────
 const STORAGE_KEY = "desktop-up.a0-demo.v1";
@@ -13,12 +20,14 @@ const surface = document.querySelector("#poster-surface");
 const toast = document.querySelector("#poster-toast");
 
 let poster = loadPoster();
-let presentationMode = poster.collapsed ? "collapsed" : "expanded"; // §4.1
-let interactionMode = "using";                                        // §4.2  (using | editing)
+let presentationMode = poster.collapsed ? "collapsed" : "expanded";
+let interactionMode = "using";
 let toastTimer = null;
 let manuallyPaused = false;
 let automaticallyPaused = false;
 let nativeSurfaceSyncTimer = null;
+let currentTemplateKey = "neon-hud";
+let templateCSSStyleElement = null;
 
 const fallbackPoster = normalizedPoster({
   id: "night-ops", title: "NIGHT OPS", subtitle: "TACTICAL ARCHIVE / 01",
@@ -83,11 +92,32 @@ function showToast(message) {
   toastTimer = setTimeout(() => toast.classList.remove("is-visible"), 2200);
 }
 
-// ── Render ─────────────────────────────────────────────────────────────
+// ── Render (template-driven) ───────────────────────────────────────────
 function render() {
-  const columns = gridColumns(poster.width, poster.density);
   const isCollapsed = presentationMode === "collapsed";
+  const itemCount = poster.items.length;
+  const columns = gridColumns(poster.width, poster.density);
 
+  // ── Load and render template HTML ──
+  const bundle = SCHEMA_CACHE.get(currentTemplateKey);
+  let templateHTML = bundle
+    ? bundle.html
+    : '<div class="poster-template-missing">模板加载中…</div>';
+
+  // Apply depth-3 user slot overrides (if any)
+  templateHTML = applyUserSlotOverrides(templateHTML, {});
+
+  // Interpolate poster data variables
+  const templateData = {
+    title: poster.title,
+    item_count: itemCount,
+    collapsed_state: presentationMode,
+    theme: poster.theme,
+    locked: poster.locked ? "locked" : "unlocked"
+  };
+  templateHTML = interpolate(templateHTML, templateData);
+
+  // Game cards — injected into the template's #poster-icon-container
   const gameCards = poster.items.map((item, index) => `
     <button class="game-tile hue-${escapeHtml(item.hue)}" type="button"
       data-action="launch" data-item-index="${index}"
@@ -97,63 +127,23 @@ function render() {
     </button>
   `).join("");
 
-  const itemCount = poster.items.length;
+  // Inject game cards into the icon container in the template HTML
+  templateHTML = templateHTML.replace(
+    /<div id="poster-icon-container"><\/div>/,
+    `<div id="poster-icon-container">${gameCards}</div>`
+  );
 
+  // Build the poster article wrapper
   const classList = [
     "poster",
-    `theme-${poster.theme}`,
     isCollapsed && "is-collapsed",
     poster.locked && "is-locked",
     interactionMode === "editing" && "is-editing"
   ].filter(Boolean).join(" ");
 
   surface.innerHTML = `
-    <article class="${classList}"
-      style="--poster-accent:${poster.accent};--poster-opacity:${poster.opacity / 100};--grid-columns:${columns}">
-      <div class="poster-atmosphere"><i></i><i></i><i></i></div>
-
-      <!-- ── Title bar (§6.1: 60px collapsed, normal expanded) ── -->
-      <header class="poster-header" data-native-drag>
-        <div class="poster-header-left">
-          <span class="poster-header-icon"></span>
-          <span class="poster-header-title">${escapeHtml(poster.title)}</span>
-          <span class="poster-header-count">${itemCount.toString().padStart(2, "0")} GAMES</span>
-        </div>
-
-        <div class="poster-header-right">
-          ${isCollapsed ? `
-            <button class="poster-btn poster-expand-btn" type="button" data-action="expand"
-              aria-label="展开海报" title="展开海报"><span></span></button>
-          ` : `
-            <button class="poster-btn poster-collapse-btn" type="button" data-action="collapse"
-              aria-label="收起海报" title="收起海报"><span></span></button>
-            ${interactionMode === "editing" ? `
-              <button class="poster-btn poster-lock-btn" type="button" data-action="lock"
-                aria-label="${poster.locked ? "解锁" : "锁定"}海报" aria-pressed="${poster.locked}"
-                title="${poster.locked ? "已锁定 · 点击解锁" : "解锁状态 · 点击锁定"}">
-                <i class="poster-lock-icon">${poster.locked ? "◈" : "◇"}</i>
-              </button>
-            ` : poster.locked ? `
-              <span class="poster-lock-indicator" title="已锁定">◈</span>
-            ` : ""}
-          `}
-        </div>
-      </header>
-
-      <!-- ── Expanded-only content (§5.1: COLLAPSED hides these) ── -->
-      ${isCollapsed ? "" : `
-        <div class="poster-copy">
-          <span>${escapeHtml(poster.subtitle)}</span>
-          <h2>${escapeHtml(poster.title)}</h2>
-          <p>${itemCount.toString().padStart(2, "0")} TITLES <i></i> READY</p>
-        </div>
-        <div class="poster-content"><div class="game-grid">${gameCards}</div></div>
-        <footer class="poster-footer">
-          <span>LOCAL LIBRARY</span>
-          <span class="poster-bars"><i></i><i></i><i></i><i></i></span>
-          <span>${poster.locked ? "POSITION LOCKED" : interactionMode === "editing" ? "DRAG TO MOVE" : ""}</span>
-        </footer>
-      `}
+    <article class="${classList}" style="--grid-columns:${columns}">
+      ${templateHTML}
 
       <!-- ── Editing-mode overlays (§6.2) ── -->
       ${interactionMode === "editing" && !isCollapsed ? `
@@ -165,6 +155,29 @@ function render() {
       ` : ""}
     </article>
   `;
+
+  // ── Inject template CSS (hot-switch safe) ──
+  if (bundle) {
+    if (templateCSSStyleElement) templateCSSStyleElement.remove();
+    templateCSSStyleElement = document.createElement("style");
+    templateCSSStyleElement.id = "template-css";
+    templateCSSStyleElement.textContent = bundle.css;
+    document.head.appendChild(templateCSSStyleElement);
+
+    // Inject default CSS variables from params-schema
+    const posterElement = surface.querySelector(".poster");
+    if (posterElement) {
+      const defaults = {};
+      if (Array.isArray(bundle.params_schema)) {
+        for (const group of bundle.params_schema) {
+          for (const param of (group.params || [])) {
+            defaults[param.key] = param.default;
+          }
+        }
+      }
+      injectTemplateCSSVariables(posterElement, currentTemplateKey, defaults);
+    }
+  }
 }
 
 // ── Native IPC ─────────────────────────────────────────────────────────
@@ -333,6 +346,46 @@ async function connectNativeControls() {
 }
 
 // ── Init ───────────────────────────────────────────────────────────────
-render();
-syncNativeSurface();
-connectNativeControls().catch(() => {});
+
+// When running in Tauri, try loading templates from the Rust side first.
+// In browser/dev mode, templates are served as static files from app/templates.
+async function preloadTemplateBundle(key) {
+  try {
+    const invoke = window.__TAURI__?.core?.invoke;
+    if (invoke) {
+      const json = await invoke("get_template_bundle", { templateKey: key });
+      const bundle = JSON.parse(json);
+      SCHEMA_CACHE.set(key, bundle);
+      return;
+    }
+  } catch {
+    // Fall back to HTTP fetch below
+  }
+
+  try {
+    const { loadTemplateBundle } = await import("./template/engine.js");
+    await loadTemplateBundle(key);
+  } catch {
+    console.warn(`template "${key}" unavailable — using fallback render`);
+  }
+}
+
+async function initTemplates() {
+  await preloadTemplateBundle("neon-hud");
+  if (!SCHEMA_CACHE.has(currentTemplateKey)) {
+    currentTemplateKey = "neon-hud";
+    await preloadTemplateBundle("neon-hud");
+  }
+}
+
+initTemplates().then(() => {
+  currentTemplateKey = poster.theme === "cinema" ? "cinema-lightbox" : "neon-hud";
+  const bundle = SCHEMA_CACHE.get(currentTemplateKey);
+  if (bundle) {
+    // Switch template CSS class on existing poster container
+    switchTemplateCSSClass(surface, null, currentTemplateKey);
+  }
+  render();
+  syncNativeSurface();
+  connectNativeControls().catch(() => {});
+});
