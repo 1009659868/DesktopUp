@@ -1,0 +1,21 @@
+{
+  "colors": {
+    "--tpl-accent": "#d4a853",
+    "--tpl-accent-dim": "#8a7030"
+  },
+  "border": {
+    "--tpl-border-strength": 35,
+    "--tpl-glow-spread": 18
+  },
+  "background": {
+    "--tpl-bg-darkness": 10,
+    "--tpl-blur-radius": 28
+  },
+  "layout": {
+    "--tpl-corner-radius": 12,
+    "--tpl-item-radius": 8,
+    "--tpl-title-size": 32,
+    "--tpl-icon-gap": 14,
+    "--tpl-icon-base-size": 64
+  }
+}

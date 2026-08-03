@@ -1,0 +1,31 @@
+<div class="poster tpl-neon-hud" data-template="neon-hud">
+
+  <!-- Title slot (user-replaceable via depth 3) -->
+  <header class="tpl-title-area" data-slot="title">
+    <h1 class="tpl-title-text">{{poster.title}}</h1>
+    <span class="tpl-title-count">{{poster.item_count}} GAMES</span>
+  </header>
+
+  <!-- Icon grid slot (layout engine fills #poster-icon-container) -->
+  <main class="tpl-icons-area" data-slot="icons">
+    <div class="tpl-icon-grid">
+      <div id="poster-icon-container"></div>
+    </div>
+  </main>
+
+  <!-- Status bar slot (user-replaceable) -->
+  <footer class="tpl-status-bar" data-slot="status">
+    <span class="tpl-status-text">NEON HUD &middot; {{poster.title}}</span>
+  </footer>
+
+  <!-- Decor layer (NOT user-replaceable — no data-slot) -->
+  <div class="tpl-decor-layer">
+    <div class="tpl-data-stream tpl-data-stream-top"></div>
+    <div class="tpl-data-stream tpl-data-stream-bottom"></div>
+    <div class="tpl-corner-mark tpl-corner-tl"></div>
+    <div class="tpl-corner-mark tpl-corner-tr"></div>
+    <div class="tpl-corner-mark tpl-corner-bl"></div>
+    <div class="tpl-corner-mark tpl-corner-br"></div>
+  </div>
+
+</div>

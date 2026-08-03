@@ -1,0 +1,133 @@
+/* ── Neon HUD Template CSS ──────────────────────────────────────────────
+   CSS custom properties prefixed --tpl-* are injected by the template engine
+   from params-schema.json defaults, then overridden by user preferences. */
+
+.poster.tpl-neon-hud {
+  /* Background: dark overlay + scanlines + wallper blur */
+  background:
+    rgba(0, 0, 0, var(--tpl-bg-darkness, 0.10)),
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(114, 228, 255, calc(var(--tpl-scanline-opacity, 0.15) * 0.3)) 2px,
+      rgba(114, 228, 255, calc(var(--tpl-scanline-opacity, 0.15) * 0.3)) 3px
+    );
+
+  backdrop-filter: blur(var(--tpl-blur-radius, 24px));
+  -webkit-backdrop-filter: blur(var(--tpl-blur-radius, 24px));
+
+  /* Border: color-mix of accent with intensity */
+  border: 1px solid color-mix(
+    in srgb,
+    var(--tpl-accent, #72e4ff) calc(var(--tpl-neon-intensity, 30) * 1%),
+    transparent
+  );
+  border-radius: var(--tpl-corner-radius, 18px);
+
+  /* Neon glow */
+  box-shadow:
+    0 0 calc(var(--tpl-glow-spread, 12px) * var(--tpl-neon-intensity, 30) / 100)
+        rgba(114, 228, 255, 0.5),
+    inset 0 0 calc(var(--tpl-glow-spread, 12px) * var(--tpl-neon-intensity, 30) / 200)
+        rgba(114, 228, 255, 0.12);
+
+  font-family: var(--tpl-font-family, 'Segoe UI Variable', system-ui, sans-serif);
+  color: var(--tpl-text-primary, #f4f6f8);
+}
+
+/* ── Title bar ── */
+.tpl-title-area {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid color-mix(in srgb, var(--tpl-accent, #72e4ff) 20%, transparent);
+}
+.tpl-title-text {
+  font-size: var(--tpl-title-size, 28px);
+  font-weight: 700;
+  color: var(--tpl-text-primary, #f4f6f8);
+  letter-spacing: 0.02em;
+}
+.tpl-title-count {
+  font-size: var(--tpl-subtitle-size, 14px);
+  color: var(--tpl-text-secondary, #8a949e);
+  font-family: var(--tpl-font-mono, 'Cascadia Code', monospace);
+}
+
+/* ── Icon grid ── */
+.tpl-icons-area {
+  flex: 1;
+  min-height: 0;
+  padding: var(--tpl-padding, 16px);
+}
+.tpl-icon-grid {
+  display: grid;
+  gap: var(--tpl-icon-gap, 12px);
+}
+#poster-icon-container {
+  display: contents;
+}
+
+/* ── Status bar ── */
+.tpl-status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px;
+  border-top: 1px solid color-mix(in srgb, var(--tpl-accent, #72e4ff) 15%, transparent);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--tpl-text-secondary, #8a949e);
+}
+.tpl-status-text {
+  opacity: 0.7;
+}
+
+/* ── Data stream lines ── */
+.tpl-data-stream {
+  position: absolute;
+  left: var(--tpl-corner-radius, 18px);
+  right: var(--tpl-corner-radius, 18px);
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--tpl-accent, #72e4ff) 20%,
+    var(--tpl-accent, #72e4ff) 80%,
+    transparent 100%
+  );
+  opacity: calc(var(--tpl-neon-intensity, 30) / 200);
+}
+.tpl-data-stream-top { top: 48px; }
+.tpl-data-stream-bottom { bottom: 32px; }
+
+/* ── Corner HUD marks ── */
+.tpl-corner-mark {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-color: var(--tpl-accent, #72e4ff);
+  border-style: solid;
+  opacity: calc(var(--tpl-neon-intensity, 30) / 200);
+}
+.tpl-corner-tl { top: 4px; left: 4px; border-width: 1px 0 0 1px; }
+.tpl-corner-tr { top: 4px; right: 4px; border-width: 1px 1px 0 0; }
+.tpl-corner-bl { bottom: 4px; left: 4px; border-width: 0 0 1px 1px; }
+.tpl-corner-br { bottom: 4px; right: 4px; border-width: 0 1px 1px 0; }
+
+/* ── Game tile cards ── */
+.tpl-neon-hud .game-tile {
+  background: rgba(8, 12, 18, 0.85);
+  border: 1px solid color-mix(in srgb, var(--tpl-accent-dim, #3a8fa8) 40%, transparent);
+  border-radius: var(--tpl-item-radius, 10px);
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+.tpl-neon-hud .game-tile:hover {
+  border-color: var(--tpl-accent, #72e4ff);
+  box-shadow: 0 0 8px rgba(114, 228, 255, 0.5);
+  background: rgba(16, 24, 36, 0.90);
+}

@@ -1,0 +1,28 @@
+{
+  "$schema": "https://desktop-up.app/schemas/template-manifest-v1.json",
+  "template_key": "neon-hud",
+  "name": "Neon HUD",
+  "version": "1.0.0",
+  "author": "Desktop-Up Built-in",
+  "description": "赛博朋克霓虹风格的 HUD 海报",
+  "trust_level": "builtin",
+  "depth0": {
+    "presets": [
+      { "id": "neon-cyan",  "name": "霓虹青",   "thumbnail": "presets/neon-cyan.png" },
+      { "id": "neon-magenta", "name": "霓虹洋红", "thumbnail": "presets/neon-magenta.png" },
+      { "id": "neon-amber", "name": "霓虹琥珀",  "thumbnail": "presets/neon-amber.png" }
+    ]
+  },
+  "depth2": {
+    "slots": [
+      { "id": "bg", "label": "背景", "type": "image", "accept": ["png","jpg","webp"], "max_size_bytes": 2097152, "default_asset": "assets/bg.png" },
+      { "id": "border-overlay", "label": "海报装饰", "type": "svg", "accept": ["svg"], "max_size_bytes": 204800, "default_asset": "assets/border-overlay.svg" }
+    ]
+  },
+  "depth3": {
+    "css_allowed": true,
+    "html_slots": ["title", "status"],
+    "script_allowed": false,
+    "description": "Neon HUD 不支持代码脚本。"
+  }
+}

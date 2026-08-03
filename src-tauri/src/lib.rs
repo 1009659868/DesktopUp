@@ -2,6 +2,7 @@ mod desktop_host;
 mod placement;
 mod runtime_monitor;
 mod webview2;
+mod template_loader;
 
 use std::sync::Mutex;
 
@@ -362,6 +363,16 @@ fn show_and_emit(app: &tauri::AppHandle, payload: &str) {
     let _ = app.emit("runtime-control", payload);
 }
 
+#[tauri::command]
+fn get_template_bundle(template_key: String) -> Result<String, String> {
+    template_loader::load_template_bundle(&template_key)
+}
+
+#[tauri::command]
+fn list_templates() -> Result<String, String> {
+    template_loader::load_index()
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -589,7 +600,9 @@ pub fn run() {
             start_poster_drag,
             resize_poster_surface,
             set_poster_interaction_region,
-            reconnect_desktop_host
+            reconnect_desktop_host,
+            get_template_bundle,
+            list_templates
         ])
         .run(tauri::generate_context!())
         .expect("failed to run Desktop-Up");

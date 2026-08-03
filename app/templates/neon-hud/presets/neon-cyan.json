@@ -1,0 +1,22 @@
+{
+  "colors": {
+    "--tpl-accent": "#72e4ff",
+    "--tpl-accent-dim": "#3a8fa8"
+  },
+  "border": {
+    "--tpl-neon-intensity": 30,
+    "--tpl-glow-spread": 12
+  },
+  "background": {
+    "--tpl-bg-darkness": 10,
+    "--tpl-blur-radius": 24,
+    "--tpl-scanline-opacity": 15
+  },
+  "layout": {
+    "--tpl-corner-radius": 18,
+    "--tpl-item-radius": 10,
+    "--tpl-title-size": 28,
+    "--tpl-icon-gap": 12,
+    "--tpl-icon-base-size": 64
+  }
+}
