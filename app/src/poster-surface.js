@@ -1,8 +1,12 @@
 import { gridColumns, normalizedPoster } from "./model.js";
 
 const STORAGE_KEY = "desktop-up.a0-demo.v1";
-const POSTER_SURFACE_GUTTER = 10;
-const POSTER_CORNER_RADIUS = 16;
+const POSTER_SURFACE_GUTTER = 0;
+const POSTER_CORNER_RADIUS = 18;
+const COLLAPSED_TITLE_HEIGHT = 60;
+const SAFETY_MARGIN_TOP = 12;
+const SAFETY_MARGIN_BOTTOM = 12;
+
 const fallbackPoster = normalizedPoster({
   id: "night-ops",
   title: "NIGHT OPS",
@@ -11,8 +15,8 @@ const fallbackPoster = normalizedPoster({
   accent: "#72e4ff",
   opacity: 94,
   density: 1,
-  width: 490,
-  height: 392,
+  width: 420,
+  height: 1368,
   collapsed: false,
   locked: true,
   items: [
@@ -54,6 +58,21 @@ function loadSnapshot() {
 function loadPoster() {
   const snapshot = loadSnapshot();
   return normalizedPoster(snapshot?.posters?.[0] ?? fallbackPoster);
+}
+
+function computeWorkAreaPosterSize() {
+  const sw = window.screen?.availWidth ?? screen.width;
+  const sh = window.screen?.availHeight ?? screen.height;
+  const deviceScaleFactor = Math.max(1, window.devicePixelRatio || 1);
+  const workWidth = sw * deviceScaleFactor;
+  const workHeight = sh * deviceScaleFactor;
+  const posterWidth = Math.max(280, Math.round(workWidth * 0.22));
+  const posterHeight = workHeight - SAFETY_MARGIN_TOP - SAFETY_MARGIN_BOTTOM;
+  return {
+    logicalWidth: Math.round(posterWidth / deviceScaleFactor),
+    logicalHeight: Math.round(posterHeight / deviceScaleFactor),
+    deviceScaleFactor
+  };
 }
 
 function persistPoster(patch) {
@@ -125,11 +144,13 @@ async function invokeNative(command, args = {}) {
 }
 
 async function syncNativeSurface() {
-  const deviceScaleFactor = Math.max(1, window.devicePixelRatio || 1);
+  const { logicalWidth, logicalHeight, deviceScaleFactor } = computeWorkAreaPosterSize();
+  const effectiveWidth = poster.collapsed ? logicalWidth : logicalWidth;
+  const effectiveHeight = poster.collapsed ? COLLAPSED_TITLE_HEIGHT : logicalHeight;
   await invokeNative("resize_poster_surface", {
     collapsed: poster.collapsed,
-    width: poster.width,
-    height: poster.height,
+    width: effectiveWidth,
+    height: effectiveHeight,
     surfaceGutter: POSTER_SURFACE_GUTTER,
     deviceScaleFactor
   });

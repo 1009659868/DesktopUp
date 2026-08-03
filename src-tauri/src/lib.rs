@@ -1,6 +1,7 @@
 mod desktop_host;
 mod placement;
 mod runtime_monitor;
+mod webview2;
 
 use std::sync::Mutex;
 
@@ -213,13 +214,16 @@ fn resize_poster_surface(
 ) -> Result<(), String> {
     let gutter = surface_gutter.clamp(0.0, 32.0);
     let scale = device_scale_factor.clamp(0.5, 4.0);
-    let logical_width = width.clamp(330.0, 640.0) + gutter * 2.0;
+    // Large-format poster: width bounded to [280, 0.45 × work area width],
+    // height near-full work area with 12px top/bottom safety margins.
+    // The JS side computes the target logical size; we apply it here.
+    let logical_width = (width.clamp(240.0, 1200.0) + gutter * 2.0).max(240.0);
     let content_height = if collapsed {
-        116.0
+        60.0 // collapsed title bar only
     } else {
-        height.clamp(240.0, 560.0)
+        height.clamp(320.0, 2160.0)
     };
-    let logical_height = content_height + gutter * 2.0;
+    let logical_height = (content_height + gutter * 2.0).max(60.0);
     let window = app
         .get_webview_window("poster")
         .ok_or_else(|| "poster window is unavailable".to_string())?;

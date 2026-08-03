@@ -52,9 +52,9 @@ newness_norm   = 1 - min(days_since_added / max(1, max_days_since_added_in_poste
 
 ## 2. 活跃度衰减系统
 
-衰减作用于 `effective_launches`，影响排名中的 `frequency_norm` 因子和图标缩放大小的计算。
+衰减作用于 `effective_launches`，是该项计算的**权威来源**。排名计算和图标缩放都从同一个 `effective_launches` 取值，但消费端的敏感度不同（见 `POSTER_REDESIGN_V0.1` §2.3）。
 
-### 2.1 衰减公式
+### 2.1 衰减公式（权威定义）
 
 ```text
 effective_launches = total_launches × decay_multiplier

@@ -51,13 +51,36 @@ scale = min_scale + (max_scale - min_scale) × ratio
 
 ### 2.3 热度衰减（已确认）
 
-超过 30 天未启动的游戏，有效启动次数打折：
+`effective_launches` 的衰减计算以 [`POSTER_LAYOUT_AND_SORT_V0.1` §2.1](POSTER_LAYOUT_AND_SORT_V0.1.md) 的三因子衰减模型为权威来源：
 
 ```text
-effective_launches = total_launches × 0.85^(days_since_last_launch / 7)
+effective_launches = total_launches × decay_multiplier
+
+decay_multiplier = clamp(
+  existence_bonus × frequency_resistance × inactivity_penalty,
+  0.1,
+  1.0
+)
 ```
 
-即每 7 天不启动衰减 15%。重新启动后恢复原值。衰减周期（7/14/30 天或关闭）用户可调。
+其中：
+- `existence_bonus`：新加入游戏的衰减免疫（30 天内不衰减）
+- `frequency_resistance`：启动次数越多抵抗力越强（50 次满抗）
+- `inactivity_penalty`：14 天缓冲期后每 7 天衰减 15%，下限 0.1
+
+同一套 `effective_launches` 用于两个消费端，但缩放端加一层 sqrt 压缩以降低对衰减的敏感度：
+
+```text
+// 排名计算（直接用 effective_launches）
+frequency_norm = log(1 + effective_launches) / log(1 + max_effective_in_poster)
+
+// 图标缩放（套 sqrt 压缩，让大小变化比排名变化温和）
+scale_input = sqrt(effective_launches × max_launches_in_poster)
+ratio = log(1 + scale_input) / log(1 + max_launches_in_poster)
+scale = min_scale + (max_scale - min_scale) × ratio
+```
+
+这确保：排名对衰减更敏感（精确排序），图标大小对衰减更温和（肉眼只需区分 3–5 档）。
 
 ### 2.4 动画过渡（已确认）
 

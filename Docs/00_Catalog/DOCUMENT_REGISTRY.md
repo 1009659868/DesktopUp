@@ -22,6 +22,15 @@
 | `A_Project/10_Plan/POSTER_REDESIGN_V0.1.md` | A/Plan | 大幅面海报、动态图标缩放、模板系统和亮带根治 | `ACTIVE` |
 | `A_Project/10_Plan/POSTER_LAYOUT_AND_SORT_V0.1.md` | A/Plan | 排序得分、活跃度衰减、行式弹性流子列填充、锚定和拖拽跳变 | `ACTIVE` |
 | `A_Project/10_Plan/POSTER_THEME_CUSTOMIZATION_V0.1.md` | A/Plan | 四级风格化定制、参数面板自动生成、导入导出和 AI Agent API | `ACTIVE` |
+| `A_Project/10_Plan/POSTER_REDESIGN_GAP_LIST.md` | A/Plan | 海报重构设计缺口清单与补齐议程 | `ACTIVE` |
+| `A_Project/10_Plan/POSTER_STATE_MACHINE_V0.1.md` | A/Plan | 海报三维正交状态机：呈现×交互×运行时 + 锁定 | `ACTIVE` |
+| `A_Project/10_Plan/POSTER_DATA_MODEL_V2.md` | A/Plan | 海报 V2 数据模型汇总：8 模型 + 计算列 + ER + 迁移 | `ACTIVE` |
+| `A_Project/10_Plan/POSTER_TEMPLATE_ENGINE_V0.1.md` | A/Plan | 模板引擎技术设计：Rust 校验 + JS 渲染、插槽、CSS 变量、热切换 | `ACTIVE` |
+| `A_Project/10_Plan/POSTER_VISUAL_NEON_HUD_V0.1.md` | A/Plan | Neon HUD 完整视觉规格：色板、排版、边框发光、扫描线、角标 | `ACTIVE` |
+| `A_Project/10_Plan/POSTER_VISUAL_CINEMA_LIGHTBOX_V0.1.md` | A/Plan | Cinema Lightbox 完整视觉规格：暖白色板、衬线标题、胶片齿孔 | `ACTIVE` |
+| `A_Project/10_Plan/POSTER_THEME_IMPORT_EXPORT_V0.1.md` | A/Plan | 主题导入导出格式规范、版本兼容、参数迁移和安全校验链 | `ACTIVE` |
+| `A_Project/10_Plan/POSTER_INTERACTION_MAP_V0.1.md` | A/Plan | 海报交互事件映射：鼠标/键盘、右键菜单、拖拽排序联动 | `ACTIVE` |
+| `A_Project/10_Plan/POSTER_ERROR_AND_EMPTY_STATE_V0.1.md` | A/Plan | 错误降级、空状态设计和首次使用引导 | `ACTIVE` |
 | `A_Project/20_Log/PROJECT_CHANGELOG.md` | A/Log | 项目级更迭记录 | `ACTIVE` |
 | `A_Project/30_Sync/COLD_START.md` | A/Sync | A 层接手阅读入口 | `ACTIVE` |
 | `A_Project/30_Sync/CURRENT_HANDOFF.md` | A/Sync | A 层当前状态 | `ACTIVE` |

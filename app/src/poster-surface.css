@@ -7,7 +7,7 @@ body.poster-page {
 }
 
 .poster-surface {
-  --surface-gutter: 10px;
+  --surface-gutter: 0px;
   width: 100vw;
   height: 100vh;
   padding: var(--surface-gutter);
@@ -23,20 +23,25 @@ body.poster-page {
   animation: surface-arrival 360ms cubic-bezier(.2,.8,.2,1) both;
 }
 
+/* Collapsed: 60px title bar only, icons hidden */
+.poster-surface .poster.is-collapsed .poster-content,
+.poster-surface .poster.is-collapsed .poster-copy,
+.poster-surface .poster.is-collapsed .poster-footer {
+  display: none;
+}
+
+.poster-surface .poster.is-collapsed .poster-header {
+  height: 60px;
+  display: flex;
+  align-items: center;
+}
+
 .poster-surface .poster:not(.is-locked) .poster-header {
   cursor: grab;
 }
 
 .poster-surface .poster:not(.is-locked) .poster-header:active {
   cursor: grabbing;
-}
-
-.poster-surface .poster.is-collapsed {
-  height: 100%;
-}
-
-.poster-surface .poster.is-collapsed .poster-copy h2 {
-  font-size: 26px;
 }
 
 .poster-surface.is-runtime-paused .poster,

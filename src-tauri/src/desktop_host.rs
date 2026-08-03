@@ -298,7 +298,8 @@ mod platform {
             normalized_axis_anchor(window_rect.top, details.work_area.top, vertical_span),
             window_rect.left,
             window_rect.top,
-        );
+        )
+        .with_width(window_width as u32);
         remember_poster_placement(&placement);
         Ok(placement)
     }
@@ -712,6 +713,15 @@ mod platform {
             }
         };
         remember_poster_window(hwnd);
+
+        // Crush the WebView2 compositor's default white background by setting
+        // DefaultBackgroundColor to fully transparent before any content renders.
+        #[cfg(target_os = "windows")]
+        {
+            if let Err(error) = crate::webview2::clear_compositor_background(window) {
+                eprintln!("failed to clear WebView2 compositor background: {error}");
+            }
+        }
 
         let disabled_by_environment = env::var_os("DESKTOP_UP_DISABLE_WORKERW").is_some();
         let should_try_workerw = prefer_workerw && !disabled_by_environment;

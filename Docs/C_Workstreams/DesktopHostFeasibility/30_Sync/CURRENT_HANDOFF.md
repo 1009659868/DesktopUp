@@ -2,7 +2,7 @@
 
 最后更新：2026-08-03
 
-状态：`ACTIVE / C-DHF-04 + C-DHF-05 IN PROGRESS — FOUNDATIONS PASS`
+状态：`ACTIVE / C-DHF-04 + C-DHF-05 IN PROGRESS — FOUNDATIONS PASS · M1.0 CODE LANDED`
 
 ## 已完成
 
@@ -57,3 +57,15 @@
 - 当前实现分支是 `impl/desktop-runtime-foundation-a0`；未经用户明确要求不提交、不推送、不改写远端；
 - 不覆盖 Docs 中已建立的用户需求和卸载安全规则；
 - 工程初始化不得把依赖缓存或构建输出提交到文档目录。
+
+## M1.0 大幅面窗口 + 亮带根治代码落地（2026-08-03/04）
+
+- 海报原生窗口尺寸从硬编码 490×392 改为工作区感知：默认宽 `max(availWidth×0.22, 280px)`，上下各 12px 安全间距
+- 收起态从 116px 改为 60px 标题条
+- `PosterPlacement` 新增 `width: Option<u32>` 持久化字段
+- Rust `resize_poster_surface` 命令的尺寸限制从 `[330,640]×[240,560]` 改为 `[240,1200]×[60,2160]`
+- 三层透明对齐：tauri.conf.json transparent + CSS background:transparent + webview2.rs 实际调用 ICoreWebView2Controller2::SetDefaultBackgroundColor（vtable 双重校验 + catch_unwind 安全边界）
+- `tauri.conf.json` 海报窗口 `resizable: true` 以允许宽度拖动
+- webview2.rs 实现了 HWND 子窗口链遍历 → GWLP_USERDATA 指针定位 → vtable 解引用校验 → from_raw_borrowed → cast → SetDefaultBackgroundColor 的完整链路
+- 全部测试通过：Rust 8/8 + Node 16/16 + 文档链接 55/55
+- Debug 和 Release `desktop-up.exe` 均启动验证通过，进程存活无崩溃

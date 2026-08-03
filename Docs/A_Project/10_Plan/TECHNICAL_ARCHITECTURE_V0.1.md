@@ -1,8 +1,8 @@
-# Desktop-Up 技术架构 V0.1
+# Desktop-Up 技术架构 V0.2
 
 状态：`PROPOSED`
 
-日期：2026-08-02
+日期：2026-08-03（修订自 2026-08-02 V0.1）
 
 ## 1. 技术栈
 
@@ -216,6 +216,18 @@ Acquire lock
 - 代码主题采用隔离 WebView、QuickJS 还是 WASM 组件模型；
 - WebView2 Evergreen 缺失时采用在线引导还是固定运行时包。
 - 单全局宿主与每显示器共享宿主的最终拓扑；不考虑每海报一个永久 WebView2 作为默认生产方案。
+- WebView2 `DefaultBackgroundColor` 全透明方案（已在设计层确认，待代码验证）
+
+## 12-bis. 海报模板与布局引擎（V0.2 新增）
+
+以下架构内容由 [`POSTER_REDESIGN_V0.1`](POSTER_REDESIGN_V0.1.md) 及其配套设计文档定义，本架构文档仅登记关键决策：
+
+- **模板引擎**：Rust 负责导入安全校验（路径穿越、压缩炸弹、脚本检测）+ JS 负责运行时渲染（插槽解析、CSS 变量注入、热切换）。见 [`POSTER_TEMPLATE_ENGINE_V0.1`](POSTER_TEMPLATE_ENGINE_V0.1.md)
+- **样式隔离**：CSS 命名空间前缀（`.tpl-{key}`）+ 类切换，使用 Shadow DOM。见模板引擎 §3.4
+- **布局引擎**：行式弹性流 + 子列填充，运行在 WebView JS 侧，输入为排序后的图标列表 + 容器宽度，输出为确定性坐标。见 [`POSTER_LAYOUT_AND_SORT_V0.1`](POSTER_LAYOUT_AND_SORT_V0.1.md)
+- **数据模型**：V2 模型（PosterTemplate、ThemeInstance、扩大 Poster/CollectionItem、PosterItemPinned）。见 [`POSTER_DATA_MODEL_V2`](POSTER_DATA_MODEL_V2.md)
+- **海报状态机**：三维正交模型（呈现 × 交互 × 运行时 + 锁定属性），不与宿主暂停状态机耦合。见 [`POSTER_STATE_MACHINE_V0.1`](POSTER_STATE_MACHINE_V0.1.md)
+- **亮带根治**：WebView2 `ICoreWebView2Controller::put_DefaultBackgroundColor` 设为 `{A:0,R:0,G:0,B:0}`，与 `tauri.conf.json` transparent + CSS `background: transparent` 三层对齐
 
 ## 13. 原生托盘与快捷菜单
 
