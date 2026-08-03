@@ -1,0 +1,9 @@
+{
+  "template_key": "minimal-fallback",
+  "name": "Minimal Fallback",
+  "version": "1.0.0",
+  "trust_level": "builtin",
+  "depth0": { "presets": [] },
+  "depth2": { "slots": [] },
+  "depth3": { "css_allowed": false, "html_slots": [], "script_allowed": false }
+}

@@ -104,6 +104,40 @@ function render() {
     ? bundle.html
     : '<div class="poster-template-missing">模板加载中…</div>';
 
+  // ── Error / empty-state guard ──
+  const fallbackBundle = SCHEMA_CACHE.get("minimal-fallback");
+  const isTemplateMissing = !bundle || !bundle.html;
+  if (isTemplateMissing) {
+    // Gracefully degrade to minimal fallback template
+    if (fallbackBundle) {
+      templateHTML = fallbackBundle.html.replace(
+        /<div id="poster-icon-container"><\/div>/,
+        `<div id="poster-icon-container">
+          <div class="poster-error-banner">⚠ 模板加载异常，已使用回退样式</div>
+        </div>`
+      );
+      currentTemplateKey = "minimal-fallback";
+    }
+  }
+
+  if (itemCount === 0 && !isCollapsed && !isTemplateMissing) {
+    // Empty state: show onboarding guide
+    templateHTML = templateHTML.replace(
+      /<div id="poster-icon-container"><\/div>/,
+      `<div id="poster-icon-container">
+        <div class="poster-empty-guide">
+          <div class="poster-empty-icon">🎮</div>
+          <div class="poster-empty-label">添加游戏</div>
+          <div class="poster-empty-hint">拖入快捷方式或扫描桌面</div>
+          <div class="poster-empty-actions">
+            <button class="poster-empty-btn" disabled>扫描桌面</button>
+            <button class="poster-empty-btn" disabled>打开控制中心</button>
+          </div>
+        </div>
+      </div>`
+    );
+  }
+
   // Apply depth-3 user slot overrides (if any)
   templateHTML = applyUserSlotOverrides(templateHTML, {});
 
@@ -500,7 +534,10 @@ async function preloadTemplateBundle(key) {
 }
 
 async function initTemplates() {
+  // Preload the fallback first so it's always available
+  await preloadTemplateBundle("minimal-fallback");
   await preloadTemplateBundle("neon-hud");
+  await preloadTemplateBundle("cinema-lightbox");
   if (!SCHEMA_CACHE.has(currentTemplateKey)) {
     currentTemplateKey = "neon-hud";
     await preloadTemplateBundle("neon-hud");
