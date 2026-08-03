@@ -43,6 +43,33 @@
   justify-content: space-between;
   padding: 12px 16px;
   border-bottom: 1px solid color-mix(in srgb, var(--tpl-accent, #72e4ff) 20%, transparent);
+  cursor: grab;
+  user-select: none;
+}
+.tpl-title-area:active {
+  cursor: grabbing;
+}
+.tpl-title-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.tpl-title-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.tpl-template-badge {
+  font-family: var(--tpl-font-mono, 'Cascadia Code', monospace);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--tpl-accent, #72e4ff);
+  background: color-mix(in srgb, var(--tpl-accent, #72e4ff) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--tpl-accent, #72e4ff) 30%, transparent);
+  border-radius: 4px;
+  padding: 2px 6px;
 }
 .tpl-title-text {
   font-size: var(--tpl-title-size, 28px);

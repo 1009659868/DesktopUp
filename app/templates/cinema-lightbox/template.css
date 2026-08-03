@@ -30,15 +30,48 @@
 /* ── Title bar (vertically stacked, serif title) ── */
 .tpl-title-area {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
   gap: 4px;
   padding: 14px 20px;
   border-bottom: 1px solid color-mix(in srgb, var(--tpl-accent-dim, #8a7e6b) 30%, transparent);
+  cursor: grab;
+  user-select: none;
+}
+.tpl-title-area:active {
+  cursor: grabbing;
+}
+.tpl-title-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.tpl-title-right {
+  display: flex;
+  align-items: center;
 }
 .tpl-title-content {
   display: flex;
   flex-direction: column;
   gap: 2px;
+}
+.tpl-template-badge {
+  font-family: var(--tpl-font-display, Georgia, 'Times New Roman', serif);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--tpl-accent, #f0e6d3);
+  opacity: 0.7;
+  border: 1px solid color-mix(in srgb, var(--tpl-accent, #f0e6d3) 20%, transparent);
+  border-radius: 4px;
+  padding: 3px 8px;
+}
+.tpl-title-version {
+  font-size: 10px;
+  font-family: var(--tpl-font-mono, monospace);
+  color: var(--tpl-text-secondary, #9a9284);
+  opacity: 0.5;
 }
 .tpl-title-text {
   font-family: var(--tpl-font-display, Georgia, 'Times New Roman', serif);

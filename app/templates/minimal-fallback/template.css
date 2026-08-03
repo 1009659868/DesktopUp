@@ -10,6 +10,11 @@
 
 .tpl-minimal-fallback .tpl-title-area {
   padding: 12px 16px;
+  cursor: grab;
+  user-select: none;
+}
+.tpl-minimal-fallback .tpl-title-area:active {
+  cursor: grabbing;
 }
 .tpl-minimal-fallback .tpl-title-text {
   font-size: 20px;

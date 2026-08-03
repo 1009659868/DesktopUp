@@ -1,9 +1,14 @@
 <div class="poster tpl-neon-hud" data-template="neon-hud">
 
   <!-- Title slot (user-replaceable via depth 3) -->
-  <header class="tpl-title-area" data-slot="title">
-    <h1 class="tpl-title-text">{{poster.title}}</h1>
-    <span class="tpl-title-count">{{poster.item_count}} GAMES</span>
+  <header class="tpl-title-area" data-slot="title" data-native-drag>
+    <div class="tpl-title-left">
+      <span class="tpl-template-badge">NEON HUD</span>
+      <h1 class="tpl-title-text">{{poster.title}}</h1>
+    </div>
+    <div class="tpl-title-right">
+      <span class="tpl-title-count">{{poster.item_count}} GAMES</span>
+    </div>
   </header>
 
   <!-- Icon grid slot (layout engine fills #poster-icon-container) -->

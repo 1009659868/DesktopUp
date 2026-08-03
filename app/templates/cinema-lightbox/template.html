@@ -1,9 +1,15 @@
 <div class="poster tpl-cinema-lightbox" data-template="cinema-lightbox">
 
-  <header class="tpl-title-area" data-slot="title">
-    <div class="tpl-title-content">
-      <h1 class="tpl-title-text">{{poster.title}}</h1>
-      <span class="tpl-title-count">{{poster.item_count}} GAMES</span>
+  <header class="tpl-title-area" data-slot="title" data-native-drag>
+    <div class="tpl-title-left">
+      <span class="tpl-template-badge">CINEMA</span>
+      <div class="tpl-title-content">
+        <h1 class="tpl-title-text">{{poster.title}}</h1>
+        <span class="tpl-title-count">{{poster.item_count}} GAMES</span>
+      </div>
+    </div>
+    <div class="tpl-title-right">
+      <span class="tpl-title-version">v{{poster.theme}}</span>
     </div>
   </header>
 
