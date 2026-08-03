@@ -19,6 +19,8 @@
 | `A_Project/10_Plan/RUNTIME_SURFACE_MODEL_V0.1.md` | A/Plan | 桌面收纳层与控制中心分离的运行表面模型 | `ACTIVE` |
 | `A_Project/10_Plan/SHORTCUT_IMPORT_AND_COLLECTION_MODEL_V0.1.md` | A/Plan | 真实快捷方式导入、安全收纳和恢复事务模型 | `PLANNED FOR A1` |
 | `A_Project/10_Plan/AI_ASSISTANT_DESIGN_V0.1.md` | A/Plan | 本地 BYOK Agent 与受控主题辅助 | `ACTIVE` |
+| `A_Project/10_Plan/POSTER_REDESIGN_V0.1.md` | A/Plan | 大幅面海报、动态图标缩放、模板系统和亮带根治 | `ACTIVE` |
+| `A_Project/10_Plan/POSTER_LAYOUT_AND_SORT_V0.1.md` | A/Plan | 排序得分、活跃度衰减、行式弹性流子列填充、锚定和拖拽跳变 | `ACTIVE` |
 | `A_Project/20_Log/PROJECT_CHANGELOG.md` | A/Log | 项目级更迭记录 | `ACTIVE` |
 | `A_Project/30_Sync/COLD_START.md` | A/Sync | A 层接手阅读入口 | `ACTIVE` |
 | `A_Project/30_Sync/CURRENT_HANDOFF.md` | A/Sync | A 层当前状态 | `ACTIVE` |
