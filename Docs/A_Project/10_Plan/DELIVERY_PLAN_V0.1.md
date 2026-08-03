@@ -81,11 +81,11 @@
 
 | 切片 | 内容 | 预估 |
 |------|------|------|
-| M1.0 | 大幅面窗口 + 亮带根治（Rust 层 WebView2 DefaultBackgroundColor） | 2–3 天 |
-| M1.1 | 海报 DOM 重构（状态机、标题条、图标区域、过渡动画） | 2–3 天 |
-| M1.2 | 模板引擎（Rust 校验链 + JS 渲染引擎 + 热切换） | 3–4 天 |
-| M1.3 | Neon HUD 模板 CSS/HTML 完整实现 | 2–3 天 |
-| M1.4 | Cinema Lightbox 模板 CSS/HTML 完整实现 | 1–2 天 |
+| M1.0 | 大幅面窗口 + 亮带根治（Rust 层 WebView2 DefaultBackgroundColor） | **DONE** |
+| M1.1 | 海报 DOM 重构（状态机、标题条、图标区域、过渡动画） | **DONE** |
+| M1.2 | 模板引擎（Rust 校验链 + JS 渲染引擎 + 热切换） | **DONE** |
+| M1.3 | Neon HUD 模板 CSS/HTML 完整实现 | **DONE** (合入M1.4) |
+| M1.4 | Cinema Lightbox 模板 CSS/HTML 完整实现 | **DONE** (合入M1.3) |
 | M1.5 | 交互实现（拖动、右键菜单、EDITING 模式） | 2–3 天 |
 | M1.6 | 降级与空状态 | 1 天 |
 
