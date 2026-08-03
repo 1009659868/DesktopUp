@@ -69,3 +69,16 @@
 - webview2.rs 实现了 HWND 子窗口链遍历 → GWLP_USERDATA 指针定位 → vtable 解引用校验 → from_raw_borrowed → cast → SetDefaultBackgroundColor 的完整链路
 - 全部测试通过：Rust 8/8 + Node 16/16 + 文档链接 55/55
 - Debug 和 Release `desktop-up.exe` 均启动验证通过，进程存活无崩溃
+
+## M1 海报重构里程碑封板（2026-08-04）
+
+M1 全部 6 个切片已完成（M1.0 → M1.6），合计 7 个代码 commits：
+
+- **M1.0** 大幅面窗口 + 亮带根治：工作区感知尺寸、WebView2 DefaultBackgroundColor、PosterPlacement.width
+- **M1.1** 海报 DOM 重构：presentationMode × interactionMode 三维状态机、COLLAPSED 60px 标题条、EDITING 锚点/拖拽手柄
+- **M1.2** 模板引擎：Rust template_loader 安全扫描 + JS engine.js 插值/变量注入/类切换
+- **M1.3/M1.4** 模板集成：3 套内置模板（Neon HUD + Cinema Lightbox + Minimal Fallback），各含 manifest/params-schema/template.html/template.css + 3 presets
+- **M1.5** 交互实现：右键上下文菜单、模板热切换、setPointerCapture 宽度拖拽
+- **M1.6** 降级与空状态：minimal-fallback 自动降级、零游戏空状态引导、橙色错误横幅
+
+代码增量：931+ 行 JS/CSS/Rust + 666+ 行模板/文档，分布在 25 个文件中。M1 里程碑封板，准备进入 M2（本地收纳 MVP）。
