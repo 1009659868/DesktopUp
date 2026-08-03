@@ -21,6 +21,7 @@
 | `A_Project/10_Plan/AI_ASSISTANT_DESIGN_V0.1.md` | A/Plan | 本地 BYOK Agent 与受控主题辅助 | `ACTIVE` |
 | `A_Project/10_Plan/POSTER_REDESIGN_V0.1.md` | A/Plan | 大幅面海报、动态图标缩放、模板系统和亮带根治 | `ACTIVE` |
 | `A_Project/10_Plan/POSTER_LAYOUT_AND_SORT_V0.1.md` | A/Plan | 排序得分、活跃度衰减、行式弹性流子列填充、锚定和拖拽跳变 | `ACTIVE` |
+| `A_Project/10_Plan/POSTER_THEME_CUSTOMIZATION_V0.1.md` | A/Plan | 四级风格化定制、参数面板自动生成、导入导出和 AI Agent API | `ACTIVE` |
 | `A_Project/20_Log/PROJECT_CHANGELOG.md` | A/Log | 项目级更迭记录 | `ACTIVE` |
 | `A_Project/30_Sync/COLD_START.md` | A/Sync | A 层接手阅读入口 | `ACTIVE` |
 | `A_Project/30_Sync/CURRENT_HANDOFF.md` | A/Sync | A 层当前状态 | `ACTIVE` |

@@ -14,5 +14,6 @@
 | [`AI_ASSISTANT_DESIGN_V0.1.md`](../10_Plan/AI_ASSISTANT_DESIGN_V0.1.md) | 本地 BYOK Agent、Provider、工具和主题草稿 | `ACTIVE` |
 | [`POSTER_REDESIGN_V0.1.md`](../10_Plan/POSTER_REDESIGN_V0.1.md) | 大幅面海报、动态图标缩放、模板系统和亮带根治 | `ACTIVE` |
 | [`POSTER_LAYOUT_AND_SORT_V0.1.md`](../10_Plan/POSTER_LAYOUT_AND_SORT_V0.1.md) | 排序得分、活跃度衰减、行式弹性流子列填充、锚定和拖拽跳变 | `ACTIVE` |
+| [`POSTER_THEME_CUSTOMIZATION_V0.1.md`](../10_Plan/POSTER_THEME_CUSTOMIZATION_V0.1.md) | 四级风格化定制、参数面板自动生成、导入导出安全链和 AI Agent 共用 API | `ACTIVE` |
 | [`PROJECT_CHANGELOG.md`](../20_Log/PROJECT_CHANGELOG.md) | 项目级不可变更迭记录 | `ACTIVE` |
 | [`CURRENT_HANDOFF.md`](../30_Sync/CURRENT_HANDOFF.md) | 当前阶段、事实和下一动作 | `ACTIVE` |
