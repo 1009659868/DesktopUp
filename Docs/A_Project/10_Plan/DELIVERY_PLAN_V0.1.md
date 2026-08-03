@@ -86,8 +86,8 @@
 | M1.2 | 模板引擎（Rust 校验链 + JS 渲染引擎 + 热切换） | **DONE** |
 | M1.3 | Neon HUD 模板 CSS/HTML 完整实现 | **DONE** (合入M1.4) |
 | M1.4 | Cinema Lightbox 模板 CSS/HTML 完整实现 | **DONE** (合入M1.3) |
-| M1.5 | 交互实现（拖动、右键菜单、EDITING 模式） | 2–3 天 |
-| M1.6 | 降级与空状态 | 1 天 |
+| M1.5 | 交互实现（拖动、右键菜单、EDITING 模式） | **DONE** |
+| M1.6 | 降级与空状态 | **DONE** |
 
 ### M2：本地收纳 MVP（原 M1）
 
