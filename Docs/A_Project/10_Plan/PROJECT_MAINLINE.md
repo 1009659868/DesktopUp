@@ -2,7 +2,9 @@
 
 最后检查：2026-08-02
 
-状态：`ACTIVE AT A0`
+状态：`SUPERSEDED`
+
+> 本计划冻结于 2026-08-04，不再新增任务。V1 当前唯一 A 层实施计划为 [`DESKTOPUP_V1_IMPLEMENTATION_PLAN.md`](DESKTOPUP_V1_IMPLEMENTATION_PLAN.md)。本文保留用于追溯旧 A0–A6 阶段模型；其中未完成硬门已迁移到新计划，不因冻结而取消。
 
 ## 1. 产品定位
 

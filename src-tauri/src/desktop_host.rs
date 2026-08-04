@@ -43,7 +43,7 @@ mod platform {
     use std::{
         env,
         sync::{
-            atomic::{AtomicBool, AtomicIsize, Ordering},
+            atomic::{AtomicBool, AtomicIsize, AtomicUsize, Ordering},
             mpsc::{sync_channel, Receiver, SyncSender},
             Mutex, OnceLock,
         },
@@ -69,12 +69,11 @@ mod platform {
                 WindowsAndMessaging::{
                     DispatchMessageW, EnumWindows, FindWindowExW, FindWindowW, GetClassNameW,
                     GetMessageW, GetParent, GetWindow, GetWindowLongPtrW, GetWindowRect, IsWindow,
-                    IsWindowVisible, SendMessageTimeoutW, SetParent, SetWindowLongPtrW,
-                    SetWindowPos, ShowWindow, TranslateMessage, EVENT_OBJECT_CREATE,
-                    EVENT_OBJECT_SHOW, EVENT_SYSTEM_FOREGROUND, GWL_EXSTYLE, GWL_STYLE,
-                    GW_HWNDPREV, HWND_BOTTOM, HWND_TOP, MSG, OBJID_WINDOW, SMTO_ABORTIFHUNG,
-                    SMTO_ERRORONEXIT, SWP_ASYNCWINDOWPOS, SWP_FRAMECHANGED, SWP_NOACTIVATE,
-                    SWP_NOSIZE, SWP_NOZORDER, SWP_SHOWWINDOW, SW_SHOWNOACTIVATE,
+                    IsWindowVisible, SetParent, SetWindowLongPtrW, SetWindowPos, ShowWindow,
+                    TranslateMessage, EVENT_OBJECT_CREATE, EVENT_OBJECT_SHOW,
+                    EVENT_SYSTEM_FOREGROUND, GWL_EXSTYLE, GWL_STYLE, GW_HWNDPREV, HWND_BOTTOM,
+                    HWND_TOP, MSG, OBJID_WINDOW, SWP_ASYNCWINDOWPOS, SWP_FRAMECHANGED,
+                    SWP_NOACTIVATE, SWP_NOSIZE, SWP_NOZORDER, SWP_SHOWWINDOW, SW_SHOWNOACTIVATE,
                     WINEVENT_OUTOFCONTEXT, WM_DESTROY, WM_DISPLAYCHANGE, WM_DPICHANGED,
                     WM_SETTINGCHANGE, WS_CAPTION, WS_CHILD, WS_EX_APPWINDOW, WS_EX_TOOLWINDOW,
                     WS_MAXIMIZEBOX, WS_MINIMIZEBOX, WS_POPUP, WS_SYSMENU, WS_THICKFRAME,
@@ -83,8 +82,6 @@ mod platform {
         },
     };
 
-    const WORKERW_REQUEST_MESSAGE: u32 = 0x052C;
-    const WORKERW_REQUEST_TIMEOUT_MS: u32 = 1000;
     const SHELL_RECOVERY_SETTLE_MS: u64 = 140;
     const POSTER_WINDOW_SUBCLASS_ID: usize = 0x4455_5031;
     const NON_CLIENT_DECORATION_STYLES: u32 =
@@ -93,6 +90,8 @@ mod platform {
     static POSTER_HWND: AtomicIsize = AtomicIsize::new(0);
     static POSTER_VISIBLE_INTENT: AtomicBool = AtomicBool::new(true);
     static TOOL_WINDOW_FALLBACK_ACTIVE: AtomicBool = AtomicBool::new(false);
+    static PLACEMENT_RECOVERY_ACTIVE: AtomicBool = AtomicBool::new(false);
+    static PLACEMENT_RECOVERY_GENERATION: AtomicUsize = AtomicUsize::new(0);
     static SHELL_RECOVERY_SENDER: OnceLock<SyncSender<()>> = OnceLock::new();
     static LAST_POSTER_PLACEMENT: OnceLock<Mutex<Option<PosterPlacement>>> = OnceLock::new();
 
@@ -142,35 +141,37 @@ mod platform {
         windows
     }
 
-    fn request_workerw() -> Result<(), String> {
-        let progman = unsafe { FindWindowW(w!("Progman"), PCWSTR::null()) }
-            .map_err(|error| format!("Progman unavailable: {error}"))?;
-        let mut message_result = 0usize;
-        let flags = windows::Win32::UI::WindowsAndMessaging::SEND_MESSAGE_TIMEOUT_FLAGS(
-            SMTO_ABORTIFHUNG.0 | SMTO_ERRORONEXIT.0,
-        );
-        let sent = unsafe {
-            SendMessageTimeoutW(
-                progman,
-                WORKERW_REQUEST_MESSAGE,
-                WPARAM(0xD),
-                LPARAM(1),
-                flags,
-                WORKERW_REQUEST_TIMEOUT_MS,
-                Some(&mut message_result),
-            )
-        };
-        if sent.0 == 0 {
-            return Err("WorkerW request timed out or was rejected".to_string());
-        }
-        Ok(())
+    fn rect_contains(container: &RECT, target: &RECT) -> bool {
+        target.left >= container.left
+            && target.top >= container.top
+            && target.right <= container.right
+            && target.bottom <= container.bottom
     }
 
-    fn select_workerw(windows: &[ShellWindow]) -> Option<HWND> {
-        if let Some(candidate) = windows
-            .iter()
-            .find(|window| window.is_workerw && window.visible && window.has_shell_view)
+    fn workerw_covers_poster_rect(workerw: HWND, poster_rect: &RECT) -> bool {
+        let mut workerw_rect = RECT::default();
+        if unsafe { GetWindowRect(workerw, &mut workerw_rect) }.is_err()
+            || !rect_contains(&workerw_rect, poster_rect)
         {
+            return false;
+        }
+
+        let poster_center = POINT {
+            x: poster_rect.left + (poster_rect.right - poster_rect.left) / 2,
+            y: poster_rect.top + (poster_rect.bottom - poster_rect.top) / 2,
+        };
+        let poster_monitor = unsafe { MonitorFromPoint(poster_center, MONITOR_DEFAULTTONEAREST) };
+        let workerw_monitor = unsafe { MonitorFromWindow(workerw, MONITOR_DEFAULTTONEAREST) };
+        poster_monitor == workerw_monitor
+    }
+
+    fn select_workerw(windows: &[ShellWindow], poster_rect: &RECT) -> Option<HWND> {
+        if let Some(candidate) = windows.iter().find(|window| {
+            window.is_workerw
+                && window.visible
+                && window.has_shell_view
+                && workerw_covers_poster_rect(window.hwnd, poster_rect)
+        }) {
             return Some(candidate.hwnd);
         }
 
@@ -178,7 +179,9 @@ mod platform {
             let next_worker =
                 unsafe { FindWindowExW(None, Some(icon_host.hwnd), w!("WorkerW"), PCWSTR::null()) };
             if let Ok(workerw) = next_worker {
-                if unsafe { IsWindowVisible(workerw).as_bool() } {
+                if unsafe { IsWindowVisible(workerw).as_bool() }
+                    && workerw_covers_poster_rect(workerw, poster_rect)
+                {
                     return Some(workerw);
                 }
             }
@@ -186,7 +189,11 @@ mod platform {
 
         windows
             .iter()
-            .find(|window| window.is_workerw && window.visible)
+            .find(|window| {
+                window.is_workerw
+                    && window.visible
+                    && workerw_covers_poster_rect(window.hwnd, poster_rect)
+            })
             .map(|window| window.hwnd)
     }
 
@@ -457,10 +464,18 @@ mod platform {
 
     fn run_shell_recovery_worker(receiver: Receiver<()>) {
         while receiver.recv().is_ok() {
-            thread::sleep(Duration::from_millis(SHELL_RECOVERY_SETTLE_MS));
-            while receiver.try_recv().is_ok() {}
-            if let Err(error) = restore_after_shell_or_display_event() {
-                eprintln!("failed to restore poster after host recovery event: {error}");
+            loop {
+                PLACEMENT_RECOVERY_ACTIVE.store(true, Ordering::Release);
+                let generation = PLACEMENT_RECOVERY_GENERATION.load(Ordering::Acquire);
+                thread::sleep(Duration::from_millis(SHELL_RECOVERY_SETTLE_MS));
+                while receiver.try_recv().is_ok() {}
+                if let Err(error) = restore_after_shell_or_display_event() {
+                    eprintln!("failed to restore poster after host recovery event: {error}");
+                }
+                PLACEMENT_RECOVERY_ACTIVE.store(false, Ordering::Release);
+                if PLACEMENT_RECOVERY_GENERATION.load(Ordering::Acquire) == generation {
+                    break;
+                }
             }
         }
     }
@@ -483,9 +498,7 @@ mod platform {
         if !matches!(class_name(hwnd).as_deref(), Some("Progman" | "WorkerW")) {
             return;
         }
-        if let Some(sender) = SHELL_RECOVERY_SENDER.get() {
-            let _ = sender.try_send(());
-        }
+        queue_host_recovery();
     }
 
     fn run_shell_foreground_hook() {
@@ -529,8 +542,14 @@ mod platform {
 
     fn queue_host_recovery() {
         if let Some(sender) = SHELL_RECOVERY_SENDER.get() {
+            PLACEMENT_RECOVERY_ACTIVE.store(true, Ordering::Release);
+            PLACEMENT_RECOVERY_GENERATION.fetch_add(1, Ordering::AcqRel);
             let _ = sender.try_send(());
         }
+    }
+
+    pub fn placement_recovery_in_progress() -> bool {
+        PLACEMENT_RECOVERY_ACTIVE.load(Ordering::Acquire)
     }
 
     unsafe extern "system" fn poster_window_subclass(
@@ -628,6 +647,11 @@ mod platform {
     fn attach_to_workerw(hwnd: HWND, workerw: HWND) -> Result<(), String> {
         let mut screen_rect = RECT::default();
         unsafe { GetWindowRect(hwnd, &mut screen_rect) }.map_err(|error| error.to_string())?;
+        if !workerw_covers_poster_rect(workerw, &screen_rect) {
+            return Err(
+                "WorkerW candidate does not cover the restored poster screen rectangle".to_string(),
+            );
+        }
 
         unsafe {
             set_common_extended_style(hwnd);
@@ -714,20 +738,24 @@ mod platform {
         remember_poster_window(hwnd);
 
         let disabled_by_environment = env::var_os("DESKTOP_UP_DISABLE_WORKERW").is_some();
-        let should_try_workerw = prefer_workerw && !disabled_by_environment;
-        let mut windows = shell_windows();
-        let mut request_error = None;
+        let enabled_by_environment = env::var_os("DESKTOP_UP_ENABLE_WORKERW").is_some();
+        let should_try_workerw =
+            prefer_workerw && enabled_by_environment && !disabled_by_environment;
+        let windows = shell_windows();
+        let mut poster_rect = RECT::default();
+        let poster_rect_available = match unsafe { GetWindowRect(hwnd, &mut poster_rect) } {
+            Ok(()) => true,
+            Err(_error) => false,
+        };
+        let mut request_error = (!poster_rect_available)
+            .then(|| "failed to read the restored poster rectangle".to_string());
 
-        if should_try_workerw && select_workerw(&windows).is_none() {
-            if let Err(error) = request_workerw() {
-                request_error = Some(error);
-            }
-            windows = shell_windows();
-        }
+        // Do not ask Explorer to create a hidden WorkerW. Only attach to an already visible,
+        // stable candidate that covers the restored poster rectangle; otherwise use ToolWindow.
 
         let workerw_detected = windows.iter().any(|window| window.is_workerw);
-        if should_try_workerw {
-            if let Some(workerw) = select_workerw(&windows) {
+        if should_try_workerw && poster_rect_available {
+            if let Some(workerw) = select_workerw(&windows, &poster_rect) {
                 match attach_to_workerw(hwnd, workerw) {
                     Ok(()) => {
                         TOOL_WINDOW_FALLBACK_ACTIVE.store(false, Ordering::Release);
@@ -750,6 +778,8 @@ mod platform {
         TOOL_WINDOW_FALLBACK_ACTIVE.store(fallback_error.is_none(), Ordering::Release);
         let reason = if disabled_by_environment {
             Some("DESKTOP_UP_DISABLE_WORKERW requested the safe fallback".to_string())
+        } else if !enabled_by_environment {
+            Some("safe ToolWindow fallback is the default on this host".to_string())
         } else if !prefer_workerw {
             Some("caller requested the safe fallback".to_string())
         } else {
@@ -811,13 +841,53 @@ mod platform {
         // After a successful SetWindowRgn call, Windows owns the region handle.
         Ok(())
     }
+
+    #[cfg(test)]
+    mod tests {
+        use super::rect_contains;
+        use windows::Win32::Foundation::RECT;
+
+        #[test]
+        fn workerw_rectangle_must_fully_contain_the_poster() {
+            let primary_workerw = RECT {
+                left: 0,
+                top: 0,
+                right: 2560,
+                bottom: 1440,
+            };
+            let secondary_poster = RECT {
+                left: 3000,
+                top: 400,
+                right: 3490,
+                bottom: 792,
+            };
+            assert!(!rect_contains(&primary_workerw, &secondary_poster));
+        }
+
+        #[test]
+        fn virtual_desktop_rectangle_can_contain_a_secondary_poster() {
+            let virtual_desktop_workerw = RECT {
+                left: 0,
+                top: 0,
+                right: 4480,
+                bottom: 1443,
+            };
+            let secondary_poster = RECT {
+                left: 3000,
+                top: 400,
+                right: 3490,
+                bottom: 792,
+            };
+            assert!(rect_contains(&virtual_desktop_workerw, &secondary_poster));
+        }
+    }
 }
 
 #[cfg(target_os = "windows")]
 pub use platform::{
     apply_interaction_region, capture_poster_window_placement, configure,
-    install_shell_foreground_monitor, restore_poster_placement, restore_poster_window_placement,
-    set_poster_visibility_intent,
+    install_shell_foreground_monitor, placement_recovery_in_progress, restore_poster_placement,
+    restore_poster_window_placement, set_poster_visibility_intent,
 };
 
 #[cfg(not(target_os = "windows"))]
@@ -837,6 +907,11 @@ pub fn install_shell_foreground_monitor(_window: &tauri::WebviewWindow) -> Resul
 
 #[cfg(not(target_os = "windows"))]
 pub fn set_poster_visibility_intent(_visible: bool) {}
+
+#[cfg(not(target_os = "windows"))]
+pub fn placement_recovery_in_progress() -> bool {
+    false
+}
 
 #[cfg(not(target_os = "windows"))]
 pub fn restore_poster_placement(

@@ -6,7 +6,7 @@
 
 ## 1. 设计目标
 
-为大幅面海报提供可切换、可定制的模板渲染系统。模板引擎负责：加载模板文件 → 解析 CSS 变量注入点 → 渲染 HTML 结构 → 注入用户参数覆盖 → 隔离模板间样式。
+为大幅面海报提供可切换、可定制的模板渲染系统。模板引擎负责：加载模板文件 → 解析 CSS 变量注入点 → 为每张海报挂载独立 Shadow Root → 渲染模板 HTML 与自制 DOM 标题栏 → 注入用户参数覆盖 → 隔离模板结构和样式。跨文档默认值与关键决策以 [`DESKTOPUP_V1_DESIGN_BASELINE.md`](DESKTOPUP_V1_DESIGN_BASELINE.md) 为准。
 
 ## 2. 实现位置决策
 
@@ -40,8 +40,25 @@
     → Rust: 读取模板文件
     → Rust: 安全扫描 CSS/HTML (每次加载都扫，不信任磁盘)
     → Rust: 返回 { html, css, schema, assets } 给前端
-    → 前端 JS: 解析 HTML 插槽 → 注入 CSS 变量 → 应用用户覆盖 → 渲染
+    → 前端 JS: 为 poster host 获取或创建独立 shadowRoot
+    → 在 shadowRoot 内解析插槽、注入模板样式和 --tpl-* 参数
+    → 应用用户覆盖并渲染自制 DOM 标题栏、图标与状态区域
 ```
+
+每张海报的宿主结构固定为：
+
+```text
+Poster host element                 ← 宿主拥有原生命中、状态与错误边界
+└─ shadowRoot                       ← 模板结构与样式的主隔离边界
+   ├─ <style data-template-style>
+   ├─ template DOM
+   │  ├─ custom title bar           ← 标题/模板/数量/收起/锁定同一行
+   │  ├─ icon slot
+   │  └─ status/decor slots
+   └─ <style data-user-override>
+```
+
+Shadow Root 在海报 host 生命周期内只创建一次。模板热切换只原子替换其内部模板 DOM、模板样式和用户覆盖，不重建 WebView，也不以 CSS 前缀替代 Shadow DOM 隔离。
 
 ## 3. 模板渲染引擎（前端 JS 侧）
 
@@ -69,10 +86,17 @@ interface TemplateBundle {
 ```html
 <!-- template.html 示例 (Neon HUD) -->
 <div class="poster tpl-neon-hud" data-template="neon-hud">
-  <!-- 标题插槽 -->
-  <header class="tpl-title-area" data-slot="title">
-    <h1 class="tpl-title-text">{{poster.title}}</h1>
-    <span class="tpl-title-count">{{poster.item_count}} GAMES</span>
+  <!-- 自制 DOM 标题栏；信息和控制按钮必须同一行 -->
+  <header class="tpl-title-area" data-slot="title" data-poster-titlebar>
+    <div class="tpl-title-meta">
+      <span class="tpl-template-name">{{template.name}}</span>
+      <h1 class="tpl-title-text">{{poster.title}}</h1>
+      <span class="tpl-title-count">{{poster.item_count}} GAMES</span>
+    </div>
+    <div class="tpl-title-controls">
+      <button type="button" data-poster-action="toggle-collapse">收起/展开</button>
+      <button type="button" data-poster-action="toggle-lock">锁定/解锁</button>
+    </div>
   </header>
 
   <!-- 图标网格插槽 -->
@@ -100,7 +124,9 @@ interface TemplateBundle {
 插槽规则：
 - `data-slot="name"` 标记可被用户深度 3 覆盖的区域
 - 没有 `data-slot` 的元素始终使用模板默认值——用户无法替换
-- 用户覆盖时：替换整个 `data-slot` 元素的 innerHTML，保留元素的 `data-slot` 属性和 class
+- 用户覆盖时：替换允许区域的 innerHTML，保留元素的 `data-slot` 属性和 class
+- 标题栏必须保留 `data-poster-titlebar`、`toggle-collapse` 与 `toggle-lock` 三个受保护节点；覆盖只能改变信息区和视觉，不能删除、换行分离或改写按钮语义
+- 未锁定 USING 下只允许从标题栏空白区开始拖动；按钮、链接、标题文字及带 `data-no-poster-drag` 的节点必须排除，锁定后整个标题栏不再产生拖动命令
 - `{{ }}` 内的表达式只支持简单变量访问（`.title`、`.item_count`）和三元表达式（`a ? b : c`），不支持函数调用、循环或任意 JS
 
 ### 3.3 CSS 变量注入点
@@ -147,28 +173,41 @@ interface TemplateBundle {
 
 用户在 `params-schema.json` 中声明的 `cssProperty` 字段自动映射——参数面板的滑块值经过 `cssTransform` 计算后写入对应 CSS 变量。
 
-### 3.4 模板间样式隔离
+### 3.4 模板间结构与样式隔离
 
-不使用 Shadow DOM（会增加复杂性和性能开销）。采用**严格的 CSS 命名空间约定 + 前缀系统**：
+V1 采用 **Shadow DOM 作为主隔离边界**。每张海报 host 创建一个独立 Shadow Root，模板 DOM、模板样式和用户覆盖只存在于该 Shadow Root 内。
 
 ```text
-1. 模板 CSS 所有选择器以 .tpl-{key} 为根（如 .tpl-neon-hud）
-2. 海报容器只挂一个模板类（如 class="poster tpl-neon-hud"）
-3. 用户 CSS 覆盖注入在 .tpl-{key} 命名空间内
-4. 热切换时：移除旧的模板类，添加新的模板类 → CSS 自动切换
-5. 全局海报样式 (poster-surface.css) 不包含任何模板相关规则
+Poster host
+└─ shadowRoot
+   ├─ template style
+   ├─ template DOM
+   ├─ custom title bar
+   ├─ icon slot
+   └─ status/decor slots
 ```
+
+约束：
+
+1. 模板 CSS 不得注入 document 级 `<style>`，也不得依赖 `:root` 污染宿主页面；
+2. `--tpl-*` 继续作为模板内部参数命名约定，但不是隔离手段；
+3. 默认值和用户覆盖均注入所属 Shadow Root 的 host 或模板根；
+4. 用户 CSS 与 HTML 插槽覆盖只能作用于所属 Shadow Root；
+5. 宿主页面只负责窗口命中、暂停、拖动命令、错误边界和跨模板状态；
+6. 模板视觉可使用 `.tpl-{key}` 作为内部可读前缀，但不能用它替代 Shadow DOM。
 
 切换模板时的清理顺序：
+
 ```text
-1. 移除旧模板类的所有注入 CSS 变量（从 :root 或容器上）
-2. 移除旧模板类
-3. 添加新模板类
-4. 注入新模板的 CSS 变量（默认值 → 用户覆盖）
-5. 如果用户对该模板有保存的参数覆盖，应用它们
+1. 保存当前 ThemeInstance 参数快照
+2. 在离屏 DocumentFragment 中构建新模板 DOM 与样式
+3. 注入模板默认参数和用户覆盖
+4. 验证必需插槽与自制标题栏契约
+5. 原子替换 Shadow Root 内部内容
+6. 释放旧模板资源并重新计算图标布局
 ```
 
-这种方式比 Shadow DOM 更快（无需创建 shadow root 和重建样式计算），且在海报这个上下文中——只有一个模板在运行时活跃——没有跨模板样式泄漏的实际风险。
+Shadow Root 在海报 host 生命周期内只创建一次；热切换不重建 WebView。
 
 ### 3.5 热切换生命周期
 
@@ -179,10 +218,9 @@ interface TemplateBundle {
       否 → invoke('get_template_bundle', { template_id })
             → Rust 返回 bundle
   → 前端：保存当前 TemplateInstance 的参数覆盖快照（用于撤销）
-  → 前端：清理旧模板 CSS 变量
-  → 前端：切换 CSS 类
-  → 前端：注入新模板 CSS 变量
-  → 前端：渲染新模板 HTML 插槽（仅替换变化的部分）
+  → 前端：在离屏 DocumentFragment 中构建新模板 DOM 与 style
+  → 前端：向所属 Shadow Root 注入新模板 CSS 变量
+  → 前端：验证标题栏与必需插槽后原子替换 Shadow Root 内容
   → 布局引擎：重新计算图标网格（因为容器尺寸可能变化）
   → 控制中心预览画布同步更新
   → 用户点击保存 → invoke('set_theme_instance', { poster_id, theme_instance })
@@ -287,16 +325,18 @@ interface TemplateBundle {
 |------|------|------|
 | 模板首次加载 | < 50ms | 从磁盘读取 + JSON 解析 + 安全扫描 |
 | CSS 变量注入 | < 5ms | 设置 CSS custom properties |
-| 模板热切换 | < 200ms | CSS 类切换 + 变量注入 + 图标容器重建 |
+| 模板热切换 | < 200ms | Shadow Root 内部原子替换 + 变量注入 + 图标容器重建 |
 | 海报收起/展开过渡 | 250ms | CSS transition，不由模板引擎控制 |
 | 模板文件缓存 | 首次加载后常驻 | 前端保持 TemplateBundle 在内存中 |
 
-模板切换时不重建 WebView——只替换 CSS 类和 DOM 内容。
+模板切换时不重建 WebView，也不重新创建海报 Shadow Root——只原子替换 Shadow Root 内部模板 DOM、style 和参数。
 
 ## 6. 文件系统布局
 
 ```text
 app/templates/                          ← 内置模板，随应用打包
+├── transparent-default/                ← 默认透明低焦点模板（暂名）
+│   └── ...（完整模板结构）
 ├── neon-hud/
 │   ├── manifest.json
 │   ├── params-schema.json
@@ -312,6 +352,8 @@ app/templates/                          ← 内置模板，随应用打包
 │       └── border-overlay.svg
 ├── cinema-lightbox/
 │   └── ...（同上结构）
+├── minimal-fallback/                   ← 独立安全回退，不作为正常默认模板
+│   └── ...（最小内置结构）
 └── _builtin_index.json                ← 内置模板注册表
 
 %LOCALAPPDATA%/DesktopUp/themes/       ← 用户导入的模板
@@ -338,13 +380,14 @@ app/templates/                          ← 内置模板，随应用打包
 |------|------|------|
 | TE-1 | `manifest.json` 和 `params-schema.json` schema 冻结 | 无 |
 | TE-2 | Rust 侧模板导入校验链 | TE-1 |
-| TE-3 | 前端 JS 模板渲染引擎（插槽 + CSS 变量注入） | TE-1 |
-| TE-4 | 热切换生命周期 | TE-2 + TE-3 |
-| TE-5 | Neon HUD 模板完整 CSS/HTML | TE-3 + GAP-05 视觉设计 |
-| TE-6 | Cinema Lightbox 模板完整 CSS/HTML | TE-3 + GAP-05 视觉设计 |
+| TE-3 | 前端 Shadow DOM 模板渲染引擎（插槽 + CSS 变量注入） | TE-1 |
+| TE-4 | Transparent Default 与独立 minimal-fallback | TE-2 + TE-3 |
+| TE-5 | Neon HUD、Cinema Lightbox 与热切换生命周期 | TE-3 + 视觉规格 |
+| TE-6 | 完整模板包校验、原子安装/注册、失败回滚与卸载迁移 | TE-2 + TE-3 |
 
 ## 修订记录
 
 | 日期 | 版本 | 内容 |
 | --- | --- | --- |
-| 2026-08-03 | V0.1 | 建立模板引擎技术设计：方案 C（Rust 校验 + JS 渲染）、插槽语法、CSS 变量注入、命名空间隔离、热切换、manifest schema、安全校验链 |
+| 2026-08-03 | V0.1 | 建立模板引擎技术设计：方案 C（Rust 校验 + JS 渲染）、插槽语法、CSS 变量注入、热切换、manifest schema、安全校验链 |
+| 2026-08-04 | V1 对齐 | 冻结 Shadow DOM 主隔离、Shadow Root 内参数与覆盖注入、原子热切换，并关联完整模板安装 |

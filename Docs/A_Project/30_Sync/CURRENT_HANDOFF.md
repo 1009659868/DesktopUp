@@ -2,7 +2,7 @@
 
 最后更新：2026-08-04
 
-状态：`ACTIVE AT A0`
+状态：`ACTIVE AT V1-P0 / DESKTOP HOST GATE`
 
 ## 已建立
 
@@ -18,7 +18,8 @@
 - [`快捷方式导入与安全收纳模型 V0.1`](../10_Plan/SHORTCUT_IMPORT_AND_COLLECTION_MODEL_V0.1.md) 已排入 A1：主动导入/扫描后先预览，再由用户选择仅添加或安全收纳；收纳共用恢复账本、撤销与卸载恢复。
 - 已完成 A0 表面角色代码对齐：冷启动只显示海报，控制中心由托盘或第二实例按需呼出，关闭后不影响海报。
 - 已记录主页与收纳窗后续改为米白、清新风；视觉制作延后到核心功能硬门完成后。
-- 已接受并登记 [`海报视觉与交互重设计 V0.1`](../10_Plan/POSTER_REDESIGN_V0.1.md)：大幅面海报（默认约 1/4 屏宽近满高）、基于启动频率的对数动态缩放（50%–300%）、Neon HUD 和 Cinema Lightbox 为首批模板、WebView2 DefaultBackgroundColor 为亮带根治方案。
+- [`DesktopUP V1 目标设计基线`](../10_Plan/DESKTOPUP_V1_DESIGN_BASELINE.md) 已建立；已冻结 Transparent Default（暂名）+ Neon HUD + Cinema Lightbox 三模板、主屏右侧、默认解锁展开、USING 自制标题栏拖动、Shadow DOM、完整模板安装和单全局宿主；上述均尚未实现和验证；
+- [`DesktopUP V1 落地推进计划`](../10_Plan/DESKTOPUP_V1_IMPLEMENTATION_PLAN.md) 已成为唯一活跃 A 实施计划，拆分为 9 个 B 模块和 33 个 C 工作流；旧 `PROJECT_MAINLINE.md` 与 `DELIVERY_PLAN_V0.1.md` 已冻结。
 - 已建立 WorkerW 安全适配与 ToolWindow 自动回退诊断；本机无可见 WorkerW，当前采用已验证回退，不强挂隐藏 Shell 窗口。
 - 单海报透明边界、按钮/拖动与桌面输入人工矩阵已经通过，C-DHF-03 完成。
 - C-DHF-04 已实现原生位置持久化、显示器工作区锚点和显示/Shell 事件恢复基础；重启恢复与模拟离屏拉回通过，真实 Win+D、Explorer、多屏和 DPI 矩阵仍待完成。
@@ -29,12 +30,12 @@
 - 尚未完成 C-DHF-04 真实 Explorer/显示器恢复矩阵与全屏暂停硬门；
 - M1 海报重构代码已重置为 `PLANNED`，尚未通过大幅面、模板、状态机、透明背景和 Release 实机验收；
 - 技术架构仍为 `PROPOSED`，需通过 A0 原型决定；
-- 产品名、品牌图标和默认视觉主题尚未冻结；
+- 产品暂名为 `DesktopUP`，品牌图标和 Transparent Default 的正式名称/完整视觉规格尚未冻结；AI 低风险免确认范围仍为 `TBD`；
 - 尚未生成 `DesktopUpSetup.exe` 或 `uninstall.exe`。
 
 ## 下一动作
 
-当前先在 `impl/poster-redesign-V1` 建立可测试的 M1 契约与最小海报切片，再按硬门逐项实施；C-DHF-04/C-DHF-05 的真实环境矩阵仍保持未完成，不因重做海报层而视为通过。精确状态见 [`Desktop Host Feasibility 当前交接`](../../C_Workstreams/DesktopHostFeasibility/30_Sync/CURRENT_HANDOFF.md)。
+当前唯一动作是继续完成 C-DHF-04 与 C-DHF-05，再推进 C-DHF-06、07、08。关闭 V1-P0 后激活 `C-PCB Poster Contract Baseline`；此前只允许准备契约草案，不得标记海报核心实现通过。精确状态见 [`Desktop Host Feasibility 当前交接`](../../C_Workstreams/DesktopHostFeasibility/30_Sync/CURRENT_HANDOFF.md)。
 
 A1 真实快捷方式能力保持排队状态，在上述 A0 硬门通过前不得开始扫描或移动用户桌面文件。
 

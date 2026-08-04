@@ -49,9 +49,10 @@ A/B/C 是决策与执行层级，不等同于源码目录。一个 B 能力可�
 
 ### 查看项目方向
 
-1. `A_Project/10_Plan/PROJECT_MAINLINE.md`
-2. `A_Project/10_Plan/PRODUCT_DESIGN_V0.1.md`
-3. `A_Project/10_Plan/DELIVERY_PLAN_V0.1.md`
+1. `A_Project/10_Plan/DESKTOPUP_V1_IMPLEMENTATION_PLAN.md`
+2. `A_Project/10_Plan/DESKTOPUP_V1_DESIGN_BASELINE.md`
+3. `A_Project/00_Catalog/DESIGN_INDEX.md`
+4. 按当前 B/C 活跃链读取对应模块和工作流计划
 
 ### 执行开发任务
 

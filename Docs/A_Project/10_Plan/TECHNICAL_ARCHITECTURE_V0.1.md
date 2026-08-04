@@ -2,7 +2,7 @@
 
 状态：`PROPOSED`
 
-日期：2026-08-03（修订自 2026-08-02 V0.1）
+日期：2026-08-04（V1 修订）
 
 ## 1. 技术栈
 
@@ -48,14 +48,16 @@ uninstall.exe
 - `Control Center`、设置和 Agent 按需创建或显示，不参与桌面宿主挂载；
 - 控制中心中的桌面画布是预览消费者，桌面宿主是已提交状态的运行消费者；
 - 两者共用 `DesktopCommand`、持久状态和事件通道，但不共用窗口焦点、装饰或显隐生命周期；
-- 首选单显示器共享一个宿主并渲染多张海报，不为每张海报常驻独立 WebView2；
+- V1 冻结为一个全局透明宿主承载当前桌面海报；后续多海报仍共享该宿主和渲染环境，不重新开放单全局/每显示器拓扑二选一；
 - 即使控制中心从未创建，托盘、桌面宿主、暂停状态机和恢复协调器仍必须完整工作。
 
 ## 3. 桌面宿主策略
 
-### 3.1 首选模式
+### 3.1 冻结模式
 
-通过独立的 Windows 适配层把无边框、无激活、工具型窗口放置于桌面层。海报区域参与命中测试，透明空白返回鼠标穿透。
+V1 固定使用一个全局透明 WebView2 桌面宿主，通过独立的 Windows 适配层把无边框、无激活、工具型窗口放置于桌面层。当前阶段只在主显示器承载单张海报；后续多海报仍共享该宿主。海报区域参与命中测试，宿主透明空白返回鼠标穿透。
+
+宿主拓扑不再作为 A0/M0 的候选决策。跨显示器坐标、命中区域和 DPI 映射只验证该单全局宿主方案，不以每显示器窗口或每海报 WebView2 作为并列生产候选。
 
 ### 3.2 兼容性边界
 
@@ -63,7 +65,7 @@ Windows 没有为交互式第三方桌面组件提供完整稳定的公开挂载
 
 必须提供回退模式：
 
-- 桌面挂载失败时使用普通 bottom-most 工具窗口；
+- WorkerW 桌面挂载失败时，同一个全局透明宿主切换为可观察的 bottom-most `ToolWindow` 回退，不改变宿主拓扑；
 - Explorer 重启时重新发现桌面窗口并挂载；
 - 连续失败时停止重试并展示恢复提示；
 - 不注入 Explorer，不读取/写入 Explorer 内存；
@@ -210,20 +212,25 @@ Acquire lock
 
 ## 12. 待 A0 验证后冻结的决策
 
-- Tauri WebView 窗口在桌面层的最终挂载与回退实现；
-- 单大窗口和每显示器一窗口的资源/命中测试对比；
+- 单全局透明宿主在桌面层的最终挂载细节，以及 WorkerW 不可用时同宿主 `ToolWindow` 回退的实现；
 - NSIS 定制能否完全满足卸载恢复顺序；必要时使用独立 Rust bootstrap uninstaller；
 - 代码主题采用隔离 WebView、QuickJS 还是 WASM 组件模型；
-- WebView2 Evergreen 缺失时采用在线引导还是固定运行时包。
-- 单全局宿主与每显示器共享宿主的最终拓扑；不考虑每海报一个永久 WebView2 作为默认生产方案。
-- WebView2 `DefaultBackgroundColor` 全透明方案（已在设计层确认，待代码验证）
+- WebView2 Evergreen 缺失时采用在线引导还是固定运行时包；
+- WebView2 `DefaultBackgroundColor` 全透明方案（已在设计层确认，待代码验证）。
 
-## 12-bis. 海报模板与布局引擎（V0.2 新增）
+单全局宿主拓扑本身已经冻结，不属于待选项。
 
-以下架构内容由 [`POSTER_REDESIGN_V0.1`](POSTER_REDESIGN_V0.1.md) 及其配套设计文档定义，本架构文档仅登记关键决策：
+## 12-bis. 海报模板与布局引擎（V1 修订）
 
-- **模板引擎**：Rust 负责导入安全校验（路径穿越、压缩炸弹、脚本检测）+ JS 负责运行时渲染（插槽解析、CSS 变量注入、热切换）。见 [`POSTER_TEMPLATE_ENGINE_V0.1`](POSTER_TEMPLATE_ENGINE_V0.1.md)
-- **样式隔离**：CSS 命名空间前缀（`.tpl-{key}`）+ 类切换，使用 Shadow DOM。见模板引擎 §3.4
+以下架构内容由 [`DESKTOPUP_V1_DESIGN_BASELINE`](DESKTOPUP_V1_DESIGN_BASELINE.md)、[`POSTER_REDESIGN_V0.1`](POSTER_REDESIGN_V0.1.md) 及其配套设计文档定义，本架构文档仅登记关键决策：
+
+- **模板引擎**：Rust 负责导入安全校验（路径穿越、压缩炸弹、脚本检测）+ JS 负责运行时渲染（插槽解析、参数注入、热切换）。见 [`POSTER_TEMPLATE_ENGINE_V0.1`](POSTER_TEMPLATE_ENGINE_V0.1.md)
+- **样式隔离**：每张海报模板挂载到独立 Shadow Root；模板结构、样式和用户 CSS 以 Shadow DOM 为主要隔离边界，不依赖 `.tpl-{key}` 命名空间承担主隔离职责。
+- **模板参数**：`--tpl-*` 只作为 Shadow Root 内部的模板参数命名约定，用于 schema、参数面板和渲染输入映射，不是跨模板 CSS 隔离机制。
+- **首发模板**：M1 内置 `transparent-default` 默认模板、`neon-hud` 和 `cinema-lightbox`；默认模板与独立的 `minimal-fallback` 安全回退分离。
+- **完整模板安装**：M1 必须支持包含 `manifest.json`、`params-schema.json`、`template.html`、`template.css`、`presets/` 和 `assets/` 的完整模板包安全校验、原子安装、注册与失败回滚。
+- **默认海报**：新海报创建在主显示器工作区右侧，锚定 `top-right`，初始状态为 `EXPANDED + USING + ACTIVE_STATIC + unlocked`。
+- **自制标题栏**：模板内 DOM 标题栏不得使用 Windows 原生标题栏；未锁定时 `USING`/`EDITING` 均允许从标题栏空白区域拖动，收起/展开与锁定按钮保持同行且必须排除在拖动命中区外。
 - **布局引擎**：行式弹性流 + 子列填充，运行在 WebView JS 侧，输入为排序后的图标列表 + 容器宽度，输出为确定性坐标。见 [`POSTER_LAYOUT_AND_SORT_V0.1`](POSTER_LAYOUT_AND_SORT_V0.1.md)
 - **数据模型**：V2 模型（PosterTemplate、ThemeInstance、扩大 Poster/CollectionItem、PosterItemPinned）。见 [`POSTER_DATA_MODEL_V2`](POSTER_DATA_MODEL_V2.md)
 - **海报状态机**：三维正交模型（呈现 × 交互 × 运行时 + 锁定属性），不与宿主暂停状态机耦合。见 [`POSTER_STATE_MACHINE_V0.1`](POSTER_STATE_MACHINE_V0.1.md)
@@ -290,3 +297,4 @@ AI 调用与手动 UI 共用 `DesktopCommand`、`ChangePlan`、预览和撤销�
 | 2026-08-02 | V0.1 | 建立首版架构、数据、安全、宿主和卸载方案 |
 | 2026-08-02 | V0.1 | 增加原生托盘快捷菜单与本地 BYOK AI Provider 架构 |
 | 2026-08-02 | V0.1 | 固化桌面收纳层默认可见、控制中心按需独立的运行表面边界 |
+| 2026-08-04 | V1 | 对齐 `DESKTOPUP_V1_DESIGN_BASELINE`：冻结单全局透明宿主及同宿主回退；以 Shadow DOM 为模板主隔离，明确 `--tpl-*` 仅为内部参数约定；冻结三套 M1 模板、默认海报几何/状态、自制标题栏拖动和完整模板包安装 |

@@ -6,11 +6,13 @@
 
 ## 1. 概述
 
-本文档覆盖 GAP-09（错误降级）和 GAP-10（空状态与首次使用）。定义了海报在异常情况和空数据场景下应呈现的视觉和交互行为。
+本文档覆盖 GAP-09（错误降级）和 GAP-10（空状态与首次使用）。定义了海报在异常情况和空数据场景下应呈现的视觉和交互行为。跨文档默认值与关键决策以 [`DESKTOPUP_V1_DESIGN_BASELINE.md`](DESKTOPUP_V1_DESIGN_BASELINE.md) 为准。
 
 ---
 
 ## 2. 错误降级
+
+`minimal-fallback` 是宿主级安全回退，不是用户正常创建海报时使用的默认模板；正常默认模板为 `transparent-default`（暂名）。进入 fallback 不得覆盖用户保存的模板选择。
 
 ### 2.1 模板 CSS 加载/解析失败
 
@@ -187,7 +189,7 @@ minimal-fallback 模板
 
 这里的"首次启动"指的是新用户的**首次使用流程**（来自 `PRODUCT_DESIGN_V0.1` §6），与海报重构的关联：
 
-1. 安装完成 → 创建默认海报（Neon HUD，空游戏）→ 以 EXPANDED 态显示
+1. 安装完成 → 在主显示器右侧创建默认海报（Transparent Default 暂名，空游戏，unlocked）→ 以 EXPANDED 态显示
 2. 海报显示空状态引导（§3.2）
 3. 用户拖入第一个快捷方式 → 引导消失 → 游戏以 `default_scale`（150%）显示
 4. 首次启动完成后，`is_first_launch = false`，后续冷启动以 COLLAPSED 或 EXPANDED 取决于上次状态
@@ -203,3 +205,4 @@ minimal-fallback 模板
 | 日期 | 版本 | 内容 |
 | --- | --- | --- |
 | 2026-08-03 | V0.1 | 建立错误降级（CSS/HTML/图标/数据/WebView）+ 空状态设计 + 首次引导 |
+| 2026-08-04 | V1 对齐 | 区分 Transparent Default 正常默认模板与 minimal-fallback 安全回退，并同步默认右侧/解锁/展开 |

@@ -2,7 +2,9 @@
 
 最后更新：2026-08-03
 
-状态：`COMPLETE`
+状态：`SUPERSEDED`
+
+> 本清单记录 2026-08-03 的旧设计收口结果。V1 已重新打开模板隔离、默认模板、宿主拓扑、默认状态和完整模板安装等决策，当前权威入口为 [`DESKTOPUP_V1_DESIGN_BASELINE.md`](DESKTOPUP_V1_DESIGN_BASELINE.md)。
 
 ## 概述
 

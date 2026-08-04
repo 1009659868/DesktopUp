@@ -6,6 +6,6 @@
 2. [`TASK_INDEX.md`](../00_Catalog/TASK_INDEX.md)
 3. [`CURRENT_HANDOFF.md`](CURRENT_HANDOFF.md)
 4. [`CODE_ANCHORS.md`](../00_Catalog/CODE_ANCHORS.md)
-5. 最近一份 [`20_Log`](../20_Log/2026-08/2026-08-03_tray_pause_state_preservation.md)
+5. 最近一份 [`20_Log`](../20_Log/2026-08/2026-08-04_cdhf04_05_real_matrix_round1.md)
 
-接手后从 `C-DHF-01` 开始，不得跳过环境基线直接声称桌面宿主可用。
+接手后保留 `C-DHF-01..03` 的已验证结论，从首个未完成任务 `C-DHF-04` 与 `C-DHF-05` 继续；不得重跑后抹去历史证据，也不得跳过真实矩阵直接声称桌面宿主可用。

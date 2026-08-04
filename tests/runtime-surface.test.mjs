@@ -60,8 +60,9 @@ test("control center remains available through explicit native entry points", ()
 test("WorkerW attachment is isolated behind an observable ToolWindow fallback", () => {
   assert.match(desktopHostAdapter, /fn attach_to_workerw/);
   assert.match(desktopHostAdapter, /fn configure_tool_window_fallback/);
-  assert.match(desktopHostAdapter, /WORKERW_REQUEST_TIMEOUT_MS/);
+  assert.doesNotMatch(desktopHostAdapter, /WORKERW_REQUEST_TIMEOUT_MS|SendMessageTimeoutW/);
   assert.match(desktopHostAdapter, /DESKTOP_UP_DISABLE_WORKERW/);
+  assert.match(desktopHostAdapter, /DESKTOP_UP_ENABLE_WORKERW/);
   assert.match(desktopHostAdapter, /GW_HWNDPREV/);
   assert.match(rustShell, /desktop_host_diagnostics/);
   assert.match(rustShell, /桌面挂载：正在初始化/);
@@ -101,9 +102,40 @@ test("poster placement persists a monitor-relative anchor and restores inside wo
   assert.match(desktopHostAdapter, /EnumDisplayMonitors/);
   assert.match(desktopHostAdapter, /MONITORINFOEXW/);
   assert.match(desktopHostAdapter, /restore_poster_placement/);
+  assert.match(rustShell, /POSTER_PLACEMENT_CAPTURE_ENABLED/);
+  assert.match(rustShell, /WindowEvent::Moved\(_\)[\s\S]*?Ordering::Acquire/);
+  assert.match(rustShell, /placement_recovery_in_progress/);
+  assert.match(desktopHostAdapter, /PLACEMENT_RECOVERY_GENERATION/);
   assert.match(rustShell, /WindowEvent::ScaleFactorChanged/);
   assert.match(rustShell, /app_config_dir/);
   assert.match(posterSurface, /window\.addEventListener\("resize", scheduleNativeSurfaceSync\)/);
+});
+
+test("WorkerW attachment rejects a parent that would clip a restored secondary-screen poster", () => {
+  assert.match(desktopHostAdapter, /fn rect_contains/);
+  assert.match(desktopHostAdapter, /fn workerw_covers_poster_rect/);
+  assert.match(desktopHostAdapter, /poster_monitor == workerw_monitor/);
+  assert.match(
+    desktopHostAdapter,
+    /WorkerW candidate does not cover the restored poster screen rectangle/,
+  );
+
+  const coverageCheck = desktopHostAdapter.indexOf(
+    "if !workerw_covers_poster_rect(workerw, &screen_rect)",
+  );
+  const reparent = desktopHostAdapter.indexOf("SetParent(hwnd, Some(workerw))");
+  assert.ok(coverageCheck >= 0, "WorkerW coverage must be checked");
+  assert.ok(reparent >= 0, "WorkerW attachment must still reparent the poster");
+  assert.ok(
+    coverageCheck < reparent,
+    "coverage must be validated before the poster becomes a WorkerW child",
+  );
+  assert.match(desktopHostAdapter, /configure_tool_window_fallback/);
+  assert.doesNotMatch(
+    desktopHostAdapter,
+    /SendMessageTimeoutW|WORKERW_REQUEST_MESSAGE|0x052C/,
+    "the host must not force Explorer to create a hidden WorkerW",
+  );
 });
 
 test("fullscreen lock and display-off pause through event-driven runtime policy", () => {

@@ -2,7 +2,10 @@ mod desktop_host;
 mod placement;
 mod runtime_monitor;
 
-use std::sync::Mutex;
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Mutex,
+};
 
 use desktop_host::DesktopHostDiagnostics;
 use placement::PlacementStore;
@@ -17,6 +20,8 @@ use tauri::{
     webview::PageLoadEvent,
     Emitter, Manager, State, WindowEvent,
 };
+
+static POSTER_PLACEMENT_CAPTURE_ENABLED: AtomicBool = AtomicBool::new(false);
 
 struct RuntimeState(Mutex<RuntimeSnapshot>);
 
@@ -280,6 +285,7 @@ fn configure_poster_host(
     let window = app
         .get_webview_window("poster")
         .ok_or_else(|| "poster window is unavailable".to_string())?;
+    POSTER_PLACEMENT_CAPTURE_ENABLED.store(false, Ordering::Release);
     let diagnostics = desktop_host::configure(&window, prefer_workerw);
     if let Some(placement) = app
         .try_state::<PlacementStore>()
@@ -290,6 +296,7 @@ fn configure_poster_host(
         }
     }
     let _ = window.set_title("");
+    POSTER_PLACEMENT_CAPTURE_ENABLED.store(true, Ordering::Release);
 
     let updated = if let Some(state) = app.try_state::<RuntimeState>() {
         if let Ok(mut snapshot) = state.0.lock() {
@@ -537,7 +544,10 @@ pub fn run() {
         .on_window_event(|window, event| {
             if window.label() == "poster" {
                 match event {
-                    WindowEvent::Moved(_) => {
+                    WindowEvent::Moved(_)
+                        if POSTER_PLACEMENT_CAPTURE_ENABLED.load(Ordering::Acquire)
+                            && !desktop_host::placement_recovery_in_progress() =>
+                    {
                         if let Ok(placement) = desktop_host::capture_poster_window_placement(window)
                         {
                             if let Some(store) = window.try_state::<PlacementStore>() {
@@ -545,6 +555,7 @@ pub fn run() {
                             }
                         }
                     }
+                    WindowEvent::Moved(_) => {}
                     WindowEvent::ScaleFactorChanged { .. } => {
                         if let Some(placement) = window
                             .try_state::<PlacementStore>()

@@ -1,8 +1,10 @@
 # Desktop-Up 制作与交付计划 V0.2
 
-状态：`PROPOSED`
+状态：`SUPERSEDED`
 
-日期：2026-08-03
+> 本制作计划冻结于 2026-08-04，不再作为任务状态或实施顺序依据。V1 当前唯一 A 层实施计划为 [`DESKTOPUP_V1_IMPLEMENTATION_PLAN.md`](DESKTOPUP_V1_IMPLEMENTATION_PLAN.md)。本文保留用于追溯旧 M0–M6 划分；全部未完成事项已迁移，不代表取消或完成。
+
+日期：2026-08-04（V1 修订）
 
 ## 1. 变更说明（自 V0.1）
 
@@ -28,13 +30,13 @@
 
 - Rust/Tauri/Svelte 最小工程；
 - 通知区域图标、原生右键菜单骨架和单实例；
-- 透明桌面宿主原型；
+- 单全局透明桌面宿主原型，以及 WorkerW 不可用时同宿主 `ToolWindow` 回退；
 - 一张可点击、可拖动的假数据海报；
 - 全屏与锁屏暂停探针；
 - 关闭主页隐藏到托盘、显式退出结束进程的生命周期探针；
 - 性能采样脚本和兼容性记录。
 
-阶段门：`C-DHF-01..08` 全部通过。任何硬门失败都必须先选择修正、回退模式或技术栈调整，不能直接进入海报重构。
+阶段门：`C-DHF-01..08` 全部通过，其中 C-DHF-08 验证已冻结的单全局透明宿主及同宿主回退，不再选择单全局/每显示器拓扑。任何硬门失败都必须先选择修正、已定义回退模式或技术栈调整，不能直接进入海报重构。
 
 参考工作量：5–8 个有效开发日（大部分已完成，剩余 C-DHF-04/05 矩阵与 C-DHF-06 性能基线）。
 
@@ -51,19 +53,22 @@
 
 交付：
 
-- 大幅面海报窗体：高度近满工作区（上下 12px），宽度 `max(工作区宽 × 0.22, 280px)`，持久保存；
+- 单全局透明宿主内的大幅面海报：默认位于主显示器右侧，高度近满工作区（上下 12px），宽度 `max(工作区宽 × 0.22, 280px)`，持久保存；
+- 新海报默认 `EXPANDED + USING + ACTIVE_STATIC + unlocked`，不自动收起；
 - WebView2 `DefaultBackgroundColor` 全透明亮带根治（Rust + tauri.conf.json + CSS 三层对齐）；
-- 模板引擎：Rust 校验 + JS 渲染、插槽语法、CSS 变量注入、命名空间隔离、热切换；
-- Neon HUD 和 Cinema Lightbox 两套内置模板完整 CSS/HTML；
+- 模板引擎：Rust 校验 + JS 渲染、插槽语法、Shadow DOM 隔离、CSS 变量注入和热切换；
+- Transparent Default（暂名、默认透明低焦点）、Neon HUD、Cinema Lightbox 三套内置模板；
 - 海报状态机：EXPANDED ↔ COLLAPSED 过渡动画，USING ↔ EDITING 切换，锁定视觉标记，auto_collapse 属性；
 - 暂停覆盖：PAUSED 冻结动画和交互，恢复后回到暂停前呈现模式；
-- 海报交互：标题条拖动、右边缘宽度调整、右键菜单骨架、图标点击启动；
-- 降级回退：模板 CSS/HTML 损坏时使用 minimal-fallback；
+- 海报交互：未锁定时 USING 可拖动自制 DOM 标题栏空白区；锁定/收起按钮同行且排除拖动；编辑态支持宽度调整、右键菜单和图标整理；
+- 降级回退：模板 CSS/HTML 损坏时使用独立 minimal-fallback；
+- 完整模板包安装：校验、预览、原子安装/注册、失败回滚及卸载迁移；
 - 控制中心模板选择器、深度 0 预设切换。
 
 硬门：
 - 大幅面海报透明背景无 10px 亮带残留；
-- 两套模板在 280–420px 宽度范围内渲染正确；
+- 三套首发模板在 280–420px 宽度范围内渲染正确且样式不越出各自 Shadow Root；
+- 完整模板包可原子安装和回滚，卸载模板不会破坏现有海报引用；
 - COLLAPSED ↔ EXPANDED 过渡不闪烁、不跳变；
 - 模板热切换 < 200ms；
 - PAUSED 状态下海报无动画帧、无输入响应；
@@ -87,8 +92,8 @@
 | M1.0 | 契约与测试基线：单一状态源、模板 DOM 边界、窗口几何所有权、失败回退 | **PLANNED** |
 | M1.1 | 大幅面窗口 + 经稳定 API 验证的透明背景方案 | **PLANNED** |
 | M1.2 | 海报 DOM 与状态机：EXPANDED/COLLAPSED、USING/EDITING、锁定、PAUSED | **PLANNED** |
-| M1.3 | 内置模板加载与安全边界；先完成 minimal-fallback，再接 Neon HUD | **PLANNED** |
-| M1.4 | Cinema Lightbox 与模板热切换 | **PLANNED** |
+| M1.3 | Shadow DOM 模板运行时、安全回退与 Transparent Default 默认模板 | **PLANNED** |
+| M1.4 | Neon HUD、Cinema Lightbox、模板热切换与完整模板安装 | **PLANNED** |
 | M1.5 | 交互实现：标题拖动、宽度调整、右键菜单、原生状态同步 | **PLANNED** |
 | M1.6 | 降级、空状态、性能与 Release 实机验收 | **PLANNED** |
 
@@ -270,3 +275,4 @@ artifacts/<version>/
 | --- | --- | --- |
 | 2026-08-02 | V0.1 | 建立从技术验证到安装包交付的首版计划 |
 | 2026-08-03 | V0.2 | 吸收海报重构设计：插入 M1 海报重构、M1→M2 收纳、原 M2–M5 顺延为 M3–M6；新增 Poster Redesign 能力模块；更新关键设计文档引用 |
+| 2026-08-04 | V1 对齐 | 撤回旧 M1 完成结论；冻结单全局宿主、右侧解锁展开、自制标题栏、三模板、Shadow DOM 与完整模板安装验收 |

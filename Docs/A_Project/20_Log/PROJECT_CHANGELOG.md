@@ -2,6 +2,25 @@
 
 本文件只记录项目级已发生事实。局部实现过程进入对应 C 工作流日志。
 
+## 2026-08-04 — 冻结旧制作计划并建立 V1 A/B/C 落地路线
+
+状态：`PLAN BASELINE / ACTIVE`
+
+- 建立 [`DESKTOPUP_V1_IMPLEMENTATION_PLAN.md`](../10_Plan/DESKTOPUP_V1_IMPLEMENTATION_PLAN.md)，作为唯一活跃 A 层实施计划；
+- 将 V1 拆分为 9 个 B 能力模块和 33 个可验证 C 工作流，定义依赖、阶段门、完成信号和证据要求；
+- `PROJECT_MAINLINE.md`、`DELIVERY_PLAN_V0.1.md` 与旧 DesktopRuntimeFoundation `MODULE_PLAN.md` 标记为 `SUPERSEDED`，保留追溯但停止新增任务；
+- C-DHF-01..03 的完成结论和 C-DHF-04..08 的未完成状态原样保留；当前仍从 C-DHF-04/C-DHF-05 推进，不因计划重组跳过硬门；
+- 下一工作流确定为 `C-PCB Poster Contract Baseline`，只能在 C-DHF-08 关闭后激活。
+
+## 2026-08-04 — 建立 V1 总设计基线并冻结关键决策
+
+状态：`DESIGN BASELINE / NOT IMPLEMENTED`
+
+- [`DesktopUP V1 目标设计基线`](../10_Plan/DESKTOPUP_V1_DESIGN_BASELINE.md) 已建立，作为跨文档默认值与关键决策入口；
+- 冻结首发三模板、主显示器工作区右侧、默认解锁并展开、`USING` 状态通过自制标题栏拖动、Shadow DOM 模板隔离、完整模板安装能力和单全局宿主；
+- 上述决策均尚未实现、尚未验证；
+- AI 低风险免确认范围、默认模板正式名、产品正式名和正式图标仍为 `TBD`。
+
 ## 2026-08-04 — 撤回原 M1 封板并建立 V1 重做分支
 
 状态：`RESET / ACTIVE`

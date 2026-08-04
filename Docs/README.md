@@ -14,17 +14,19 @@ Desktop-Up（暂定名）是一个面向 Windows 11 的低资源桌面海报启�
 当前活跃链：
 
 ```text
-A: Desktop-Up 产品主线 / A0 可行性与体验定型
-  -> B: Desktop Runtime Foundation / 桌面运行时基础
-     -> C: Desktop Host Feasibility / 桌面宿主可行性验证
+A: DesktopUP V1 落地计划 / V1-P0 宿主硬门
+  -> B: Desktop Runtime Foundation / 单全局桌面运行时
+     -> C: Desktop Host Feasibility / C-DHF-04 + C-DHF-05
 ```
 
 ## 设计与计划入口
 
+- [DesktopUP V1 落地推进计划](A_Project/10_Plan/DESKTOPUP_V1_IMPLEMENTATION_PLAN.md)（唯一活跃实施路线、B/C 拆分与阶段门）
+- [DesktopUP V1 目标设计基线](A_Project/10_Plan/DESKTOPUP_V1_DESIGN_BASELINE.md)（跨文档目标、默认值与关键决策入口）
 - [产品设计稿 V0.1](A_Project/10_Plan/PRODUCT_DESIGN_V0.1.md)
 - [技术架构设计 V0.1](A_Project/10_Plan/TECHNICAL_ARCHITECTURE_V0.1.md)
-- [项目主线](A_Project/10_Plan/PROJECT_MAINLINE.md)
-- [制作与交付计划 V0.1](A_Project/10_Plan/DELIVERY_PLAN_V0.1.md)
+- [旧项目主线（已冻结）](A_Project/10_Plan/PROJECT_MAINLINE.md)
+- [旧制作与交付计划（已冻结）](A_Project/10_Plan/DELIVERY_PLAN_V0.1.md)
 - [通知区域与快捷访问设计 V0.1](A_Project/10_Plan/TRAY_AND_QUICK_ACCESS_DESIGN_V0.1.md)
 - [运行表面模型 V0.1](A_Project/10_Plan/RUNTIME_SURFACE_MODEL_V0.1.md)
 - [快捷方式导入与安全收纳模型 V0.1](A_Project/10_Plan/SHORTCUT_IMPORT_AND_COLLECTION_MODEL_V0.1.md)

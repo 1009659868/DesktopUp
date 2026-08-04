@@ -39,7 +39,7 @@ PosterTemplate ──→ ThemeInstance ──→ Poster ──→ PosterItem ←
 ```text
 PosterTemplate
 ├── id: String (UUID)                    ← 内部标识
-├── template_key: String                 ← 目录名，如 "neon-hud", "cinema-lightbox"
+├── template_key: String                 ← 目录名，如 "transparent-default", "neon-hud", "cinema-lightbox"
 ├── name: String                         ← 显示名，如 "Neon HUD"
 ├── version: String                      ← 语义版本，如 "1.0.0"
 ├── trust_level: "builtin" | "imported" | "trusted_script"
@@ -50,7 +50,9 @@ PosterTemplate
 └── updated_at: Timestamp
 ```
 
-内置模板（neon-hud, cinema-lightbox）`trust_level = "builtin"`，不经过导入校验链。用户导入的 `trust_level` 由导入时的安全校验结果决定。
+V1 首发内置模板为 `transparent-default`、`neon-hud`、`cinema-lightbox`，三者 `trust_level = "builtin"`，不经过用户导入确认链，但运行时仍执行完整性与安全扫描。新海报的 `ThemeInstance` 默认绑定 `transparent-default`。
+
+`minimal-fallback` 是宿主内置的最小安全回退渲染，不是默认模板、首发可选模板或普通 `PosterTemplate`。它不得与 `transparent-default` 合并，也不出现在常规模板选择器中。
 
 ### 3.2 ThemeInstance（重写）
 
@@ -74,8 +76,9 @@ ThemeInstance
 
 约束：
 - `parameter_overrides` 只存储用户**修改过**的参数；未修改的参数使用 `params-schema.json` 的 `default`
-- `css_override` 在写入前经过 CSS 安全扫描（拦截 `url()` 含 `http/https`、`@import`）
-- `html_slot_overrides` 在写入前经过 HTML 安全扫描（拦截 script、iframe、object）
+- `--tpl-*` 是模板 Shadow Root 内部参数命名约定，不是跨模板隔离手段；参数覆盖只注入所属海报的 Shadow Root
+- `css_override` 在写入前经过 CSS 安全扫描（拦截 `url()` 含 `http/https`、`@import`），并且只能进入所属模板的 Shadow Root
+- `html_slot_overrides` 在写入前经过 HTML 安全扫描（拦截 script、iframe、object），并且只能替换所属 Shadow Root 内允许的插槽
 
 ### 3.3 Poster（扩大）
 
@@ -85,14 +88,15 @@ ThemeInstance
 Poster
 ├── id: String (UUID)
 ├── title: String
-├── monitor_identity: String             ← 所属显示器设备名（当前单显示器固定值）
+├── monitor_identity: String             ← 所属显示器设备名；新海报默认 "primary"
 ├── anchor: "top-left" | "top-right" | "bottom-left" | "bottom-right" | "free"
-├── normalized_rect: { x: f64, y: f64 }  ← 归一化坐标 (0.0–1.0)
-├── width: u32                           ← [新增] 海报宽度 (px)，持久保存
-├── collapsed_state: "expanded" | "collapsed"  ← [变更] 呈现模式，启动默认 EXPANDED
-├── auto_collapse_enabled: bool          ← [新增] 是否启用鼠标离开自动收起
+│                                             新海报默认 "top-right"
+├── normalized_rect: { x: f64, y: f64 }  ← 归一化坐标 (0.0–1.0)，由右上安全边距计算
+├── width: u32                           ← [新增] 海报宽度 (px)，默认 max(工作区宽 × 0.22, 280px)
+├── collapsed_state: "expanded" | "collapsed"  ← [变更] 呈现模式，默认 "expanded"
+├── auto_collapse_enabled: bool          ← [新增] 自动收起开关，默认 false（即 auto_collapse=false）
 ├── auto_collapse_delay_seconds: u32     ← [新增] 自动收起延迟秒数，默认 3
-├── is_locked: bool                      ← [新增] 锁定标记，默认 false
+├── is_locked: bool                      ← [新增] 锁定标记，默认 false（unlocked）
 ├── layout_kind: "grid" | "shelf" | "cards"  ← [暂未使用] A1 排列风格
 ├── theme_instance_id: String (UUID)     ← → ThemeInstance.id
 ├── z_group: u32                         ← [暂未使用] 多海报 Z 序组
@@ -100,12 +104,28 @@ Poster
 └── updated_at: Timestamp
 ```
 
+新建事务必须生成同一份 V1 默认快照：
+
+```text
+monitor_identity = "primary"
+anchor = "top-right"
+collapsed_state = "expanded"       // EXPANDED
+interaction_mode = "using"         // USING，仅运行时，不持久化
+runtime_mode = "active_static"     // ACTIVE_STATIC，仅运行时快照
+is_locked = false                   // unlocked
+auto_collapse_enabled = false       // auto_collapse=false
+template_key = "transparent-default"
+```
+
+默认模板与 `minimal-fallback` 必须分离：正常创建始终绑定 `transparent-default`；只有模板缺失、损坏或无法安全渲染时才由宿主临时进入 `minimal-fallback`，且不得把 fallback 回写为用户选择。
+
 字段变更说明：
 - `collapsed_state`：原为枚举，现映射到状态机的呈现模式维度
 - `width`：新增。高度为工作区计算值，不持久化（显示器变化时重算）
 - `is_locked`：新增。替代原来隐含在交互模式中的锁定概念
 - `auto_collapse_*`：新增。替代原来 "自动隐藏" 伪状态
-- 交互模式（USING/EDITING）不持久化——启动总是 USING
+- 交互模式（USING/EDITING）不持久化——新建与启动总是 USING
+- 运行时模式由宿主快照提供，不写入 `Poster`——新建默认 ACTIVE_STATIC，后续按主题与暂停策略转换
 
 PosterPlacement（独立持久化文件，非数据库）：
 
@@ -263,3 +283,4 @@ PosterItemPinned N ──── 1  PosterItem      N ──── 1  CollectionI
 | 日期 | 版本 | 内容 |
 | --- | --- | --- |
 | 2026-08-03 | V0.1 | 汇总 V2 数据模型：8 个模型 + 计算列 + ER 关系 + 迁移路径 |
+| 2026-08-04 | V1 修订 | 同步 `primary/top-right/EXPANDED/USING/ACTIVE_STATIC/unlocked`、`auto_collapse=false` 与 `transparent-default` 默认值；明确三套首发模板、独立安全 fallback 和 Shadow Root 内部参数边界 |

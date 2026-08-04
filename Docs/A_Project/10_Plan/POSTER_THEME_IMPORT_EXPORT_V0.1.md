@@ -123,13 +123,19 @@ my-neon-hud.theme.zip
 
 ```text
 my-neon-hud.full.zip
-├── manifest.json
-├── params.json
-├── user.css                  ← 深度 3 CSS 覆盖片段
-├── slots/
-│   ├── title.html            ← 标题插槽覆盖
-│   └── status.html           ← 状态栏插槽覆盖
-└── assets/
+├── manifest.json             ← 完整模板元数据与文件清单（必需）
+├── params-schema.json        ← 结构化参数 schema（必需）
+├── template.html             ← 完整模板 DOM（必需）
+├── template.css              ← 完整模板样式（必需）
+├── params.json               ← 当前参数快照（可选）
+├── user.css                  ← 深度 3 CSS 覆盖片段（可选）
+├── slots/                    ← HTML 插槽覆盖（可选）
+│   ├── title.html
+│   └── status.html
+├── presets/                  ← 至少包含完整预设目录（必需，可为空清单但目录必须声明）
+│   ├── neon-cyan.json
+│   └── neon-magenta.json
+└── assets/                   ← 完整模板依赖素材（必需，可为空清单但目录必须声明）
     ├── bg.png
     └── border-overlay.svg
 ```
@@ -151,6 +157,14 @@ my-neon-hud.full.zip
     "trust_required": true
   },
 
+  "template": {
+    "schema": "params-schema.json",
+    "html": "template.html",
+    "css": "template.css",
+    "presets_directory": "presets/",
+    "assets_directory": "assets/"
+  },
+
   "depth3": {
     "css_override": "user.css",
     "html_slot_overrides": {
@@ -166,6 +180,10 @@ my-neon-hud.full.zip
   },
 
   "asset_checksums": {
+    "params-schema.json": "sha256:000...",
+    "template.html": "sha256:001...",
+    "template.css": "sha256:002...",
+    "presets/neon-cyan.json": "sha256:003...",
     "user.css": "sha256:111...",
     "slots/title.html": "sha256:222...",
     "slots/status.html": "sha256:333...",
@@ -177,10 +195,11 @@ my-neon-hud.full.zip
 
 ### 5.3 规则
 
+- 完整主题包必须同时携带并校验 `manifest.json`、`params-schema.json`、`template.html`、`template.css`、`presets/`、`assets/`；缺少任一必需组成、清单引用不闭合或校验和不匹配都拒绝安装
+- `template.html` 与 `template.css` 只允许挂载到每张海报的 Shadow Root；不得注入宿主 document、控制中心或其他海报
 - `meta.trust_required` 由导出时判断：如果模板 `manifest.json` 中 `depth3.script_allowed = true` 且包含脚本，则为 `true`
 - `depth3.scripts` 数组列出脚本文件路径。当前 Ne​on HUD 和 Cinema Lightbox 均为空数组（内置模板不含脚本）
-- `user.css` 是可选的——如果用户没有写 CSS 覆盖，此文件不存在
-- `slots/` 目录也可选——只导出用户实际覆盖过的插槽
+- `params.json`、`user.css` 和 `slots/` 是实例覆盖，可选；它们不能替代完整模板必需文件
 
 ---
 
@@ -213,8 +232,9 @@ my-neon-hud.full.zip
    - 建议用户先更新模板
 
 3. 目标模板不存在：
-   - 导入纯参数快照 (.params.json) 时：提示用户需先安装对应模板
-   - 导入 .theme.zip / .full.zip 时：先安装内嵌模板，再应用参数
+   - 导入纯参数快照 (`.params.json`) 时：提示用户需先安装对应模板
+   - 导入素材包 (`.theme.zip`) 时：拒绝导入并提示其依赖的模板未安装
+   - 导入完整主题包 (`.full.zip`) 时：校验包内完整模板后，将模板、索引和可选实例覆盖作为同一原子事务安装
 ```
 
 ### 6.3 参数迁移 schema 扩展
@@ -274,21 +294,32 @@ my-neon-hud.full.zip
 
 ```
 全部文件校验通过
-  → 复制用户覆盖文件到 %LOCALAPPDATA%/DesktopUp/themes/imported-{uuid}/
-  → 参数覆盖写入 ThemeInstance 表
-  → 素材文件注册到素材缓存
-  → CSS/HTML 覆盖写入 ThemeInstance 表
-  → 生成 ChangePlan 预览 → 用户确认 → 写入
+  → 在隔离暂存目录构造完整模板目录与可选 ThemeInstance
+  → 生成 ChangePlan 预览 → 用户确认
+  → 开启安装事务并记录旧模板索引、目录和引用快照
+  → 原子发布 manifest / schema / template HTML / template CSS / presets / assets
+  → 同一事务注册模板索引、素材、参数和 CSS/HTML 覆盖
+  → 提交后清理暂存目录与旧快照
 
-任一文件校验失败
-  → 列出全部失败项
+校验、复制、注册或提交任一步失败
+  → 回滚模板目录、模板索引、素材注册、ThemeInstance 和海报引用
   → 清除临时目录
-  → 不部分安装
+  → 列出全部失败项
+  → 不留下半安装或半注册状态
 ```
 
 ---
 
-## 8. 导出实现路径
+## 8. 完整模板卸载
+
+卸载完整模板前必须先枚举所有 `ThemeInstance`、海报和预设引用：
+
+1. 生成迁移预览，将引用迁移到默认模板；默认模板不可用时迁移到 `minimal-fallback`；
+2. 用户确认后，在同一事务中提交引用迁移并移除模板索引与模板目录；
+3. 任一引用无法迁移、文件删除失败或事务提交失败时，恢复原引用和模板注册并拒绝卸载；
+4. 禁止先删除模板文件再修复引用，禁止留下悬空 `package_id/package_version`。
+
+## 9. 导出实现路径
 
 导出由前端发起 → Rust 侧执行（文件系统操作不经过 WebView）：
 
@@ -299,8 +330,8 @@ my-neon-hud.full.zip
       2. 构建 params.json（合并 default + overrides）
       3. 构建 manifest.json
       4. 复制素材文件引用到临时目录
-      5. [.full.zip] 导出 CSS/HTML 覆盖文件
-      6. 打包 zip
+      5. [.full.zip] 导出 params-schema.json、template.html、template.css、完整 presets/ 与 assets/，再附加可选 CSS/HTML 覆盖
+      6. 校验完整文件清单与校验和后打包 zip
       7. 写入用户选择的路径（通过系统文件保存对话框）
       8. 返回文件路径给前端
 ```
@@ -310,3 +341,4 @@ my-neon-hud.full.zip
 | 日期 | 版本 | 内容 |
 | --- | --- | --- |
 | 2026-08-03 | V0.1 | 建立三种导出格式的完整规范、版本兼容策略、参数迁移 schema、安全校验链 |
+| 2026-08-04 | V1 对齐 | 完整主题包改为携带模板本体；增加 Shadow DOM 运行边界、原子安装/注册、失败回滚和模板卸载迁移 |
