@@ -73,10 +73,11 @@ mod platform {
                     TranslateMessage, EVENT_OBJECT_CREATE, EVENT_OBJECT_SHOW,
                     EVENT_SYSTEM_FOREGROUND, GWL_EXSTYLE, GWL_STYLE, GW_HWNDPREV, HWND_BOTTOM,
                     HWND_TOP, MSG, OBJID_WINDOW, SWP_ASYNCWINDOWPOS, SWP_FRAMECHANGED,
-                    SWP_NOACTIVATE, SWP_NOSIZE, SWP_NOZORDER, SWP_SHOWWINDOW, SW_SHOWNOACTIVATE,
-                    WINEVENT_OUTOFCONTEXT, WM_DESTROY, WM_DISPLAYCHANGE, WM_DPICHANGED,
-                    WM_SETTINGCHANGE, WS_CAPTION, WS_CHILD, WS_EX_APPWINDOW, WS_EX_TOOLWINDOW,
-                    WS_MAXIMIZEBOX, WS_MINIMIZEBOX, WS_POPUP, WS_SYSMENU, WS_THICKFRAME,
+                    SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SWP_NOZORDER, SWP_SHOWWINDOW,
+                    SW_SHOWNOACTIVATE, WINEVENT_OUTOFCONTEXT, WM_DESTROY, WM_DISPLAYCHANGE,
+                    WM_DPICHANGED, WM_EXITSIZEMOVE, WM_MOVING, WM_SETTINGCHANGE, WS_CAPTION,
+                    WS_CHILD, WS_EX_APPWINDOW, WS_EX_TOOLWINDOW, WS_MAXIMIZEBOX, WS_MINIMIZEBOX,
+                    WS_POPUP, WS_SYSMENU, WS_THICKFRAME,
                 },
             },
         },
@@ -560,6 +561,66 @@ mod platform {
         subclass_id: usize,
         _reference_data: usize,
     ) -> LRESULT {
+        if message == WM_MOVING {
+            // Clamp the drag rectangle to the nearest monitor's work area so the
+            // poster can never be dragged off-screen.
+            if let Some(rect) = (lparam.0 as *mut RECT).as_mut() {
+                let monitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+                if let Some(descriptor) = monitor_descriptor(monitor) {
+                    let window_width = rect.right - rect.left;
+                    let window_height = rect.bottom - rect.top;
+                    let horizontal_span = usable_axis_span(
+                        descriptor.work_area.left,
+                        descriptor.work_area.right,
+                        window_width,
+                    );
+                    let vertical_span = usable_axis_span(
+                        descriptor.work_area.top,
+                        descriptor.work_area.bottom,
+                        window_height,
+                    );
+                    let clamp_left = descriptor.work_area.left;
+                    let clamp_top = descriptor.work_area.top;
+                    let clamp_right = clamp_left + horizontal_span;
+                    let clamp_bottom = clamp_top + vertical_span;
+                    if rect.left < clamp_left {
+                        let offset = clamp_left - rect.left;
+                        rect.left += offset;
+                        rect.right += offset;
+                    } else if rect.left > clamp_right {
+                        let offset = rect.left - clamp_right;
+                        rect.left -= offset;
+                        rect.right -= offset;
+                    }
+                    if rect.top < clamp_top {
+                        let offset = clamp_top - rect.top;
+                        rect.top += offset;
+                        rect.bottom += offset;
+                    } else if rect.top > clamp_bottom {
+                        let offset = rect.top - clamp_bottom;
+                        rect.top -= offset;
+                        rect.bottom -= offset;
+                    }
+                }
+            }
+            return LRESULT(1); // handled — write the (clamped) RECT back
+        }
+        if message == WM_EXITSIZEMOVE {
+            // After the user finishes dragging, re-anchor the poster to the
+            // desktop Z-order layer so it never stays above application windows.
+            if TOOL_WINDOW_FALLBACK_ACTIVE.load(Ordering::Acquire) {
+                let anchor = fallback_z_order_anchor(hwnd);
+                let _ = SetWindowPos(
+                    hwnd,
+                    Some(anchor),
+                    0,
+                    0,
+                    0,
+                    0,
+                    SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_ASYNCWINDOWPOS,
+                );
+            }
+        }
         if matches!(message, WM_DISPLAYCHANGE | WM_DPICHANGED | WM_SETTINGCHANGE) {
             queue_host_recovery();
         } else if message == WM_DESTROY {
