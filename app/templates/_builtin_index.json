@@ -1,4 +1,0 @@
-[
-  { "template_key": "neon-hud", "name": "Neon HUD", "path": "neon-hud", "default_preset": "neon-cyan" },
-  { "template_key": "cinema-lightbox", "name": "Cinema Lightbox", "path": "cinema-lightbox", "default_preset": "lightbox-warm" }
-]

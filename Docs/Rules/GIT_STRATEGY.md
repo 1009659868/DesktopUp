@@ -1,6 +1,6 @@
 # Desktop-Up Git 与分支同步策略
 
-最后检查：2026-08-02
+最后检查：2026-08-04
 
 状态：`ACTIVE`
 
@@ -24,7 +24,7 @@ main ─────────────────────────
 | `impl/<module>-a<stage>` | 一个活跃 B 模块在某 A 阶段的实施 | 每个已验收 C 子项保持独立提交；未经要求不推送 |
 | `feat/*`、`fix/*`、`chore/*` | 短期独立任务 | 原则上 7 天内合并并删除 |
 
-当前实施分支：`impl/desktop-runtime-foundation-a0`。
+当前实施分支：`impl/poster-redesign-V1`。该分支从 `impl/poster-redesign-a0` 的文档基线出发，将实际代码恢复到 M1 落地前状态后重新推进；废弃实现不得直接合回。
 
 ## 2. 创建与同步
 
@@ -34,14 +34,14 @@ main ─────────────────────────
 git fetch origin
 git switch dev/mainline
 git merge --ff-only origin/dev/mainline
-git switch -c impl/desktop-runtime-foundation-a0
+git switch -c impl/poster-redesign-V1
 ```
 
 实施分支同步集成线：
 
 ```powershell
 git fetch origin
-git switch impl/desktop-runtime-foundation-a0
+git switch impl/poster-redesign-V1
 git merge dev/mainline
 ```
 

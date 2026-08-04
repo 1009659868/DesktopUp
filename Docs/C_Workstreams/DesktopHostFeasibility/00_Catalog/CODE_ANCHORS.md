@@ -1,6 +1,6 @@
 # Desktop Host Feasibility 代码锚点
 
-状态：`ACTIVE IMPLEMENTATION`
+状态：`ACTIVE IMPLEMENTATION / M1 RESET BASELINE`
 
 ## 前端 Demo
 
@@ -28,11 +28,12 @@
 - [`src-tauri/icons/app-icon.svg`](../../../../src-tauri/icons/app-icon.svg)：A0 应用图标矢量源。
 - [`src-tauri/Cargo.lock`](../../../../src-tauri/Cargo.lock)：已验证的 Rust 依赖锁文件。
 
-- [`src-tauri/src/webview2.rs`](../../../../src-tauri/src/webview2.rs)：WebView2 DefaultBackgroundColor 透明化入口（当前为占位桩，等待 Tauri 稳定 API 后接入）
+当前 V1 基线中尚未建立模板加载器、模板运行时或 `webview2.rs`；这些文件只有在对应契约、测试和稳定 API 路径明确后才重新加入。
 
 ## 尚未建立的锚点
 
-- `webview2.rs` 中的 `ICoreWebView2Controller2::SetDefaultBackgroundColor` 实际调用——当前为安全占位桩，等 Tauri 提供稳定 WebView 控制器访问路径后接回第三条透明层
+- WebView2 `DefaultBackgroundColor` 的稳定、可验证接入路径；不得通过猜测子 HWND `GWLP_USERDATA` 并解引用未知 COM 指针实现；
+- M1 模板加载器、单根模板 DOM 契约、参数转换和行为测试；
 - Explorer 重启后的完整人工验证（Shell 创建/显示事件恢复已接入，`TaskbarCreated` 托盘恢复属于 C-DHF-07）；
 - 多海报交互区域合并和人工桌面输入矩阵（单海报原生圆角区域已经通过）；
 - C-DHF-05 真实全屏、锁屏、显示器关闭及多屏人工矩阵（事件驱动状态机已经建立）；

@@ -11,7 +11,7 @@
 
 - `main`: verified release baseline; no direct implementation.
 - `dev/mainline`: daily integration branch.
-- `impl/desktop-runtime-foundation-a0`: current local implementation branch.
+- `impl/poster-redesign-V1`: current local implementation branch; M1 poster code restarted from the pre-M1 implementation baseline while retaining the accepted design documents.
 - Follow `Docs/Rules/GIT_STRATEGY.md` for sync, commit and merge behavior.
 
 ## Project commands

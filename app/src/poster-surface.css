@@ -7,155 +7,43 @@ body.poster-page {
 }
 
 .poster-surface {
-  --surface-gutter: 0px;
+  --surface-gutter: 10px;
   width: 100vw;
   height: 100vh;
   padding: var(--surface-gutter);
   background: transparent;
 }
 
-/* ── Poster container (§6.1: height-only transition) ─────────────────── */
 .poster-surface .poster {
   position: relative;
   width: 100%;
   height: 100%;
   transform: none;
   backdrop-filter: none;
-  /* height transition driven by native window resize; CSS handles content */
   animation: surface-arrival 360ms cubic-bezier(.2,.8,.2,1) both;
 }
 
-/* ── Presentation mode: COLLAPSED (§5.1/§6.1) ──────────────────────── */
-.poster-surface .poster.is-collapsed .poster-content,
-.poster-surface .poster.is-collapsed .poster-copy,
-.poster-surface .poster.is-collapsed .poster-footer,
-.poster-surface .poster.is-collapsed .poster-resize-handle,
-.poster-surface .poster.is-collapsed .poster-anchor {
-  display: none;
-}
-
-.poster-surface .poster.is-collapsed .poster-header {
-  height: 60px;
-  display: flex;
-  align-items: center;
-}
-
-/* ── Title bar ─────────────────────────────────────────────────────── */
-.poster-surface .poster-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 16px;
-}
-.poster-header-left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.poster-header-right {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-/* ── Lock indicator (§6.3) ─────────────────────────────────────────── */
-.poster-lock-indicator {
-  font-size: 12px;
-  color: #d4a853;
-  opacity: 0.6;
-  cursor: default;
-  user-select: none;
-}
-.poster-lock-indicator:hover {
-  opacity: 1;
-}
-.poster-lock-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 2px;
-}
-.poster-lock-icon {
-  font-size: 12px;
-  color: #d4a853;
-  opacity: 0.6;
-  transition: opacity 150ms ease;
-}
-.poster-lock-icon:hover { opacity: 1; }
-
-/* Locked poster in global EDITING: dashed border hint (§6.3) */
-.poster.is-locked.is-editing .poster-header {
-  border-bottom: 2px dashed rgba(212, 168, 83, 0.45);
-}
-
-/* ── Editing-mode overlays (§6.2) ──────────────────────────────────── */
-.poster-resize-handle {
-  position: absolute;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  width: 6px;
-  cursor: ew-resize;
-  opacity: 0;
-  background: var(--poster-accent, #72e4ff);
-  animation: fade-in 150ms ease forwards;
-}
-.poster-resize-handle:hover { opacity: 0.35; }
-
-.poster-anchor {
-  position: absolute;
-  width: 8px;
-  height: 8px;
-  border: 1px solid var(--poster-accent, #72e4ff);
-  border-radius: 50%;
-  opacity: 0;
-  animation: fade-in 200ms ease forwards;
-}
-.poster-anchor-tl { top: 4px; left: 4px; }
-.poster-anchor-tr { top: 4px; right: 4px; }
-.poster-anchor-bl { bottom: 4px; left: 4px; }
-.poster-anchor-br { bottom: 4px; right: 4px; }
-
-/* Editing backlight */
-.poster.is-editing {
-  filter: brightness(1.05);
-}
-.poster.is-editing .game-tile {
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-}
-
-@keyframes fade-in {
-  from { opacity: 0; }
-  to { opacity: 0.55; }
-}
-
-/* ── Drag cursors (§5.1) ───────────────────────────────────────────── */
 .poster-surface .poster:not(.is-locked) .poster-header {
   cursor: grab;
 }
+
 .poster-surface .poster:not(.is-locked) .poster-header:active {
   cursor: grabbing;
 }
 
-/* ── PAUSED overlay (§6.4) ─────────────────────────────────────────── */
+.poster-surface .poster.is-collapsed {
+  height: 100%;
+}
+
+.poster-surface .poster.is-collapsed .poster-copy h2 {
+  font-size: 26px;
+}
+
 .poster-surface.is-runtime-paused .poster,
 .poster-surface.is-runtime-paused .poster-atmosphere i {
   animation-play-state: paused !important;
 }
-.poster-surface.is-runtime-paused .poster {
-  opacity: 0.85;
-  filter: none;
-}
-.poster-surface.is-runtime-paused .poster::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: rgba(0,0,0,0.05);
-  pointer-events: none;
-  border-radius: inherit;
-}
 
-/* ── Toast ─────────────────────────────────────────────────────────── */
 .poster-toast {
   right: 16px;
   bottom: 14px;
@@ -163,100 +51,6 @@ body.poster-page {
   pointer-events: none;
 }
 
-/* ── Context menu ─────────────────────────────────────────────────── */
-.poster-context-menu {
-  position: fixed;
-  z-index: 9999;
-  min-width: 180px;
-  background: rgba(12, 14, 20, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 8px;
-  padding: 6px 0;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(16px);
-  font-family: 'Segoe UI Variable', system-ui, sans-serif;
-  font-size: 13px;
-}
-.poster-context-item {
-  padding: 6px 16px;
-  color: #e0e4e8;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background 100ms ease;
-}
-.poster-context-item:hover {
-  background: rgba(255, 255, 255, 0.08);
-}
-.poster-context-item.is-disabled {
-  color: #5a5e64;
-  cursor: default;
-}
-.poster-context-item.is-disabled:hover {
-  background: transparent;
-}
-.poster-context-separator {
-  height: 1px;
-  margin: 4px 8px;
-  background: rgba(255, 255, 255, 0.08);
-}
-
-/* ── Empty state guide ──────────────────────────────────────────── */
-.poster-empty-guide {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 40px 20px;
-  min-height: 200px;
-}
-.poster-empty-icon {
-  font-size: 32px;
-  opacity: 0.6;
-}
-.poster-empty-label {
-  font-size: 16px;
-  font-weight: 600;
-  color: #f4f6f8;
-}
-.poster-empty-hint {
-  font-size: 13px;
-  color: #8a949e;
-}
-.poster-empty-actions {
-  display: flex;
-  gap: 8px;
-  margin-top: 12px;
-}
-.poster-empty-btn {
-  padding: 6px 16px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.06);
-  color: #8a949e;
-  font-size: 12px;
-  cursor: not-allowed;
-}
-.poster-empty-btn:enabled {
-  cursor: pointer;
-  color: #f4f6f8;
-}
-
-/* ── Error banner ──────────────────────────────────────────────── */
-.poster-error-banner {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  margin: 12px;
-  border: 1px solid rgba(255, 160, 60, 0.3);
-  border-radius: 6px;
-  background: rgba(255, 160, 60, 0.08);
-  color: #ffb347;
-  font-size: 12px;
-}
-
-/* ── Arrival ───────────────────────────────────────────────────────── */
 @keyframes surface-arrival {
   from { opacity: 0; transform: translateY(8px) scale(.985); }
   to { opacity: 1; transform: none; }

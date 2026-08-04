@@ -20,7 +20,6 @@ pub struct PosterPlacement {
     pub anchor_y: f64,
     pub fallback_x: i32,
     pub fallback_y: i32,
-    pub width: Option<u32>,
 }
 
 impl PosterPlacement {
@@ -38,13 +37,7 @@ impl PosterPlacement {
             anchor_y: anchor_y.clamp(0.0, 1.0),
             fallback_x,
             fallback_y,
-            width: None,
         }
-    }
-
-    pub fn with_width(mut self, width: u32) -> Self {
-        self.width = Some(width);
-        self
     }
 
     fn is_supported(&self) -> bool {

@@ -1,6 +1,6 @@
 # A 层当前交接
 
-最后更新：2026-08-02
+最后更新：2026-08-04
 
 状态：`ACTIVE AT A0`
 
@@ -10,7 +10,7 @@
 - Rust + Tauri 2 + Svelte/TypeScript 是当前提议技术栈；
 - 安装、恢复和卸载被列为发布硬门；
 - A/B/C 活跃链已指向桌面宿主可行性验证；
-- Git 仓库已经建立，当前实现分支为 `impl/desktop-runtime-foundation-a0`；
+- Git 仓库已经建立，当前实现分支为 `impl/poster-redesign-V1`；该分支保留已接受的海报设计文档，将实际代码恢复到 M1 落地前基线后重新实施；
 - 已建立零额外依赖的交互前端 Demo 与 Tauri 原生双窗体应用，并完成 Debug/Release 编译；
 - 已验证通知区域入口、主页关闭收纳、单实例回呼，以及无任务栏的独立透明海报 `ToolWindow` 回退宿主；
 - 已接受 [`运行表面模型 V0.1`](../10_Plan/RUNTIME_SURFACE_MODEL_V0.1.md)：桌面海报是唯一默认可见表面，当前主页只作为按需控制中心；
@@ -22,17 +22,19 @@
 - 已建立 WorkerW 安全适配与 ToolWindow 自动回退诊断；本机无可见 WorkerW，当前采用已验证回退，不强挂隐藏 Shell 窗口。
 - 单海报透明边界、按钮/拖动与桌面输入人工矩阵已经通过，C-DHF-03 完成。
 - C-DHF-04 已实现原生位置持久化、显示器工作区锚点和显示/Shell 事件恢复基础；重启恢复与模拟离屏拉回通过，真实 Win+D、Explorer、多屏和 DPI 矩阵仍待完成。
+- 2026-08-04 决定撤回原 `impl/poster-redesign-a0` 的 M1 完成/封板结论：原实现存在模板、状态、窗口几何和测试契约的结构性缺陷，不作为 V1 代码基线；设计文档继续有效。
 
 ## 尚未完成
 
 - 尚未完成 C-DHF-04 真实 Explorer/显示器恢复矩阵与全屏暂停硬门；
+- M1 海报重构代码已重置为 `PLANNED`，尚未通过大幅面、模板、状态机、透明背景和 Release 实机验收；
 - 技术架构仍为 `PROPOSED`，需通过 A0 原型决定；
 - 产品名、品牌图标和默认视觉主题尚未冻结；
 - 尚未生成 `DesktopUpSetup.exe` 或 `uninstall.exe`。
 
 ## 下一动作
 
-命中测试已完成。下一步完成 C-DHF-04 Win+D、Explorer、多屏和 DPI 真实环境矩阵，再进入暂停硬门。精确状态见 [`Desktop Host Feasibility 当前交接`](../../C_Workstreams/DesktopHostFeasibility/30_Sync/CURRENT_HANDOFF.md)。
+当前先在 `impl/poster-redesign-V1` 建立可测试的 M1 契约与最小海报切片，再按硬门逐项实施；C-DHF-04/C-DHF-05 的真实环境矩阵仍保持未完成，不因重做海报层而视为通过。精确状态见 [`Desktop Host Feasibility 当前交接`](../../C_Workstreams/DesktopHostFeasibility/30_Sync/CURRENT_HANDOFF.md)。
 
 A1 真实快捷方式能力保持排队状态，在上述 A0 硬门通过前不得开始扫描或移动用户桌面文件。
 

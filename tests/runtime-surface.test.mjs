@@ -71,7 +71,7 @@ test("poster surface publishes a native interaction region", () => {
   assert.match(posterSurface, /set_poster_interaction_region/);
   assert.match(posterSurface, /POSTER_SURFACE_GUTTER/);
   assert.match(posterSurface, /window\.devicePixelRatio/);
-  assert.match(posterSurface, /surface\.querySelector\(".poster"\)/);
+  assert.match(posterSurface, /posterElement\.offsetWidth/);
   assert.match(rustShell, /tauri::PhysicalSize/);
   assert.match(desktopHostAdapter, /CreateRoundRectRgn/);
   assert.match(desktopHostAdapter, /SetWindowRgn/);

@@ -1,8 +1,8 @@
 # Desktop Host Feasibility 当前交接
 
-最后更新：2026-08-03
+最后更新：2026-08-04
 
-状态：`ACTIVE / C-DHF-04 + C-DHF-05 IN PROGRESS — FOUNDATIONS PASS · M1.0 CODE LANDED`
+状态：`ACTIVE / C-DHF-04 + C-DHF-05 IN PROGRESS — M1 IMPLEMENTATION RESET`
 
 ## 已完成
 
@@ -47,38 +47,22 @@
 - 多海报原生窗体尚未验证；C-DHF-05 的真实全屏、锁屏、显示器关闭、恢复和跨屏不误停矩阵仍待人工验证；
 - 工作集约 `26.7 MB` 仅是 A0 单次观测，性能预算尚未形成正式基线；
 - 尚未生成最终 `DesktopUpSetup.exe` 与安装目录内的 `uninstall.exe`。
+- 原 M1 海报重构实现已撤回，不再视为完成；大幅面、模板、状态机、透明背景、降级和 Release 视觉验收均需在 V1 重新实现与验证。
 
 ## 精确下一步
 
-执行 C-DHF-04 与 C-DHF-05 真实环境矩阵：先复测 Win+D 与同屏最大化/全屏暂停恢复，再经用户允许执行 Explorer 重启、锁屏和显示器关闭/唤醒；多屏/主屏/DPI 与跨屏不误停按当前机器可用条件验证。两项通过后进入 C-DHF-06 性能基线。
+先在 `impl/poster-redesign-V1` 冻结并测试 M1 的状态、模板 DOM、窗口几何和失败回退契约，再实现最小大幅面海报切片。C-DHF-04/C-DHF-05 的真实环境矩阵仍保持待验证，后续按 Win+D、最大化/全屏、Explorer、锁屏、显示器和 DPI 顺序继续。
 
 ## 工作区注意事项
 
-- 当前实现分支是 `impl/desktop-runtime-foundation-a0`；未经用户明确要求不提交、不推送、不改写远端；
+- 当前实现分支是 `impl/poster-redesign-V1`；该分支保留远程 `impl/poster-redesign-a0` 的设计文档，代码恢复到 M1 落地前基线；未经用户明确要求不推送、不合并、不改写远端；
 - 不覆盖 Docs 中已建立的用户需求和卸载安全规则；
 - 工程初始化不得把依赖缓存或构建输出提交到文档目录。
 
-## M1.0 大幅面窗口 + 亮带根治代码落地（2026-08-03/04）
+## M1 实现重置（2026-08-04）
 
-- 海报原生窗口尺寸从硬编码 490×392 改为工作区感知：默认宽 `max(availWidth×0.22, 280px)`，上下各 12px 安全间距
-- 收起态从 116px 改为 60px 标题条
-- `PosterPlacement` 新增 `width: Option<u32>` 持久化字段
-- Rust `resize_poster_surface` 命令的尺寸限制从 `[330,640]×[240,560]` 改为 `[240,1200]×[60,2160]`
-- 三层透明对齐：tauri.conf.json transparent + CSS background:transparent + webview2.rs 实际调用 ICoreWebView2Controller2::SetDefaultBackgroundColor（vtable 双重校验 + catch_unwind 安全边界）
-- `tauri.conf.json` 海报窗口 `resizable: true` 以允许宽度拖动
-- webview2.rs 实现了 HWND 子窗口链遍历 → GWLP_USERDATA 指针定位 → vtable 解引用校验 → from_raw_borrowed → cast → SetDefaultBackgroundColor 的完整链路
-- 全部测试通过：Rust 8/8 + Node 16/16 + 文档链接 55/55
-- Debug 和 Release `desktop-up.exe` 均启动验证通过，进程存活无崩溃
-
-## M1 海报重构里程碑封板（2026-08-04）
-
-M1 全部 6 个切片已完成（M1.0 → M1.6），合计 7 个代码 commits：
-
-- **M1.0** 大幅面窗口 + 亮带根治：工作区感知尺寸、WebView2 DefaultBackgroundColor、PosterPlacement.width
-- **M1.1** 海报 DOM 重构：presentationMode × interactionMode 三维状态机、COLLAPSED 60px 标题条、EDITING 锚点/拖拽手柄
-- **M1.2** 模板引擎：Rust template_loader 安全扫描 + JS engine.js 插值/变量注入/类切换
-- **M1.3/M1.4** 模板集成：3 套内置模板（Neon HUD + Cinema Lightbox + Minimal Fallback），各含 manifest/params-schema/template.html/template.css + 3 presets
-- **M1.5** 交互实现：右键上下文菜单、模板热切换、setPointerCapture 宽度拖拽
-- **M1.6** 降级与空状态：minimal-fallback 自动降级、零游戏空状态引导、橙色错误横幅
-
-代码增量：931+ 行 JS/CSS/Rust + 666+ 行模板/文档，分布在 25 个文件中。M1 里程碑封板，准备进入 M2（本地收纳 MVP）。
+- 原 `impl/poster-redesign-a0` 与后续修复线的 M1 完成/封板结论撤回；历史提交和审查记录只作为失败样本，不作为当前代码事实。
+- `impl/poster-redesign-V1` 保留已接受的 `POSTER_*` 设计文档，将 `app/`、`src-tauri/` 和 `tests/` 恢复到提交 `8eac6eb` 的 M1 落地前状态。
+- 原实现暴露的结构性问题包括：模板 DOM 双根、状态与原生窗口几何多数据源、模板加载/净化边界不足、透明背景使用不稳定指针路径、以及测试只检查源码字符串而未覆盖行为。
+- V1 不直接复用失败实现；先建立可执行契约和行为测试，再按 minimal-fallback → 大幅面 → 状态机 → Neon HUD → Cinema Lightbox → 交互/降级/Release 验收推进。
+- M2 本地收纳继续保持 `PLANNED`，不得在 M1 和宿主硬门通过前启动真实桌面文件操作。

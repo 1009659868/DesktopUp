@@ -1,8 +1,6 @@
 mod desktop_host;
 mod placement;
 mod runtime_monitor;
-mod webview2;
-mod template_loader;
 
 use std::sync::Mutex;
 
@@ -215,16 +213,13 @@ fn resize_poster_surface(
 ) -> Result<(), String> {
     let gutter = surface_gutter.clamp(0.0, 32.0);
     let scale = device_scale_factor.clamp(0.5, 4.0);
-    // Large-format poster: width bounded to [280, 0.45 × work area width],
-    // height near-full work area with 12px top/bottom safety margins.
-    // The JS side computes the target logical size; we apply it here.
-    let logical_width = (width.clamp(240.0, 1200.0) + gutter * 2.0).max(240.0);
+    let logical_width = width.clamp(330.0, 640.0) + gutter * 2.0;
     let content_height = if collapsed {
-        60.0 // collapsed title bar only
+        116.0
     } else {
-        height.clamp(320.0, 2160.0)
+        height.clamp(240.0, 560.0)
     };
-    let logical_height = (content_height + gutter * 2.0).max(60.0);
+    let logical_height = content_height + gutter * 2.0;
     let window = app
         .get_webview_window("poster")
         .ok_or_else(|| "poster window is unavailable".to_string())?;
@@ -361,16 +356,6 @@ fn toggle_poster_window(app: &tauri::AppHandle) {
 fn show_and_emit(app: &tauri::AppHandle, payload: &str) {
     show_main_window(app);
     let _ = app.emit("runtime-control", payload);
-}
-
-#[tauri::command]
-fn get_template_bundle(template_key: String) -> Result<String, String> {
-    template_loader::load_template_bundle(&template_key)
-}
-
-#[tauri::command]
-fn list_templates() -> Result<String, String> {
-    template_loader::load_index()
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -600,9 +585,7 @@ pub fn run() {
             start_poster_drag,
             resize_poster_surface,
             set_poster_interaction_region,
-            reconnect_desktop_host,
-            get_template_bundle,
-            list_templates
+            reconnect_desktop_host
         ])
         .run(tauri::generate_context!())
         .expect("failed to run Desktop-Up");
