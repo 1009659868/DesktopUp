@@ -37,10 +37,10 @@ const defaults = {
       density: 1,
       x: 72,
       y: 154,
-      width: 490,
-      height: 392,
+      width: 420,
+      height: 1368,
       collapsed: false,
-      locked: true,
+      locked: false,
       autoCollapse: false,
       items: catalog.slice(0, 6).map(toItem)
     },
@@ -70,6 +70,7 @@ const posterLayer = document.querySelector("#poster-layer");
 const editToggle = document.querySelector("#edit-toggle");
 const pauseToggle = document.querySelector("#pause-toggle");
 const runtimeChip = document.querySelector("#runtime-chip");
+const perfChip = document.querySelector("#perf-chip");
 const toast = document.querySelector("#toast");
 const accentControl = document.querySelector("#accent-control");
 const opacityControl = document.querySelector("#opacity-control");
@@ -250,6 +251,37 @@ function applyNativePauseSnapshot(snapshot = {}) {
   pauseToggle.setAttribute("aria-pressed", String(state.manualPaused));
   renderRuntime();
   app.classList.toggle("is-paused", state.manualPaused || state.runtimeSuspended);
+}
+
+// ── Performance telemetry polling (C-DHF-06) ───────────────────────
+let perfPollTimer = null;
+
+async function pollPerformance() {
+  const invoke = window.__TAURI__?.core?.invoke;
+  if (!invoke) return;
+  try {
+    const snap = await invoke("get_performance_snapshot");
+    renderPerformance(snap);
+  } catch { /* backend not yet ready — retry next cycle */ }
+}
+
+function renderPerformance(snap) {
+  if (!perfChip || !snap) return;
+  const mb = snap.memoryBytes != null
+    ? (snap.memoryBytes / (1024 * 1024)).toFixed(1)
+    : "--";
+  const fps = snap.posterFps != null && snap.posterFps > 0
+    ? `${Math.round(snap.posterFps)}`
+    : "--";
+  perfChip.querySelector("strong").textContent = `~${mb} MB`;
+  perfChip.querySelector("small").textContent = `FPS ${fps}`;
+  // Green dot for well-behaved memory (< 192 MB heuristic for a Tauri app)
+  perfChip.classList.toggle("is-good", snap.memoryBytes != null && snap.memoryBytes < 192 * 1024 * 1024);
+}
+
+function startPerformancePolling() {
+  pollPerformance();
+  perfPollTimer = setInterval(pollPerformance, 2000);
 }
 
 function updatePoster(id, patch) {
@@ -489,4 +521,5 @@ window.addEventListener("keydown", (event) => {
 });
 
 connectNativeControls().catch(() => {});
+startPerformancePolling();
 render();

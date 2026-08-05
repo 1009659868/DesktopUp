@@ -16,19 +16,21 @@ export function initials(title) {
 }
 
 export function normalizedPoster(poster) {
+  // Guard: null/undefined → safe default (C-PCB §4 fallback contract)
+  const src = poster ?? {};
   return {
-    ...poster,
-    theme: THEMES.includes(poster.theme) ? poster.theme : "nocturne",
-    accent: /^#[\da-f]{6}$/i.test(poster.accent) ? poster.accent : "#72e4ff",
-    opacity: clamp(Number(poster.opacity) || 94, 72, 100),
-    density: clamp(Number(poster.density) || 1, 0, 2),
-    x: Number(poster.x) || 0,
-    y: Number(poster.y) || 0,
-    width: clamp(Number(poster.width) || 420, 330, 640),
-    height: clamp(Number(poster.height) || 350, 240, 560),
-    collapsed: Boolean(poster.collapsed),
-    locked: poster.locked === undefined ? true : Boolean(poster.locked),
-    items: Array.isArray(poster.items) ? poster.items : []
+    ...src,
+    theme: THEMES.includes(src.theme) ? src.theme : "nocturne",
+    accent: /^#[\da-f]{6}$/i.test(src.accent) ? src.accent : "#72e4ff",
+    opacity: clamp(Number(src.opacity) || 94, 72, 100),
+    density: clamp(Number(src.density) || 1, 0, 2),
+    x: Number(src.x) || 0,
+    y: Number(src.y) || 0,
+    width: clamp(Number(src.width) || 420, 280, 1200),
+    height: clamp(Number(src.height) || 800, 60, 2160),
+    collapsed: Boolean(src.collapsed),
+    locked: src.locked === undefined ? false : Boolean(src.locked),
+    items: Array.isArray(src.items) ? src.items : []
   };
 }
 
@@ -47,7 +49,7 @@ export function moveWithinBounds(rect, stage, nextPosition) {
 
 export function resizeWithinBounds(rect, nextSize) {
   return {
-    width: clamp(nextSize.width, 330, 640),
-    height: clamp(nextSize.height, 240, 560)
+    width: clamp(nextSize.width, 240, 1200),
+    height: clamp(nextSize.height, 60, 2160)
   };
 }

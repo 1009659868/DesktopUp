@@ -6,6 +6,7 @@ use std::sync::{
     atomic::{AtomicBool, Ordering},
     Mutex,
 };
+use std::time::Instant;
 
 use desktop_host::DesktopHostDiagnostics;
 use placement::PlacementStore;
@@ -22,6 +23,8 @@ use tauri::{
 };
 
 static POSTER_PLACEMENT_CAPTURE_ENABLED: AtomicBool = AtomicBool::new(false);
+
+struct PerformanceClock(Instant);
 
 struct RuntimeState(Mutex<RuntimeSnapshot>);
 
@@ -40,6 +43,7 @@ struct RuntimeSnapshot {
     effective_paused: bool,
     all_locked: bool,
     poster_visible: bool,
+    poster_fps: f64,
     desktop_host: DesktopHostDiagnostics,
     runtime_visibility: RuntimeVisibilitySnapshot,
     runtime_monitor: RuntimeMonitorCapabilities,
@@ -54,6 +58,7 @@ impl Default for RuntimeSnapshot {
             effective_paused: false,
             all_locked: true,
             poster_visible: true,
+            poster_fps: 0.0,
             desktop_host: DesktopHostDiagnostics::default(),
             runtime_visibility: RuntimeVisibilitySnapshot::default(),
             runtime_monitor: RuntimeMonitorCapabilities::default(),
@@ -218,11 +223,11 @@ fn resize_poster_surface(
 ) -> Result<(), String> {
     let gutter = surface_gutter.clamp(0.0, 32.0);
     let scale = device_scale_factor.clamp(0.5, 4.0);
-    let logical_width = width.clamp(330.0, 640.0) + gutter * 2.0;
+    let logical_width = width.clamp(240.0, 1200.0) + gutter * 2.0;
     let content_height = if collapsed {
-        116.0
+        60.0 // collapsed title bar only (V1 §6.2, COLLAPSED = 60px)
     } else {
-        height.clamp(240.0, 560.0)
+        height.clamp(60.0, 2160.0)
     };
     let logical_height = content_height + gutter * 2.0;
     let window = app
@@ -257,8 +262,8 @@ fn set_poster_interaction_region(
         &window,
         x.clamp(0.0, 64.0),
         y.clamp(0.0, 64.0),
-        width.clamp(1.0, 640.0),
-        height.clamp(1.0, 560.0),
+        width.clamp(1.0, 1280.0),
+        height.clamp(1.0, 2200.0),
         corner_radius.clamp(0.0, 48.0),
         device_scale_factor.clamp(0.5, 4.0),
     )?;
@@ -319,6 +324,77 @@ fn reconnect_desktop_host(app: tauri::AppHandle) -> Result<DesktopHostDiagnostic
     configure_poster_host(&app, true)
 }
 
+#[tauri::command]
+fn get_performance_snapshot(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
+    // ── Working set (RSS) via kernel32 K32GetProcessMemoryInfo ────────
+    #[cfg(target_os = "windows")]
+    let memory_bytes = {
+        type K32GetProcessMemoryInfo = unsafe extern "system" fn(
+            isize, *mut u8, u32,
+        ) -> i32;
+        let kernel32 = unsafe {
+            windows::Win32::System::LibraryLoader::GetModuleHandleW(windows::core::w!("kernel32"))
+                .unwrap_or_default()
+        };
+        // PROCESS_MEMORY_COUNTERS = 10×u32 = 40 bytes
+        let mut buf = [0u8; 40];
+        let proc = unsafe { windows::Win32::System::Threading::GetCurrentProcess() };
+        let get_mem_info: Option<K32GetProcessMemoryInfo> = unsafe {
+            let addr = windows::Win32::System::LibraryLoader::GetProcAddress(
+                kernel32,
+                windows::core::s!("K32GetProcessMemoryInfo"),
+            );
+            std::mem::transmute(addr)
+        };
+        match get_mem_info {
+            Some(f) if !proc.0.is_null() => {
+                let ok = unsafe {
+                    f(proc.0 as isize, buf.as_mut_ptr(), buf.len() as u32)
+                };
+                if ok != 0 {
+                    // WorkingSetSize is at offset 8 (u32 pairs: cb, PageFaultCount, WorkingSetSize.lo, WorkingSetSize.hi)
+                    let lo = u32::from_ne_bytes([buf[8], buf[9], buf[10], buf[11]]);
+                    let hi = u32::from_ne_bytes([buf[12], buf[13], buf[14], buf[15]]);
+                    ((hi as u64) << 32) | (lo as u64)
+                } else {
+                    0
+                }
+            }
+            _ => 0,
+        }
+    };
+
+    #[cfg(not(target_os = "windows"))]
+    let memory_bytes = 0u64;
+
+    // ── WebView frame rate ────────────────────────────────────────────
+    let fps = app
+        .try_state::<RuntimeState>()
+        .and_then(|state| state.0.lock().ok().map(|snapshot| snapshot.poster_fps))
+        .unwrap_or(0.0);
+
+    Ok(serde_json::json!({
+        "memoryBytes": memory_bytes,
+        "posterFps": fps,
+        "elapsedMs": app.try_state::<PerformanceClock>()
+            .map(|clock| clock.0.elapsed().as_millis() as u64)
+            .unwrap_or(0),
+    }))
+}
+
+#[tauri::command]
+fn report_poster_fps(
+    fps: f64,
+    app: tauri::AppHandle,
+) -> Result<(), String> {
+    if let Some(state) = app.try_state::<RuntimeState>() {
+        if let Ok(mut snapshot) = state.0.lock() {
+            snapshot.poster_fps = fps;
+        }
+    }
+    Ok(())
+}
+
 fn set_poster_visibility(app: &tauri::AppHandle, visible: bool) {
     desktop_host::set_poster_visibility_intent(visible);
     if let Some(window) = app.get_webview_window("poster") {
@@ -372,6 +448,7 @@ pub fn run() {
             show_main_window(app);
         }))
         .manage(RuntimeState::default())
+        .manage(PerformanceClock(Instant::now()))
         .setup(|app| {
             let placement_path = app
                 .path()
@@ -596,7 +673,9 @@ pub fn run() {
             start_poster_drag,
             resize_poster_surface,
             set_poster_interaction_region,
-            reconnect_desktop_host
+            reconnect_desktop_host,
+            get_performance_snapshot,
+            report_poster_fps
         ])
         .run(tauri::generate_context!())
         .expect("failed to run Desktop-Up");

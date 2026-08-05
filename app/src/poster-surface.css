@@ -7,7 +7,7 @@ body.poster-page {
 }
 
 .poster-surface {
-  --surface-gutter: 10px;
+  --surface-gutter: 0px;
   width: 100vw;
   height: 100vh;
   padding: var(--surface-gutter);
@@ -20,6 +20,10 @@ body.poster-page {
   height: 100%;
   transform: none;
   backdrop-filter: none;
+  /* Override styles.css grid-template-rows so content takes only the
+     space its children need, leaving the rest transparent. */
+  display: flex;
+  flex-direction: column;
   animation: surface-arrival 360ms cubic-bezier(.2,.8,.2,1) both;
 }
 
@@ -31,8 +35,22 @@ body.poster-page {
   cursor: grabbing;
 }
 
-.poster-surface .poster.is-collapsed {
-  height: 100%;
+/* Collapsed: only the header is visible; everything else is hidden.
+   The native window height is set to 60px by resize_poster_surface.
+   Only the .poster-header remains visible — .poster-copy, .poster-content,
+   .poster-footer, and .poster-atmosphere are explicitly hidden. */
+.poster-surface .poster.is-collapsed .poster-copy,
+.poster-surface .poster.is-collapsed .poster-content,
+.poster-surface .poster.is-collapsed .poster-footer,
+.poster-surface .poster.is-collapsed .poster-atmosphere {
+  display: none;
+}
+
+.poster-surface .poster.is-collapsed .poster-header {
+  padding: 0 16px;
+  height: 60px;
+  display: flex;
+  align-items: center;
 }
 
 .poster-surface .poster.is-collapsed .poster-copy h2 {

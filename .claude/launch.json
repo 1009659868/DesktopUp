@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "desktop-up-dev",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["scripts/serve-ui.mjs"],
+      "port": 4173
+    }
+  ]
+}

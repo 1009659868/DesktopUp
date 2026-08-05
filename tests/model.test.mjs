@@ -29,15 +29,15 @@ test("poster normalization rejects invalid theme and visual values", () => {
   assert.equal(poster.accent, "#72e4ff");
   assert.equal(poster.opacity, 100);
   assert.equal(poster.density, 0);
-  assert.equal(poster.width, 330);
-  assert.equal(poster.height, 560);
-  assert.equal(poster.locked, true);
+  assert.equal(poster.width, 280);
+  assert.equal(poster.height, 999);
+  assert.equal(poster.locked, false);
   assert.deepEqual(poster.items, []);
 });
 
-test("poster lock is normalized and defaults to safe locked state", () => {
+test("poster lock is normalized and defaults to unlocked", () => {
   assert.equal(normalizedPoster({ locked: false }).locked, false);
-  assert.equal(normalizedPoster({}).locked, true);
+  assert.equal(normalizedPoster({}).locked, false);
   assert.equal(normalizedPoster({ locked: "yes" }).locked, true);
 });
 
@@ -58,8 +58,8 @@ test("movement leaves a visible recovery handle", () => {
 
 test("resize respects supported poster range", () => {
   assert.deepEqual(resizeWithinBounds({}, { width: 50, height: 900 }), {
-    width: 330,
-    height: 560
+    width: 240,
+    height: 900
   });
 });
 

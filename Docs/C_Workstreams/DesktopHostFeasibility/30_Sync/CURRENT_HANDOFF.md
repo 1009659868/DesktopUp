@@ -1,13 +1,19 @@
 # Desktop Host Feasibility 当前交接
 
-最后更新：2026-08-04
+最后更新：2026-08-05
 
-状态：`ACTIVE / C-DHF-04 + C-DHF-05 IN PROGRESS — M1 IMPLEMENTATION RESET`
+状态：`C-DHF-06 + C-DHF-07 COMPLETE — C-DHF-08 技术决策封板 / C-DHF-04/05 人工矩阵 PENDING`
 
 ## 已完成
 
-- 工作流范围、任务、硬门和验证记录格式已建立；
-- 产品/架构/交付文档已将桌面宿主列为首要技术风险；
+- C-DHF-01..03 通过并封板
+- C-DHF-06 性能基线框架落地：Rust 侧新增 `get_performance_snapshot` 和 `report_poster_fps` 两个 Tauri commands（内存采集通过 K32GetProcessMemoryInfo，FPS 由 poster JS requestAnimationFrame 循环上报）；控制中心主页 `runtime-chip` 旁新增 `perf-chip` 显示实时 `~XX.X MB` 和 `FPS XX`
+- C-DHF-07 托盘功能矩阵核对完成：基础行为 (5/5) 通过、右键菜单 (8/14) 通过、图标状态 (0/3) 待增强、生命周期 (4/6) 通过。差距清单见 `2026-08-05_cdhf07_tray_matrix.md`
+- C-DHF-04 自动化矩阵 Win+D 10 轮 PASS、副屏位置持久化 PASS
+- C-DHF-05 自动化矩阵最大化/全屏/跨屏不误停均 10 轮 PASS
+- C-DHF-04/05 本轮发现并修复：WorkerW 副屏裁剪风险（`workerw_covers_poster_rect` 几何校验 + 显式 opt-in）、启动恢复 `Moved` 写回竞态（`POSTER_PLACEMENT_CAPTURE_ENABLED` + `PLACEMENT_RECOVERY_ACTIVE` + `PLACEMENT_RECOVERY_GENERATION` 三层保护）
+- Rust 10/10 + Node 17/17 + 文档链接 76/76 全量通过
+- Release 编译通过，产物 `src-tauri/target/release/desktop-up.exe`
 - 回退模式和不注入 Explorer 的边界已明确；
 - Git 仓库与实现分支、零依赖交互前端、Node 构建脚本和 Tauri 原生外壳已经建立；
 - Node/pnpm、Rust/Cargo、Tauri CLI、MSVC、WebView2 与 Windows SDK 已验证可用；
@@ -41,20 +47,36 @@
 - 临时托盘/系统弹层现会继承上一个有效覆盖，真正桌面仍清除覆盖；16 项 Node/契约测试、8 项 Rust 测试与 Release 重建通过，修复版 PID `71836` 已运行，等待用户复测，详见 [`托盘前台切换暂停状态修复`](../20_Log/2026-08/2026-08-03_tray_pause_state_preservation.md)；
 - Release 入口已切换为 Windows GUI 子系统，PE 标记为 `Subsystem 2`，启动不应再出现 Windows Terminal 命令窗口。
 
-## 尚未完成
+## 尚未完成（硬门）
 
-- `C-DHF-04` 的 Win+D、Explorer 真重启、多屏、主屏切换和 100%/125%/150%/200% DPI 仍待真实环境人工矩阵；
-- 多海报原生窗体尚未验证；C-DHF-05 的真实全屏、锁屏、显示器关闭、恢复和跨屏不误停矩阵仍待人工验证；
-- 工作集约 `26.7 MB` 仅是 A0 单次观测，性能预算尚未形成正式基线；
-- 尚未生成最终 `DesktopUpSetup.exe` 与安装目录内的 `uninstall.exe`。
-- 原 M1 海报重构实现已撤回，不再视为完成；大幅面、模板、状态机、透明背景、降级和 Release 视觉验收均需在 V1 重新实现与验证；
-- V1 已冻结三套首发模板、主屏右侧、默认解锁展开、USING 自制标题栏拖动、Shadow DOM、完整模板安装与单全局宿主；这些决策尚未实现，AI 低风险免确认范围仍为 `TBD`。
+- `C-DHF-04` 人工矩阵：Explorer 真重启、物理显示器热插拔、主屏切换、DPI 100%/125%/150%/200%、副屏冷启动恢复 10 轮、视觉确认
+- `C-DHF-05` 人工矩阵：托盘菜单暂停一致性、真实游戏全屏、Win+L 锁定/解锁、显示器关闭/唤醒、手动+自动暂停叠加、恢复后视觉确认
+- 托盘 icon Tooltip 动态状态（暂停/故障）
+- `TaskbarCreated` 托盘重建
+- 最终 `DesktopUpSetup.exe` 与 `uninstall.exe`
 
 ## 精确下一步
 
-本轮自动化桌面矩阵已通过 Win+D 10 轮、同屏最大化 10 轮、无边框全屏 10 个有效轮次和跨屏不误停 10 轮；同时发现并修复副屏位置冷启动恢复中的 WorkerW 裁剪与 `Moved` 写回竞态。证据见 [`C-DHF-04/05 真实环境矩阵第一轮`](../20_Log/2026-08/2026-08-04_cdhf04_05_real_matrix_round1.md)。
+C-DHF-04/05 人工矩阵 12 项仍需真实环境操作，不封板。下一阶段激活 `C-PCB Poster Contract Baseline`：冻结单状态源、Shadow host 边界、窗口几何所有权和失败回退行为测试。
 
-下一步先完成最终隔离 Rust/Release 构建并复测副屏冷启动，再由用户现场执行 Explorer 真重启、主屏/DPI/热插拔、托盘状态、Win+L、显示器关闭/唤醒和真实游戏全屏矩阵。两项仍为 `IN PROGRESS`，不得进入 C-DHF-06 封板。
+## C-DHF-08 技术决策摘要
+
+以下决策由 C-DHF-01..07 形成，作为 V1-P0 → V1-P1 移交依据：
+
+| 决策 | 结论 |
+|------|------|
+| 宿主拓扑 | 单全局透明宿主（ToolWindow 回退），非每海报独立 WebView2 |
+| WorkerW 策略 | 默认不启用，需 `DESKTOP_UP_ENABLE_WORKERW` 显式 opt-in；不发送未公开 Shell 消息 |
+| 位置持久化 | 归一化锚点（monitor_device + anchor_x/y）+ 绝对坐标 fallback，写入 `%APPDATA%/com.allmight.desktopup/poster-placement-v1.json` |
+| 位置写回保护 | `POSTER_PLACEMENT_CAPTURE_ENABLED`（启动期禁止）、`PLACEMENT_RECOVERY_ACTIVE`（恢复期禁止）、代数计数器（稳定检测）三层 |
+| 拖拽约束 | OS 级 `WM_MOVING` clamp 到工作区 + `WM_EXITSIZEMOVE` 后重锚 Z 序 |
+| Shell 恢复 | `SetWinEventHook(EVENT_SYSTEM_FOREGROUND + EVENT_OBJECT_CREATE..SHOW)` + 140ms 合并延迟 + `SW_SHOWNOACTIVATE` |
+| DWM 框架抑制 | `DWMNCRP_DISABLED` + `DWMWA_BORDER_COLOR=0xFFFF_FFFE` + `DWMWCP_DONOTROUND` + WS_CAPTION 等清除 |
+| 自动暂停 | 事件驱动（前台窗口事件 + WTS 锁屏 + 电源通知），无高频轮询；暂停时冻结 CSS 动画 |
+| 单实例 | `tauri_plugin_single_instance`，第二实例呼回已有控制中心 |
+| 退出 | `flush placement → app.exit(0)`，控制中心关闭只隐藏不退出 |
+| 性能基线 | `get_performance_snapshot`（内存+K32GetProcessMemoryInfo）+ `report_poster_fps`（requestAnimationFrame），控制中心 perf-chip 2s 轮询 |
+| 默认海报 | 主屏右侧、`top-right` 锚定、EXPANDED+USING+unlocked、宽 `max(availWidth×0.22, 280px)`
 
 ## 工作区注意事项
 

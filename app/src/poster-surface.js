@@ -1,8 +1,8 @@
 import { gridColumns, normalizedPoster } from "./model.js";
 
 const STORAGE_KEY = "desktop-up.a0-demo.v1";
-const POSTER_SURFACE_GUTTER = 10;
-const POSTER_CORNER_RADIUS = 16;
+const POSTER_SURFACE_GUTTER = 0;
+const POSTER_CORNER_RADIUS = 18;
 const fallbackPoster = normalizedPoster({
   id: "night-ops",
   title: "NIGHT OPS",
@@ -11,10 +11,10 @@ const fallbackPoster = normalizedPoster({
   accent: "#72e4ff",
   opacity: 94,
   density: 1,
-  width: 490,
-  height: 392,
+  width: 420,
+  height: 1368,
   collapsed: false,
-  locked: true,
+  locked: false,
   items: [
     ["AFTERLIGHT", "AL", "violet"],
     ["GHOST SIGNAL", "GS", "cyan"],
@@ -26,9 +26,7 @@ const fallbackPoster = normalizedPoster({
 });
 
 const surface = document.querySelector("#poster-surface");
-const toast = document.querySelector("#poster-toast");
 let poster = loadPoster();
-let toastTimer = null;
 let manuallyPaused = false;
 let automaticallyPaused = false;
 let nativeSurfaceSyncTimer = null;
@@ -69,13 +67,6 @@ function persistPoster(patch) {
   poster = next;
   render();
   syncNativeSurface();
-}
-
-function showToast(message) {
-  clearTimeout(toastTimer);
-  toast.textContent = message;
-  toast.classList.add("is-visible");
-  toastTimer = setTimeout(() => toast.classList.remove("is-visible"), 2200);
 }
 
 function render() {
@@ -124,15 +115,46 @@ async function invokeNative(command, args = {}) {
   }
 }
 
+function computeWorkAreaPosterSize() {
+  const sw = window.screen?.availWidth ?? screen.width;
+  const sh = window.screen?.availHeight ?? screen.height;
+  const pw = Math.max(280, Math.round(sw * 0.22));
+  const ph = sh - 24; // 12px top + 12px bottom safety margin
+  return { logicalWidth: pw, logicalHeight: ph };
+}
+
+// On first load, override the fallback default with work-area-aware size.
+// poster.width / poster.height from storage or fallback are the source of
+// truth for the JS render; the native window is driven from those values
+// via syncNativeSurface → resize_poster_surface.
+(function applyInitialPosterSize() {
+  const { logicalWidth, logicalHeight } = computeWorkAreaPosterSize();
+  poster.width = logicalWidth;
+  poster.height = logicalHeight;
+})();
+
 async function syncNativeSurface() {
   const deviceScaleFactor = Math.max(1, window.devicePixelRatio || 1);
-  await invokeNative("resize_poster_surface", {
-    collapsed: poster.collapsed,
-    width: poster.width,
-    height: poster.height,
-    surfaceGutter: POSTER_SURFACE_GUTTER,
-    deviceScaleFactor
-  });
+  // Use poster DOM dimensions, not work-area size, so the native window
+  // exactly matches the rendered poster content.
+  if (poster.collapsed) {
+    // Collapsed: only the 60px header is visible.
+    await invokeNative("resize_poster_surface", {
+      collapsed: true,
+      width: poster.width,
+      height: poster.height,
+      surfaceGutter: POSTER_SURFACE_GUTTER,
+      deviceScaleFactor
+    });
+  } else {
+    await invokeNative("resize_poster_surface", {
+      collapsed: false,
+      width: poster.width,
+      height: poster.height,
+      surfaceGutter: POSTER_SURFACE_GUTTER,
+      deviceScaleFactor
+    });
+  }
   await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
   const posterElement = surface.querySelector(".poster");
   if (!posterElement) return;
@@ -171,20 +193,15 @@ surface.addEventListener("click", (event) => {
   const action = event.target.closest("[data-action]")?.dataset.action;
   if (action === "lock") {
     persistPoster({ locked: !poster.locked });
-    showToast(poster.locked ? "海报位置已锁定" : "海报位置已解锁，可拖动标题栏");
   }
   if (action === "collapse") {
     persistPoster({ collapsed: !poster.collapsed });
-    showToast(poster.collapsed ? "海报已收起" : "海报已展开");
   }
 });
 
 surface.addEventListener("pointerdown", (event) => {
   if (!event.target.closest("[data-native-drag]") || event.target.closest("button")) return;
-  if (poster.locked) {
-    showToast("位置已锁定，点击右上角锁按钮后再拖动");
-    return;
-  }
+  if (poster.locked) return;
   event.preventDefault();
   invokeNative("start_poster_drag");
 });
@@ -193,7 +210,7 @@ surface.addEventListener("dblclick", (event) => {
   const tile = event.target.closest('[data-action="launch"]');
   if (!tile) return;
   const item = poster.items[Number(tile.dataset.itemIndex)];
-  if (item) showToast(`Demo：准备启动 ${item.title}`);
+  if (item) { /* demo: no-op, launch not implemented yet */ }
 });
 
 window.addEventListener("storage", (event) => {
@@ -226,3 +243,20 @@ async function connectNativeControls() {
 render();
 syncNativeSurface();
 connectNativeControls().catch(() => {});
+
+// ── Frame-rate telemetry (C-DHF-06) ───────────────────────────────────
+let frameCount = 0;
+let fpsLastSample = performance.now();
+function sampleFrame() {
+  frameCount++;
+  const now = performance.now();
+  const elapsed = now - fpsLastSample;
+  if (elapsed >= 2000) {
+    const fps = Math.round((frameCount / elapsed) * 1000);
+    invokeNative("report_poster_fps", { fps });
+    frameCount = 0;
+    fpsLastSample = now;
+  }
+  requestAnimationFrame(sampleFrame);
+}
+requestAnimationFrame(sampleFrame);
