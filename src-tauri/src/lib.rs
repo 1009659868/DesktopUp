@@ -6,6 +6,7 @@ use std::sync::{
     atomic::{AtomicBool, Ordering},
     Mutex,
 };
+use std::time::Instant;
 
 use desktop_host::DesktopHostDiagnostics;
 use placement::PlacementStore;
@@ -16,12 +17,14 @@ use tauri::{
         CheckMenuItem, CheckMenuItemBuilder, MenuBuilder, MenuItem, MenuItemBuilder,
         PredefinedMenuItem, SubmenuBuilder,
     },
-    tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
+    tray::{MouseButton, TrayIconBuilder, TrayIconEvent},
     webview::PageLoadEvent,
     Emitter, Manager, State, WindowEvent,
 };
 
 static POSTER_PLACEMENT_CAPTURE_ENABLED: AtomicBool = AtomicBool::new(false);
+
+struct PerformanceClock(Instant);
 
 struct RuntimeState(Mutex<RuntimeSnapshot>);
 
@@ -41,6 +44,8 @@ struct RuntimeSnapshot {
     all_locked: bool,
     poster_visible: bool,
     pause_reasons: Vec<String>,
+    poster_fps: f64,
+    performance_mode: String,
     desktop_host: DesktopHostDiagnostics,
     runtime_visibility: RuntimeVisibilitySnapshot,
     runtime_monitor: RuntimeMonitorCapabilities,
@@ -56,6 +61,8 @@ impl Default for RuntimeSnapshot {
             all_locked: true,
             poster_visible: true,
             pause_reasons: Vec::new(),
+            poster_fps: 0.0,
+            performance_mode: "auto".to_string(),
             desktop_host: DesktopHostDiagnostics::default(),
             runtime_visibility: RuntimeVisibilitySnapshot::default(),
             runtime_monitor: RuntimeMonitorCapabilities::default(),
@@ -68,6 +75,25 @@ impl RuntimeSnapshot {
         self.automatically_paused = self.runtime_visibility.automatically_paused;
         self.pause_reasons = self.runtime_visibility.pause_reasons.clone();
         self.effective_paused = self.manually_paused || self.automatically_paused;
+    }
+
+    fn pause_state(&self) -> String {
+        match self.performance_mode.as_str() {
+            "activeStatic" | "activeAnimated" | "paused" | "stopped" => {
+                self.performance_mode.clone()
+            }
+            _ => {
+                if !self.poster_visible {
+                    "stopped".to_string()
+                } else if self.effective_paused {
+                    "paused".to_string()
+                } else if self.poster_fps > 0.0 {
+                    "activeAnimated".to_string()
+                } else {
+                    "activeStatic".to_string()
+                }
+            }
+        }
     }
 }
 
@@ -166,6 +192,7 @@ fn update_runtime_state(
     edit_mode: bool,
     manually_paused: bool,
     all_locked: bool,
+    performance_mode: String,
     app: tauri::AppHandle,
     state: State<'_, RuntimeState>,
 ) -> Result<RuntimeSnapshot, String> {
@@ -173,6 +200,15 @@ fn update_runtime_state(
     snapshot.edit_mode = edit_mode;
     snapshot.manually_paused = manually_paused;
     snapshot.all_locked = all_locked;
+    if matches!(
+        performance_mode.as_str(),
+        "auto" | "activeStatic" | "activeAnimated" | "paused" | "stopped"
+    ) {
+        snapshot.performance_mode = performance_mode;
+        if snapshot.performance_mode != "activeAnimated" {
+            snapshot.poster_fps = 0.0;
+        }
+    }
     snapshot.refresh_pause_state();
     runtime_monitor::publish_diagnostics(&snapshot.runtime_visibility, snapshot.manually_paused);
     let updated = snapshot.clone();
@@ -322,6 +358,155 @@ fn reconnect_desktop_host(app: tauri::AppHandle) -> Result<DesktopHostDiagnostic
     configure_poster_host(&app, true)
 }
 
+#[cfg(target_os = "windows")]
+fn current_process_memory_bytes() -> u64 {
+    use windows::Win32::System::ProcessStatus::{K32GetProcessMemoryInfo, PROCESS_MEMORY_COUNTERS};
+    use windows::Win32::System::Threading::GetCurrentProcess;
+
+    let mut counters = PROCESS_MEMORY_COUNTERS {
+        cb: std::mem::size_of::<PROCESS_MEMORY_COUNTERS>() as u32,
+        ..Default::default()
+    };
+    let ok = unsafe {
+        K32GetProcessMemoryInfo(
+            GetCurrentProcess(),
+            &mut counters,
+            std::mem::size_of::<PROCESS_MEMORY_COUNTERS>() as u32,
+        )
+    };
+    if ok.as_bool() {
+        counters.WorkingSetSize as u64
+    } else {
+        0
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+fn current_process_memory_bytes() -> u64 {
+    0
+}
+
+#[cfg(target_os = "windows")]
+fn current_process_count() -> u32 {
+    use windows::Win32::System::ProcessStatus::EnumProcesses;
+
+    let mut pids = [0u32; 4096];
+    let mut needed = 0u32;
+    let ok = unsafe {
+        EnumProcesses(
+            pids.as_mut_ptr(),
+            std::mem::size_of_val(&pids) as u32,
+            &mut needed,
+        )
+    };
+    if ok.is_err() {
+        return 0;
+    }
+    let count = (needed as usize / std::mem::size_of::<u32>()).min(pids.len());
+    count as u32
+}
+
+#[cfg(not(target_os = "windows"))]
+fn current_process_count() -> u32 {
+    0
+}
+
+#[cfg(target_os = "windows")]
+fn current_process_cpu_ms() -> u64 {
+    use windows::Win32::Foundation::FILETIME;
+    use windows::Win32::System::Threading::{GetCurrentProcess, GetProcessTimes};
+
+    let mut creation = FILETIME::default();
+    let mut exit = FILETIME::default();
+    let mut kernel = FILETIME::default();
+    let mut user = FILETIME::default();
+    let ok = unsafe {
+        GetProcessTimes(
+            GetCurrentProcess(),
+            &mut creation,
+            &mut exit,
+            &mut kernel,
+            &mut user,
+        )
+    };
+    if ok.is_err() {
+        return 0;
+    }
+    let kernel_ms = (((kernel.dwHighDateTime as u64) << 32) | kernel.dwLowDateTime as u64) / 10_000;
+    let user_ms = (((user.dwHighDateTime as u64) << 32) | user.dwLowDateTime as u64) / 10_000;
+    kernel_ms + user_ms
+}
+
+#[cfg(not(target_os = "windows"))]
+fn current_process_cpu_ms() -> u64 {
+    0
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct PerformanceSnapshot {
+    memory_bytes: u64,
+    process_count: u32,
+    poster_fps: f64,
+    cpu_ms: u64,
+    pause_state: String,
+    elapsed_ms: u64,
+}
+
+#[tauri::command]
+fn get_performance_snapshot(
+    app: tauri::AppHandle,
+    state: State<'_, RuntimeState>,
+) -> Result<PerformanceSnapshot, String> {
+    let snapshot = state.0.lock().map_err(|error| error.to_string())?;
+    let elapsed_ms = app
+        .try_state::<PerformanceClock>()
+        .map(|clock| clock.0.elapsed().as_millis() as u64)
+        .unwrap_or(0);
+    Ok(PerformanceSnapshot {
+        memory_bytes: current_process_memory_bytes(),
+        process_count: current_process_count(),
+        poster_fps: snapshot.poster_fps,
+        cpu_ms: current_process_cpu_ms(),
+        pause_state: snapshot.pause_state(),
+        elapsed_ms,
+    })
+}
+
+#[tauri::command]
+fn report_poster_fps(fps: f64, state: State<'_, RuntimeState>) -> Result<(), String> {
+    let mut snapshot = state.0.lock().map_err(|error| error.to_string())?;
+    snapshot.poster_fps = fps.clamp(0.0, 240.0);
+    Ok(())
+}
+
+#[tauri::command]
+fn save_performance_baseline(
+    samples: Vec<serde_json::Value>,
+    app: tauri::AppHandle,
+) -> Result<(), String> {
+    let directory = app
+        .path()
+        .app_config_dir()
+        .map_err(|error| error.to_string())?;
+    std::fs::create_dir_all(&directory).map_err(|error| error.to_string())?;
+    let path = directory.join("performance-baseline-v1.json");
+    let saved_at = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|duration| duration.as_secs())
+        .unwrap_or(0);
+    let payload = serde_json::json!({
+        "version": 1,
+        "savedAtUnixSeconds": saved_at,
+        "samples": samples,
+    });
+    std::fs::write(
+        path,
+        serde_json::to_vec_pretty(&payload).map_err(|error| error.to_string())?,
+    )
+    .map_err(|error| error.to_string())
+}
+
 fn set_poster_visibility(app: &tauri::AppHandle, visible: bool) {
     desktop_host::set_poster_visibility_intent(visible);
     if let Some(window) = app.get_webview_window("poster") {
@@ -355,6 +540,18 @@ fn show_main_window(app: &tauri::AppHandle) {
     }
 }
 
+fn toggle_main_window(app: &tauri::AppHandle) {
+    if let Some(window) = app.get_webview_window("main") {
+        if window.is_visible().unwrap_or(false) {
+            let _ = window.hide();
+        } else {
+            let _ = window.show();
+            let _ = window.unminimize();
+            let _ = window.set_focus();
+        }
+    }
+}
+
 fn toggle_poster_window(app: &tauri::AppHandle) {
     let visible = app
         .get_webview_window("poster")
@@ -375,6 +572,7 @@ pub fn run() {
             show_main_window(app);
         }))
         .manage(RuntimeState::default())
+        .manage(PerformanceClock(Instant::now()))
         .setup(|app| {
             let placement_path = app
                 .path()
@@ -487,15 +685,10 @@ pub fn run() {
                     _ => {}
                 })
                 .on_tray_icon_event(|tray, event| match event {
-                    TrayIconEvent::Click {
-                        button: MouseButton::Left,
-                        button_state: MouseButtonState::Up,
-                        ..
-                    } => toggle_poster_window(tray.app_handle()),
                     TrayIconEvent::DoubleClick {
                         button: MouseButton::Left,
                         ..
-                    } => show_main_window(tray.app_handle()),
+                    } => toggle_main_window(tray.app_handle()),
                     _ => {}
                 })
                 .build(app)?;
@@ -599,7 +792,10 @@ pub fn run() {
             start_poster_drag,
             resize_poster_surface,
             set_poster_interaction_region,
-            reconnect_desktop_host
+            reconnect_desktop_host,
+            get_performance_snapshot,
+            report_poster_fps,
+            save_performance_baseline
         ])
         .run(tauri::generate_context!())
         .expect("failed to run Desktop-Up");
@@ -623,6 +819,8 @@ mod tests {
             "allLocked",
             "posterVisible",
             "pauseReasons",
+            "posterFps",
+            "performanceMode",
             "desktopHost",
             "runtimeVisibility",
             "runtimeMonitor",
@@ -645,5 +843,60 @@ mod tests {
         snapshot.refresh_pause_state();
         assert_eq!(snapshot.pause_reasons, ["displayOff"]);
         assert!(snapshot.effective_paused);
+    }
+
+    #[test]
+    fn pause_state_follows_auto_runtime_contract() {
+        let mut snapshot = RuntimeSnapshot::default();
+        assert_eq!(snapshot.pause_state(), "activeStatic");
+
+        snapshot.poster_fps = 30.0;
+        assert_eq!(snapshot.pause_state(), "activeAnimated");
+
+        snapshot.manually_paused = true;
+        snapshot.refresh_pause_state();
+        assert_eq!(snapshot.pause_state(), "paused");
+
+        snapshot.manually_paused = false;
+        snapshot.refresh_pause_state();
+        snapshot.poster_visible = false;
+        assert_eq!(snapshot.pause_state(), "stopped");
+    }
+
+    #[test]
+    fn performance_mode_override_controls_pause_state() {
+        let mut snapshot = RuntimeSnapshot::default();
+        snapshot.performance_mode = "paused".to_string();
+        assert_eq!(snapshot.pause_state(), "paused");
+
+        snapshot.performance_mode = "activeAnimated".to_string();
+        snapshot.effective_paused = true;
+        assert_eq!(snapshot.pause_state(), "activeAnimated");
+    }
+
+    #[test]
+    fn performance_snapshot_serializes_with_frontend_camel_case_contract() {
+        let snapshot = PerformanceSnapshot {
+            memory_bytes: 1234,
+            process_count: 7,
+            poster_fps: 30.0,
+            cpu_ms: 88,
+            pause_state: "activeAnimated".to_string(),
+            elapsed_ms: 99,
+        };
+        let value = serde_json::to_value(snapshot).unwrap();
+        let object = value
+            .as_object()
+            .expect("snapshot must serialize to an object");
+        for key in [
+            "memoryBytes",
+            "processCount",
+            "posterFps",
+            "cpuMs",
+            "pauseState",
+            "elapsedMs",
+        ] {
+            assert!(object.contains_key(key), "missing performance field {key}");
+        }
     }
 }

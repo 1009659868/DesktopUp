@@ -16,6 +16,7 @@ import {
   isRuntimeSuspended,
   selectedPoster
 } from "./poster-runtime.js";
+import { isReportingFps } from "./performance-monitor.js";
 const POSTER_SURFACE_GUTTER = 10;
 const POSTER_CORNER_RADIUS = 16;
 const fallbackPoster = normalizedPoster(createDefaultSnapshot().posters[0]);
@@ -27,6 +28,10 @@ let toastTimer = null;
 let manuallyPaused = false;
 let automaticallyPaused = false;
 let nativeSurfaceSyncTimer = null;
+let fpsRafId = null;
+let frameCount = 0;
+let fpsLastSample = performance.now();
+let lastReportedFps = null;
 
 function loadSnapshot() {
   return readPosterSnapshot(localStorage);
@@ -111,7 +116,63 @@ function applyRuntimePauseState(snapshot = {}) {
   manuallyPaused = runtime.manuallyPaused;
   automaticallyPaused = runtime.automaticallyPaused;
   surface.classList.toggle("is-runtime-paused", isRuntimeSuspended(runtime, document.hidden));
+  const pauseState = runtime.performanceMode === "auto"
+    ? (isRuntimeSuspended(runtime, document.hidden) ? "paused" : "activeStatic")
+    : runtime.performanceMode;
+  surface.classList.toggle("is-performance-static", pauseState === "activeStatic");
+  surface.classList.toggle("is-performance-animated", pauseState === "activeAnimated");
+  surface.classList.toggle("is-performance-paused", pauseState === "paused");
+  surface.classList.toggle("is-performance-stopped", pauseState === "stopped");
   document.body.dataset.runtimePauseReason = runtime.pauseReasons.join(",");
+  document.body.dataset.performanceMode = runtime.performanceMode;
+  syncFpsSampling();
+}
+
+function reportPosterFps(fps) {
+  if (lastReportedFps === fps) return;
+  lastReportedFps = fps;
+  invokeNative("report_poster_fps", { fps });
+}
+
+function shouldSampleFps() {
+  const mode = document.body.dataset.performanceMode || "auto";
+  return isReportingFps(mode, isRuntimeSuspended(runtime, document.hidden), document.hidden);
+}
+
+function stopFpsSampling() {
+  if (fpsRafId != null) {
+    cancelAnimationFrame(fpsRafId);
+    fpsRafId = null;
+  }
+  frameCount = 0;
+  reportPosterFps(0);
+}
+
+function sampleFrame(now) {
+  if (!shouldSampleFps()) {
+    stopFpsSampling();
+    return;
+  }
+  frameCount += 1;
+  const elapsed = now - fpsLastSample;
+  if (elapsed >= 2000) {
+    reportPosterFps(Math.round((frameCount / elapsed) * 1000));
+    frameCount = 0;
+    fpsLastSample = now;
+  }
+  fpsRafId = requestAnimationFrame(sampleFrame);
+}
+
+function syncFpsSampling() {
+  if (shouldSampleFps()) {
+    if (fpsRafId == null) {
+      fpsLastSample = performance.now();
+      frameCount = 0;
+      fpsRafId = requestAnimationFrame(sampleFrame);
+    }
+  } else {
+    stopFpsSampling();
+  }
 }
 
 surface.addEventListener("click", (event) => {
@@ -173,4 +234,5 @@ async function connectNativeControls() {
 
 render();
 syncNativeSurface();
+syncFpsSampling();
 connectNativeControls().catch(() => {});

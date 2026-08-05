@@ -2,13 +2,14 @@
 
 最后更新：2026-08-05
 
-状态：`ACTIVE / C-DHF-06 — 性能基线 + 可视化; C-DHF-04/05 物理矩阵延后`
+状态：`ACTIVE / C-DHF-06 — IMPLEMENTATION READY / BASELINE SAMPLING PENDING; C-DHF-04/05 物理矩阵延后`
 
 ## 已完成
 
 - 工作流范围、任务、硬门和验证记录格式已建立；
-- `runtime-surface` 测试已从源码字符串断言改为行为验证；新增 `poster-core.js` 作为共享海报渲染/存储契约层、`poster-runtime.js` 作为窗口几何/USING-EDITING/锁定-收起/原生同步的统一运行时层，`main.js` 与 `poster-surface.js` 统一使用；25 项 Node/契约测试、12 项 Rust 测试与 Release 构建通过；
-- C-DHF-06 已激活，计划拆为 `C-DHF-06a` 四态性能采集和 `C-DHF-06b` Desktop-Up 内简单性能数值可视化；
+- `runtime-surface` 测试已从源码字符串断言改为行为验证；新增 `poster-core.js` 作为共享海报渲染/存储契约层、`poster-runtime.js` 作为窗口几何/USING-EDITING/锁定-收起/原生同步的统一运行时层，`main.js` 与 `poster-surface.js` 统一使用；31 项 Node/契约测试、15 项 Rust 测试与 Release 构建通过；
+- C-DHF-06 已实现：`C-DHF-06a` 四态性能采集和采样保存、`C-DHF-06b` Desktop-Up 内性能数值可视化均落地；真实基线数据待采样；
+- 托盘行为契约已调整：单击托盘不再切换海报，双击切换主页，海报显隐仅通过右键菜单“显示海报宿主”控制；
 - 产品/架构/交付文档已将桌面宿主列为首要技术风险；
 - 回退模式和不注入 Explorer 的边界已明确；
 - Git 仓库与实现分支、零依赖交互前端、Node 构建脚本和 Tauri 原生外壳已经建立；
@@ -58,7 +59,7 @@ Rust `RuntimeSnapshot` 与前端 `poster-runtime.js` 已对齐：
 
 - `C-DHF-04` 的 Explorer 真重启、物理热插拔、主屏切换和 100%/125%/150%/200% DPI 因物理环境延后；
 - 多海报原生窗体尚未验证；C-DHF-05 已由用户确认真实游戏全屏、Win+L、显示器关闭/唤醒通过，托盘菜单一致性、手动+自动暂停叠加和恢复后视觉确认延后；
-- C-DHF-06 尚未实现，四态性能基线、采样记录和 Desktop-Up 内性能数值可视化均待开发；
+- C-DHF-06 真实四态基线采样数据待执行，`performance-baseline-v1.json` 尚未由用户生成；
 - 工作集约 `26.7 MB` 仅是 A0 单次观测，性能预算尚未形成正式基线；
 - 尚未生成最终 `DesktopUpSetup.exe` 与安装目录内的 `uninstall.exe`。
 - 原 M1 海报重构实现已撤回，不再视为完成；大幅面、模板、状态机、透明背景、降级和 Release 视觉验收均需在 V1 重新实现与验证；
@@ -68,7 +69,7 @@ Rust `RuntimeSnapshot` 与前端 `poster-runtime.js` 已对齐：
 
 本轮自动化桌面矩阵已通过 Win+D 10 轮、同屏最大化 10 轮、无边框全屏 10 个有效轮次和跨屏不误停 10 轮；同时发现并修复副屏位置冷启动恢复中的 WorkerW 裁剪与 `Moved` 写回竞态。证据见 [`C-DHF-04/05 真实环境矩阵第一轮`](../20_Log/2026-08/2026-08-04_cdhf04_05_real_matrix_round1.md)。
 
-下一步进入 C-DHF-06：先实现四态性能采集和采样记录，再在 Desktop-Up 内提供简单性能数值可视化；C-DHF-04/05 剩余物理矩阵保持延后，不参与当前开发阻塞。
+下一步由用户在本机 Release 中依次对 `activeStatic / activeAnimated / paused / stopped` 四个模式执行“采集当前状态 10s”，确认 `performance-baseline-v1.json` 生成；C-DHF-04/05 剩余物理矩阵保持延后，不参与当前开发阻塞。
 
 用户实机确认记录见 [`C-DHF-04/05 用户实机矩阵补充`](../20_Log/2026-08/2026-08-05_cdhf04_05_physical_matrix_user.md)；Explorer 真重启、热插拔、主屏/DPI 因物理环境暂不能执行，标记为延后，不阻塞 C-DHF-06。
 

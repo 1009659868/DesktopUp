@@ -2,6 +2,15 @@
 
 本文件只记录项目级已发生事实。局部实现过程进入对应 C 工作流日志。
 
+## 2026-08-06 — 调整托盘单击/双击契约
+
+状态：`ACCEPTED / ACTIVE`
+
+- 单击托盘不再显示/隐藏海报，避免误隐藏桌面常驻程序；
+- 双击托盘切换主页显示/隐藏；
+- 海报显隐仅通过右键菜单“显示海报宿主”控制；
+- 同步更新 `TRAY_AND_QUICK_ACCESS_DESIGN`、`RUNTIME_SURFACE_MODEL`、`PRODUCT_DESIGN`、B 模块计划和 C 工作流计划。
+
 ## 2026-08-04 — 冻结旧制作计划并建立 V1 A/B/C 落地路线
 
 状态：`PLAN BASELINE / ACTIVE`

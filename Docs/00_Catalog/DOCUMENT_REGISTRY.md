@@ -1,6 +1,6 @@
 # 文档登记表
 
-最后检查：2026-08-05
+最后检查：2026-08-06
 
 | 文档 | 层级 | 职责 | 状态 |
 | --- | --- | --- | --- |
@@ -73,6 +73,7 @@
 | `C_Workstreams/DesktopHostFeasibility/20_Log/2026-08/2026-08-03_tray_pause_state_preservation.md` | C/Log | 托盘临时前台错误清除最大化/全屏暂停修复 | `USER RETEST PENDING` |
 | `C_Workstreams/DesktopHostFeasibility/20_Log/2026-08/2026-08-04_cdhf04_05_real_matrix_round1.md` | C/Log | C-DHF-04/05 自动化真实桌面矩阵、缺陷修复与剩余人工项 | `IN PROGRESS` |
 | `C_Workstreams/DesktopHostFeasibility/20_Log/2026-08/2026-08-05_cdhf04_05_physical_matrix_user.md` | C/Log | C-DHF-04/05 用户实机确认与物理受限待测项 | `IN PROGRESS` |
+| `C_Workstreams/DesktopHostFeasibility/20_Log/2026-08/2026-08-06_cdhf06_performance_baseline.md` | C/Log | C-DHF-06 四态性能采集/采样保存/可视化实现记录 | `IN PROGRESS` |
 | `C_Workstreams/DesktopHostFeasibility/30_Sync/COLD_START.md` | C/Sync | C 工作流接手阅读入口 | `ACTIVE` |
 | `C_Workstreams/DesktopHostFeasibility/30_Sync/CURRENT_HANDOFF.md` | C/Sync | 当前可执行位置 | `ACTIVE` |
 | `Reference/RELATED_PROJECTS.md` | Reference | 同类项目调研 | `REFERENCE` |

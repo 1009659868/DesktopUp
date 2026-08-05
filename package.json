@@ -7,7 +7,7 @@
   "scripts": {
     "build": "node scripts/build-ui.mjs",
     "dev": "node scripts/serve-ui.mjs",
-    "check": "node --check app/src/model.js && node --check app/src/main.js && node --check app/src/poster-core.js && node --check app/src/poster-runtime.js && node --check app/src/poster-surface.js && node --test tests/*.test.mjs && node scripts/check-doc-links.mjs",
+    "check": "node --check app/src/model.js && node --check app/src/main.js && node --check app/src/performance-monitor.js && node --check app/src/poster-core.js && node --check app/src/poster-runtime.js && node --check app/src/poster-surface.js && node --test tests/*.test.mjs && node scripts/check-doc-links.mjs",
     "tauri:dev": "cargo tauri dev",
     "tauri:build": "cargo tauri build"
   }

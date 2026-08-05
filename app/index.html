@@ -52,6 +52,11 @@
               <strong>STATIC</strong>
               <small>按需绘制</small>
             </div>
+            <div class="perf-chip" id="perf-chip" title="性能基线">
+              <span class="perf-bar"></span>
+              <strong>-- MB</strong>
+              <small>FPS --</small>
+            </div>
           </header>
 
           <div class="snap-grid" aria-hidden="true"></div>
@@ -124,6 +129,25 @@
               <input id="autostart-control" type="checkbox" />
               <i></i>
             </label>
+          </section>
+
+          <section class="control-group performance-panel">
+            <header><span>性能基线</span><small>C-DHF-06</small></header>
+            <div class="performance-mode-list" id="performance-mode-list" role="group" aria-label="性能采样状态">
+              <button class="perf-mode is-active" data-performance-mode="auto" type="button">自动</button>
+              <button class="perf-mode" data-performance-mode="activeStatic" type="button">静态</button>
+              <button class="perf-mode" data-performance-mode="activeAnimated" type="button">30 FPS</button>
+              <button class="perf-mode" data-performance-mode="paused" type="button">暂停</button>
+              <button class="perf-mode" data-performance-mode="stopped" type="button">停止</button>
+            </div>
+            <dl class="performance-values">
+              <div><dt>内存</dt><dd id="perf-memory">--</dd></div>
+              <div><dt>FPS</dt><dd id="perf-fps">--</dd></div>
+              <div><dt>进程</dt><dd id="perf-processes">--</dd></div>
+              <div><dt>CPU</dt><dd id="perf-cpu">--</dd></div>
+              <div><dt>状态</dt><dd id="perf-state">--</dd></div>
+            </dl>
+            <button class="perf-collect" id="perf-collect" type="button">采集当前状态 10s</button>
           </section>
 
           <button class="primary-action" id="add-game" type="button">

@@ -1,6 +1,6 @@
 # Desktop Runtime Foundation V1 模块计划
 
-最后检查：2026-08-05
+最后检查：2026-08-06
 
 状态：`ACTIVE`
 

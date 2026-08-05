@@ -21,6 +21,13 @@ import {
   posterSnapshot,
   selectedPoster as runtimeSelectedPoster
 } from "./poster-runtime.js";
+import {
+  buildPerformanceSample,
+  formatCpuMs,
+  formatMemoryBytes,
+  normalizePerformanceMode,
+  performanceModeLabel
+} from "./performance-monitor.js";
 
 const app = document.querySelector("#app");
 const stage = document.querySelector("#desktop-stage");
@@ -28,6 +35,14 @@ const posterLayer = document.querySelector("#poster-layer");
 const editToggle = document.querySelector("#edit-toggle");
 const pauseToggle = document.querySelector("#pause-toggle");
 const runtimeChip = document.querySelector("#runtime-chip");
+const perfChip = document.querySelector("#perf-chip");
+const perfMemory = document.querySelector("#perf-memory");
+const perfFps = document.querySelector("#perf-fps");
+const perfProcesses = document.querySelector("#perf-processes");
+const perfCpu = document.querySelector("#perf-cpu");
+const perfState = document.querySelector("#perf-state");
+const performanceModeList = document.querySelector("#performance-mode-list");
+const perfCollect = document.querySelector("#perf-collect");
 const toast = document.querySelector("#toast");
 const accentControl = document.querySelector("#accent-control");
 const opacityControl = document.querySelector("#opacity-control");
@@ -40,6 +55,8 @@ let gesture = null;
 let toastTimer = null;
 let automaticallyPaused = false;
 let automaticPauseReasons = [];
+let perfPollTimer = null;
+let performanceCollecting = false;
 
 saveState();
 
@@ -58,6 +75,13 @@ function selectedPoster() {
 function render() {
   app.classList.toggle("is-editing", state.editMode);
   app.classList.toggle("is-paused", state.manuallyPaused || isRuntimeSuspended(state, document.hidden));
+  const pauseState = state.performanceMode === "auto"
+    ? (isRuntimeSuspended(state, document.hidden) ? "paused" : "activeStatic")
+    : state.performanceMode;
+  app.classList.toggle("is-performance-static", pauseState === "activeStatic");
+  app.classList.toggle("is-performance-animated", pauseState === "activeAnimated");
+  app.classList.toggle("is-performance-paused", pauseState === "paused");
+  app.classList.toggle("is-performance-stopped", pauseState === "stopped");
   editToggle.setAttribute("aria-pressed", String(state.editMode));
   editToggle.querySelector("span:last-child").textContent = state.editMode ? "完成编辑" : "进入编辑";
   pauseToggle.setAttribute("aria-pressed", String(state.manuallyPaused));
@@ -126,6 +150,87 @@ function renderRuntime() {
     : state.manuallyPaused
       ? "手动暂停 · 0 FPS"
       : "按需绘制";
+}
+
+function renderPerformance(snapshot = {}) {
+  const memory = formatMemoryBytes(snapshot.memoryBytes);
+  const fps = snapshot.posterFps != null && snapshot.posterFps > 0
+    ? `${Math.round(snapshot.posterFps)}`
+    : "--";
+  if (perfChip) {
+    perfChip.querySelector("strong").textContent = memory;
+    perfChip.querySelector("small").textContent = `FPS ${fps}`;
+    perfChip.classList.toggle(
+      "is-good",
+      snapshot.memoryBytes != null && snapshot.memoryBytes < 192 * 1024 * 1024
+    );
+  }
+  if (perfMemory) perfMemory.textContent = memory;
+  if (perfFps) perfFps.textContent = fps;
+  if (perfProcesses) perfProcesses.textContent = String(snapshot.processCount ?? "--");
+  if (perfCpu) perfCpu.textContent = formatCpuMs(snapshot.cpuMs);
+  if (perfState) perfState.textContent = performanceModeLabel(snapshot.pauseState ?? state.performanceMode);
+
+  const pauseState = snapshot.pauseState ?? state.performanceMode;
+  app.classList.toggle("is-performance-static", pauseState === "activeStatic");
+  app.classList.toggle("is-performance-animated", pauseState === "activeAnimated");
+  app.classList.toggle("is-performance-paused", pauseState === "paused");
+  app.classList.toggle("is-performance-stopped", pauseState === "stopped");
+}
+
+async function pollPerformance() {
+  const invoke = window.__TAURI__?.core?.invoke;
+  if (!invoke) return;
+  try {
+    renderPerformance(await invoke("get_performance_snapshot"));
+  } catch {
+    /* backend snapshot not ready yet */
+  }
+}
+
+function startPerformancePolling() {
+  pollPerformance();
+  perfPollTimer = setInterval(pollPerformance, 2000);
+}
+
+async function collectPerformanceBaseline() {
+  const invoke = window.__TAURI__?.core?.invoke;
+  if (!invoke) {
+    showToast("性能采样仅在 Tauri 环境可用");
+    return;
+  }
+  if (performanceCollecting) return;
+  performanceCollecting = true;
+  perfCollect.disabled = true;
+  perfCollect.textContent = "采集中...";
+  const samples = [];
+  try {
+    for (let index = 0; index < 5; index += 1) {
+      const snapshot = await invoke("get_performance_snapshot");
+      samples.push(buildPerformanceSample(snapshot, state.performanceMode));
+      renderPerformance(snapshot);
+      if (index < 4) {
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+      }
+    }
+    await invoke("save_performance_baseline", { samples });
+    showToast("性能基线已保存");
+  } catch {
+    showToast("性能采样失败");
+  } finally {
+    performanceCollecting = false;
+    perfCollect.disabled = false;
+    perfCollect.textContent = "采集当前状态 10s";
+  }
+}
+
+function applyPerformanceMode(mode) {
+  state = applyPosterAction(state, {
+    type: "setPerformanceMode",
+    value: normalizePerformanceMode(mode)
+  });
+  render();
+  syncNativeRuntimeState();
 }
 
 function applyNativePauseSnapshot(snapshot = {}) {
@@ -308,6 +413,17 @@ autostartControl.addEventListener("change", () => {
   showToast(autostartControl.checked ? "Demo：开机自启已标记为开启" : "Demo：开机自启已标记为关闭");
 });
 
+performanceModeList.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-performance-mode]");
+  if (!button) return;
+  performanceModeList.querySelectorAll("[data-performance-mode]").forEach((option) => {
+    option.classList.toggle("is-active", option === button);
+  });
+  applyPerformanceMode(button.dataset.performanceMode);
+});
+
+perfCollect.addEventListener("click", collectPerformanceBaseline);
+
 document.querySelector("#add-game").addEventListener("click", () => {
   const poster = selectedPoster();
   const catalogEntry = DEFAULT_CATALOG[poster.items.length % DEFAULT_CATALOG.length];
@@ -390,4 +506,5 @@ window.addEventListener("keydown", (event) => {
 });
 
 connectNativeControls().catch(() => {});
+startPerformancePolling();
 render();

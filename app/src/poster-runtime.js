@@ -1,5 +1,13 @@
 import { moveWithinBounds, normalizedPoster, resizeWithinBounds } from "./model.js";
 
+export const PERFORMANCE_MODES = Object.freeze([
+  "auto",
+  "activeStatic",
+  "activeAnimated",
+  "paused",
+  "stopped"
+]);
+
 export function createRuntimeState(snapshot) {
   const posters = Array.isArray(snapshot?.posters)
     ? snapshot.posters.map(normalizedPoster)
@@ -23,6 +31,9 @@ export function createRuntimeState(snapshot) {
     allLocked: Boolean(snapshot?.allLocked ?? posters.every((poster) => poster.locked)),
     posterVisible: snapshot?.posterVisible ?? true,
     pauseReasons: Array.isArray(pauseReasons) ? pauseReasons : [],
+    performanceMode: PERFORMANCE_MODES.includes(snapshot?.performanceMode)
+      ? snapshot.performanceMode
+      : "auto",
     runtimeVisibility: visibility
   };
 }
@@ -63,7 +74,8 @@ export function buildRuntimeSyncArgs(state) {
   return {
     editMode: state.editMode,
     manuallyPaused: state.manuallyPaused,
-    allLocked: state.allLocked
+    allLocked: state.allLocked,
+    performanceMode: state.performanceMode
   };
 }
 
@@ -73,6 +85,13 @@ export function applyPosterAction(state, action) {
       return { ...state, editMode: !state.editMode };
     case "setEditMode":
       return { ...state, editMode: Boolean(action.value) };
+    case "setPerformanceMode":
+      return {
+        ...state,
+        performanceMode: PERFORMANCE_MODES.includes(action.value)
+          ? action.value
+          : "auto"
+      };
     case "toggleManualPause": {
       const manuallyPaused = !state.manuallyPaused;
       return {
@@ -108,6 +127,9 @@ export function applyPosterAction(state, action) {
         allLocked: raw.allLocked ?? state.allLocked,
         posterVisible: raw.posterVisible ?? state.posterVisible,
         pauseReasons: Array.isArray(pauseReasons) ? pauseReasons : [],
+        performanceMode: PERFORMANCE_MODES.includes(raw.performanceMode)
+          ? raw.performanceMode
+          : state.performanceMode,
         runtimeVisibility: visibility
       };
     }

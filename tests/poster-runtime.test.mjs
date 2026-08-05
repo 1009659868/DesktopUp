@@ -20,6 +20,7 @@ test("runtime state starts in USING and keeps poster state normalized", () => {
   assert.equal(state.manuallyPaused, false);
   assert.equal(state.automaticallyPaused, false);
   assert.equal(isRuntimeSuspended(state), false);
+  assert.equal(state.performanceMode, "auto");
   assert.equal(selectedPoster(state).id, "night-ops");
   assert.equal(posterInteractionMode(state), "using");
 });
@@ -138,8 +139,19 @@ test("runtime snapshots and native sync args use the canonical interface", () =>
   assert.deepEqual(buildRuntimeSyncArgs(state), {
     editMode: true,
     manuallyPaused: true,
-    allLocked: false
+    allLocked: false,
+    performanceMode: "auto"
   });
+});
+
+test("performance mode is part of the shared runtime contract", () => {
+  let state = createRuntimeState(createDefaultSnapshot());
+  state = applyPosterAction(state, { type: "setPerformanceMode", value: "activeAnimated" });
+  assert.equal(state.performanceMode, "activeAnimated");
+  assert.equal(buildRuntimeSyncArgs(state).performanceMode, "activeAnimated");
+
+  state = applyPosterAction(state, { type: "setPerformanceMode", value: "not-a-mode" });
+  assert.equal(state.performanceMode, "auto");
 });
 
 test("native sync arguments are built from the shared layer", () => {
