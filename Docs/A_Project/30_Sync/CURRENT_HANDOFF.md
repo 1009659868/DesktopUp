@@ -1,8 +1,8 @@
 # A 层当前交接
 
-最后更新：2026-08-04
+最后更新：2026-08-05
 
-状态：`ACTIVE AT V1-P0 / DESKTOP HOST GATE`
+状态：`ACTIVE AT V1-P0 / DESKTOP HOST GATE / C-DHF-06`
 
 ## 已建立
 
@@ -27,7 +27,7 @@
 
 ## 尚未完成
 
-- 尚未完成 C-DHF-04 真实 Explorer/显示器恢复矩阵与全屏暂停硬门；
+- C-DHF-04/05 剩余物理矩阵（Explorer 真重启、热插拔、主屏/DPI 切换等）因物理环境延后；已确认的真实游戏全屏、Win+L、显示器关闭/唤醒通过；
 - M1 海报重构代码已重置为 `PLANNED`，尚未通过大幅面、模板、状态机、透明背景和 Release 实机验收；
 - 技术架构仍为 `PROPOSED`，需通过 A0 原型决定；
 - 产品暂名为 `DesktopUP`，品牌图标和 Transparent Default 的正式名称/完整视觉规格尚未冻结；AI 低风险免确认范围仍为 `TBD`；
@@ -35,7 +35,7 @@
 
 ## 下一动作
 
-当前唯一动作是继续完成 C-DHF-04 与 C-DHF-05，再推进 C-DHF-06、07、08。关闭 V1-P0 后激活 `C-PCB Poster Contract Baseline`；此前只允许准备契约草案，不得标记海报核心实现通过。精确状态见 [`Desktop Host Feasibility 当前交接`](../../C_Workstreams/DesktopHostFeasibility/30_Sync/CURRENT_HANDOFF.md)。
+当前推进 C-DHF-06 性能基线与 Desktop-Up 内简单性能数值可视化；C-DHF-04/05 剩余物理矩阵保持延后，待物理环境恢复后收口 C-DHF-07/08。关闭 V1-P0 后激活 `C-PCB Poster Contract Baseline`；此前只允许准备契约草案，不得标记海报核心实现通过。精确状态见 [`Desktop Host Feasibility 当前交接`](../../C_Workstreams/DesktopHostFeasibility/30_Sync/CURRENT_HANDOFF.md)。
 
 A1 真实快捷方式能力保持排队状态，在上述 A0 硬门通过前不得开始扫描或移动用户桌面文件。
 

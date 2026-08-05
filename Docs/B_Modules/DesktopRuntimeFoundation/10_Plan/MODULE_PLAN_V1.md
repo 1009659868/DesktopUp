@@ -1,6 +1,6 @@
 # Desktop Runtime Foundation V1 模块计划
 
-最后检查：2026-08-04
+最后检查：2026-08-05
 
 状态：`ACTIVE`
 
@@ -22,7 +22,7 @@
 
 ## 3. 当前任务顺序
 
-`C-DHF-04 + C-DHF-05 → C-DHF-06 / C-DHF-07 → C-DHF-08 → C-DRP → C-RLC`
+`C-DHF-04/05 剩余物理矩阵延后 → C-DHF-06（含 Desktop-Up 内性能数值可视化）→ C-DHF-07/08 待 04/05 恢复后收口 → C-DRP → C-RLC`
 
 ## 4. 模块完成信号
 

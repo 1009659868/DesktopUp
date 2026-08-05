@@ -40,6 +40,7 @@ struct RuntimeSnapshot {
     effective_paused: bool,
     all_locked: bool,
     poster_visible: bool,
+    pause_reasons: Vec<String>,
     desktop_host: DesktopHostDiagnostics,
     runtime_visibility: RuntimeVisibilitySnapshot,
     runtime_monitor: RuntimeMonitorCapabilities,
@@ -54,6 +55,7 @@ impl Default for RuntimeSnapshot {
             effective_paused: false,
             all_locked: true,
             poster_visible: true,
+            pause_reasons: Vec::new(),
             desktop_host: DesktopHostDiagnostics::default(),
             runtime_visibility: RuntimeVisibilitySnapshot::default(),
             runtime_monitor: RuntimeMonitorCapabilities::default(),
@@ -64,6 +66,7 @@ impl Default for RuntimeSnapshot {
 impl RuntimeSnapshot {
     fn refresh_pause_state(&mut self) {
         self.automatically_paused = self.runtime_visibility.automatically_paused;
+        self.pause_reasons = self.runtime_visibility.pause_reasons.clone();
         self.effective_paused = self.manually_paused || self.automatically_paused;
     }
 }
@@ -600,4 +603,47 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("failed to run Desktop-Up");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn runtime_snapshot_serializes_with_frontend_camel_case_contract() {
+        let value = serde_json::to_value(RuntimeSnapshot::default()).unwrap();
+        let object = value
+            .as_object()
+            .expect("snapshot must serialize to an object");
+        for key in [
+            "editMode",
+            "manuallyPaused",
+            "automaticallyPaused",
+            "effectivePaused",
+            "allLocked",
+            "posterVisible",
+            "pauseReasons",
+            "desktopHost",
+            "runtimeVisibility",
+            "runtimeMonitor",
+        ] {
+            assert!(
+                object.contains_key(key),
+                "missing frontend contract field {key}"
+            );
+        }
+    }
+
+    #[test]
+    fn pause_reasons_are_promoted_to_the_top_level_snapshot() {
+        let mut snapshot = RuntimeSnapshot::default();
+        snapshot.runtime_visibility = RuntimeVisibilitySnapshot {
+            automatically_paused: true,
+            pause_reasons: vec!["displayOff".to_string()],
+            ..Default::default()
+        };
+        snapshot.refresh_pause_state();
+        assert_eq!(snapshot.pause_reasons, ["displayOff"]);
+        assert!(snapshot.effective_paused);
+    }
 }

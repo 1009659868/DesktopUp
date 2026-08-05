@@ -1,12 +1,14 @@
 # Desktop Host Feasibility 当前交接
 
-最后更新：2026-08-04
+最后更新：2026-08-05
 
-状态：`ACTIVE / C-DHF-04 + C-DHF-05 IN PROGRESS — M1 IMPLEMENTATION RESET`
+状态：`ACTIVE / C-DHF-06 — 性能基线 + 可视化; C-DHF-04/05 物理矩阵延后`
 
 ## 已完成
 
 - 工作流范围、任务、硬门和验证记录格式已建立；
+- `runtime-surface` 测试已从源码字符串断言改为行为验证；新增 `poster-core.js` 作为共享海报渲染/存储契约层、`poster-runtime.js` 作为窗口几何/USING-EDITING/锁定-收起/原生同步的统一运行时层，`main.js` 与 `poster-surface.js` 统一使用；25 项 Node/契约测试、12 项 Rust 测试与 Release 构建通过；
+- C-DHF-06 已激活，计划拆为 `C-DHF-06a` 四态性能采集和 `C-DHF-06b` Desktop-Up 内简单性能数值可视化；
 - 产品/架构/交付文档已将桌面宿主列为首要技术风险；
 - 回退模式和不注入 Explorer 的边界已明确；
 - Git 仓库与实现分支、零依赖交互前端、Node 构建脚本和 Tauri 原生外壳已经建立；
@@ -39,12 +41,24 @@
 - 15 项 Node/契约测试、6 项 Rust 测试、`cargo check` 与 Release 重建通过；首轮修复 PID `63628` 的冷启动连续采样和第二实例回呼均保持单实例、`Responding=True`，最终对齐重建 PID `70600` 也持续响应，证据见 [`启动与单实例回呼挂起修复`](../20_Log/2026-08/2026-08-03_startup_hang_recovery.md)。
 - C-DHF-05 人工矩阵发现“Codex 最大化后右键托盘仍显示静态待机”失败；原因是 `Shell_TrayWnd` 被旧逻辑与 `Progman/WorkerW` 一同视为真正回桌面，托盘打开时错误清除覆盖暂停；
 - 临时托盘/系统弹层现会继承上一个有效覆盖，真正桌面仍清除覆盖；16 项 Node/契约测试、8 项 Rust 测试与 Release 重建通过，修复版 PID `71836` 已运行，等待用户复测，详见 [`托盘前台切换暂停状态修复`](../20_Log/2026-08/2026-08-03_tray_pause_state_preservation.md)；
+- 用户实机确认真实游戏全屏、Win+L 锁定/解锁、显示器关闭/唤醒通过；记录见 [`C-DHF-04/05 用户实机矩阵补充`](../20_Log/2026-08/2026-08-05_cdhf04_05_physical_matrix_user.md)。
 - Release 入口已切换为 Windows GUI 子系统，PE 标记为 `Subsystem 2`，启动不应再出现 Windows Terminal 命令窗口。
+
+## 运行时接口契约（2026-08-05）
+
+Rust `RuntimeSnapshot` 与前端 `poster-runtime.js` 已对齐：
+
+- 顶层字段统一为 `editMode`、`manuallyPaused`、`automaticallyPaused`、`effectivePaused`、`allLocked`、`posterVisible`、`pauseReasons`、`runtimeVisibility`；
+- 前端通过 `applyRuntimeSnapshot` 直接接收 Rust snapshot，不再手工拼接暂停字段；
+- 前端通过 `buildRuntimeSyncArgs` 回传 `editMode`、`manuallyPaused`、`allLocked`；
+- `USING/EDITING` 不持久化，由 `posterInteractionMode` 从 `editMode + locked` 派生；
+- 原生窗口尺寸与命中区域参数统一由 `buildNativeResizeArgs` / `buildInteractionRegionArgs` 构造。
 
 ## 尚未完成
 
-- `C-DHF-04` 的 Win+D、Explorer 真重启、多屏、主屏切换和 100%/125%/150%/200% DPI 仍待真实环境人工矩阵；
-- 多海报原生窗体尚未验证；C-DHF-05 的真实全屏、锁屏、显示器关闭、恢复和跨屏不误停矩阵仍待人工验证；
+- `C-DHF-04` 的 Explorer 真重启、物理热插拔、主屏切换和 100%/125%/150%/200% DPI 因物理环境延后；
+- 多海报原生窗体尚未验证；C-DHF-05 已由用户确认真实游戏全屏、Win+L、显示器关闭/唤醒通过，托盘菜单一致性、手动+自动暂停叠加和恢复后视觉确认延后；
+- C-DHF-06 尚未实现，四态性能基线、采样记录和 Desktop-Up 内性能数值可视化均待开发；
 - 工作集约 `26.7 MB` 仅是 A0 单次观测，性能预算尚未形成正式基线；
 - 尚未生成最终 `DesktopUpSetup.exe` 与安装目录内的 `uninstall.exe`。
 - 原 M1 海报重构实现已撤回，不再视为完成；大幅面、模板、状态机、透明背景、降级和 Release 视觉验收均需在 V1 重新实现与验证；
@@ -54,7 +68,9 @@
 
 本轮自动化桌面矩阵已通过 Win+D 10 轮、同屏最大化 10 轮、无边框全屏 10 个有效轮次和跨屏不误停 10 轮；同时发现并修复副屏位置冷启动恢复中的 WorkerW 裁剪与 `Moved` 写回竞态。证据见 [`C-DHF-04/05 真实环境矩阵第一轮`](../20_Log/2026-08/2026-08-04_cdhf04_05_real_matrix_round1.md)。
 
-下一步先完成最终隔离 Rust/Release 构建并复测副屏冷启动，再由用户现场执行 Explorer 真重启、主屏/DPI/热插拔、托盘状态、Win+L、显示器关闭/唤醒和真实游戏全屏矩阵。两项仍为 `IN PROGRESS`，不得进入 C-DHF-06 封板。
+下一步进入 C-DHF-06：先实现四态性能采集和采样记录，再在 Desktop-Up 内提供简单性能数值可视化；C-DHF-04/05 剩余物理矩阵保持延后，不参与当前开发阻塞。
+
+用户实机确认记录见 [`C-DHF-04/05 用户实机矩阵补充`](../20_Log/2026-08/2026-08-05_cdhf04_05_physical_matrix_user.md)；Explorer 真重启、热插拔、主屏/DPI 因物理环境暂不能执行，标记为延后，不阻塞 C-DHF-06。
 
 ## 工作区注意事项
 

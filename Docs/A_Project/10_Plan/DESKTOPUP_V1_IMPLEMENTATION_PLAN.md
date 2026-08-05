@@ -142,20 +142,21 @@
 ```text
 A: DESKTOPUP_V1_IMPLEMENTATION_PLAN / V1-P0
 └─ B: Desktop Runtime Foundation / B-DRF
-   └─ C: Desktop Host Feasibility / C-DHF-04 + C-DHF-05
+   └─ C: Desktop Host Feasibility / C-DHF-06 ACTIVE
+       （C-DHF-04/05 剩余物理矩阵因物理环境延后）
 ```
 
 当前推进顺序：
 
 ```text
-C-DHF-04 + C-DHF-05
-→ C-DHF-06
-C-DHF-04 → C-DHF-07
-C-DHF-01..07 → C-DHF-08
+C-DHF-04/05 剩余物理矩阵延后（物理环境暂不可用）
+→ C-DHF-06 性能基线 + Desktop-Up 内简单性能数值可视化
+→ C-DHF-07 待 C-DHF-04 恢复后执行
+→ C-DHF-08 待 C-DHF-01..07 全部收口后封板
 → 激活 C-PCB Poster Contract Baseline
 ```
 
-在 C-DHF-08 关闭前，可以准备 C-PCB 的测试契约草案，但不得将 V1-P1 或 M1 标记为实施通过。
+C-DHF-06 已提前激活，但 C-DHF-04/05 的物理矩阵结论仍是 V1-P0 未完成硬门，不得因推进 C-DHF-06 而把 04/05 标记为通过。在 C-DHF-08 关闭前，可以准备 C-PCB 的测试契约草案，但不得将 V1-P1 或 M1 标记为实施通过。
 
 ## 7. 任务状态规则
 
