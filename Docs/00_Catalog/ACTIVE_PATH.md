@@ -4,9 +4,9 @@
 
 | 层级 | 当前节点 | 权威入口 | 状态 |
 | --- | --- | --- | --- |
-| A | DesktopUP V1 落地计划 / V1-P0 宿主硬门 | `A_Project/10_Plan/DESKTOPUP_V1_IMPLEMENTATION_PLAN.md` | `ACTIVE` |
-| B | Desktop Runtime Foundation / 单全局桌面运行时 | `B_Modules/DesktopRuntimeFoundation/10_Plan/MODULE_PLAN_V1.md` | `ACTIVE` |
-| C | Desktop Host Feasibility / 桌面宿主可行性验证 | `C_Workstreams/DesktopHostFeasibility/10_Plan/WORKSTREAM_PLAN.md` | `ACTIVE` |
+| A | DesktopUP V1 落地计划 / V1-P0 宿主硬门 | `A_Project/10_Plan/DESKTOPUP_V1_IMPLEMENTATION_PLAN.md` | `ACTIVE — V1-P0 COMPLETE / NEXT V1-P1` |
+| B | Desktop Runtime Foundation / 单全局桌面运行时 | `B_Modules/DesktopRuntimeFoundation/10_Plan/MODULE_PLAN_V1.md` | `ACTIVE — C-DRP NEXT` |
+| C | Desktop Host Feasibility / 桌面宿主可行性验证 | `C_Workstreams/DesktopHostFeasibility/10_Plan/WORKSTREAM_PLAN.md` | `COMPLETE — NEXT C-DRP / C-PCB` |
 
 ## 当前接手链
 
@@ -27,10 +27,10 @@ V1-P0 不直接进入海报核心和真实收纳开发。当前 C-DHF 必须先�
 当前推进顺序（2026-08-05）：
 
 ```text
-C-DHF-04/05 剩余物理矩阵延后（物理环境暂不可用）
-→ C-DHF-06 性能基线 + Desktop-Up 内简单性能数值可视化
-→ C-DHF-07/08 待 C-DHF-04/05 恢复后收口
+C-DHF-04/05 剩余物理矩阵（COMPLETE）
+→ C-DHF-06 性能基线 + Desktop-Up 内简单性能数值可视化（COMPLETE）
+→ C-DHF-07/08（COMPLETE）
 → 激活 C-PCB Poster Contract Baseline
 ```
 
-在 C-DHF-08 关闭前，可以准备 C-PCB 的测试契约草案，但不得把设计冻结或契约草案标记为实现通过。
+`C-DHF-01..08` 已关闭，`V1-P0` 宿主硬门结论具备；下一步激活 `C-DRP` 与 `C-PCB`，不得把 M1 标记为实现通过。

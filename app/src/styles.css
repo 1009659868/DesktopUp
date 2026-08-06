@@ -599,6 +599,7 @@ button {
   grid-template-columns: repeat(var(--grid-columns), minmax(0, 1fr));
   gap: 11px;
   height: 100%;
+  align-content: start;
   overflow: auto;
   padding: 2px 2px 8px;
   scrollbar-width: thin;

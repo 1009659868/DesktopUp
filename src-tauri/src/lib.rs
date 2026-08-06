@@ -480,6 +480,29 @@ fn report_poster_fps(fps: f64, state: State<'_, RuntimeState>) -> Result<(), Str
     Ok(())
 }
 
+fn merge_performance_samples(
+    existing: Option<&serde_json::Value>,
+    incoming: Vec<serde_json::Value>,
+) -> Vec<serde_json::Value> {
+    let mut merged = Vec::new();
+    if let Some(samples) = existing
+        .and_then(|value| value.get("samples"))
+        .and_then(|samples| samples.as_array())
+    {
+        merged.extend(samples.iter().cloned());
+    }
+    for sample in &incoming {
+        let mode = sample
+            .get("mode")
+            .and_then(|value| value.as_str())
+            .unwrap_or("");
+        merged
+            .retain(|existing| existing.get("mode").and_then(|value| value.as_str()) != Some(mode));
+    }
+    merged.extend(incoming);
+    merged
+}
+
 #[tauri::command]
 fn save_performance_baseline(
     samples: Vec<serde_json::Value>,
@@ -491,15 +514,33 @@ fn save_performance_baseline(
         .map_err(|error| error.to_string())?;
     std::fs::create_dir_all(&directory).map_err(|error| error.to_string())?;
     let path = directory.join("performance-baseline-v1.json");
+    let existing = std::fs::read(&path)
+        .ok()
+        .and_then(|bytes| serde_json::from_slice::<serde_json::Value>(&bytes).ok());
+    let samples = merge_performance_samples(existing.as_ref(), samples);
     let saved_at = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map(|duration| duration.as_secs())
         .unwrap_or(0);
-    let payload = serde_json::json!({
+    let mut payload = serde_json::json!({
         "version": 1,
         "savedAtUnixSeconds": saved_at,
         "samples": samples,
     });
+    if let Some(existing) = existing.as_ref().and_then(|value| value.as_object()) {
+        for key in ["machine", "sampling"] {
+            if let Some(value) = existing.get(key) {
+                payload[key] = value.clone();
+            }
+        }
+    }
+    if payload.get("sampling").is_none() {
+        payload["sampling"] = serde_json::json!({
+            "method": "Release control center; each mode collects 5 snapshots every 2000ms",
+            "intervalMs": 2000,
+            "samplesPerMode": 5,
+        });
+    }
     std::fs::write(
         path,
         serde_json::to_vec_pretty(&payload).map_err(|error| error.to_string())?,
@@ -872,6 +913,26 @@ mod tests {
         snapshot.performance_mode = "activeAnimated".to_string();
         snapshot.effective_paused = true;
         assert_eq!(snapshot.pause_state(), "activeAnimated");
+    }
+
+    #[test]
+    fn performance_baseline_merge_replaces_only_incoming_modes() {
+        let existing = serde_json::json!({
+            "samples": [
+                {"mode": "stopped"},
+                {"mode": "activeStatic"}
+            ]
+        });
+        let incoming = vec![
+            serde_json::json!({"mode": "activeStatic"}),
+            serde_json::json!({"mode": "activeAnimated"}),
+        ];
+        let merged = merge_performance_samples(Some(&existing), incoming);
+        let modes: Vec<_> = merged
+            .iter()
+            .filter_map(|sample| sample["mode"].as_str())
+            .collect();
+        assert_eq!(modes, ["stopped", "activeStatic", "activeAnimated"]);
     }
 
     #[test]

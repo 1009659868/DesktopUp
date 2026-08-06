@@ -1,8 +1,8 @@
 # Desktop Host Feasibility 当前交接
 
-最后更新：2026-08-05
+最后更新：2026-08-06
 
-状态：`ACTIVE / C-DHF-06 — IMPLEMENTATION READY / BASELINE SAMPLING PENDING; C-DHF-04/05 物理矩阵延后`
+状态：`COMPLETE — C-DHF-01..08 CLOSED`
 
 ## 已完成
 
@@ -20,6 +20,10 @@
 - A0 通知区域菜单已包含主页、设置、海报显隐、编辑、全局锁定、暂停、快捷主题、Agent 占位、安全重扫和退出；
 - 通知区域快捷入口与可选本地 BYOK AI 设计已同步到 A/B/C 计划。
 - 已接受并登记 [`运行表面模型 V0.1`](../../../A_Project/10_Plan/RUNTIME_SURFACE_MODEL_V0.1.md)：正常启动只显示桌面收纳层，主页/设置/Agent 均按需独立呼出。
+- C-DHF-06 四态真实基线采样、机器/采样元数据和 Release 实时数值可视化确认已完成，任务已标记 `COMPLETE`；
+- C-DHF-04 副屏冷启动恢复 10/10 已通过，剩余物理矩阵由用户手动确认通过；
+- C-DHF-05 用户实机全屏/Win+L/熄屏通过，手动+自动暂停叠加已确认，剩余项由用户手动确认通过；
+- C-DHF-07 托盘恢复矩阵由用户手动确认通过；
 - 已消除控制中心冷启动可见偏差：Release 冷启动只有海报可见，第二实例可呼出主页，关闭主页后海报继续可见；验证见 [`A0 运行表面角色代码对齐记录`](../20_Log/2026-08/2026-08-02_a0_surface_role_implementation.md)。
 - 已将主页和收纳窗的米白清新风改版登记为功能硬门完成后的延期任务，当前不修改 A0 深色原型。
 - 已建立隔离 WorkerW 适配器、1000ms Explorer 请求超时、可查询运行诊断和 `DESKTOP_UP_DISABLE_WORKERW` 强制回退测试入口；
@@ -59,7 +63,7 @@ Rust `RuntimeSnapshot` 与前端 `poster-runtime.js` 已对齐：
 
 - `C-DHF-04` 的 Explorer 真重启、物理热插拔、主屏切换和 100%/125%/150%/200% DPI 因物理环境延后；
 - 多海报原生窗体尚未验证；C-DHF-05 已由用户确认真实游戏全屏、Win+L、显示器关闭/唤醒通过，托盘菜单一致性、手动+自动暂停叠加和恢复后视觉确认延后；
-- C-DHF-06 真实四态基线采样数据待执行，`performance-baseline-v1.json` 尚未由用户生成；
+- C-DHF-08 已形成决策封板记录，`C-DHF-01..08` 全部关闭；
 - 工作集约 `26.7 MB` 仅是 A0 单次观测，性能预算尚未形成正式基线；
 - 尚未生成最终 `DesktopUpSetup.exe` 与安装目录内的 `uninstall.exe`。
 - 原 M1 海报重构实现已撤回，不再视为完成；大幅面、模板、状态机、透明背景、降级和 Release 视觉验收均需在 V1 重新实现与验证；
@@ -69,7 +73,7 @@ Rust `RuntimeSnapshot` 与前端 `poster-runtime.js` 已对齐：
 
 本轮自动化桌面矩阵已通过 Win+D 10 轮、同屏最大化 10 轮、无边框全屏 10 个有效轮次和跨屏不误停 10 轮；同时发现并修复副屏位置冷启动恢复中的 WorkerW 裁剪与 `Moved` 写回竞态。证据见 [`C-DHF-04/05 真实环境矩阵第一轮`](../20_Log/2026-08/2026-08-04_cdhf04_05_real_matrix_round1.md)。
 
-下一步由用户在本机 Release 中依次对 `activeStatic / activeAnimated / paused / stopped` 四个模式执行“采集当前状态 10s”，确认 `performance-baseline-v1.json` 生成；C-DHF-04/05 剩余物理矩阵保持延后，不参与当前开发阻塞。
+下一步激活 `C-DRP Desktop Runtime Productionization` 与 `C-PCB Poster Contract Baseline`，由 `ACTIVE_PATH.md` 唯一选中；不把 M1 海报实现标记为完成。
 
 用户实机确认记录见 [`C-DHF-04/05 用户实机矩阵补充`](../20_Log/2026-08/2026-08-05_cdhf04_05_physical_matrix_user.md)；Explorer 真重启、热插拔、主屏/DPI 因物理环境暂不能执行，标记为延后，不阻塞 C-DHF-06。
 

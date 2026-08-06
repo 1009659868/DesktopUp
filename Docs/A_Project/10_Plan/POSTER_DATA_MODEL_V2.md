@@ -93,6 +93,7 @@ Poster
 │                                             新海报默认 "top-right"
 ├── normalized_rect: { x: f64, y: f64 }  ← 归一化坐标 (0.0–1.0)，由右上安全边距计算
 ├── width: u32                           ← [新增] 海报宽度 (px)，默认 max(工作区宽 × 0.22, 280px)
+├── height: u32                          ← [新增] 海报高度 (px)，默认工作区高 - 上下安全边距
 ├── collapsed_state: "expanded" | "collapsed"  ← [变更] 呈现模式，默认 "expanded"
 ├── auto_collapse_enabled: bool          ← [新增] 自动收起开关，默认 false（即 auto_collapse=false）
 ├── auto_collapse_delay_seconds: u32     ← [新增] 自动收起延迟秒数，默认 3
@@ -121,7 +122,8 @@ template_key = "transparent-default"
 
 字段变更说明：
 - `collapsed_state`：原为枚举，现映射到状态机的呈现模式维度
-- `width`：新增。高度为工作区计算值，不持久化（显示器变化时重算）
+- `width` / `height`：新增。海报框支持拉伸，尺寸均持久化；显示器变化时在最小/最大尺寸限制内恢复并避免越出工作区
+- 最小/最大尺寸是 C-PCB/C-LST 冻结的显式契约常量，不作为单海报业务字段重复存储
 - `is_locked`：新增。替代原来隐含在交互模式中的锁定概念
 - `auto_collapse_*`：新增。替代原来 "自动隐藏" 伪状态
 - 交互模式（USING/EDITING）不持久化——新建与启动总是 USING
@@ -136,6 +138,7 @@ PosterPlacement (poster-placement-v1.json)
 ├── work_area_normalized: { x: f64, y: f64 }  ← 工作区归一化锚点
 ├── absolute_fallback: { x: i32, y: i32 }     ← 绝对像素回退
 ├── width: u32                                 ← [新增] 海报宽度
+├── height: u32                                ← [新增] 海报高度
 └── updated_at: Timestamp
 ```
 

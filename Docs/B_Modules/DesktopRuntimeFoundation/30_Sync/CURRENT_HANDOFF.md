@@ -1,8 +1,8 @@
 # Desktop Runtime Foundation 当前交接
 
-最后更新：2026-08-05
+最后更新：2026-08-06
 
-状态：`ACTIVE AT B-DRF / C-DHF-06 IMPLEMENTATION READY`
+状态：`ACTIVE AT B-DRF / C-DHF-01..08 COMPLETE`
 
 ## 当前事实
 
@@ -18,12 +18,15 @@
 - 单海报原生圆角交互区域与透明边界已通过黑盒探针和用户人工矩阵，C-DHF-03 完成；
 - 原生位置存储、显示器工作区归一化锚点、合并写盘和显示/Shell 事件恢复基础已实现；重启位置恢复和模拟显示变化拉回通过，C-DHF-04 的 Explorer 真重启、多屏和 DPI 人工矩阵因物理环境延后；
 - Release 单次工作集约 `26.7 MB`，性能目标仍需正式场景基线；
+- C-DHF-06 四态真实基线采样、机器/采样元数据和 Release 实时数值可视化确认已完成；
+- C-DHF-04/05/07 已由用户手动确认通过；
+- C-DHF-08 决策封板已完成，`C-DHF-01..08` 全部关闭；
 - V1 已冻结单全局宿主、主屏右侧、默认解锁展开和未锁定 USING 自制标题栏拖动契约；这些是目标设计，当前 A0 独立窗体实现尚未对齐和验证；
 - 当前模块计划已切换到 [`MODULE_PLAN_V1.md`](../10_Plan/MODULE_PLAN_V1.md)；旧 `MODULE_PLAN.md` 已冻结。模块路线为 C-DHF → C-DRP → C-RLC。
 
 ## 下一动作
 
-继续执行 C-DHF-06 真实四态采样并保存 `performance-baseline-v1.json`；C-DHF-04/05 剩余物理矩阵保持延后，恢复物理环境后再收口 C-DHF-07/08。之后激活 C-DRP。海报状态、几何和标题栏契约归属下一个 B-PCR/C-PCB，不在当前 C-DHF 中提前实现。
+`C-DHF-01..08` 已全部 `COMPLETE`。下一步激活 `C-DRP Desktop Runtime Productionization` 收敛生产单全局宿主；`C-PCB Poster Contract Baseline` 冻结海报核心契约。海报状态、几何和标题栏契约归属 B-PCR/C-PCB，不在当前 C-DHF 中提前实现。
 
 ## 不得提前进行
 

@@ -11,6 +11,34 @@
 - 海报显隐仅通过右键菜单“显示海报宿主”控制；
 - 同步更新 `TRAY_AND_QUICK_ACCESS_DESIGN`、`RUNTIME_SURFACE_MODEL`、`PRODUCT_DESIGN`、B 模块计划和 C 工作流计划。
 
+## 2026-08-06 — 新增海报框拉伸需求
+
+状态：`ACCEPTED / PLANNED`
+
+- 海报框支持在 `EDITING + EXPANDED + 未锁定` 状态拉伸宽度与高度；
+- 宽度与高度均受显式最小/最大尺寸限制，锁定或收起态禁止拉伸；
+- 拉伸后的海报框尺寸持久保存；高度边界在 C-PCB/C-LST 契约中冻结。
+
+## 2026-08-06 — C-DHF-06 性能基线完成
+
+状态：`COMPLETE`
+
+- 四种模式 `activeStatic / activeAnimated / paused / stopped` 各采集 5 个样本，共 20 个样本，写入 `%APPDATA%\com.allmight.desktopup\performance-baseline-v1.json`；
+- 基线文件补充机器规格与采样方法元数据；
+- Release 控制中心实时性能数值可视化已确认可读取；
+- `save_performance_baseline` 改为按 `mode` 合并，避免后采模式覆盖前序模式；
+- Node 31 项、Rust 16 项测试与 Release 构建通过。
+
+## 2026-08-06 — C-DHF-01..08 宿主可行性关闭
+
+状态：`COMPLETE`
+
+- 用户手动确认 `C-DHF-04/05` 剩余物理矩阵通过；
+- 用户手动确认 `C-DHF-07` 托盘恢复矩阵通过；
+- `C-DHF-08` 决策封板记录已建立，`V1-P0` 宿主硬门结论具备；
+- 下一阶段激活 `C-DRP Desktop Runtime Productionization` 与 `C-PCB Poster Contract Baseline`；
+- 不得把 M1 海报实现标记为完成。
+
 ## 2026-08-04 — 冻结旧制作计划并建立 V1 A/B/C 落地路线
 
 状态：`PLAN BASELINE / ACTIVE`
