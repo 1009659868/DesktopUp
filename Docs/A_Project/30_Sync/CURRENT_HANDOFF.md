@@ -10,7 +10,7 @@
 - Rust + Tauri 2 + Svelte/TypeScript 是当前提议技术栈；
 - 安装、恢复和卸载被列为发布硬门；
 - A/B/C 活跃链已指向桌面宿主可行性验证；
-- Git 仓库已经建立，当前实现分支为 `impl/poster-redesign-V1-fix`，作为 `impl/poster-redesign-V1` 的缺陷修复线；设计文档继续有效，M1 未重新封板；
+- Git 仓库已经建立，当前实现分支为 `impl/poster-redesign-V1`；`impl/poster-redesign-V1-fix` 的已验证修复已于 2026-08-08 合入，设计文档继续有效，M1 未重新封板；
 - 已建立零额外依赖的交互前端 Demo 与 Tauri 原生双窗体应用，并完成 Debug/Release 编译；
 - 已验证通知区域入口、主页关闭收纳、单实例回呼，以及无任务栏的独立透明海报 `ToolWindow` 回退宿主；
 - 已接受 [`运行表面模型 V0.1`](../10_Plan/RUNTIME_SURFACE_MODEL_V0.1.md)：桌面海报是唯一默认可见表面，当前主页只作为按需控制中心；

@@ -89,7 +89,7 @@ Rust `RuntimeSnapshot` 与前端 `poster-runtime.js` 已对齐：
 
 ## 工作区注意事项
 
-- 当前实现分支是 `impl/poster-redesign-V1-fix`，作为 `impl/poster-redesign-V1` 的缺陷修复线；未经用户明确要求不推送、不合并、不改写远端；
+- 当前实现分支是 `impl/poster-redesign-V1`；`impl/poster-redesign-V1-fix` 的状态一致性、桌面层级与顶部亮带修复已于 2026-08-08 合入；未经用户明确要求不推送、不改写远端；
 - 不覆盖 Docs 中已建立的用户需求和卸载安全规则；
 - 工程初始化不得把依赖缓存或构建输出提交到文档目录。
 
