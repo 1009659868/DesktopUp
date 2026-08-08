@@ -35,9 +35,21 @@ test("cold start surface contract is configured in Tauri", () => {
   assert.equal(poster.title, "", "poster native title must stay empty");
   assert.equal(poster.url, "poster.html", "poster window must load the native poster page");
   assert.equal(poster.transparent, true, "poster surface must be transparent");
+  assert.deepEqual(
+    poster.backgroundColor,
+    [0, 0, 0, 0],
+    "poster window and WebView must start with a fully transparent background"
+  );
   assert.equal(poster.decorations, false, "poster surface must not use native decorations");
   assert.equal(poster.focus, false, "poster surface must not steal focus");
+  assert.equal(poster.focusable, false, "poster surface must not become an active application");
+  assert.equal(
+    poster.alwaysOnBottom,
+    false,
+    "the native desktop anchor must own Z-order instead of Tauri window levels"
+  );
   assert.equal(poster.closable, false, "poster surface must not be closable by the user");
+  assert.equal(poster.skipTaskbar, true, "poster surface must never acquire a taskbar button");
 });
 
 test("release executable uses the Windows GUI subsystem", { skip: !existsSync(releaseExe) }, () => {

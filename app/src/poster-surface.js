@@ -3,10 +3,13 @@ import {
   STORAGE_KEY,
   buildPosterMarkup,
   createDefaultSnapshot,
+  isPosterSnapshot,
   readFirstPoster,
   readPosterSnapshot,
+  readSharedPosterSnapshot,
   replaceFirstPoster,
-  writePosterSnapshot
+  writePosterSnapshot,
+  writeSharedPosterSnapshot
 } from "./poster-core.js";
 import {
   applyPosterAction,
@@ -14,6 +17,7 @@ import {
   buildNativeResizeArgs,
   createRuntimeState,
   isRuntimeSuspended,
+  posterInteractionMode,
   selectedPoster
 } from "./poster-runtime.js";
 import { isReportingFps } from "./performance-monitor.js";
@@ -23,8 +27,12 @@ const fallbackPoster = normalizedPoster(createDefaultSnapshot().posters[0]);
 
 const surface = document.querySelector("#poster-surface");
 const toast = document.querySelector("#poster-toast");
-let runtime = loadRuntime();
+let runtime = createRuntimeState({
+  selectedPosterId: fallbackPoster.id,
+  posters: [fallbackPoster]
+});
 let toastTimer = null;
+let launchClickTimer = null;
 let manuallyPaused = false;
 let automaticallyPaused = false;
 let nativeSurfaceSyncTimer = null;
@@ -33,13 +41,18 @@ let frameCount = 0;
 let fpsLastSample = performance.now();
 let lastReportedFps = null;
 
-function loadSnapshot() {
-  return readPosterSnapshot(localStorage);
+function nativeInvoke() {
+  return window.__TAURI__?.core?.invoke;
 }
 
-function loadRuntime() {
-  const first = readFirstPoster(loadSnapshot(), fallbackPoster);
+function runtimeFromSnapshot(snapshot) {
+  const first = readFirstPoster(snapshot, fallbackPoster);
   return createRuntimeState({ selectedPosterId: first.id, posters: [first] });
+}
+
+async function loadRuntime() {
+  const snapshot = await readSharedPosterSnapshot(localStorage, nativeInvoke());
+  return runtimeFromSnapshot(snapshot);
 }
 
 function currentPoster() {
@@ -53,11 +66,12 @@ function persistPoster(patch) {
     patch
   });
   const next = currentPoster();
-  const snapshot = loadSnapshot() ?? {
-    selectedPosterId: fallbackPoster.id,
-    posters: [fallbackPoster]
-  };
-  writePosterSnapshot(localStorage, replaceFirstPoster(snapshot, next));
+  const snapshot = readPosterSnapshot(localStorage) ?? createDefaultSnapshot();
+  void writeSharedPosterSnapshot(
+    localStorage,
+    nativeInvoke(),
+    replaceFirstPoster(snapshot, next)
+  );
   render();
   syncNativeSurface();
 }
@@ -179,11 +193,27 @@ surface.addEventListener("click", (event) => {
   const action = event.target.closest("[data-action]")?.dataset.action;
   const poster = currentPoster();
   if (action === "lock") {
-    persistPoster({ locked: !poster.locked });
-    showToast(poster.locked ? "海报位置已锁定" : "海报位置已解锁，可拖动标题栏");
+    const nextLocked = !poster.locked;
+    persistPoster({ locked: nextLocked });
+    showToast(nextLocked ? "海报位置已锁定" : "海报位置已解锁，可拖动标题栏");
+    return;
   }
   if (action === "collapse") {
     persistPoster({ collapsed: !poster.collapsed });
+    return;
+  }
+  if (action === "launch") {
+    const tile = event.target.closest('[data-action="launch"]');
+    const item = poster.items[Number(tile?.dataset.itemIndex)];
+    if (!item) return;
+    window.clearTimeout(launchClickTimer);
+    if (posterInteractionMode(runtime, poster) === "editing") {
+      if (event.detail === 1) showToast(`${item.title} 已选中，可继续排序或编辑`);
+    } else if (event.detail === 1) {
+      launchClickTimer = window.setTimeout(() => {
+        showToast(`Demo：准备启动 ${item.title}`);
+      }, 400);
+    }
   }
 });
 
@@ -201,13 +231,14 @@ surface.addEventListener("pointerdown", (event) => {
 surface.addEventListener("dblclick", (event) => {
   const tile = event.target.closest('[data-action="launch"]');
   if (!tile) return;
+  window.clearTimeout(launchClickTimer);
   const item = currentPoster().items[Number(tile.dataset.itemIndex)];
-  if (item) showToast(`Demo：准备启动 ${item.title}`);
+  if (item) showToast(`Demo：准备启动 ${item.title}，并标记为最近活跃`);
 });
 
 window.addEventListener("storage", (event) => {
   if (event.key !== STORAGE_KEY) return;
-  runtime = loadRuntime();
+  runtime = runtimeFromSnapshot(readPosterSnapshot(localStorage));
   render();
   syncNativeSurface();
 });
@@ -230,9 +261,25 @@ async function connectNativeControls() {
   await listen("runtime-pause-state", (event) => {
     applyRuntimePauseState(event.payload ?? {});
   });
+  await listen("poster-snapshot-updated", (event) => {
+    if (!isPosterSnapshot(event.payload)) return;
+    writePosterSnapshot(localStorage, event.payload);
+    runtime = runtimeFromSnapshot(event.payload);
+    render();
+    syncNativeSurface();
+  });
 }
 
-render();
-syncNativeSurface();
-syncFpsSampling();
-connectNativeControls().catch(() => {});
+async function bootstrap() {
+  try {
+    runtime = await loadRuntime();
+  } catch {
+    runtime = runtimeFromSnapshot(null);
+  }
+  render();
+  syncNativeSurface();
+  syncFpsSampling();
+  connectNativeControls().catch(() => {});
+}
+
+bootstrap();

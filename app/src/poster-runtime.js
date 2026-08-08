@@ -8,6 +8,12 @@ export const PERFORMANCE_MODES = Object.freeze([
   "stopped"
 ]);
 
+export function deriveAllLocked(posters) {
+  return Array.isArray(posters)
+    && posters.length > 0
+    && posters.every((poster) => poster.locked);
+}
+
 export function createRuntimeState(snapshot) {
   const posters = Array.isArray(snapshot?.posters)
     ? snapshot.posters.map(normalizedPoster)
@@ -28,7 +34,7 @@ export function createRuntimeState(snapshot) {
     effectivePaused: Boolean(
       snapshot?.effectivePaused ?? (manuallyPaused || automaticallyPaused)
     ),
-    allLocked: Boolean(snapshot?.allLocked ?? posters.every((poster) => poster.locked)),
+    allLocked: deriveAllLocked(posters),
     posterVisible: snapshot?.posterVisible ?? true,
     pauseReasons: Array.isArray(pauseReasons) ? pauseReasons : [],
     performanceMode: PERFORMANCE_MODES.includes(snapshot?.performanceMode)
@@ -74,7 +80,7 @@ export function buildRuntimeSyncArgs(state) {
   return {
     editMode: state.editMode,
     manuallyPaused: state.manuallyPaused,
-    allLocked: state.allLocked,
+    allLocked: deriveAllLocked(state.posters),
     performanceMode: state.performanceMode
   };
 }
@@ -124,7 +130,7 @@ export function applyPosterAction(state, action) {
         effectivePaused: Boolean(
           raw.effectivePaused ?? (manuallyPaused || automaticallyPaused)
         ),
-        allLocked: raw.allLocked ?? state.allLocked,
+        allLocked: deriveAllLocked(state.posters),
         posterVisible: raw.posterVisible ?? state.posterVisible,
         pauseReasons: Array.isArray(pauseReasons) ? pauseReasons : [],
         performanceMode: PERFORMANCE_MODES.includes(raw.performanceMode)
@@ -137,18 +143,27 @@ export function applyPosterAction(state, action) {
       return state.posters.some((poster) => poster.id === action.posterId)
         ? { ...state, selectedPosterId: action.posterId }
         : state;
-    case "patchPoster":
+    case "patchPoster": {
+      const posters = state.posters.map((poster) => poster.id === action.posterId
+        ? normalizedPoster({ ...poster, ...action.patch })
+        : poster);
       return {
         ...state,
-        posters: state.posters.map((poster) => poster.id === action.posterId
-          ? normalizedPoster({ ...poster, ...action.patch })
-          : poster)
+        posters,
+        allLocked: deriveAllLocked(posters)
       };
-    case "setAllLocked":
+    }
+    case "setAllLocked": {
+      const posters = state.posters.map((poster) => normalizedPoster({
+        ...poster,
+        locked: action.locked
+      }));
       return {
         ...state,
-        posters: state.posters.map((poster) => normalizedPoster({ ...poster, locked: action.locked }))
+        posters,
+        allLocked: deriveAllLocked(posters)
       };
+    }
     case "movePoster": {
       const target = state.posters.find((poster) => poster.id === action.posterId);
       if (!target) return state;

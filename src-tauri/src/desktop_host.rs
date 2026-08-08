@@ -72,12 +72,13 @@ mod platform {
                     IsWindowVisible, SetParent, SetWindowLongPtrW, SetWindowPos, ShowWindow,
                     TranslateMessage, EVENT_OBJECT_CREATE, EVENT_OBJECT_SHOW,
                     EVENT_SYSTEM_FOREGROUND, GWL_EXSTYLE, GWL_STYLE, GW_HWNDPREV, HWND_BOTTOM,
-                    HWND_TOP, MSG, OBJID_WINDOW, SWP_ASYNCWINDOWPOS, SWP_FRAMECHANGED,
-                    SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SWP_NOZORDER, SWP_SHOWWINDOW,
-                    SW_SHOWNOACTIVATE, WINEVENT_OUTOFCONTEXT, WM_DESTROY, WM_DISPLAYCHANGE,
-                    WM_DPICHANGED, WM_EXITSIZEMOVE, WM_MOVING, WM_SETTINGCHANGE, WS_CAPTION,
-                    WS_CHILD, WS_EX_APPWINDOW, WS_EX_TOOLWINDOW, WS_MAXIMIZEBOX, WS_MINIMIZEBOX,
-                    WS_POPUP, WS_SYSMENU, WS_THICKFRAME,
+                    HWND_TOP, MA_NOACTIVATE, MSG, OBJID_WINDOW, SWP_ASYNCWINDOWPOS,
+                    SWP_FRAMECHANGED, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SWP_NOZORDER,
+                    SWP_SHOWWINDOW, SW_SHOWNOACTIVATE, WINEVENT_OUTOFCONTEXT, WM_DESTROY,
+                    WM_DISPLAYCHANGE, WM_DPICHANGED, WM_EXITSIZEMOVE, WM_MOUSEACTIVATE, WM_MOVING,
+                    WM_SETTINGCHANGE, WS_CAPTION, WS_CHILD, WS_EX_APPWINDOW, WS_EX_NOACTIVATE,
+                    WS_EX_TOOLWINDOW, WS_MAXIMIZEBOX, WS_MINIMIZEBOX, WS_POPUP, WS_SYSMENU,
+                    WS_THICKFRAME,
                 },
             },
         },
@@ -229,6 +230,16 @@ mod platform {
             device: String::from_utf16_lossy(&details.szDevice[..device_length]),
             work_area: details.monitorInfo.rcWork,
         })
+    }
+
+    pub fn poster_work_area_size(window: &tauri::WebviewWindow) -> Option<(u32, u32)> {
+        let hwnd = window.hwnd().ok()?;
+        let monitor = unsafe { MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST) };
+        let descriptor = monitor_descriptor(monitor)?;
+        Some((
+            (descriptor.work_area.right - descriptor.work_area.left).max(1) as u32,
+            (descriptor.work_area.bottom - descriptor.work_area.top).max(1) as u32,
+        ))
     }
 
     unsafe extern "system" fn collect_monitor(
@@ -427,6 +438,22 @@ mod platform {
         }
     }
 
+    fn anchor_tool_window_to_desktop(hwnd: HWND) -> Result<(), String> {
+        let z_order_anchor = fallback_z_order_anchor(hwnd);
+        unsafe {
+            SetWindowPos(
+                hwnd,
+                Some(z_order_anchor),
+                0,
+                0,
+                0,
+                0,
+                SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_ASYNCWINDOWPOS,
+            )
+            .map_err(|error| error.to_string())
+        }
+    }
+
     fn restore_after_shell_or_display_event() -> Result<(), String> {
         if !POSTER_VISIBLE_INTENT.load(Ordering::Acquire) {
             return Ok(());
@@ -609,17 +636,16 @@ mod platform {
             // After the user finishes dragging, re-anchor the poster to the
             // desktop Z-order layer so it never stays above application windows.
             if TOOL_WINDOW_FALLBACK_ACTIVE.load(Ordering::Acquire) {
-                let anchor = fallback_z_order_anchor(hwnd);
-                let _ = SetWindowPos(
-                    hwnd,
-                    Some(anchor),
-                    0,
-                    0,
-                    0,
-                    0,
-                    SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_ASYNCWINDOWPOS,
-                );
+                let _ = anchor_tool_window_to_desktop(hwnd);
             }
+        }
+        if message == WM_MOUSEACTIVATE {
+            // The poster must stay mouse-interactive without becoming a foreground application.
+            // Reassert the desktop layer before allowing the click through to the WebView.
+            if TOOL_WINDOW_FALLBACK_ACTIVE.load(Ordering::Acquire) {
+                let _ = anchor_tool_window_to_desktop(hwnd);
+            }
+            return LRESULT(MA_NOACTIVATE as isize);
         }
         if matches!(message, WM_DISPLAYCHANGE | WM_DPICHANGED | WM_SETTINGCHANGE) {
             queue_host_recovery();
@@ -670,9 +696,13 @@ mod platform {
     fn set_common_extended_style(hwnd: HWND) {
         unsafe {
             let current_style = GetWindowLongPtrW(hwnd, GWL_EXSTYLE) as u32;
-            let tool_style = (current_style & !WS_EX_APPWINDOW.0) | WS_EX_TOOLWINDOW.0;
+            let tool_style = tool_window_extended_style(current_style);
             SetWindowLongPtrW(hwnd, GWL_EXSTYLE, tool_style as isize);
         }
+    }
+
+    fn tool_window_extended_style(current_style: u32) -> u32 {
+        (current_style & !WS_EX_APPWINDOW.0) | WS_EX_TOOLWINDOW.0 | WS_EX_NOACTIVATE.0
     }
 
     fn suppress_dwm_non_client_frame(hwnd: HWND) {
@@ -905,8 +935,11 @@ mod platform {
 
     #[cfg(test)]
     mod tests {
-        use super::rect_contains;
+        use super::{rect_contains, tool_window_extended_style};
         use windows::Win32::Foundation::RECT;
+        use windows::Win32::UI::WindowsAndMessaging::{
+            WS_EX_APPWINDOW, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW,
+        };
 
         #[test]
         fn workerw_rectangle_must_fully_contain_the_poster() {
@@ -941,14 +974,22 @@ mod platform {
             };
             assert!(rect_contains(&virtual_desktop_workerw, &secondary_poster));
         }
+
+        #[test]
+        fn fallback_window_is_mouse_interactive_without_becoming_an_application() {
+            let style = tool_window_extended_style(WS_EX_APPWINDOW.0);
+            assert_eq!(style & WS_EX_APPWINDOW.0, 0);
+            assert_ne!(style & WS_EX_TOOLWINDOW.0, 0);
+            assert_ne!(style & WS_EX_NOACTIVATE.0, 0);
+        }
     }
 }
 
 #[cfg(target_os = "windows")]
 pub use platform::{
     apply_interaction_region, capture_poster_window_placement, configure,
-    install_shell_foreground_monitor, placement_recovery_in_progress, restore_poster_placement,
-    restore_poster_window_placement, set_poster_visibility_intent,
+    install_shell_foreground_monitor, placement_recovery_in_progress, poster_work_area_size,
+    restore_poster_placement, restore_poster_window_placement, set_poster_visibility_intent,
 };
 
 #[cfg(not(target_os = "windows"))]
@@ -972,6 +1013,11 @@ pub fn set_poster_visibility_intent(_visible: bool) {}
 #[cfg(not(target_os = "windows"))]
 pub fn placement_recovery_in_progress() -> bool {
     false
+}
+
+#[cfg(not(target_os = "windows"))]
+pub fn poster_work_area_size(_window: &tauri::WebviewWindow) -> Option<(u32, u32)> {
+    None
 }
 
 #[cfg(not(target_os = "windows"))]

@@ -54,6 +54,12 @@ test("lock and collapse actions are shared state transitions", () => {
 
   state = applyPosterAction(state, { type: "setAllLocked", locked: false });
   assert.equal(state.posters.every((poster) => poster.locked === false), true);
+  assert.equal(state.allLocked, false);
+  assert.equal(buildRuntimeSyncArgs(state).allLocked, false);
+
+  state = applyPosterAction(state, { type: "setAllLocked", locked: true });
+  assert.equal(state.allLocked, true);
+  assert.equal(buildRuntimeSyncArgs(state).allLocked, true);
 });
 
 test("move and resize go through the same geometry ownership layer", () => {
@@ -73,8 +79,8 @@ test("move and resize go through the same geometry ownership layer", () => {
     posterId: "night-ops",
     next: { width: 50, height: 900 }
   });
-  assert.equal(selectedPoster(state).width, 330);
-  assert.equal(selectedPoster(state).height, 560);
+  assert.equal(selectedPoster(state).width, 240);
+  assert.equal(selectedPoster(state).height, 900);
 });
 
 test("persisted snapshot excludes ephemeral runtime fields", () => {

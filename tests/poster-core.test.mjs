@@ -4,10 +4,12 @@ import {
   STORAGE_KEY,
   buildPosterMarkup,
   createDefaultSnapshot,
+  readSharedPosterSnapshot,
   readFirstPoster,
   replaceFirstPoster,
   readPosterSnapshot,
-  writePosterSnapshot
+  writePosterSnapshot,
+  writeSharedPosterSnapshot
 } from "../app/src/poster-core.js";
 
 function memoryStorage() {
@@ -88,11 +90,42 @@ test("poster core keeps storage shape as the single shared contract", () => {
   assert.deepEqual(snapshot.posters, [{ id: "night-ops" }]);
 });
 
+test("shared snapshot bridge prefers Rust state and migrates local fallback", async () => {
+  const storage = memoryStorage();
+  const local = { selectedPosterId: "local", posters: [{ id: "local" }] };
+  const shared = { selectedPosterId: "shared", posters: [{ id: "shared" }] };
+  writePosterSnapshot(storage, local);
+
+  const preferred = await readSharedPosterSnapshot(storage, async (command) => {
+    assert.equal(command, "load_poster_snapshot");
+    return shared;
+  });
+  assert.deepEqual(preferred, shared);
+  assert.deepEqual(readPosterSnapshot(storage), shared);
+
+  let migrated = null;
+  const fallbackStorage = memoryStorage();
+  writePosterSnapshot(fallbackStorage, local);
+  const migratedSnapshot = await readSharedPosterSnapshot(fallbackStorage, async (command, args) => {
+    if (command === "load_poster_snapshot") return null;
+    if (command === "save_poster_snapshot") migrated = args.snapshot;
+  });
+  assert.deepEqual(migratedSnapshot, local);
+  assert.deepEqual(migrated, local);
+
+  const next = { selectedPosterId: "next", posters: [{ id: "next" }] };
+  await writeSharedPosterSnapshot(fallbackStorage, async (command, args) => {
+    assert.equal(command, "save_poster_snapshot");
+    assert.deepEqual(args.snapshot, next);
+  }, next);
+  assert.deepEqual(readPosterSnapshot(fallbackStorage), next);
+});
+
 test("poster core provides one canonical default snapshot", () => {
   const snapshot = createDefaultSnapshot();
   assert.equal(snapshot.selectedPosterId, "night-ops");
   assert.equal(snapshot.posters.length, 2);
-  assert.equal(snapshot.posters[0].locked, true);
+  assert.equal(snapshot.posters[0].locked, false);
   assert.equal(snapshot.posters[0].items.length, 6);
   assert.equal(snapshot.posters[1].items.length, 3);
 });

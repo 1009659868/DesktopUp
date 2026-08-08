@@ -39,12 +39,13 @@
         "minimizable": false,
         "closable": false,
         "focus": false,
-        "focusable": true,
+        "focusable": false,
         "visible": true,
         "decorations": false,
         "transparent": true,
-        "alwaysOnBottom": true,
-        "skipTaskbar": false,
+        "backgroundColor": [0, 0, 0, 0],
+        "alwaysOnBottom": false,
+        "skipTaskbar": true,
         "shadow": false
       }
     ],

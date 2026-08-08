@@ -16,13 +16,13 @@
 
 | C 工作流 | 结果 | 依赖 | 状态 |
 | --- | --- | --- | --- |
-| Desktop Host Feasibility (`C-DHF`) | 关闭宿主可行性、恢复、暂停、性能和托盘硬门 | 无 | `ACTIVE` |
-| Desktop Runtime Productionization (`C-DRP`) | 把原型收敛为单全局生产宿主和稳定接口 | C-DHF | `PLANNED` |
+| Desktop Host Feasibility (`C-DHF`) | 关闭宿主可行性、恢复、暂停、性能和托盘硬门 | 无 | `COMPLETE` |
+| Desktop Runtime Productionization (`C-DRP`) | 把原型收敛为单全局生产宿主和稳定接口 | C-DHF | `PLANNED NEXT` |
 | Runtime Lifecycle and Quick Access (`C-RLC`) | 单实例、控制中心、托盘、自启、退出和 TaskbarCreated 恢复 | C-DRP | `PLANNED` |
 
 ## 3. 当前任务顺序
 
-`C-DHF-04/05 剩余物理矩阵延后 → C-DHF-06（含 Desktop-Up 内性能数值可视化）→ C-DHF-07/08 待 04/05 恢复后收口 → C-DRP → C-RLC`
+`C-DHF-01..08 COMPLETE → C-DRP → C-RLC`
 
 ## 4. 模块完成信号
 
@@ -35,5 +35,5 @@
 ## 5. 不得提前
 
 - 不把 A0 独立海报窗体直接当作生产单全局宿主；
-- 不在 C-DHF-08 前声明宿主硬门通过；
+- C-DHF-08 已关闭，但 A0 独立海报窗体仍需通过 C-DRP 收敛为生产单全局宿主；
 - 不扫描或移动真实桌面文件。

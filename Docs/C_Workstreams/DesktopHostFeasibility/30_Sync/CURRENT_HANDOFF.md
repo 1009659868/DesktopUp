@@ -1,13 +1,23 @@
 # Desktop Host Feasibility 当前交接
 
-最后更新：2026-08-05
+最后更新：2026-08-08
 
-状态：`ACTIVE / C-DHF-06 — IMPLEMENTATION READY / BASELINE SAMPLING PENDING; C-DHF-04/05 物理矩阵延后`
+状态：`COMPLETE — C-DHF-01..08 CLOSED`
+
+## 2026-08-08 关闭后维护修复
+
+- Dev/Release 因 WebView 来源隔离而产生两份海报状态的问题已修复：新增 Rust 共享 JSON 桥接，原生快照为权威数据，本地存储降为各来源缓存；跨启动实测已从不同的 `nocturne / 469×560` 与 `glass / 490×392` 收敛到同一份 `glass / 490×392`；
+- 修复海报大尺寸被旧 `560px` 上限破坏性截断、`allLocked` 陈旧、锁定提示反向、首次快照可能丢失第二海报和海报进入任务栏的问题；原生尺寸增加当前显示器工作区钳制；
+- 托盘编辑/全局锁定/快捷主题不再主动显示主页，USING/EDITING 图标单击语义已按设计区分；
+- 用户后续截图确认海报点击后可覆盖普通应用，且顶部亮带仍存在；现已增加 `WS_EX_NOACTIVATE + MA_NOACTIVATE`、统一桌面 Z 序锚点、关闭 `alwaysOnBottom` 双所有权，并移除可被暂停冻结的桌面宿主入场动画；
+- 修复版 HWND 位于 `Progman` 正上方，`ExtendedStyle=0x08000090`、`WM_MOUSEACTIVATE=3`，客户区与外框完全重合；屏幕像素探针未再发现亮带，详见 [`桌面层级与顶部亮带修复`](../20_Log/2026-08/2026-08-08_desktop_layer_and_surface_edge_bugfix.md)；
+- 32 项 Node/契约测试、19 项 Rust 测试与 `cargo tauri build --no-bundle` 通过；交叉启动证据与保留边界另见 [`运行状态一致性修复`](../20_Log/2026-08/2026-08-08_runtime_state_consistency_bugfix.md)；
+- 本轮不改变 C-DHF 已关闭结论，也不把单全局宿主、多海报、模板、Shadow DOM、真实快捷方式启动或 M1 标记为完成。
 
 ## 已完成
 
 - 工作流范围、任务、硬门和验证记录格式已建立；
-- `runtime-surface` 测试已从源码字符串断言改为行为验证；新增 `poster-core.js` 作为共享海报渲染/存储契约层、`poster-runtime.js` 作为窗口几何/USING-EDITING/锁定-收起/原生同步的统一运行时层，`main.js` 与 `poster-surface.js` 统一使用；31 项 Node/契约测试、15 项 Rust 测试与 Release 构建通过；
+- `runtime-surface` 测试已从源码字符串断言改为行为验证；新增 `poster-core.js` 作为共享海报渲染/存储契约层、`poster-runtime.js` 作为窗口几何/USING-EDITING/锁定-收起/原生同步的统一运行时层，`main.js` 与 `poster-surface.js` 统一使用；当前 32 项 Node/契约测试、18 项 Rust 测试与 Release 构建通过；
 - C-DHF-06 已实现：`C-DHF-06a` 四态性能采集和采样保存、`C-DHF-06b` Desktop-Up 内性能数值可视化均落地；真实基线数据待采样；
 - 托盘行为契约已调整：单击托盘不再切换海报，双击切换主页，海报显隐仅通过右键菜单“显示海报宿主”控制；
 - 产品/架构/交付文档已将桌面宿主列为首要技术风险；
@@ -20,6 +30,10 @@
 - A0 通知区域菜单已包含主页、设置、海报显隐、编辑、全局锁定、暂停、快捷主题、Agent 占位、安全重扫和退出；
 - 通知区域快捷入口与可选本地 BYOK AI 设计已同步到 A/B/C 计划。
 - 已接受并登记 [`运行表面模型 V0.1`](../../../A_Project/10_Plan/RUNTIME_SURFACE_MODEL_V0.1.md)：正常启动只显示桌面收纳层，主页/设置/Agent 均按需独立呼出。
+- C-DHF-06 四态真实基线采样、机器/采样元数据和 Release 实时数值可视化确认已完成，任务已标记 `COMPLETE`；
+- C-DHF-04 副屏冷启动恢复 10/10 已通过，剩余物理矩阵由用户手动确认通过；
+- C-DHF-05 用户实机全屏/Win+L/熄屏通过，手动+自动暂停叠加已确认，剩余项由用户手动确认通过；
+- C-DHF-07 托盘恢复矩阵由用户手动确认通过；
 - 已消除控制中心冷启动可见偏差：Release 冷启动只有海报可见，第二实例可呼出主页，关闭主页后海报继续可见；验证见 [`A0 运行表面角色代码对齐记录`](../20_Log/2026-08/2026-08-02_a0_surface_role_implementation.md)。
 - 已将主页和收纳窗的米白清新风改版登记为功能硬门完成后的延期任务，当前不修改 A0 深色原型。
 - 已建立隔离 WorkerW 适配器、1000ms Explorer 请求超时、可查询运行诊断和 `DESKTOP_UP_DISABLE_WORKERW` 强制回退测试入口；
@@ -59,7 +73,7 @@ Rust `RuntimeSnapshot` 与前端 `poster-runtime.js` 已对齐：
 
 - `C-DHF-04` 的 Explorer 真重启、物理热插拔、主屏切换和 100%/125%/150%/200% DPI 因物理环境延后；
 - 多海报原生窗体尚未验证；C-DHF-05 已由用户确认真实游戏全屏、Win+L、显示器关闭/唤醒通过，托盘菜单一致性、手动+自动暂停叠加和恢复后视觉确认延后；
-- C-DHF-06 真实四态基线采样数据待执行，`performance-baseline-v1.json` 尚未由用户生成；
+- C-DHF-08 已形成决策封板记录，`C-DHF-01..08` 全部关闭；
 - 工作集约 `26.7 MB` 仅是 A0 单次观测，性能预算尚未形成正式基线；
 - 尚未生成最终 `DesktopUpSetup.exe` 与安装目录内的 `uninstall.exe`。
 - 原 M1 海报重构实现已撤回，不再视为完成；大幅面、模板、状态机、透明背景、降级和 Release 视觉验收均需在 V1 重新实现与验证；
@@ -69,13 +83,13 @@ Rust `RuntimeSnapshot` 与前端 `poster-runtime.js` 已对齐：
 
 本轮自动化桌面矩阵已通过 Win+D 10 轮、同屏最大化 10 轮、无边框全屏 10 个有效轮次和跨屏不误停 10 轮；同时发现并修复副屏位置冷启动恢复中的 WorkerW 裁剪与 `Moved` 写回竞态。证据见 [`C-DHF-04/05 真实环境矩阵第一轮`](../20_Log/2026-08/2026-08-04_cdhf04_05_real_matrix_round1.md)。
 
-下一步由用户在本机 Release 中依次对 `activeStatic / activeAnimated / paused / stopped` 四个模式执行“采集当前状态 10s”，确认 `performance-baseline-v1.json` 生成；C-DHF-04/05 剩余物理矩阵保持延后，不参与当前开发阻塞。
+下一步激活 `C-DRP Desktop Runtime Productionization` 与 `C-PCB Poster Contract Baseline`，由 `ACTIVE_PATH.md` 唯一选中；不把 M1 海报实现标记为完成。
 
 用户实机确认记录见 [`C-DHF-04/05 用户实机矩阵补充`](../20_Log/2026-08/2026-08-05_cdhf04_05_physical_matrix_user.md)；Explorer 真重启、热插拔、主屏/DPI 因物理环境暂不能执行，标记为延后，不阻塞 C-DHF-06。
 
 ## 工作区注意事项
 
-- 当前实现分支是 `impl/poster-redesign-V1`；该分支保留远程 `impl/poster-redesign-a0` 的设计文档，代码恢复到 M1 落地前基线；未经用户明确要求不推送、不合并、不改写远端；
+- 当前实现分支是 `impl/poster-redesign-V1-fix`，作为 `impl/poster-redesign-V1` 的缺陷修复线；未经用户明确要求不推送、不合并、不改写远端；
 - 不覆盖 Docs 中已建立的用户需求和卸载安全规则；
 - 工程初始化不得把依赖缓存或构建输出提交到文档目录。
 

@@ -33,8 +33,8 @@
 
 | 阶段 | 目标 | B 模块 | 退出条件 | 状态 |
 | --- | --- | --- | --- | --- |
-| V1-P0 | 关闭桌面宿主遗留硬门 | Desktop Runtime Foundation | C-DHF-04..08 全部形成 PASS、接受回退或明确阻塞结论 | `ACTIVE` |
-| V1-P1 | 冻结海报核心契约 | Poster Core Runtime | 单状态源、单全局宿主几何所有权、自制标题栏、右侧默认值和行为测试通过 | `PLANNED` |
+| V1-P0 | 关闭桌面宿主遗留硬门 | Desktop Runtime Foundation | C-DHF-04..08 全部形成 PASS、接受回退或明确阻塞结论 | `COMPLETE` |
+| V1-P1 | 冻结海报核心契约 | Poster Core Runtime | 单状态源、单全局宿主几何所有权、自制标题栏、右侧默认值和行为测试通过 | `PLANNED NEXT` |
 | V1-P2 | 落地透明大幅面海报 | Poster Core Runtime | Transparent Default、大幅面、展开/收起、锁定、暂停和 Release 实机矩阵通过 | `PLANNED` |
 | V1-P3 | 建立模板平台并交付首发模板 | Template Platform | Shadow DOM、安全 fallback、三模板、热切换和完整模板安装通过 | `PLANNED` |
 | V1-P4 | 建立本地收纳与启动闭环 | Collection and Launch | 只读发现、预览、仅添加、安全收纳、启动、撤销和恢复通过 | `PLANNED` |
@@ -63,8 +63,8 @@
 
 | C 工作流 | 可验证结果 | 依赖 | 状态 |
 | --- | --- | --- | --- |
-| C-DHF Desktop Host Feasibility | 关闭 Win+D、Explorer、多屏/DPI、暂停、性能、托盘和宿主决策硬门 | 无 | `ACTIVE` |
-| C-DRP Desktop Runtime Productionization | 将验证原型收敛为单全局生产宿主与稳定接口 | C-DHF | `PLANNED` |
+| C-DHF Desktop Host Feasibility | 关闭 Win+D、Explorer、多屏/DPI、暂停、性能、托盘和宿主决策硬门 | 无 | `COMPLETE` |
+| C-DRP Desktop Runtime Productionization | 将验证原型收敛为单全局生产宿主与稳定接口 | C-DHF | `PLANNED NEXT` |
 | C-RLC Runtime Lifecycle and Quick Access | 单实例、控制中心、托盘、自启、退出与 TaskbarCreated 恢复 | C-DRP | `PLANNED` |
 
 ### B-PCR：Poster Core Runtime
@@ -73,7 +73,7 @@
 | --- | --- | --- | --- |
 | C-PCB Poster Contract Baseline | 冻结单状态源、Shadow host 边界、窗口几何所有权、默认快照和失败回退行为测试 | C-DHF | `PLANNED NEXT` |
 | C-LST Large Surface and Transparency | 主屏右侧大幅面透明海报、稳定透明背景与位置恢复 | C-PCB, C-DRP | `PLANNED` |
-| C-PSI Poster State and Interaction | EXPANDED/COLLAPSED、USING/EDITING、锁定、标题栏拖动、命中区域和暂停同步 | C-LST | `PLANNED` |
+| C-PSI Poster State and Interaction | EXPANDED/COLLAPSED、USING/EDITING、锁定、标题栏拖动、海报框拉伸（含最小/最大尺寸限制）、命中区域和暂停同步 | C-LST | `PLANNED` |
 | C-PCRG Poster Core Release Gate | Debug/Release、真实 Windows 矩阵和核心性能封板 | C-PSI | `PLANNED` |
 
 ### B-TPL：Template Platform
@@ -142,7 +142,7 @@
 ```text
 A: DESKTOPUP_V1_IMPLEMENTATION_PLAN / V1-P0
 └─ B: Desktop Runtime Foundation / B-DRF
-   └─ C: Desktop Host Feasibility / C-DHF-06 ACTIVE
+   └─ C: Desktop Host Feasibility / C-DHF-08 COMPLETE / NEXT C-DRP + C-PCB
        （C-DHF-04/05 剩余物理矩阵因物理环境延后）
 ```
 
@@ -150,13 +150,13 @@ A: DESKTOPUP_V1_IMPLEMENTATION_PLAN / V1-P0
 
 ```text
 C-DHF-04/05 剩余物理矩阵延后（物理环境暂不可用）
-→ C-DHF-06 性能基线 + Desktop-Up 内简单性能数值可视化
-→ C-DHF-07 待 C-DHF-04 恢复后执行
-→ C-DHF-08 待 C-DHF-01..07 全部收口后封板
+→ C-DHF-06 性能基线 + Desktop-Up 内简单性能数值可视化（COMPLETE）
+→ C-DHF-07 托盘恢复矩阵（COMPLETE）
+→ C-DHF-08 决策封板（COMPLETE）
 → 激活 C-PCB Poster Contract Baseline
 ```
 
-C-DHF-06 已提前激活，但 C-DHF-04/05 的物理矩阵结论仍是 V1-P0 未完成硬门，不得因推进 C-DHF-06 而把 04/05 标记为通过。在 C-DHF-08 关闭前，可以准备 C-PCB 的测试契约草案，但不得将 V1-P1 或 M1 标记为实施通过。
+`C-DHF-01..08` 已全部关闭，`V1-P0` 宿主硬门具备关闭结论。下一阶段激活 `C-DRP` 与 `C-PCB`；不得将 V1-P1 或 M1 标记为实施通过。
 
 ## 7. 任务状态规则
 

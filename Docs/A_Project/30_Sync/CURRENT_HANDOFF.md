@@ -1,8 +1,8 @@
 # A 层当前交接
 
-最后更新：2026-08-05
+最后更新：2026-08-08
 
-状态：`ACTIVE AT V1-P0 / DESKTOP HOST GATE / C-DHF-06 IMPLEMENTATION READY`
+状态：`V1-P0 DESKTOP HOST GATE CLOSED / NEXT C-DRP + C-PCB`
 
 ## 已建立
 
@@ -10,7 +10,7 @@
 - Rust + Tauri 2 + Svelte/TypeScript 是当前提议技术栈；
 - 安装、恢复和卸载被列为发布硬门；
 - A/B/C 活跃链已指向桌面宿主可行性验证；
-- Git 仓库已经建立，当前实现分支为 `impl/poster-redesign-V1`；该分支保留已接受的海报设计文档，将实际代码恢复到 M1 落地前基线后重新实施；
+- Git 仓库已经建立，当前实现分支为 `impl/poster-redesign-V1-fix`，作为 `impl/poster-redesign-V1` 的缺陷修复线；设计文档继续有效，M1 未重新封板；
 - 已建立零额外依赖的交互前端 Demo 与 Tauri 原生双窗体应用，并完成 Debug/Release 编译；
 - 已验证通知区域入口、主页关闭收纳、单实例回呼，以及无任务栏的独立透明海报 `ToolWindow` 回退宿主；
 - 已接受 [`运行表面模型 V0.1`](../10_Plan/RUNTIME_SURFACE_MODEL_V0.1.md)：桌面海报是唯一默认可见表面，当前主页只作为按需控制中心；
@@ -24,11 +24,17 @@
 - 单海报透明边界、按钮/拖动与桌面输入人工矩阵已经通过，C-DHF-03 完成。
 - C-DHF-04 已实现原生位置持久化、显示器工作区锚点和显示/Shell 事件恢复基础；重启恢复与模拟离屏拉回通过，真实 Win+D、Explorer、多屏和 DPI 矩阵仍待完成。
 - 2026-08-04 决定撤回原 `impl/poster-redesign-a0` 的 M1 完成/封板结论：原实现存在模板、状态、窗口几何和测试契约的结构性缺陷，不作为 V1 代码基线；设计文档继续有效。
+- 2026-08-08 已修复 Dev/Release 海报状态分裂、大尺寸破坏性截断、锁定派生状态与提示错误、托盘快捷操作误开主页、首次快照丢海报和任务栏可见等缺陷；采用过渡 Rust JSON 共享桥接，正式状态仓库仍由后续 C-DRP/C-PCB 收敛。
+- 同日后续修复 ToolWindow 点击后覆盖普通应用与顶部亮带：当前海报不可激活，原生锚定在 `Progman` 正上方，独立桌面表面不再运行可能被自动暂停冻结的入场位移动画；自动探针通过，等待用户目视确认。
 
 ## 尚未完成
 
 - C-DHF-04/05 剩余物理矩阵（Explorer 真重启、热插拔、主屏/DPI 切换等）因物理环境延后；已确认的真实游戏全屏、Win+L、显示器关闭/唤醒通过；
-- C-DHF-06 四态性能采集、采样保存和 Desktop-Up 内性能数值可视化已实现，真实基线采样数据待执行；
+- C-DHF-06 四态性能采集、采样保存和 Desktop-Up 内性能数值可视化已实现，真实四态基线采样和收口核对已完成；
+- C-DHF-04 已由用户手动确认通过；
+- C-DHF-05 已由用户手动确认通过；
+- C-DHF-07 已由用户手动确认通过；
+- C-DHF-08 决策封板已完成，`V1-P0` 宿主硬门关闭；
 - 托盘行为契约已调整：单击托盘不改变海报，双击切换主页，海报显隐仅通过右键菜单“显示海报宿主”控制；
 - M1 海报重构代码已重置为 `PLANNED`，尚未通过大幅面、模板、状态机、透明背景和 Release 实机验收；
 - 技术架构仍为 `PROPOSED`，需通过 A0 原型决定；
@@ -37,7 +43,7 @@
 
 ## 下一动作
 
-当前推进 C-DHF-06 真实四态采样：用户在 Release 中对 `activeStatic / activeAnimated / paused / stopped` 分别采集 10 秒并保存基线；C-DHF-04/05 剩余物理矩阵保持延后，待物理环境恢复后收口 C-DHF-07/08。关闭 V1-P0 后激活 `C-PCB Poster Contract Baseline`；此前只允许准备契约草案，不得标记海报核心实现通过。精确状态见 [`Desktop Host Feasibility 当前交接`](../../C_Workstreams/DesktopHostFeasibility/30_Sync/CURRENT_HANDOFF.md)。
+当前 `C-DHF-01..08` 已全部关闭，`V1-P0` 宿主硬门具备关闭结论。下一阶段激活 `C-DRP Desktop Runtime Productionization` 与 `C-PCB Poster Contract Baseline`，由 `ACTIVE_PATH.md` 唯一选中；在此之前不把 M1 海报实现标记为完成。精确状态见 [`Desktop Host Feasibility 当前交接`](../../C_Workstreams/DesktopHostFeasibility/30_Sync/CURRENT_HANDOFF.md)。
 
 A1 真实快捷方式能力保持排队状态，在上述 A0 硬门通过前不得开始扫描或移动用户桌面文件。
 

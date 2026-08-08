@@ -9,15 +9,19 @@ import {
   buildPosterMarkup,
   createDefaultSnapshot,
   DEFAULT_CATALOG,
+  isPosterSnapshot,
   readPosterSnapshot,
+  readSharedPosterSnapshot,
   toDemoItem,
-  writePosterSnapshot
+  writePosterSnapshot,
+  writeSharedPosterSnapshot
 } from "./poster-core.js";
 import {
   applyPosterAction,
   buildRuntimeSyncArgs,
   createRuntimeState,
   isRuntimeSuspended,
+  posterInteractionMode,
   posterSnapshot,
   selectedPoster as runtimeSelectedPoster
 } from "./poster-runtime.js";
@@ -50,22 +54,26 @@ const densityControl = document.querySelector("#density-control");
 const autoCollapseControl = document.querySelector("#auto-collapse");
 const autostartControl = document.querySelector("#autostart-control");
 
-let state = loadState();
+let state = createRuntimeState(createDefaultSnapshot());
 let gesture = null;
 let toastTimer = null;
+let launchClickTimer = null;
 let automaticallyPaused = false;
 let automaticPauseReasons = [];
 let perfPollTimer = null;
 let performanceCollecting = false;
 
-saveState();
+function nativeInvoke() {
+  return window.__TAURI__?.core?.invoke;
+}
 
-function loadState() {
-  return createRuntimeState(readPosterSnapshot(localStorage) ?? createDefaultSnapshot());
+async function loadState() {
+  const snapshot = await readSharedPosterSnapshot(localStorage, nativeInvoke());
+  return createRuntimeState(snapshot ?? createDefaultSnapshot());
 }
 
 function saveState() {
-  writePosterSnapshot(localStorage, posterSnapshot(state));
+  void writeSharedPosterSnapshot(localStorage, nativeInvoke(), posterSnapshot(state));
 }
 
 function selectedPoster() {
@@ -270,6 +278,21 @@ posterLayer.addEventListener("click", (event) => {
   selectPoster(id);
 
   const action = event.target.closest("[data-action]")?.dataset.action;
+  if (action === "launch") {
+    const poster = state.posters.find((entry) => entry.id === id);
+    const tile = event.target.closest('[data-action="launch"]');
+    const item = poster?.items[Number(tile?.dataset.itemIndex)];
+    if (!item) return;
+    window.clearTimeout(launchClickTimer);
+    if (posterInteractionMode(state, poster) === "editing") {
+      if (event.detail === 1) showToast(`${item.title} 已选中，可继续排序或编辑`);
+    } else if (event.detail === 1) {
+      launchClickTimer = window.setTimeout(() => {
+        showToast(`Demo：准备启动 ${item.title}`);
+      }, 400);
+    }
+    return;
+  }
   if (action === "collapse") {
     const poster = state.posters.find((entry) => entry.id === id);
     updatePoster(id, { collapsed: !poster.collapsed });
@@ -285,9 +308,10 @@ posterLayer.addEventListener("click", (event) => {
 posterLayer.addEventListener("dblclick", (event) => {
   const tile = event.target.closest('[data-action="launch"]');
   if (!tile) return;
+  window.clearTimeout(launchClickTimer);
   const poster = state.posters.find((entry) => entry.id === tile.dataset.posterId);
   const item = poster?.items[Number(tile.dataset.itemIndex)];
-  if (item) showToast(`Demo：准备启动 ${item.title}`);
+  if (item) showToast(`Demo：准备启动 ${item.title}，并标记为最近活跃`);
 });
 
 posterLayer.addEventListener("pointerdown", (event) => {
@@ -449,7 +473,8 @@ window.addEventListener("storage", (event) => {
   if (event.key !== STORAGE_KEY) return;
   const editMode = state.editMode;
   const manuallyPaused = state.manuallyPaused;
-  state = applyPosterAction(loadState(), { type: "setEditMode", value: editMode });
+  const snapshot = readPosterSnapshot(localStorage) ?? createDefaultSnapshot();
+  state = applyPosterAction(createRuntimeState(snapshot), { type: "setEditMode", value: editMode });
   state = applyPosterAction(state, { type: "setManualPaused", value: manuallyPaused });
   render();
 });
@@ -465,6 +490,18 @@ async function connectNativeControls() {
   }
   await listen("runtime-pause-state", (event) => {
     applyNativePauseSnapshot(event.payload ?? {});
+  });
+  await listen("poster-snapshot-updated", (event) => {
+    if (!isPosterSnapshot(event.payload)) return;
+    const editMode = state.editMode;
+    const manuallyPaused = state.manuallyPaused;
+    writePosterSnapshot(localStorage, event.payload);
+    state = applyPosterAction(createRuntimeState(event.payload), {
+      type: "setEditMode",
+      value: editMode
+    });
+    state = applyPosterAction(state, { type: "setManualPaused", value: manuallyPaused });
+    render();
   });
   await listen("runtime-control", (event) => {
     const action = String(event.payload ?? "");
@@ -505,6 +542,16 @@ window.addEventListener("keydown", (event) => {
   }
 });
 
-connectNativeControls().catch(() => {});
-startPerformancePolling();
-render();
+async function bootstrap() {
+  try {
+    state = await loadState();
+  } catch {
+    state = createRuntimeState(createDefaultSnapshot());
+  }
+  saveState();
+  render();
+  startPerformancePolling();
+  connectNativeControls().catch(() => {});
+}
+
+bootstrap();
