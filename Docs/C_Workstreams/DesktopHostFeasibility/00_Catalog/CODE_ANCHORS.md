@@ -5,15 +5,15 @@
 ## 前端 Demo
 
 - [`app/index.html`](../../../../app/index.html)：Demo 页面和主界面结构。
-- [`app/src/main.js`](../../../../app/src/main.js)：交互绑定、本地演示状态，以及手动/自动暂停状态的控制中心预览同步；海报标记来自 `poster-core`，状态动作来自 `poster-runtime`，性能数值来自 `performance-monitor`。
+- [`app/src/main.js`](../../../../app/src/main.js)：交互绑定、共享海报快照初始化，以及手动/自动暂停状态的控制中心预览同步；首次启动会保存完整默认快照，海报标记来自 `poster-core`，状态动作来自 `poster-runtime`，性能数值来自 `performance-monitor`。
 - [`app/src/model.js`](../../../../app/src/model.js)：海报、图标、主题和布局的纯状态模型。
-- [`app/src/poster-core.js`](../../../../app/src/poster-core.js)：海报状态快照、共享渲染标记与存储契约；`main.js` 与 `poster-surface.js` 都从这里读取。
+- [`app/src/poster-core.js`](../../../../app/src/poster-core.js)：海报状态快照、共享渲染标记与存储契约；封装 WebView 本地缓存与 Rust 共享快照桥接，`main.js` 与 `poster-surface.js` 都从这里读取。
 - [`app/src/poster-runtime.js`](../../../../app/src/poster-runtime.js)：窗口几何所有权、USING/EDITING 推导、锁定/收起动作和原生同步参数构造的统一运行时层；与 Rust `RuntimeSnapshot` 使用同一份 camelCase 字段契约。
 - [`app/src/performance-monitor.js`](../../../../app/src/performance-monitor.js)：性能模式归一化、数值格式化、FPS 上报判定和采样记录构造。
 - [`app/src/styles.css`](../../../../app/src/styles.css)：Windows 11 风格控制中心与桌面海报视觉。
 - [`app/poster.html`](../../../../app/poster.html)：独立透明海报宿主页面。
-- [`app/src/poster-surface.js`](../../../../app/src/poster-surface.js)：独立海报状态同步、锁定、原生拖动、收起交互、运行时自动暂停，以及 WebView DPI/无动画布局区域上报和 FPS 遥测；海报标记来自 `poster-core`，状态动作来自 `poster-runtime`。
-- [`app/src/poster-surface.css`](../../../../app/src/poster-surface.css)：独立宿主透明背景与满窗海报适配。
+- [`app/src/poster-surface.js`](../../../../app/src/poster-surface.js)：独立海报共享状态同步、锁定、原生拖动、收起、USING/EDITING 图标交互、运行时自动暂停，以及 WebView DPI/无动画布局区域上报和 FPS 遥测；海报标记来自 `poster-core`，状态动作来自 `poster-runtime`。
+- [`app/src/poster-surface.css`](../../../../app/src/poster-surface.css)：独立宿主透明背景与满窗海报适配；原生桌面表面不使用可被自动暂停冻结的入场位移动画。
 - [`tests/model.test.mjs`](../../../../tests/model.test.mjs)：状态模型单元测试。
 - [`tests/poster-core.test.mjs`](../../../../tests/poster-core.test.mjs)：共享海报渲染与存储契约行为测试。
 - [`tests/poster-runtime.test.mjs`](../../../../tests/poster-runtime.test.mjs)：窗口几何、USING/EDITING、锁定/收起和原生同步参数行为测试。
@@ -25,11 +25,12 @@
 ## Tauri 外壳
 
 - [`src-tauri/src/main.rs`](../../../../src-tauri/src/main.rs)：原生应用入口；Release 使用 Windows GUI 子系统，不创建控制台或 Windows Terminal 窗口。
-- [`src-tauri/src/lib.rs`](../../../../src-tauri/src/lib.rs)：主页/海报双窗体生命周期、宿主诊断状态、单实例、原生拖动/收起、WebView DPI 到物理窗体尺寸换算、通知区域菜单、后台状态快照到主线程 UI 的无锁调度、性能采样/基线保存，以及海报原生标题强制置空；`RuntimeSnapshot` 顶层契约包含 `pauseReasons`、`posterFps`、`performanceMode` 等前端对齐字段。
-- [`src-tauri/src/desktop_host.rs`](../../../../src-tauri/src/desktop_host.rs)：隔离的 WorkerW 发现/挂载、超时保护、统一 DPI 的原生窗口区域命中、显式 DWM 非客户区/边框抑制、无装饰 `ToolWindow` 自动回退，以及基于 `EVENT_SYSTEM_FOREGROUND` 的 Win+D/Shell 恢复监视器。
+- [`src-tauri/src/lib.rs`](../../../../src-tauri/src/lib.rs)：主页/海报双窗体生命周期、宿主诊断状态、单实例、原生拖动/收起、WebView DPI 到物理窗体尺寸换算与工作区钳制、通知区域菜单、共享海报快照命令、后台状态快照到主线程 UI 的无锁调度、性能采样/基线保存，以及海报原生标题强制置空；`RuntimeSnapshot` 顶层契约包含 `pauseReasons`、`posterFps`、`performanceMode` 等前端对齐字段。
+- [`src-tauri/src/desktop_host.rs`](../../../../src-tauri/src/desktop_host.rs)：隔离的 WorkerW 发现/挂载、超时保护、统一 DPI 的原生窗口区域命中、当前显示器工作区查询、显式 DWM 非客户区/边框抑制、`WS_EX_NOACTIVATE + WM_MOUSEACTIVATE` 桌面层级约束、无装饰 `ToolWindow` 自动回退，以及基于 `EVENT_SYSTEM_FOREGROUND` 的 Win+D/Shell 恢复监视器。
 - [`src-tauri/src/placement.rs`](../../../../src-tauri/src/placement.rs)：版本化海报位置快照、300ms 合并写盘和用户应用配置目录持久化。
+- [`src-tauri/src/poster_snapshot.rs`](../../../../src-tauri/src/poster_snapshot.rs)：Dev/Release 跨 WebView 来源共用的过渡 JSON 快照仓库，提供读取、最低结构验证和串行写入；后续由正式状态仓库替换。
 - [`src-tauri/src/runtime_monitor.rs`](../../../../src-tauri/src/runtime_monitor.rs)：前台全屏/最大化、WTS 锁屏和显示器电源事件归一化，托盘/系统弹层临时前台继承，确定性自动暂停状态、一次性启动复核与 HWND 黑盒诊断。
-- [`src-tauri/tauri.conf.json`](../../../../src-tauri/tauri.conf.json)：主页冷启动隐藏、透明海报默认可见、海报原生标题为空，以及 Release/NSIS 构建配置。
+- [`src-tauri/tauri.conf.json`](../../../../src-tauri/tauri.conf.json)：主页冷启动隐藏、海报窗口与 WebView 全透明背景、不可激活且跳过任务栏、海报原生标题为空，以及 Release/NSIS 构建配置；Z 序由原生桌面锚点唯一管理。
 - [`src-tauri/capabilities/default.json`](../../../../src-tauri/capabilities/default.json)：主页与海报窗口的最小能力声明。
 - [`src-tauri/icons/app-icon.svg`](../../../../src-tauri/icons/app-icon.svg)：A0 应用图标矢量源。
 - [`src-tauri/Cargo.lock`](../../../../src-tauri/Cargo.lock)：已验证的 Rust 依赖锁文件。

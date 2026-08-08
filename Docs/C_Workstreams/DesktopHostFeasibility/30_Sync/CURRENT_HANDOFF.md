@@ -1,13 +1,23 @@
 # Desktop Host Feasibility 当前交接
 
-最后更新：2026-08-06
+最后更新：2026-08-08
 
 状态：`COMPLETE — C-DHF-01..08 CLOSED`
+
+## 2026-08-08 关闭后维护修复
+
+- Dev/Release 因 WebView 来源隔离而产生两份海报状态的问题已修复：新增 Rust 共享 JSON 桥接，原生快照为权威数据，本地存储降为各来源缓存；跨启动实测已从不同的 `nocturne / 469×560` 与 `glass / 490×392` 收敛到同一份 `glass / 490×392`；
+- 修复海报大尺寸被旧 `560px` 上限破坏性截断、`allLocked` 陈旧、锁定提示反向、首次快照可能丢失第二海报和海报进入任务栏的问题；原生尺寸增加当前显示器工作区钳制；
+- 托盘编辑/全局锁定/快捷主题不再主动显示主页，USING/EDITING 图标单击语义已按设计区分；
+- 用户后续截图确认海报点击后可覆盖普通应用，且顶部亮带仍存在；现已增加 `WS_EX_NOACTIVATE + MA_NOACTIVATE`、统一桌面 Z 序锚点、关闭 `alwaysOnBottom` 双所有权，并移除可被暂停冻结的桌面宿主入场动画；
+- 修复版 HWND 位于 `Progman` 正上方，`ExtendedStyle=0x08000090`、`WM_MOUSEACTIVATE=3`，客户区与外框完全重合；屏幕像素探针未再发现亮带，详见 [`桌面层级与顶部亮带修复`](../20_Log/2026-08/2026-08-08_desktop_layer_and_surface_edge_bugfix.md)；
+- 32 项 Node/契约测试、19 项 Rust 测试与 `cargo tauri build --no-bundle` 通过；交叉启动证据与保留边界另见 [`运行状态一致性修复`](../20_Log/2026-08/2026-08-08_runtime_state_consistency_bugfix.md)；
+- 本轮不改变 C-DHF 已关闭结论，也不把单全局宿主、多海报、模板、Shadow DOM、真实快捷方式启动或 M1 标记为完成。
 
 ## 已完成
 
 - 工作流范围、任务、硬门和验证记录格式已建立；
-- `runtime-surface` 测试已从源码字符串断言改为行为验证；新增 `poster-core.js` 作为共享海报渲染/存储契约层、`poster-runtime.js` 作为窗口几何/USING-EDITING/锁定-收起/原生同步的统一运行时层，`main.js` 与 `poster-surface.js` 统一使用；31 项 Node/契约测试、15 项 Rust 测试与 Release 构建通过；
+- `runtime-surface` 测试已从源码字符串断言改为行为验证；新增 `poster-core.js` 作为共享海报渲染/存储契约层、`poster-runtime.js` 作为窗口几何/USING-EDITING/锁定-收起/原生同步的统一运行时层，`main.js` 与 `poster-surface.js` 统一使用；当前 32 项 Node/契约测试、18 项 Rust 测试与 Release 构建通过；
 - C-DHF-06 已实现：`C-DHF-06a` 四态性能采集和采样保存、`C-DHF-06b` Desktop-Up 内性能数值可视化均落地；真实基线数据待采样；
 - 托盘行为契约已调整：单击托盘不再切换海报，双击切换主页，海报显隐仅通过右键菜单“显示海报宿主”控制；
 - 产品/架构/交付文档已将桌面宿主列为首要技术风险；
@@ -79,7 +89,7 @@ Rust `RuntimeSnapshot` 与前端 `poster-runtime.js` 已对齐：
 
 ## 工作区注意事项
 
-- 当前实现分支是 `impl/poster-redesign-V1`；该分支保留远程 `impl/poster-redesign-a0` 的设计文档，代码恢复到 M1 落地前基线；未经用户明确要求不推送、不合并、不改写远端；
+- 当前实现分支是 `impl/poster-redesign-V1-fix`，作为 `impl/poster-redesign-V1` 的缺陷修复线；未经用户明确要求不推送、不合并、不改写远端；
 - 不覆盖 Docs 中已建立的用户需求和卸载安全规则；
 - 工程初始化不得把依赖缓存或构建输出提交到文档目录。
 

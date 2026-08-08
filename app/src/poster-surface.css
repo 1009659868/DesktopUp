@@ -20,7 +20,7 @@ body.poster-page {
   height: 100%;
   transform: none;
   backdrop-filter: none;
-  animation: surface-arrival 360ms cubic-bezier(.2,.8,.2,1) both;
+  animation: none;
 }
 
 .poster-surface .poster:not(.is-locked) .poster-header {
@@ -49,11 +49,6 @@ body.poster-page {
   bottom: 14px;
   max-width: calc(100vw - 32px);
   pointer-events: none;
-}
-
-@keyframes surface-arrival {
-  from { opacity: 0; transform: translateY(8px) scale(.985); }
-  to { opacity: 1; transform: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -1,5 +1,11 @@
 export const THEMES = Object.freeze(["nocturne", "ember", "glass"]);
 export const DENSITY_LABELS = Object.freeze(["紧凑", "舒展", "画廊"]);
+export const POSTER_SIZE_LIMITS = Object.freeze({
+  minWidth: 240,
+  maxWidth: 1920,
+  minHeight: 240,
+  maxHeight: 2160
+});
 
 export function clamp(value, minimum, maximum) {
   return Math.min(Math.max(value, minimum), maximum);
@@ -24,10 +30,10 @@ export function normalizedPoster(poster) {
     density: clamp(Number(poster.density) || 1, 0, 2),
     x: Number(poster.x) || 0,
     y: Number(poster.y) || 0,
-    width: clamp(Number(poster.width) || 420, 330, 640),
-    height: clamp(Number(poster.height) || 350, 240, 560),
+    width: clamp(Number(poster.width) || 420, POSTER_SIZE_LIMITS.minWidth, POSTER_SIZE_LIMITS.maxWidth),
+    height: clamp(Number(poster.height) || 350, POSTER_SIZE_LIMITS.minHeight, POSTER_SIZE_LIMITS.maxHeight),
     collapsed: Boolean(poster.collapsed),
-    locked: poster.locked === undefined ? true : Boolean(poster.locked),
+    locked: poster.locked === undefined ? false : Boolean(poster.locked),
     items: Array.isArray(poster.items) ? poster.items : []
   };
 }
@@ -47,7 +53,7 @@ export function moveWithinBounds(rect, stage, nextPosition) {
 
 export function resizeWithinBounds(rect, nextSize) {
   return {
-    width: clamp(nextSize.width, 330, 640),
-    height: clamp(nextSize.height, 240, 560)
+    width: clamp(nextSize.width, POSTER_SIZE_LIMITS.minWidth, POSTER_SIZE_LIMITS.maxWidth),
+    height: clamp(nextSize.height, POSTER_SIZE_LIMITS.minHeight, POSTER_SIZE_LIMITS.maxHeight)
   };
 }

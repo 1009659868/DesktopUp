@@ -1,5 +1,6 @@
 mod desktop_host;
 mod placement;
+mod poster_snapshot;
 mod runtime_monitor;
 
 use std::sync::{
@@ -10,6 +11,7 @@ use std::time::Instant;
 
 use desktop_host::DesktopHostDiagnostics;
 use placement::PlacementStore;
+use poster_snapshot::PosterSnapshotStore;
 use runtime_monitor::{RuntimeMonitorCapabilities, RuntimeVisibilitySnapshot};
 use serde::Serialize;
 use tauri::{
@@ -58,7 +60,7 @@ impl Default for RuntimeSnapshot {
             manually_paused: false,
             automatically_paused: false,
             effective_paused: false,
-            all_locked: true,
+            all_locked: false,
             poster_visible: true,
             pause_reasons: Vec::new(),
             poster_fps: 0.0,
@@ -218,6 +220,22 @@ fn update_runtime_state(
 }
 
 #[tauri::command]
+fn load_poster_snapshot(store: State<'_, PosterSnapshotStore>) -> Option<serde_json::Value> {
+    store.snapshot()
+}
+
+#[tauri::command]
+fn save_poster_snapshot(
+    snapshot: serde_json::Value,
+    app: tauri::AppHandle,
+    store: State<'_, PosterSnapshotStore>,
+) -> Result<(), String> {
+    store.replace(snapshot.clone())?;
+    app.emit("poster-snapshot-updated", snapshot)
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
 fn runtime_state(state: State<'_, RuntimeState>) -> Result<RuntimeSnapshot, String> {
     state
         .0
@@ -245,6 +263,16 @@ fn start_poster_drag(app: tauri::AppHandle) -> Result<(), String> {
         .map_err(|error| error.to_string())
 }
 
+fn clamp_surface_physical_size(requested: (u32, u32), work_area: Option<(u32, u32)>) -> (u32, u32) {
+    match work_area {
+        Some((work_width, work_height)) => (
+            requested.0.min(work_width.max(1)),
+            requested.1.min(work_height.max(1)),
+        ),
+        None => requested,
+    }
+}
+
 #[tauri::command]
 fn resize_poster_surface(
     collapsed: bool,
@@ -257,21 +285,25 @@ fn resize_poster_surface(
 ) -> Result<(), String> {
     let gutter = surface_gutter.clamp(0.0, 32.0);
     let scale = device_scale_factor.clamp(0.5, 4.0);
-    let logical_width = width.clamp(330.0, 640.0) + gutter * 2.0;
+    let logical_width = width.clamp(240.0, 1920.0) + gutter * 2.0;
     let content_height = if collapsed {
         116.0
     } else {
-        height.clamp(240.0, 560.0)
+        height.clamp(240.0, 2160.0)
     };
     let logical_height = content_height + gutter * 2.0;
     let window = app
         .get_webview_window("poster")
         .ok_or_else(|| "poster window is unavailable".to_string())?;
-    window
-        .set_size(tauri::PhysicalSize::new(
+    let (physical_width, physical_height) = clamp_surface_physical_size(
+        (
             (logical_width * scale).round() as u32,
             (logical_height * scale).round() as u32,
-        ))
+        ),
+        desktop_host::poster_work_area_size(&window),
+    );
+    window
+        .set_size(tauri::PhysicalSize::new(physical_width, physical_height))
         .map_err(|error| error.to_string())?;
     if let Some(placement) = placement_store.snapshot() {
         desktop_host::restore_poster_placement(&window, &placement)?;
@@ -296,8 +328,8 @@ fn set_poster_interaction_region(
         &window,
         x.clamp(0.0, 64.0),
         y.clamp(0.0, 64.0),
-        width.clamp(1.0, 640.0),
-        height.clamp(1.0, 560.0),
+        width.clamp(1.0, 1920.0),
+        height.clamp(1.0, 2160.0),
         corner_radius.clamp(0.0, 48.0),
         device_scale_factor.clamp(0.5, 4.0),
     )?;
@@ -606,6 +638,10 @@ fn show_and_emit(app: &tauri::AppHandle, payload: &str) {
     let _ = app.emit("runtime-control", payload);
 }
 
+fn emit_control(app: &tauri::AppHandle, payload: &str) {
+    let _ = app.emit("runtime-control", payload);
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -622,6 +658,11 @@ pub fn run() {
             let placement_store = PlacementStore::open(placement_path);
             let startup_placement = placement_store.snapshot();
             app.manage(placement_store);
+            let snapshot_path = app
+                .path()
+                .app_config_dir()?
+                .join("poster-snapshot-bridge-v1.json");
+            app.manage(PosterSnapshotStore::open(snapshot_path));
 
             let show_item = MenuItemBuilder::with_id("show", "打开 Desktop-Up 主页").build(app)?;
             let settings_item = MenuItemBuilder::with_id("settings", "设置…").build(app)?;
@@ -642,7 +683,7 @@ pub fn run() {
                 .checked(false)
                 .build(app)?;
             let lock_item = CheckMenuItemBuilder::with_id("lock-all", "锁定全部海报")
-                .checked(true)
+                .checked(false)
                 .build(app)?;
             let pause_item = CheckMenuItemBuilder::with_id("pause", "暂停动态效果")
                 .checked(false)
@@ -703,12 +744,12 @@ pub fn run() {
                     "show" => show_main_window(app),
                     "settings" => show_and_emit(app, "open-settings"),
                     "workspace" => toggle_poster_window(app),
-                    "edit" => show_and_emit(app, "toggle-edit"),
-                    "lock-all" => show_and_emit(app, "toggle-lock-all"),
+                    "edit" => emit_control(app, "toggle-edit"),
+                    "lock-all" => emit_control(app, "toggle-lock-all"),
                     "pause" => toggle_manual_pause(app),
-                    "theme-nocturne" => show_and_emit(app, "theme:nocturne"),
-                    "theme-ember" => show_and_emit(app, "theme:ember"),
-                    "theme-glass" => show_and_emit(app, "theme:glass"),
+                    "theme-nocturne" => emit_control(app, "theme:nocturne"),
+                    "theme-ember" => emit_control(app, "theme:ember"),
+                    "theme-glass" => emit_control(app, "theme:glass"),
                     "agent" => show_and_emit(app, "open-agent"),
                     "reconnect" => {
                         if let Err(error) = configure_poster_host(app, true) {
@@ -735,6 +776,11 @@ pub fn run() {
                 .build(app)?;
 
             if let Some(poster) = app.get_webview_window("poster") {
+                if let Err(error) =
+                    poster.set_background_color(Some(tauri::window::Color(0, 0, 0, 0)))
+                {
+                    eprintln!("failed to force the poster surface background transparent: {error}");
+                }
                 if let Some(placement) = startup_placement.as_ref() {
                     if let Err(error) = desktop_host::restore_poster_placement(&poster, placement) {
                         eprintln!("failed to restore saved poster placement: {error}");
@@ -828,6 +874,8 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             runtime_state,
+            load_poster_snapshot,
+            save_poster_snapshot,
             desktop_host_diagnostics,
             update_runtime_state,
             start_poster_drag,
@@ -959,5 +1007,14 @@ mod tests {
         ] {
             assert!(object.contains_key(key), "missing performance field {key}");
         }
+    }
+
+    #[test]
+    fn poster_surface_size_never_exceeds_the_monitor_work_area() {
+        assert_eq!(
+            clamp_surface_physical_size((1800, 1400), Some((1920, 1080))),
+            (1800, 1080)
+        );
+        assert_eq!(clamp_surface_physical_size((900, 700), None), (900, 700));
     }
 }

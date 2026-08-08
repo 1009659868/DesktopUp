@@ -24,6 +24,41 @@ export function writePosterSnapshot(storage, snapshot) {
   storage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
 }
 
+export function isPosterSnapshot(snapshot) {
+  return Boolean(snapshot) && Array.isArray(snapshot.posters);
+}
+
+export async function readSharedPosterSnapshot(storage, invoke) {
+  const localSnapshot = readPosterSnapshot(storage);
+  if (typeof invoke !== "function") return localSnapshot;
+
+  try {
+    const sharedSnapshot = await invoke("load_poster_snapshot");
+    if (isPosterSnapshot(sharedSnapshot)) {
+      writePosterSnapshot(storage, sharedSnapshot);
+      return sharedSnapshot;
+    }
+    if (isPosterSnapshot(localSnapshot)) {
+      await invoke("save_poster_snapshot", { snapshot: localSnapshot });
+    }
+  } catch {
+    return localSnapshot;
+  }
+  return localSnapshot;
+}
+
+export async function writeSharedPosterSnapshot(storage, invoke, snapshot) {
+  if (!isPosterSnapshot(snapshot)) return false;
+  writePosterSnapshot(storage, snapshot);
+  if (typeof invoke !== "function") return true;
+  try {
+    await invoke("save_poster_snapshot", { snapshot });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function readFirstPoster(snapshot, fallback) {
   return normalizedPoster(snapshot?.posters?.[0] ?? fallback);
 }
@@ -70,7 +105,7 @@ export function createDefaultSnapshot() {
         width: 490,
         height: 392,
         collapsed: false,
-        locked: true,
+        locked: false,
         autoCollapse: false,
         items: DEFAULT_CATALOG.slice(0, 6).map(toDemoItem)
       },
@@ -87,7 +122,7 @@ export function createDefaultSnapshot() {
         width: 376,
         height: 314,
         collapsed: true,
-        locked: true,
+        locked: false,
         autoCollapse: false,
         items: DEFAULT_CATALOG.slice(6).map(toDemoItem)
       }
@@ -135,7 +170,7 @@ export function buildPosterMarkup(poster, options = {}) {
   const itemPosterIdAttr = posterId == null ? "" : ` data-poster-id="${escapeHtml(posterId)}"`;
   const games = source.items.map((item, index) => `
     <button class="game-tile hue-${escapeHtml(item.hue)}" type="button" data-action="launch"${itemPosterIdAttr}
-      data-item-index="${index}" title="双击启动 ${escapeHtml(item.title)}">
+      data-item-index="${index}" title="单击启动 ${escapeHtml(item.title)}，双击启动并标记最近活跃">
       <span class="game-cover"><i></i><strong>${escapeHtml(item.mark)}</strong><small>0${index + 1}</small></span>
       <span class="game-name">${escapeHtml(item.title)}</span>
     </button>
