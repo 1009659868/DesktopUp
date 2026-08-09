@@ -1,6 +1,6 @@
 # Local AI Assistant 模块计划
 
-最后检查：2026-08-04
+最后检查：2026-08-09
 
 状态：`PLANNED`
 
@@ -16,7 +16,7 @@
 
 | C 工作流 | 结果 | 依赖 | 状态 |
 | --- | --- | --- | --- |
-| Command and ChangePlan (`C-CCP`) | 手动 UI 与 AI 共用命令、预览、确认、撤销和风险分级 | C-TIE, C-LRC | `PLANNED` |
+| Command and ChangePlan (`C-CCP`) | 手动 UI 与 AI 共用命令、预览、确认、撤销和风险分级 | C-TIE, C-LCH | `PLANNED` |
 | Provider and Credential (`C-PCC`) | BYOK Provider、凭据安全和无 Key 不联网 | C-CCP | `PLANNED` |
 | Preview and Undo Agent (`C-PUA`) | 受控参数/主题草稿、越权拒绝和失败回退 | C-PCC | `PLANNED` |
 

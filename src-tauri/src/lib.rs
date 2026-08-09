@@ -1,4 +1,6 @@
 mod desktop_host;
+mod host_contract;
+mod host_topology;
 mod placement;
 mod poster_snapshot;
 mod runtime_monitor;
@@ -10,6 +12,16 @@ use std::sync::{
 use std::time::Instant;
 
 use desktop_host::DesktopHostDiagnostics;
+use host_contract::{
+    virtual_bounds, DisplayDescriptor, DisplayTopology, HostPlacementIntent, HostSurfaceRequest,
+    HostSurfaceSnapshot, InteractionRegion, LogicalRect, LogicalSize, PhysicalRect,
+    ResponsiveScalePolicy, HOST_CONTRACT_VERSION,
+};
+use host_topology::{
+    desktop_host_window, effective_logical_work_area, inspect_host_topology,
+    optional_desktop_host_window, responsive_scale_for_work_area, HostTopologySnapshot,
+    DESKTOP_HOST_WINDOW_LABEL,
+};
 use placement::PlacementStore;
 use poster_snapshot::PosterSnapshotStore;
 use runtime_monitor::{RuntimeMonitorCapabilities, RuntimeVisibilitySnapshot};
@@ -30,6 +42,12 @@ struct PerformanceClock(Instant);
 
 struct RuntimeState(Mutex<RuntimeSnapshot>);
 
+#[derive(Default)]
+struct HostSurfaceCoordinator(Mutex<()>);
+
+#[derive(Default)]
+struct PosterSurfaceLifecycle(AtomicBool);
+
 impl Default for RuntimeState {
     fn default() -> Self {
         Self(Mutex::new(RuntimeSnapshot::default()))
@@ -39,15 +57,20 @@ impl Default for RuntimeState {
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct RuntimeSnapshot {
+    contract_version: u32,
     edit_mode: bool,
     manually_paused: bool,
     automatically_paused: bool,
     effective_paused: bool,
     all_locked: bool,
     poster_visible: bool,
+    host_surface_ready: bool,
     pause_reasons: Vec<String>,
     poster_fps: f64,
     performance_mode: String,
+    host_surface: HostSurfaceSnapshot,
+    display_topology: DisplayTopology,
+    host_topology: HostTopologySnapshot,
     desktop_host: DesktopHostDiagnostics,
     runtime_visibility: RuntimeVisibilitySnapshot,
     runtime_monitor: RuntimeMonitorCapabilities,
@@ -56,18 +79,45 @@ struct RuntimeSnapshot {
 impl Default for RuntimeSnapshot {
     fn default() -> Self {
         Self {
+            contract_version: HOST_CONTRACT_VERSION,
             edit_mode: false,
             manually_paused: false,
             automatically_paused: false,
             effective_paused: false,
             all_locked: false,
             poster_visible: true,
+            host_surface_ready: false,
             pause_reasons: Vec::new(),
             poster_fps: 0.0,
             performance_mode: "auto".to_string(),
+            host_surface: HostSurfaceSnapshot::default(),
+            display_topology: DisplayTopology::default(),
+            host_topology: HostTopologySnapshot::default(),
             desktop_host: DesktopHostDiagnostics::default(),
             runtime_visibility: RuntimeVisibilitySnapshot::default(),
             runtime_monitor: RuntimeMonitorCapabilities::default(),
+        }
+    }
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct HostSurfaceSyncResult {
+    contract_version: u32,
+    host_surface: HostSurfaceSnapshot,
+    display_topology: DisplayTopology,
+    host_topology: HostTopologySnapshot,
+    desktop_host: DesktopHostDiagnostics,
+}
+
+impl HostSurfaceSyncResult {
+    fn from_runtime(snapshot: &RuntimeSnapshot) -> Self {
+        Self {
+            contract_version: HOST_CONTRACT_VERSION,
+            host_surface: snapshot.host_surface.clone(),
+            display_topology: snapshot.display_topology.clone(),
+            host_topology: snapshot.host_topology.clone(),
+            desktop_host: snapshot.desktop_host.clone(),
         }
     }
 }
@@ -255,10 +305,302 @@ fn desktop_host_diagnostics(
         .map_err(|error| error.to_string())
 }
 
+fn monitor_matches(left: &tauri::Monitor, right: &tauri::Monitor) -> bool {
+    left.name() == right.name()
+        && left.position() == right.position()
+        && left.size() == right.size()
+}
+
+fn physical_rect(
+    position: &tauri::PhysicalPosition<i32>,
+    size: &tauri::PhysicalSize<u32>,
+) -> PhysicalRect {
+    PhysicalRect {
+        x: position.x,
+        y: position.y,
+        width: size.width,
+        height: size.height,
+    }
+}
+
+fn resolve_display_topology(window: &tauri::WebviewWindow) -> DisplayTopology {
+    let primary = window.primary_monitor().ok().flatten();
+    let scale_policy = ResponsiveScalePolicy::default();
+    let mut monitors = window.available_monitors().unwrap_or_default();
+    monitors.sort_by(|left, right| {
+        (left.position().x, left.position().y, left.name()).cmp(&(
+            right.position().x,
+            right.position().y,
+            right.name(),
+        ))
+    });
+    let displays = monitors
+        .iter()
+        .enumerate()
+        .map(|(index, monitor)| {
+            let work_area = monitor.work_area();
+            let physical_work_area = physical_rect(&work_area.position, &work_area.size);
+            let effective_logical_work_area =
+                effective_logical_work_area(&physical_work_area, monitor.scale_factor());
+            let responsive_scale =
+                responsive_scale_for_work_area(&effective_logical_work_area, &scale_policy);
+            DisplayDescriptor {
+                display_id: monitor
+                    .name()
+                    .cloned()
+                    .unwrap_or_else(|| format!("display-{index}")),
+                is_primary: primary
+                    .as_ref()
+                    .is_some_and(|primary| monitor_matches(primary, monitor)),
+                scale_factor: monitor.scale_factor(),
+                renderer_scale_factor: monitor.scale_factor(),
+                bounds: physical_rect(monitor.position(), monitor.size()),
+                work_area: physical_work_area,
+                effective_logical_work_area,
+                responsive_scale,
+            }
+        })
+        .collect::<Vec<_>>();
+    DisplayTopology {
+        contract_version: HOST_CONTRACT_VERSION,
+        coordinate_space: "physicalPixels".to_string(),
+        virtual_bounds: virtual_bounds(&displays),
+        scale_policy,
+        displays,
+    }
+}
+
+fn target_display_id(
+    window: &tauri::WebviewWindow,
+    intent: &HostPlacementIntent,
+    placement_store: &PlacementStore,
+) -> Option<String> {
+    if let HostPlacementIntent::Anchor {
+        display_id: Some(display_id),
+        ..
+    } = intent
+    {
+        return Some(display_id.clone());
+    }
+    window
+        .current_monitor()
+        .ok()
+        .flatten()
+        .and_then(|monitor| monitor.name().cloned())
+        .or_else(|| {
+            placement_store
+                .snapshot()
+                .and_then(|placement| placement.monitor_device)
+        })
+}
+
+fn select_target_display_index(
+    topology: &DisplayTopology,
+    preferred_display_id: Option<&str>,
+) -> Option<usize> {
+    preferred_display_id
+        .and_then(|display_id| {
+            topology
+                .displays
+                .iter()
+                .position(|display| display.display_id == display_id)
+        })
+        .or_else(|| {
+            topology
+                .displays
+                .iter()
+                .position(|display| display.is_primary)
+        })
+        .or_else(|| (!topology.displays.is_empty()).then_some(0))
+}
+
+fn next_host_revision(state: &RuntimeState) -> Result<u64, String> {
+    state
+        .0
+        .lock()
+        .map(|snapshot| snapshot.host_surface.revision.saturating_add(1).max(1))
+        .map_err(|error| error.to_string())
+}
+
+fn current_host_surface(state: &RuntimeState) -> Result<HostSurfaceSnapshot, String> {
+    state
+        .0
+        .lock()
+        .map(|snapshot| snapshot.host_surface.clone())
+        .map_err(|error| error.to_string())
+}
+
+fn apply_host_placement_intent(
+    window: &tauri::WebviewWindow,
+    intent: &HostPlacementIntent,
+    placement_store: &PlacementStore,
+) -> Result<(), String> {
+    match intent {
+        HostPlacementIntent::Preserve => {
+            if let Some(placement) = placement_store.snapshot() {
+                desktop_host::restore_poster_placement(window, &placement)?;
+            }
+        }
+        HostPlacementIntent::Anchor {
+            display_id,
+            normalized_x,
+            normalized_y,
+        } => {
+            let fallback = window.outer_position().map_err(|error| error.to_string())?;
+            let placement = placement::PosterPlacement::new(
+                display_id.clone(),
+                *normalized_x,
+                *normalized_y,
+                fallback.x,
+                fallback.y,
+            );
+            desktop_host::restore_poster_placement(window, &placement)?;
+            placement_store.record(placement);
+        }
+    }
+    Ok(())
+}
+
+fn apply_host_surface_request(
+    app: &tauri::AppHandle,
+    request: HostSurfaceRequest,
+) -> Result<HostSurfaceSyncResult, String> {
+    let validated = request.validate()?;
+    let coordinator = app.state::<HostSurfaceCoordinator>();
+    let _guard = coordinator.0.lock().map_err(|error| error.to_string())?;
+    let runtime_state = app.state::<RuntimeState>();
+    {
+        let snapshot = runtime_state.0.lock().map_err(|error| error.to_string())?;
+        if validated.request.revision < snapshot.host_surface.revision {
+            return Ok(HostSurfaceSyncResult::from_runtime(&snapshot));
+        }
+    }
+
+    let window = desktop_host_window(app)?;
+    let placement_store = app.state::<PlacementStore>();
+    let mut display_topology = resolve_display_topology(&window);
+    let preferred_display_id = target_display_id(
+        &window,
+        &validated.request.placement_intent,
+        &placement_store,
+    );
+    let target_display_index =
+        select_target_display_index(&display_topology, preferred_display_id.as_deref());
+    if let Some(index) = target_display_index {
+        let display = &mut display_topology.displays[index];
+        display.renderer_scale_factor = validated.request.scale_factor;
+        display.effective_logical_work_area =
+            effective_logical_work_area(&display.work_area, display.renderer_scale_factor);
+        display.responsive_scale = responsive_scale_for_work_area(
+            &display.effective_logical_work_area,
+            &display_topology.scale_policy,
+        );
+    }
+    let target_display = target_display_index.map(|index| display_topology.displays[index].clone());
+    let validated = if let Some(display) = target_display.as_ref() {
+        validated.resolve_display_scale(
+            Some(display.display_id.clone()),
+            display.scale_factor,
+            display.renderer_scale_factor,
+            display.responsive_scale,
+        )?
+    } else {
+        validated
+    };
+    let (physical_width, physical_height) = clamp_surface_physical_size(
+        (
+            validated.physical_size.width,
+            validated.physical_size.height,
+        ),
+        target_display
+            .as_ref()
+            .map(|display| (display.work_area.width, display.work_area.height))
+            .or_else(|| desktop_host::poster_work_area_size(&window)),
+    );
+    window
+        .set_size(tauri::PhysicalSize::new(physical_width, physical_height))
+        .map_err(|error| error.to_string())?;
+    apply_host_placement_intent(
+        &window,
+        &validated.request.placement_intent,
+        &placement_store,
+    )?;
+    if let Some(region) = validated.request.interaction_region.as_ref() {
+        desktop_host::apply_interaction_region(
+            &window,
+            region.rect.x,
+            region.rect.y,
+            region.rect.width,
+            region.rect.height,
+            region.corner_radius,
+            validated.effective_scale_factor,
+        )?;
+    }
+    let _ = window.set_title("");
+
+    let mut host_surface = HostSurfaceSnapshot::from(validated);
+    host_surface.physical_size.width = physical_width;
+    host_surface.physical_size.height = physical_height;
+    let mut snapshot = runtime_state.0.lock().map_err(|error| error.to_string())?;
+    snapshot.host_surface = host_surface;
+    snapshot.display_topology = display_topology;
+    snapshot.host_topology = inspect_host_topology(app);
+    snapshot.desktop_host.interaction_region_count =
+        usize::from(snapshot.host_surface.interaction_region.is_some());
+    snapshot.desktop_host.interaction_region = snapshot
+        .host_surface
+        .interaction_region
+        .as_ref()
+        .map(|region| {
+            format!(
+                "{}:{:.1},{:.1} {:.1}x{:.1} @{:.2}x",
+                region.region_id,
+                region.rect.x,
+                region.rect.y,
+                region.rect.width,
+                region.rect.height,
+                snapshot.host_surface.effective_scale_factor
+            )
+        });
+    let updated = snapshot.clone();
+    let result = HostSurfaceSyncResult::from_runtime(&snapshot);
+    drop(snapshot);
+    schedule_runtime_outputs(app, updated, false);
+    Ok(result)
+}
+
+#[tauri::command]
+fn sync_host_surface(
+    request: HostSurfaceRequest,
+    app: tauri::AppHandle,
+) -> Result<HostSurfaceSyncResult, String> {
+    apply_host_surface_request(&app, request)
+}
+
+fn resync_host_surface_for_display_change(
+    app: &tauri::AppHandle,
+) -> Result<Option<HostSurfaceSyncResult>, String> {
+    let runtime_state = app.state::<RuntimeState>();
+    let current = current_host_surface(&runtime_state)?;
+    if current.revision == 0 {
+        return Ok(None);
+    }
+    let request = HostSurfaceRequest {
+        contract_version: HOST_CONTRACT_VERSION,
+        revision: next_host_revision(&runtime_state)?,
+        surface_id: current.surface_id,
+        logical_size: current.logical_size,
+        scale_factor: current.device_scale_factor,
+        user_scale: current.user_scale,
+        placement_intent: HostPlacementIntent::Preserve,
+        interaction_region: current.interaction_region,
+    };
+    apply_host_surface_request(app, request).map(Some)
+}
+
 #[tauri::command]
 fn start_poster_drag(app: tauri::AppHandle) -> Result<(), String> {
-    app.get_webview_window("poster")
-        .ok_or_else(|| "poster window is unavailable".to_string())?
+    desktop_host_window(&app)?
         .start_dragging()
         .map_err(|error| error.to_string())
 }
@@ -281,7 +623,6 @@ fn resize_poster_surface(
     surface_gutter: f64,
     device_scale_factor: f64,
     app: tauri::AppHandle,
-    placement_store: State<'_, PlacementStore>,
 ) -> Result<(), String> {
     let gutter = surface_gutter.clamp(0.0, 32.0);
     let scale = device_scale_factor.clamp(0.5, 4.0);
@@ -292,23 +633,26 @@ fn resize_poster_surface(
         height.clamp(240.0, 2160.0)
     };
     let logical_height = content_height + gutter * 2.0;
-    let window = app
-        .get_webview_window("poster")
-        .ok_or_else(|| "poster window is unavailable".to_string())?;
-    let (physical_width, physical_height) = clamp_surface_physical_size(
-        (
-            (logical_width * scale).round() as u32,
-            (logical_height * scale).round() as u32,
-        ),
-        desktop_host::poster_work_area_size(&window),
-    );
-    window
-        .set_size(tauri::PhysicalSize::new(physical_width, physical_height))
-        .map_err(|error| error.to_string())?;
-    if let Some(placement) = placement_store.snapshot() {
-        desktop_host::restore_poster_placement(&window, &placement)?;
-    }
-    Ok(())
+    let runtime_state = app.state::<RuntimeState>();
+    let current = current_host_surface(&runtime_state)?;
+    let interaction_region = current.interaction_region.filter(|region| {
+        region.rect.x + region.rect.width <= logical_width
+            && region.rect.y + region.rect.height <= logical_height
+    });
+    let request = HostSurfaceRequest {
+        contract_version: HOST_CONTRACT_VERSION,
+        revision: next_host_revision(&runtime_state)?,
+        surface_id: current.surface_id,
+        logical_size: LogicalSize {
+            width: logical_width,
+            height: logical_height,
+        },
+        scale_factor: scale,
+        user_scale: current.user_scale,
+        placement_intent: HostPlacementIntent::Preserve,
+        interaction_region,
+    };
+    apply_host_surface_request(&app, request).map(|_| ())
 }
 
 #[tauri::command]
@@ -321,41 +665,55 @@ fn set_poster_interaction_region(
     device_scale_factor: f64,
     app: tauri::AppHandle,
 ) -> Result<DesktopHostDiagnostics, String> {
-    let window = app
-        .get_webview_window("poster")
-        .ok_or_else(|| "poster window is unavailable".to_string())?;
-    desktop_host::apply_interaction_region(
-        &window,
-        x.clamp(0.0, 64.0),
-        y.clamp(0.0, 64.0),
-        width.clamp(1.0, 1920.0),
-        height.clamp(1.0, 2160.0),
-        corner_radius.clamp(0.0, 48.0),
-        device_scale_factor.clamp(0.5, 4.0),
-    )?;
-
+    let window = desktop_host_window(&app)?;
     let runtime_state = app.state::<RuntimeState>();
-    let mut snapshot = runtime_state.0.lock().map_err(|error| error.to_string())?;
-    snapshot.desktop_host.interaction_region_count = 1;
-    snapshot.desktop_host.interaction_region = Some(format!(
-        "{:.1},{:.1} {:.1}x{:.1} @{:.2}x",
-        x, y, width, height, device_scale_factor
-    ));
-    let updated = snapshot.clone();
-    let diagnostics = snapshot.desktop_host.clone();
-    drop(snapshot);
-    schedule_runtime_outputs(&app, updated, false);
-    let _ = window.set_title("");
-    Ok(diagnostics)
+    let current = current_host_surface(&runtime_state)?;
+    let scale = device_scale_factor.clamp(0.5, 4.0);
+    let logical_size = if current.revision > 0 {
+        current.logical_size
+    } else {
+        let physical = window.inner_size().map_err(|error| error.to_string())?;
+        LogicalSize {
+            width: (physical.width as f64 / scale).max(1.0),
+            height: (physical.height as f64 / scale).max(1.0),
+        }
+    };
+    let region_x = x.clamp(0.0, 64.0).min((logical_size.width - 1.0).max(0.0));
+    let region_y = y.clamp(0.0, 64.0).min((logical_size.height - 1.0).max(0.0));
+    let region_width = width
+        .clamp(1.0, 1920.0)
+        .min((logical_size.width - region_x).max(1.0));
+    let region_height = height
+        .clamp(1.0, 2160.0)
+        .min((logical_size.height - region_y).max(1.0));
+    let max_radius = region_width.min(region_height) / 2.0;
+    let request = HostSurfaceRequest {
+        contract_version: HOST_CONTRACT_VERSION,
+        revision: next_host_revision(&runtime_state)?,
+        surface_id: current.surface_id,
+        logical_size,
+        scale_factor: scale,
+        user_scale: current.user_scale,
+        placement_intent: HostPlacementIntent::Preserve,
+        interaction_region: Some(InteractionRegion {
+            region_id: "poster-legacy".to_string(),
+            rect: LogicalRect {
+                x: region_x,
+                y: region_y,
+                width: region_width,
+                height: region_height,
+            },
+            corner_radius: corner_radius.clamp(0.0, 48.0).min(max_radius),
+        }),
+    };
+    apply_host_surface_request(&app, request).map(|result| result.desktop_host)
 }
 
 fn configure_poster_host(
     app: &tauri::AppHandle,
     prefer_workerw: bool,
 ) -> Result<DesktopHostDiagnostics, String> {
-    let window = app
-        .get_webview_window("poster")
-        .ok_or_else(|| "poster window is unavailable".to_string())?;
+    let window = desktop_host_window(app)?;
     POSTER_PLACEMENT_CAPTURE_ENABLED.store(false, Ordering::Release);
     let diagnostics = desktop_host::configure(&window, prefer_workerw);
     if let Some(placement) = app
@@ -372,6 +730,8 @@ fn configure_poster_host(
     let updated = if let Some(state) = app.try_state::<RuntimeState>() {
         if let Ok(mut snapshot) = state.0.lock() {
             snapshot.desktop_host = diagnostics.clone();
+            snapshot.display_topology = resolve_display_topology(&window);
+            snapshot.host_topology = inspect_host_topology(app);
             Some(snapshot.clone())
         } else {
             None
@@ -581,9 +941,14 @@ fn save_performance_baseline(
 }
 
 fn set_poster_visibility(app: &tauri::AppHandle, visible: bool) {
-    desktop_host::set_poster_visibility_intent(visible);
-    if let Some(window) = app.get_webview_window("poster") {
-        if visible {
+    let surface_ready = app
+        .try_state::<PosterSurfaceLifecycle>()
+        .map(|lifecycle| lifecycle.0.load(Ordering::Acquire))
+        .unwrap_or(false);
+    let native_visible = visible && surface_ready;
+    desktop_host::set_poster_visibility_intent(native_visible);
+    if let Some(window) = optional_desktop_host_window(app) {
+        if native_visible {
             let _ = window.show();
         } else {
             let _ = window.hide();
@@ -603,6 +968,78 @@ fn set_poster_visibility(app: &tauri::AppHandle, visible: bool) {
     if let Some(updated) = updated {
         schedule_runtime_outputs(app, updated, false);
     }
+}
+
+fn reset_poster_surface_initialization(app: &tauri::AppHandle) {
+    if let Some(lifecycle) = app.try_state::<PosterSurfaceLifecycle>() {
+        lifecycle.0.store(false, Ordering::Release);
+    }
+    desktop_host::set_poster_visibility_intent(false);
+    if let Some(window) = optional_desktop_host_window(app) {
+        let _ = window.hide();
+    }
+    if let Some(state) = app.try_state::<RuntimeState>() {
+        if let Ok(mut snapshot) = state.0.lock() {
+            snapshot.host_surface_ready = false;
+        }
+    }
+}
+
+#[tauri::command]
+fn mark_poster_surface_ready(revision: u64, app: tauri::AppHandle) -> Result<bool, String> {
+    if revision == 0 {
+        return Err("poster surface readiness requires a synchronized revision".to_string());
+    }
+
+    let (should_show, host_surface) = {
+        let state = app.state::<RuntimeState>();
+        let snapshot = state.0.lock().map_err(|error| error.to_string())?;
+        if snapshot.host_surface.revision < revision {
+            return Err(format!(
+                "poster surface revision {} is not synchronized yet",
+                revision
+            ));
+        }
+        (snapshot.poster_visible, snapshot.host_surface.clone())
+    };
+
+    let lifecycle = app.state::<PosterSurfaceLifecycle>();
+    if lifecycle.0.load(Ordering::Acquire) {
+        return Ok(true);
+    }
+
+    // Reassert the final popup/DWM styles after the canonical size and window region are in
+    // place, while the native window is still hidden. This prevents the cold-start frame from
+    // ever exposing a stale Windows non-client surface.
+    configure_poster_host(&app, true)?;
+    let window = desktop_host_window(&app)?;
+    window
+        .set_size(tauri::PhysicalSize::new(
+            host_surface.physical_size.width,
+            host_surface.physical_size.height,
+        ))
+        .map_err(|error| error.to_string())?;
+    if let Some(region) = host_surface.interaction_region.as_ref() {
+        // SWP_FRAMECHANGED in host configuration must run before the final region write.
+        // Reapplying the region last invalidates the stale Windows 11/DWM non-client strip
+        // that otherwise survives until the first user-initiated collapse/resize.
+        desktop_host::apply_interaction_region(
+            &window,
+            region.rect.x,
+            region.rect.y,
+            region.rect.width,
+            region.rect.height,
+            region.corner_radius,
+            host_surface.effective_scale_factor,
+        )?;
+    }
+    lifecycle.0.store(true, Ordering::Release);
+    if let Ok(mut snapshot) = app.state::<RuntimeState>().0.lock() {
+        snapshot.host_surface_ready = true;
+    }
+    set_poster_visibility(&app, should_show);
+    runtime_monitor::reevaluate_foreground();
+    Ok(true)
 }
 
 fn show_main_window(app: &tauri::AppHandle) {
@@ -627,8 +1064,8 @@ fn toggle_main_window(app: &tauri::AppHandle) {
 
 fn toggle_poster_window(app: &tauri::AppHandle) {
     let visible = app
-        .get_webview_window("poster")
-        .and_then(|window| window.is_visible().ok())
+        .try_state::<RuntimeState>()
+        .and_then(|state| state.0.lock().ok().map(|snapshot| snapshot.poster_visible))
         .unwrap_or(false);
     set_poster_visibility(app, !visible);
 }
@@ -649,6 +1086,8 @@ pub fn run() {
             show_main_window(app);
         }))
         .manage(RuntimeState::default())
+        .manage(HostSurfaceCoordinator::default())
+        .manage(PosterSurfaceLifecycle::default())
         .manage(PerformanceClock(Instant::now()))
         .setup(|app| {
             let placement_path = app
@@ -663,6 +1102,12 @@ pub fn run() {
                 .app_config_dir()?
                 .join("poster-snapshot-bridge-v1.json");
             app.manage(PosterSnapshotStore::open(snapshot_path));
+
+            if let Some(state) = app.try_state::<RuntimeState>() {
+                if let Ok(mut snapshot) = state.0.lock() {
+                    snapshot.host_topology = inspect_host_topology(app.handle());
+                }
+            }
 
             let show_item = MenuItemBuilder::with_id("show", "打开 Desktop-Up 主页").build(app)?;
             let settings_item = MenuItemBuilder::with_id("settings", "设置…").build(app)?;
@@ -775,7 +1220,7 @@ pub fn run() {
                 })
                 .build(app)?;
 
-            if let Some(poster) = app.get_webview_window("poster") {
+            if let Some(poster) = optional_desktop_host_window(app.handle()) {
                 if let Err(error) =
                     poster.set_background_color(Some(tauri::window::Color(0, 0, 0, 0)))
                 {
@@ -805,27 +1250,26 @@ pub fn run() {
             Ok(())
         })
         .on_page_load(|webview, payload| {
-            if webview.label() != "poster" || payload.event() != PageLoadEvent::Finished {
+            if webview.label() != DESKTOP_HOST_WINDOW_LABEL {
                 return;
             }
 
             let app = webview.app_handle();
-            let should_show = app
-                .try_state::<RuntimeState>()
-                .and_then(|state| state.0.lock().ok().map(|snapshot| snapshot.poster_visible))
-                .unwrap_or(true);
-            if !should_show {
+            if payload.event() == PageLoadEvent::Started {
+                reset_poster_surface_initialization(app);
+                return;
+            }
+            if payload.event() != PageLoadEvent::Finished {
                 return;
             }
 
-            set_poster_visibility(app, true);
             if let Err(error) = configure_poster_host(app, true) {
                 eprintln!("failed to configure poster host window: {error}");
             }
             runtime_monitor::reevaluate_foreground();
         })
         .on_window_event(|window, event| {
-            if window.label() == "poster" {
+            if window.label() == DESKTOP_HOST_WINDOW_LABEL {
                 match event {
                     WindowEvent::Moved(_)
                         if POSTER_PLACEMENT_CAPTURE_ENABLED.load(Ordering::Acquire)
@@ -849,6 +1293,11 @@ pub fn run() {
                             {
                                 eprintln!("failed to recover poster after DPI change: {error}");
                             }
+                        }
+                        if let Err(error) =
+                            resync_host_surface_for_display_change(window.app_handle())
+                        {
+                            eprintln!("failed to rescale desktop host after DPI change: {error}");
                         }
                     }
                     WindowEvent::Destroyed => {
@@ -879,6 +1328,8 @@ pub fn run() {
             desktop_host_diagnostics,
             update_runtime_state,
             start_poster_drag,
+            sync_host_surface,
+            mark_poster_surface_ready,
             resize_poster_surface,
             set_poster_interaction_region,
             reconnect_desktop_host,
@@ -901,15 +1352,20 @@ mod tests {
             .as_object()
             .expect("snapshot must serialize to an object");
         for key in [
+            "contractVersion",
             "editMode",
             "manuallyPaused",
             "automaticallyPaused",
             "effectivePaused",
             "allLocked",
             "posterVisible",
+            "hostSurfaceReady",
             "pauseReasons",
             "posterFps",
             "performanceMode",
+            "hostSurface",
+            "displayTopology",
+            "hostTopology",
             "desktopHost",
             "runtimeVisibility",
             "runtimeMonitor",
@@ -919,6 +1375,12 @@ mod tests {
                 "missing frontend contract field {key}"
             );
         }
+        assert_eq!(value["contractVersion"], HOST_CONTRACT_VERSION);
+        assert_eq!(value["hostSurface"]["geometryOwner"], "nativeHost");
+        assert_eq!(
+            value["displayTopology"]["coordinateSpace"],
+            "physicalPixels"
+        );
     }
 
     #[test]

@@ -9,6 +9,8 @@ import {
 } from "../app/src/poster-core.js";
 
 const tauriConfig = JSON.parse(readFileSync("src-tauri/tauri.conf.json", "utf8"));
+const nativeRuntime = readFileSync("src-tauri/src/lib.rs", "utf8");
+const posterSurfaceRuntime = readFileSync("app/src/poster-surface.js", "utf8");
 const releaseExe = "src-tauri/target/release/desktop-up.exe";
 
 function windowConfig(label) {
@@ -31,7 +33,11 @@ test("cold start surface contract is configured in Tauri", () => {
   assert.ok(main, "main control-center window must be configured");
   assert.ok(poster, "poster surface window must be configured");
   assert.equal(main.visible, false, "control center must stay hidden on cold start");
-  assert.equal(poster.visible, true, "poster surface must remain the default visible surface");
+  assert.equal(
+    poster.visible,
+    false,
+    "poster native window must stay hidden until its first canonical surface handshake"
+  );
   assert.equal(poster.title, "", "poster native title must stay empty");
   assert.equal(poster.url, "poster.html", "poster window must load the native poster page");
   assert.equal(poster.transparent, true, "poster surface must be transparent");
@@ -50,6 +56,42 @@ test("cold start surface contract is configured in Tauri", () => {
   );
   assert.equal(poster.closable, false, "poster surface must not be closable by the user");
   assert.equal(poster.skipTaskbar, true, "poster surface must never acquire a taskbar button");
+});
+
+test("cold start reveals the poster only after native geometry and CSS presentation are ready", () => {
+  assert.match(nativeRuntime, /struct PosterSurfaceLifecycle\(AtomicBool\)/);
+  assert.match(nativeRuntime, /fn mark_poster_surface_ready/);
+  assert.match(nativeRuntime, /configure_poster_host\(&app, true\)\?/);
+  const readinessFinalize = nativeRuntime.match(
+    /fn mark_poster_surface_ready[\s\S]*?runtime_monitor::reevaluate_foreground\(\);/
+  )?.[0];
+  assert.ok(readinessFinalize, "cold-start native finalization path must exist");
+  assert.ok(
+    readinessFinalize.indexOf("configure_poster_host(&app, true)?")
+      < readinessFinalize.indexOf("desktop_host::apply_interaction_region"),
+    "the final window region must be applied after SWP_FRAMECHANGED host configuration"
+  );
+  assert.match(posterSurfaceRuntime, /applyHostPresentation\(result\?\.hostSurface\)/);
+  assert.match(posterSurfaceRuntime, /revealInitializedNativeSurface\(result\?\.hostSurface\?\.revision\)/);
+});
+
+test("runtime configuration contains exactly one global transparent desktop host", () => {
+  const hostWindows = tauriConfig.app.windows.filter((window) =>
+    window.label === "poster" || window.url === "poster.html"
+  );
+  assert.equal(hostWindows.length, 1, "all posters must share one production host WebView");
+  assert.equal(hostWindows[0].label, "poster", "the legacy label is the canonical host label");
+  assert.equal(hostWindows[0].transparent, true);
+  assert.equal(hostWindows[0].skipTaskbar, true);
+});
+
+test("native host size and interaction region share the resolved display scale", () => {
+  const interactionApply = nativeRuntime.match(
+    /desktop_host::apply_interaction_region\([\s\S]*?\)\?;/
+  )?.[0];
+  assert.ok(interactionApply, "native interaction application path must exist");
+  assert.match(interactionApply, /validated\.effective_scale_factor/);
+  assert.doesNotMatch(interactionApply, /validated\.request\.scale_factor/);
 });
 
 test("release executable uses the Windows GUI subsystem", { skip: !existsSync(releaseExe) }, () => {

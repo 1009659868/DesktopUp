@@ -1,6 +1,6 @@
 # 文档登记表
 
-最后检查：2026-08-06
+最后检查：2026-08-09
 
 | 文档 | 层级 | 职责 | 状态 |
 | --- | --- | --- | --- |
@@ -58,9 +58,9 @@
 | `B_Modules/GameSourceDiscovery/10_Plan/MODULE_PLAN.md` | B/Plan | Steam/Epic/Xbox 发现计划 | `PLANNED` |
 | `B_Modules/DistributionLifecycle/00_Catalog/C_WORKSTREAM_INDEX.md` | B/Catalog | 分发与生命周期工作流索引 | `PLANNED` |
 | `B_Modules/DistributionLifecycle/10_Plan/MODULE_PLAN.md` | B/Plan | 安装、升级、卸载和发布计划 | `PLANNED EARLY CONTRACT` |
-| `C_Workstreams/DesktopHostFeasibility/00_Catalog/TASK_INDEX.md` | C/Catalog | 桌面宿主任务索引 | `ACTIVE` |
-| `C_Workstreams/DesktopHostFeasibility/00_Catalog/CODE_ANCHORS.md` | C/Catalog | 当前前端与 Tauri 实现代码定位 | `ACTIVE` |
-| `C_Workstreams/DesktopHostFeasibility/10_Plan/WORKSTREAM_PLAN.md` | C/Plan | 桌面宿主验证计划 | `ACTIVE` |
+| `C_Workstreams/DesktopHostFeasibility/00_Catalog/TASK_INDEX.md` | C/Catalog | 桌面宿主任务索引 | `COMPLETE` |
+| `C_Workstreams/DesktopHostFeasibility/00_Catalog/CODE_ANCHORS.md` | C/Catalog | 已验证前端与 Tauri 实现代码定位 | `COMPLETE` |
+| `C_Workstreams/DesktopHostFeasibility/10_Plan/WORKSTREAM_PLAN.md` | C/Plan | 桌面宿主验证计划 | `COMPLETE` |
 | `C_Workstreams/DesktopHostFeasibility/20_Log/2026-08/2026-08-02_docs_and_design_baseline.md` | C/Log | 文档与设计建立记录 | `COMPLETE` |
 | `C_Workstreams/DesktopHostFeasibility/20_Log/2026-08/2026-08-02_document_validation.md` | C/Log | 文档链接与登记验证 | `COMPLETE` |
 | `C_Workstreams/DesktopHostFeasibility/20_Log/2026-08/2026-08-02_a0_demo_scaffold.md` | C/Log | A0 Demo 工程骨架与验证进度 | `IN PROGRESS` |
@@ -76,8 +76,19 @@
 | `C_Workstreams/DesktopHostFeasibility/20_Log/2026-08/2026-08-06_cdhf06_performance_baseline.md` | C/Log | C-DHF-06 四态性能采集/采样保存/可视化实现记录 | `COMPLETE` |
 | `C_Workstreams/DesktopHostFeasibility/20_Log/2026-08/2026-08-06_cdhf04_05_07_08_round2.md` | C/Log | C-DHF-04/05/07 剩余物理与托盘矩阵第二轮记录 | `COMPLETE` |
 | `C_Workstreams/DesktopHostFeasibility/20_Log/2026-08/2026-08-06_cdhf08_decision_closure.md` | C/Log | C-DHF-08 宿主决策封板记录 | `COMPLETE` |
-| `C_Workstreams/DesktopHostFeasibility/30_Sync/COLD_START.md` | C/Sync | C 工作流接手阅读入口 | `ACTIVE` |
-| `C_Workstreams/DesktopHostFeasibility/30_Sync/CURRENT_HANDOFF.md` | C/Sync | 当前可执行位置 | `ACTIVE` |
+| `C_Workstreams/DesktopHostFeasibility/30_Sync/COLD_START.md` | C/Sync | 已关闭 C 工作流追溯入口 | `COMPLETE` |
+| `C_Workstreams/DesktopHostFeasibility/30_Sync/CURRENT_HANDOFF.md` | C/Sync | 已关闭宿主可行性交接 | `COMPLETE` |
+| `C_Workstreams/DesktopRuntimeProductionization/00_Catalog/TASK_INDEX.md` | C/Catalog | 生产宿主任务索引 | `ACTIVE` |
+| `C_Workstreams/DesktopRuntimeProductionization/00_Catalog/CODE_ANCHORS.md` | C/Catalog | 生产宿主代码定位 | `ACTIVE` |
+| `C_Workstreams/DesktopRuntimeProductionization/10_Plan/WORKSTREAM_PLAN.md` | C/Plan | 单全局生产宿主收敛计划 | `ACTIVE` |
+| `C_Workstreams/DesktopRuntimeProductionization/20_Log/2026-08/2026-08-09_plan_activation.md` | C/Log | C-DRP 激活与路线重排记录 | `COMPLETE` |
+| `C_Workstreams/DesktopRuntimeProductionization/20_Log/2026-08/2026-08-09_cdrp01_host_contract.md` | C/Log | C-DRP-01 版本化宿主契约实施与验证 | `COMPLETE` |
+| `C_Workstreams/DesktopRuntimeProductionization/20_Log/2026-08/2026-08-09_cdrp01_collapse_sync_bugfix.md` | C/Log | C-DRP-01 收起目标尺寸同步缺陷修复与 Release 实测 | `FIX VERIFIED` |
+| `C_Workstreams/DesktopRuntimeProductionization/20_Log/2026-08/2026-08-09_cdrp02_responsive_scaling_scope.md` | C/Log | C-DRP-02 分辨率/DPI 响应缩放范围与验证矩阵 | `ACCEPTED / PLANNED` |
+| `C_Workstreams/DesktopRuntimeProductionization/20_Log/2026-08/2026-08-09_cdrp02_single_host_and_responsive_scale.md` | C/Log | C-DRP-02 单宿主、响应缩放实施与主屏 Release 证据 | `IMPLEMENTED / PHYSICAL MATRIX PENDING` |
+| `C_Workstreams/DesktopRuntimeProductionization/20_Log/2026-08/2026-08-09_cdrp02_cold_start_dwm_strip_fix.md` | C/Log | C-DRP-02 冷启动顶部 DWM 白条初始化顺序修复与实屏验证 | `FIX VERIFIED` |
+| `C_Workstreams/DesktopRuntimeProductionization/30_Sync/COLD_START.md` | C/Sync | 当前 C 工作流接手阅读入口 | `ACTIVE` |
+| `C_Workstreams/DesktopRuntimeProductionization/30_Sync/CURRENT_HANDOFF.md` | C/Sync | 当前生产宿主可执行位置 | `ACTIVE` |
 | `Reference/RELATED_PROJECTS.md` | Reference | 同类项目调研 | `REFERENCE` |
 | `Rules/DOCUMENT_GOVERNANCE.md` | Rules | 文档权威和同步规则 | `ACTIVE` |
 | `Rules/GIT_STRATEGY.md` | Rules | 分支、同步、提交、合并和仓库卫生 | `ACTIVE` |

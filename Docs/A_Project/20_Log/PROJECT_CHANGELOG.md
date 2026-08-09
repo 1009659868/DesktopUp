@@ -2,6 +2,28 @@
 
 本文件只记录项目级已发生事实。局部实现过程进入对应 C 工作流日志。
 
+## 2026-08-09 — 将分辨率响应缩放纳入 C-DRP-02
+
+状态：`ACCEPTED / PLANNED`
+
+- C-DRP-02 从“单宿主 + 统一坐标”扩展为“单宿主 + 统一坐标 + 分辨率/DPI 响应缩放”；
+- 显示适配使用 effective logical work area，并把 Windows device scale 与 responsive scale 分层，避免双重 DPI 放大；
+- 海报业务基准尺寸不因显示器变化被改写，后继用户缩放偏好仍归 C-PCB/C-PSS；
+- 初始验证基线为 `1920×1080 logical = 1.0`、候选响应范围 `0.80–1.25`，最终参数必须经 1366×768 至 4K、100%–200% DPI 与混合 DPI 矩阵冻结；
+- 本次只调整计划、验收面和交接，不代表响应缩放代码已经实现。
+
+## 2026-08-09 — 重排 V1 交付顺序并激活 C-DRP
+
+状态：`PLAN BASELINE V1.1 / ACTIVE`
+
+- 唯一活跃链由已关闭的 C-DHF 切换为 `V1-P1 → B-DRF → C-DRP`，C-PCB 保持唯一后继而不同时激活；
+- 新增 `C-PSS Poster State Store`，把版本化 SQLite、迁移/回滚策略和过渡 JSON 退出纳入显式阶段门；
+- 将原 `C-LRC` 拆为 `C-LCH Real Launch` 与 `C-RCV Recovery and Uninstall Interface`，使真实启动不再依赖文件保险库；
+- 把“只读发现 → 仅添加 → 真实启动”提前为 Usable MVP，再建立保险库与恢复形成 Safe Collection MVP；
+- 完整模板平台、布局、主题与 AI 排在上述功能和安全检查点之后；
+- C-IBC 进入早期契约顺序，但最终 `DesktopUpSetup.exe` 与独立 `uninstall.exe` 仍由发布候选门封板；
+- 增加 Release 空闲渲染、CPU、内存和 schema 迁移预算；本次只调整计划和文档结构，不代表新运行时代码完成。
+
 ## 2026-08-06 — 调整托盘单击/双击契约
 
 状态：`ACCEPTED / ACTIVE`

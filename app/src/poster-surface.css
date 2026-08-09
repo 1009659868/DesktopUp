@@ -8,10 +8,12 @@ body.poster-page {
 
 .poster-surface {
   --surface-gutter: 10px;
-  width: 100vw;
-  height: 100vh;
+  width: var(--host-logical-width, 100vw);
+  height: var(--host-logical-height, 100vh);
   padding: var(--surface-gutter);
   background: transparent;
+  transform: scale(var(--host-visual-scale, 1));
+  transform-origin: left top;
 }
 
 .poster-surface .poster {

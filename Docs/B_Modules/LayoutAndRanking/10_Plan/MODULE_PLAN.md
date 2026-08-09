@@ -1,6 +1,6 @@
 # Layout and Ranking 模块计划
 
-最后检查：2026-08-04
+最后检查：2026-08-09
 
 状态：`PLANNED`
 
@@ -14,7 +14,7 @@
 
 | C 工作流 | 结果 | 依赖 | 状态 |
 | --- | --- | --- | --- |
-| Launch Telemetry Model (`C-LTM`) | 统计、最近使用、衰减和迁移 | C-LRC | `PLANNED` |
+| Launch Telemetry Model (`C-LTM`) | 统计、最近使用、衰减和迁移 | C-LCH | `PLANNED` |
 | Ranking Engine (`C-RNK`) | 可复现得分、稳定排序和跳变衰减 | C-LTM | `PLANNED` |
 | Elastic Layout Flow (`C-ELF`) | 弹性流、子列填充、响应式宽度和快照 | C-RNK, C-PSI | `PLANNED` |
 | Pin Drag and Scaling (`C-PDS`) | 三层控制、锚定、拖拽、缩放和动画 | C-ELF | `PLANNED` |

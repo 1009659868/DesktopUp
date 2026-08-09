@@ -1,6 +1,6 @@
 # Distribution Lifecycle 模块计划
 
-最后检查：2026-08-04
+最后检查：2026-08-09
 
 状态：`PLANNED EARLY CONTRACT`
 
@@ -14,9 +14,9 @@
 
 | C 工作流 | 结果 | 依赖 | 状态 |
 | --- | --- | --- | --- |
-| Install Baseline Contract (`C-IBC`) | 安装/数据目录、权限、自启和依赖契约 | B-DRF | `PLANNED EARLY` |
-| Upgrade and Migration (`C-UGM`) | 应用、数据库、模板和配置迁移/回滚 | schema 稳定 | `PLANNED` |
-| Uninstall and Recovery (`C-URV`) | 独立卸载器、快捷方式恢复和失败保留保险库 | C-LRC, C-UGM | `PLANNED` |
+| Install Baseline Contract (`C-IBC`) | 安装/数据目录、权限、自启和依赖契约 | C-DRP | `PLANNED EARLY` |
+| Upgrade and Migration (`C-UGM`) | 应用、数据库、模板和配置迁移/回滚 | C-PSS 与相关 schema 稳定 | `PLANNED` |
+| Uninstall and Recovery (`C-URV`) | 独立卸载器、快捷方式恢复和失败保留保险库 | C-RCV, C-UGM | `PLANNED` |
 | Release Candidate Gate (`C-RCG`) | 净机、签名、许可证、安全和安装卸载矩阵 | 全部 V1 必需工作流 | `PLANNED` |
 
 ## 3. 模块完成信号
@@ -25,3 +25,5 @@
 - 升级失败可回滚；
 - 卸载优先恢复用户快捷方式，失败时保留可定位保险库；
 - 净机、权限、依赖、签名和许可证矩阵通过。
+
+`C-IBC` 在 V1-P1 只冻结契约和构建基线，不宣称已交付最终安装包；真实 `DesktopUpSetup.exe` 与独立 `uninstall.exe` 仍由 C-RCG 封板。

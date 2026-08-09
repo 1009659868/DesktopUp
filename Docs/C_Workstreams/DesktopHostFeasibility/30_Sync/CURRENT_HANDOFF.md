@@ -83,7 +83,7 @@ Rust `RuntimeSnapshot` 与前端 `poster-runtime.js` 已对齐：
 
 本轮自动化桌面矩阵已通过 Win+D 10 轮、同屏最大化 10 轮、无边框全屏 10 个有效轮次和跨屏不误停 10 轮；同时发现并修复副屏位置冷启动恢复中的 WorkerW 裁剪与 `Moved` 写回竞态。证据见 [`C-DHF-04/05 真实环境矩阵第一轮`](../20_Log/2026-08/2026-08-04_cdhf04_05_real_matrix_round1.md)。
 
-下一步激活 `C-DRP Desktop Runtime Productionization` 与 `C-PCB Poster Contract Baseline`，由 `ACTIVE_PATH.md` 唯一选中；不把 M1 海报实现标记为完成。
+当前已激活 [`C-DRP Desktop Runtime Productionization`](../../DesktopRuntimeProductionization/30_Sync/CURRENT_HANDOFF.md)；`C-PCB Poster Contract Baseline` 仅在 C-DRP 完成后激活，不把 M1 海报实现标记为完成。
 
 用户实机确认记录见 [`C-DHF-04/05 用户实机矩阵补充`](../20_Log/2026-08/2026-08-05_cdhf04_05_physical_matrix_user.md)；Explorer 真重启、热插拔、主屏/DPI 因物理环境暂不能执行，标记为延后，不阻塞 C-DHF-06。
 

@@ -5,9 +5,9 @@
 | ID | B 能力 | 权威计划 | 状态 | C 工作流数 |
 | --- | --- | --- | --- | --- |
 | B-DRF | Desktop Runtime Foundation | [`MODULE_PLAN_V1.md`](../B_Modules/DesktopRuntimeFoundation/10_Plan/MODULE_PLAN_V1.md) | `ACTIVE` | 3 |
-| B-PCR | Poster Core Runtime | [`MODULE_PLAN.md`](../B_Modules/PosterCoreRuntime/10_Plan/MODULE_PLAN.md) | `PLANNED NEXT` | 4 |
+| B-PCR | Poster Core Runtime | [`MODULE_PLAN.md`](../B_Modules/PosterCoreRuntime/10_Plan/MODULE_PLAN.md) | `PLANNED NEXT` | 5 |
 | B-TPL | Template Platform | [`MODULE_PLAN.md`](../B_Modules/TemplatePlatform/10_Plan/MODULE_PLAN.md) | `PLANNED` | 4 |
-| B-COL | Collection and Launch | [`MODULE_PLAN.md`](../B_Modules/CollectionAndLaunch/10_Plan/MODULE_PLAN.md) | `PLANNED` | 4 |
+| B-COL | Collection and Launch | [`MODULE_PLAN.md`](../B_Modules/CollectionAndLaunch/10_Plan/MODULE_PLAN.md) | `PLANNED` | 5 |
 | B-LAR | Layout and Ranking | [`MODULE_PLAN.md`](../B_Modules/LayoutAndRanking/10_Plan/MODULE_PLAN.md) | `PLANNED` | 4 |
 | B-THA | Theme Authoring | [`MODULE_PLAN.md`](../B_Modules/ThemeAuthoring/10_Plan/MODULE_PLAN.md) | `PLANNED` | 4 |
 | B-AIA | Local AI Assistant | [`MODULE_PLAN.md`](../B_Modules/LocalAIAssistant/10_Plan/MODULE_PLAN.md) | `PLANNED` | 3 |

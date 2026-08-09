@@ -1,4 +1,5 @@
 import { moveWithinBounds, normalizedPoster, resizeWithinBounds } from "./model.js";
+import { HOST_CONTRACT_VERSION, createHostSurfaceRequest } from "./host-contract.js";
 
 export const PERFORMANCE_MODES = Object.freeze([
   "auto",
@@ -26,6 +27,7 @@ export function createRuntimeState(snapshot) {
   const manuallyPaused = Boolean(snapshot?.manuallyPaused ?? false);
 
   return {
+    contractVersion: snapshot?.contractVersion ?? HOST_CONTRACT_VERSION,
     selectedPosterId: snapshot?.selectedPosterId ?? posters[0]?.id ?? null,
     posters,
     editMode: Boolean(snapshot?.editMode ?? false),
@@ -36,11 +38,16 @@ export function createRuntimeState(snapshot) {
     ),
     allLocked: deriveAllLocked(posters),
     posterVisible: snapshot?.posterVisible ?? true,
+    hostSurfaceReady: Boolean(snapshot?.hostSurfaceReady ?? false),
     pauseReasons: Array.isArray(pauseReasons) ? pauseReasons : [],
     performanceMode: PERFORMANCE_MODES.includes(snapshot?.performanceMode)
       ? snapshot.performanceMode
       : "auto",
-    runtimeVisibility: visibility
+    runtimeVisibility: visibility,
+    hostSurface: snapshot?.hostSurface ?? null,
+    displayTopology: snapshot?.displayTopology ?? null,
+    hostTopology: snapshot?.hostTopology ?? null,
+    desktopHost: snapshot?.desktopHost ?? null
   };
 }
 
@@ -65,14 +72,20 @@ export function posterSnapshot(state) {
 
 export function buildRuntimeSnapshot(state) {
   return {
+    contractVersion: state.contractVersion,
     editMode: state.editMode,
     manuallyPaused: state.manuallyPaused,
     automaticallyPaused: state.automaticallyPaused,
     effectivePaused: state.effectivePaused,
     allLocked: state.allLocked,
     posterVisible: state.posterVisible,
+    hostSurfaceReady: state.hostSurfaceReady,
     pauseReasons: state.pauseReasons,
-    runtimeVisibility: state.runtimeVisibility
+    runtimeVisibility: state.runtimeVisibility,
+    hostSurface: state.hostSurface,
+    displayTopology: state.displayTopology,
+    hostTopology: state.hostTopology,
+    desktopHost: state.desktopHost
   };
 }
 
@@ -132,11 +145,17 @@ export function applyPosterAction(state, action) {
         ),
         allLocked: deriveAllLocked(state.posters),
         posterVisible: raw.posterVisible ?? state.posterVisible,
+        hostSurfaceReady: Boolean(raw.hostSurfaceReady ?? state.hostSurfaceReady),
         pauseReasons: Array.isArray(pauseReasons) ? pauseReasons : [],
         performanceMode: PERFORMANCE_MODES.includes(raw.performanceMode)
           ? raw.performanceMode
           : state.performanceMode,
-        runtimeVisibility: visibility
+        runtimeVisibility: visibility,
+        contractVersion: raw.contractVersion ?? state.contractVersion,
+        hostSurface: raw.hostSurface ?? state.hostSurface,
+        displayTopology: raw.displayTopology ?? state.displayTopology,
+        hostTopology: raw.hostTopology ?? state.hostTopology,
+        desktopHost: raw.desktopHost ?? state.desktopHost
       };
     }
     case "selectPoster":
@@ -210,5 +229,38 @@ export function buildInteractionRegionArgs(rect, options = {}) {
     height: Number(rect?.height ?? 0),
     cornerRadius: options.cornerRadius ?? 0,
     deviceScaleFactor: options.deviceScaleFactor ?? 1
+  };
+}
+
+export function buildHostSurfaceSyncArgs(poster, rect, options = {}) {
+  const source = normalizedPoster(poster);
+  const surfaceGutter = Number(options.surfaceGutter ?? 0);
+  const contentHeight = source.collapsed
+    ? Number(options.collapsedHeight ?? 116)
+    : source.height;
+  const interactionRect = rect ? {
+    x: Number(rect.x ?? rect.left ?? 0),
+    y: Number(rect.y ?? rect.top ?? 0),
+    width: source.width,
+    height: contentHeight
+  } : null;
+  const logicalSize = {
+    width: source.width + surfaceGutter * 2,
+    height: contentHeight + surfaceGutter * 2
+  };
+  return {
+    request: createHostSurfaceRequest({
+      revision: options.revision ?? 1,
+      surfaceId: options.surfaceId ?? "poster-host",
+      logicalSize,
+      scaleFactor: options.deviceScaleFactor ?? 1,
+      userScale: options.userScale ?? 1,
+      placementIntent: options.placementIntent ?? { kind: "preserve" },
+      interactionRegion: interactionRect ? {
+        regionId: options.regionId ?? `poster-${source.id}`,
+        rect: interactionRect,
+        cornerRadius: options.cornerRadius ?? 0
+      } : null
+    })
   };
 }

@@ -90,7 +90,10 @@ mod platform {
         WS_CAPTION.0 | WS_THICKFRAME.0 | WS_SYSMENU.0 | WS_MINIMIZEBOX.0 | WS_MAXIMIZEBOX.0;
 
     static POSTER_HWND: AtomicIsize = AtomicIsize::new(0);
-    static POSTER_VISIBLE_INTENT: AtomicBool = AtomicBool::new(true);
+    // The poster is deliberately hidden until the WebView has completed the canonical
+    // HostSurface handshake. Showing the raw Tauri window during cold start can expose a
+    // transient Windows 11/DWM non-client strip before the first size/region invalidation.
+    static POSTER_VISIBLE_INTENT: AtomicBool = AtomicBool::new(false);
     static TOOL_WINDOW_FALLBACK_ACTIVE: AtomicBool = AtomicBool::new(false);
     static PLACEMENT_RECOVERY_ACTIVE: AtomicBool = AtomicBool::new(false);
     static PLACEMENT_RECOVERY_GENERATION: AtomicUsize = AtomicUsize::new(0);

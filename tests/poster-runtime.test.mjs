@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   applyPosterAction,
+  buildHostSurfaceSyncArgs,
   buildInteractionRegionArgs,
   buildNativeResizeArgs,
   buildRuntimeSnapshot,
@@ -21,6 +22,7 @@ test("runtime state starts in USING and keeps poster state normalized", () => {
   assert.equal(state.automaticallyPaused, false);
   assert.equal(isRuntimeSuspended(state), false);
   assert.equal(state.performanceMode, "auto");
+  assert.equal(state.contractVersion, 1);
   assert.equal(selectedPoster(state).id, "night-ops");
   assert.equal(posterInteractionMode(state), "using");
 });
@@ -93,6 +95,7 @@ test("persisted snapshot excludes ephemeral runtime fields", () => {
   assert.equal("allLocked" in snapshot, false);
   assert.equal("posterVisible" in snapshot, false);
   assert.equal("pauseReasons" in snapshot, false);
+  assert.equal("contractVersion" in snapshot, false);
   assert.ok(Array.isArray(snapshot.posters));
 });
 
@@ -107,11 +110,16 @@ test("Rust RuntimeSnapshot payload maps into the shared frontend runtime", () =>
       effectivePaused: true,
       allLocked: false,
       posterVisible: true,
+      hostSurfaceReady: true,
       pauseReasons: ["fullscreenForeground"],
       runtimeVisibility: {
         automaticallyPaused: true,
         pauseReasons: ["fullscreenForeground"]
-      }
+      },
+      contractVersion: 1,
+      hostSurface: { contractVersion: 1, revision: 4, geometryOwner: "nativeHost" },
+      displayTopology: { contractVersion: 1, displays: [] },
+      hostTopology: { contractVersion: 1, invariantSatisfied: true }
     }
   });
 
@@ -122,6 +130,10 @@ test("Rust RuntimeSnapshot payload maps into the shared frontend runtime", () =>
   assert.equal(state.allLocked, false);
   assert.deepEqual(state.pauseReasons, ["fullscreenForeground"]);
   assert.equal(isRuntimeSuspended(state), true);
+  assert.equal(state.hostSurface.revision, 4);
+  assert.deepEqual(state.displayTopology.displays, []);
+  assert.equal(state.hostTopology.invariantSatisfied, true);
+  assert.equal(state.hostSurfaceReady, true);
 });
 
 test("runtime snapshots and native sync args use the canonical interface", () => {
@@ -138,10 +150,12 @@ test("runtime snapshots and native sync args use the canonical interface", () =>
   });
 
   const snapshot = buildRuntimeSnapshot(state);
+  assert.equal(snapshot.contractVersion, 1);
   assert.equal(snapshot.editMode, true);
   assert.equal(snapshot.manuallyPaused, true);
   assert.equal(snapshot.automaticallyPaused, false);
   assert.equal(snapshot.effectivePaused, true);
+  assert.equal(snapshot.hostSurfaceReady, false);
   assert.deepEqual(buildRuntimeSyncArgs(state), {
     editMode: true,
     manuallyPaused: true,
@@ -182,4 +196,13 @@ test("native sync arguments are built from the shared layer", () => {
     cornerRadius: 16,
     deviceScaleFactor: 1.25
   });
+
+  const canonical = buildHostSurfaceSyncArgs(
+    selectedPoster(state),
+    { x: 10, y: 10, width: selectedPoster(state).width, height: selectedPoster(state).height },
+    { revision: 2, surfaceGutter: 10, cornerRadius: 18, deviceScaleFactor: 1.25 }
+  );
+  assert.equal(canonical.request.contractVersion, 1);
+  assert.equal(canonical.request.revision, 2);
+  assert.equal(canonical.request.placementIntent.kind, "preserve");
 });

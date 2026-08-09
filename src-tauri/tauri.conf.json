@@ -40,7 +40,7 @@
         "closable": false,
         "focus": false,
         "focusable": false,
-        "visible": true,
+        "visible": false,
         "decorations": false,
         "transparent": true,
         "backgroundColor": [0, 0, 0, 0],

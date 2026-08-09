@@ -107,7 +107,7 @@
 
 ## 6. 退出与后继
 
-通过后：完成 B-DRF0，激活 `DesktopHostProduction`。
+通过后：完成宿主可行性硬门，由 `ACTIVE_PATH.md` 激活 [`C-DRP Desktop Runtime Productionization`](../../DesktopRuntimeProductionization/10_Plan/WORKSTREAM_PLAN.md)。
 
 未通过但回退可接受：记录用户体验差异，由 A 层确认是否进入 MVP。
 

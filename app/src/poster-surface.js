@@ -13,16 +13,17 @@ import {
 } from "./poster-core.js";
 import {
   applyPosterAction,
-  buildInteractionRegionArgs,
-  buildNativeResizeArgs,
+  buildHostSurfaceSyncArgs,
   createRuntimeState,
   isRuntimeSuspended,
   posterInteractionMode,
   selectedPoster
 } from "./poster-runtime.js";
 import { isReportingFps } from "./performance-monitor.js";
+import { hostPresentationCssVariables } from "./host-presentation.js";
 const POSTER_SURFACE_GUTTER = 10;
 const POSTER_CORNER_RADIUS = 16;
+const POSTER_COLLAPSED_HEIGHT = 116;
 const fallbackPoster = normalizedPoster(createDefaultSnapshot().posters[0]);
 
 const surface = document.querySelector("#poster-surface");
@@ -36,6 +37,8 @@ let launchClickTimer = null;
 let manuallyPaused = false;
 let automaticallyPaused = false;
 let nativeSurfaceSyncTimer = null;
+let hostSurfaceRevision = 0;
+let nativeSurfaceReady = false;
 let fpsRafId = null;
 let frameCount = 0;
 let fpsLastSample = performance.now();
@@ -87,6 +90,26 @@ function render() {
   surface.innerHTML = buildPosterMarkup(currentPoster(), { surface: "native" });
 }
 
+function applyHostPresentation(hostSurface) {
+  if (!hostSurface || hostSurface.revision <= 0) return;
+  const variables = hostPresentationCssVariables(hostSurface);
+  for (const [name, value] of Object.entries(variables)) {
+    surface.style.setProperty(name, value);
+  }
+  document.body.dataset.targetDisplayId = hostSurface.targetDisplayId ?? "unknown";
+  document.body.dataset.responsiveScale = String(hostSurface.responsiveScale ?? 1);
+}
+
+async function revealInitializedNativeSurface(revision) {
+  if (nativeSurfaceReady || !Number.isSafeInteger(revision) || revision <= 0) return;
+  await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const ready = await invokeNative("mark_poster_surface_ready", { revision });
+  if (ready) {
+    nativeSurfaceReady = true;
+    document.body.dataset.hostSurfaceReady = "true";
+  }
+}
+
 async function invokeNative(command, args = {}) {
   const invoke = window.__TAURI__?.core?.invoke;
   if (!invoke) return;
@@ -98,25 +121,34 @@ async function invokeNative(command, args = {}) {
 }
 
 async function syncNativeSurface() {
-  const deviceScaleFactor = Math.max(1, window.devicePixelRatio || 1);
-  await invokeNative("resize_poster_surface", buildNativeResizeArgs(currentPoster(), {
-    deviceScaleFactor,
-    surfaceGutter: POSTER_SURFACE_GUTTER
-  }));
-  await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-  const posterElement = surface.querySelector(".poster");
-  if (!posterElement) return;
-  const diagnostics = await invokeNative("set_poster_interaction_region", buildInteractionRegionArgs({
-    x: posterElement.offsetLeft,
-    y: posterElement.offsetTop,
-    width: posterElement.offsetWidth,
-    height: posterElement.offsetHeight
-  }, {
-    deviceScaleFactor,
-    cornerRadius: POSTER_CORNER_RADIUS
-  }));
-  if (diagnostics?.mode) {
-    document.body.dataset.desktopHostMode = diagnostics.mode;
+  try {
+    const deviceScaleFactor = Math.max(1, window.devicePixelRatio || 1);
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    const posterElement = surface.querySelector(".poster");
+    if (!posterElement) return;
+    hostSurfaceRevision += 1;
+    const args = buildHostSurfaceSyncArgs(currentPoster(), {
+      x: posterElement.offsetLeft,
+      y: posterElement.offsetTop,
+      width: posterElement.offsetWidth,
+      height: posterElement.offsetHeight
+    }, {
+      revision: hostSurfaceRevision,
+      deviceScaleFactor,
+      surfaceGutter: POSTER_SURFACE_GUTTER,
+      collapsedHeight: POSTER_COLLAPSED_HEIGHT,
+      cornerRadius: POSTER_CORNER_RADIUS,
+      placementIntent: { kind: "preserve" }
+    });
+    const result = await invokeNative("sync_host_surface", args);
+    applyHostPresentation(result?.hostSurface);
+    await revealInitializedNativeSurface(result?.hostSurface?.revision);
+    const diagnostics = result?.desktopHost;
+    if (diagnostics?.mode) {
+      document.body.dataset.desktopHostMode = diagnostics.mode;
+    }
+  } catch {
+    showToast("海报窗口同步失败");
   }
 }
 
@@ -126,7 +158,11 @@ function scheduleNativeSurfaceSync() {
 }
 
 function applyRuntimePauseState(snapshot = {}) {
+  if (Number.isSafeInteger(snapshot?.hostSurface?.revision)) {
+    hostSurfaceRevision = Math.max(hostSurfaceRevision, snapshot.hostSurface.revision);
+  }
   runtime = applyPosterAction(runtime, { type: "applyRuntimeSnapshot", snapshot });
+  applyHostPresentation(runtime.hostSurface);
   manuallyPaused = runtime.manuallyPaused;
   automaticallyPaused = runtime.automaticallyPaused;
   surface.classList.toggle("is-runtime-paused", isRuntimeSuspended(runtime, document.hidden));
@@ -277,9 +313,9 @@ async function bootstrap() {
     runtime = runtimeFromSnapshot(null);
   }
   render();
+  await connectNativeControls().catch(() => {});
   syncNativeSurface();
   syncFpsSampling();
-  connectNativeControls().catch(() => {});
 }
 
 bootstrap();

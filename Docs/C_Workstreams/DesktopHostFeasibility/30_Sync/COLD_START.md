@@ -8,4 +8,4 @@
 4. [`CODE_ANCHORS.md`](../00_Catalog/CODE_ANCHORS.md)
 5. 最近一份 [`20_Log`](../20_Log/2026-08/2026-08-06_cdhf08_decision_closure.md)
 
-接手后保留 `C-DHF-01..08` 的全部已验证结论；`C-DHF` 工作流已关闭，下一阶段进入 `C-DRP` 与 `C-PCB`。不得重跑后抹去历史证据，也不得把 M1 海报实现标记为完成。
+接手后保留 `C-DHF-01..08` 的全部已验证结论；`C-DHF` 工作流已关闭，当前活跃工作流是 [`C-DRP`](../../DesktopRuntimeProductionization/30_Sync/COLD_START.md)，C-PCB 仅为后继。不得重跑后抹去历史证据，也不得把 M1 海报实现标记为完成。

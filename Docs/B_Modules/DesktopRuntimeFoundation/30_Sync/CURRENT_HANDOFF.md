@@ -1,8 +1,8 @@
 # Desktop Runtime Foundation 当前交接
 
-最后更新：2026-08-06
+最后更新：2026-08-09
 
-状态：`ACTIVE AT B-DRF / C-DHF-01..08 COMPLETE`
+状态：`ACTIVE AT B-DRF / C-DRP-02 IN PROGRESS`
 
 ## 当前事实
 
@@ -23,10 +23,12 @@
 - C-DHF-08 决策封板已完成，`C-DHF-01..08` 全部关闭；
 - V1 已冻结单全局宿主、主屏右侧、默认解锁展开和未锁定 USING 自制标题栏拖动契约；这些是目标设计，当前 A0 独立窗体实现尚未对齐和验证；
 - 当前模块计划已切换到 [`MODULE_PLAN_V1.md`](../10_Plan/MODULE_PLAN_V1.md)；旧 `MODULE_PLAN.md` 已冻结。模块路线为 C-DHF → C-DRP → C-RLC。
+- C-DRP-01 已建立 `host-contract-v1`：Rust 与前端共用 contractVersion/revision/surfaceId/logicalSize/scaleFactor/placementIntent/interactionRegion 字段；RuntimeSnapshot 同步暴露 HostSurface 与 DisplayTopology，原生宿主是唯一窗口几何写入者。
+- C-DRP-02 主屏代码闭环已实现并通过 Release：唯一宿主不变量、monitor/renderer 比例分层、effective logical work area、0.80–1.25 响应策略、CSS 等比呈现和同尺度原生命中均已落地；当前仅剩真实混合 DPI 跨屏物理矩阵，因此仍为 `IN PROGRESS`。
 
 ## 下一动作
 
-`C-DHF-01..08` 已全部 `COMPLETE`。下一步激活 `C-DRP Desktop Runtime Productionization` 收敛生产单全局宿主；`C-PCB Poster Contract Baseline` 冻结海报核心契约。海报状态、几何和标题栏契约归属 B-PCR/C-PCB，不在当前 C-DHF 中提前实现。
+`C-DHF-01..08` 与 `C-DRP-01` 已 `COMPLETE`。当前唯一活跃工作流仍是 [`C-DRP Desktop Runtime Productionization`](../../../C_Workstreams/DesktopRuntimeProductionization/10_Plan/WORKSTREAM_PLAN.md)，精确下一步为 C-DRP-02 单全局宿主拓扑、统一显示坐标和分辨率/DPI 响应缩放；`C-PCB Poster Contract Baseline` 排在 C-DRP 完成之后。海报 schema、海报内部几何、用户缩放偏好和标题栏语义归属 B-PCR/C-PCB，C-DRP 只定义宿主边界、显示适配与传输契约。
 
 ## 不得提前进行
 
