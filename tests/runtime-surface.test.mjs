@@ -75,6 +75,12 @@ test("cold start reveals the poster only after native geometry and CSS presentat
   assert.match(posterSurfaceRuntime, /revealInitializedNativeSurface\(result\?\.hostSurface\?\.revision\)/);
 });
 
+test("native style changes cannot restore a Windows caption after cold start", () => {
+  const desktopHost = readFileSync("src-tauri/src/desktop_host.rs", "utf8");
+  assert.match(desktopHost, /WM_STYLECHANGING/);
+  assert.match(desktopHost, /strip_non_client_decoration_styles\(style\.styleNew\)/);
+});
+
 test("runtime configuration contains exactly one global transparent desktop host", () => {
   const hostWindows = tauriConfig.app.windows.filter((window) =>
     window.label === "poster" || window.url === "poster.html"

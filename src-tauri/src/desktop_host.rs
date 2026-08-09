@@ -72,13 +72,13 @@ mod platform {
                     IsWindowVisible, SetParent, SetWindowLongPtrW, SetWindowPos, ShowWindow,
                     TranslateMessage, EVENT_OBJECT_CREATE, EVENT_OBJECT_SHOW,
                     EVENT_SYSTEM_FOREGROUND, GWL_EXSTYLE, GWL_STYLE, GW_HWNDPREV, HWND_BOTTOM,
-                    HWND_TOP, MA_NOACTIVATE, MSG, OBJID_WINDOW, SWP_ASYNCWINDOWPOS,
+                    HWND_TOP, MA_NOACTIVATE, MSG, OBJID_WINDOW, STYLESTRUCT, SWP_ASYNCWINDOWPOS,
                     SWP_FRAMECHANGED, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SWP_NOZORDER,
                     SWP_SHOWWINDOW, SW_SHOWNOACTIVATE, WINEVENT_OUTOFCONTEXT, WM_DESTROY,
                     WM_DISPLAYCHANGE, WM_DPICHANGED, WM_EXITSIZEMOVE, WM_MOUSEACTIVATE, WM_MOVING,
-                    WM_SETTINGCHANGE, WS_CAPTION, WS_CHILD, WS_EX_APPWINDOW, WS_EX_NOACTIVATE,
-                    WS_EX_TOOLWINDOW, WS_MAXIMIZEBOX, WS_MINIMIZEBOX, WS_POPUP, WS_SYSMENU,
-                    WS_THICKFRAME,
+                    WM_SETTINGCHANGE, WM_STYLECHANGING, WS_CAPTION, WS_CHILD, WS_EX_APPWINDOW,
+                    WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_MAXIMIZEBOX, WS_MINIMIZEBOX, WS_POPUP,
+                    WS_SYSMENU, WS_THICKFRAME,
                 },
             },
         },
@@ -88,6 +88,10 @@ mod platform {
     const POSTER_WINDOW_SUBCLASS_ID: usize = 0x4455_5031;
     const NON_CLIENT_DECORATION_STYLES: u32 =
         WS_CAPTION.0 | WS_THICKFRAME.0 | WS_SYSMENU.0 | WS_MINIMIZEBOX.0 | WS_MAXIMIZEBOX.0;
+
+    fn strip_non_client_decoration_styles(style: u32) -> u32 {
+        style & !NON_CLIENT_DECORATION_STYLES
+    }
 
     static POSTER_HWND: AtomicIsize = AtomicIsize::new(0);
     // The poster is deliberately hidden until the WebView has completed the canonical
@@ -591,6 +595,14 @@ mod platform {
         subclass_id: usize,
         _reference_data: usize,
     ) -> LRESULT {
+        if message == WM_STYLECHANGING && wparam.0 as i32 == GWL_STYLE.0 {
+            // Tauri/tao may reapply its cached top-level style while the initially hidden
+            // WebView is shown. Enforce the desktop-host invariant at the Win32 boundary so
+            // WS_CAPTION cannot reappear after the one-time configuration path has finished.
+            if let Some(style) = (lparam.0 as *mut STYLESTRUCT).as_mut() {
+                style.styleNew = strip_non_client_decoration_styles(style.styleNew);
+            }
+        }
         if message == WM_MOVING {
             // Clamp the drag rectangle to the nearest monitor's work area so the
             // poster can never be dragged off-screen.
@@ -751,7 +763,7 @@ mod platform {
             set_common_extended_style(hwnd);
             let current_style = GetWindowLongPtrW(hwnd, GWL_STYLE) as u32;
             let child_style =
-                (current_style & !(WS_POPUP.0 | NON_CLIENT_DECORATION_STYLES)) | WS_CHILD.0;
+                (strip_non_client_decoration_styles(current_style) & !WS_POPUP.0) | WS_CHILD.0;
             SetWindowLongPtrW(hwnd, GWL_STYLE, child_style as isize);
             suppress_dwm_non_client_frame(hwnd);
 
@@ -792,7 +804,7 @@ mod platform {
             let _ = SetParent(hwnd, None);
             let current_style = GetWindowLongPtrW(hwnd, GWL_STYLE) as u32;
             let popup_style =
-                (current_style & !(WS_CHILD.0 | NON_CLIENT_DECORATION_STYLES)) | WS_POPUP.0;
+                (strip_non_client_decoration_styles(current_style) & !WS_CHILD.0) | WS_POPUP.0;
             SetWindowLongPtrW(hwnd, GWL_STYLE, popup_style as isize);
             set_common_extended_style(hwnd);
             suppress_dwm_non_client_frame(hwnd);
@@ -938,10 +950,13 @@ mod platform {
 
     #[cfg(test)]
     mod tests {
-        use super::{rect_contains, tool_window_extended_style};
+        use super::{
+            rect_contains, strip_non_client_decoration_styles, tool_window_extended_style,
+        };
         use windows::Win32::Foundation::RECT;
         use windows::Win32::UI::WindowsAndMessaging::{
-            WS_EX_APPWINDOW, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW,
+            WS_CAPTION, WS_EX_APPWINDOW, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_MAXIMIZEBOX,
+            WS_MINIMIZEBOX, WS_SYSMENU, WS_THICKFRAME, WS_VISIBLE,
         };
 
         #[test]
@@ -984,6 +999,23 @@ mod platform {
             assert_eq!(style & WS_EX_APPWINDOW.0, 0);
             assert_ne!(style & WS_EX_TOOLWINDOW.0, 0);
             assert_ne!(style & WS_EX_NOACTIVATE.0, 0);
+        }
+
+        #[test]
+        fn later_style_changes_cannot_restore_native_decorations() {
+            let proposed = WS_VISIBLE.0
+                | WS_CAPTION.0
+                | WS_THICKFRAME.0
+                | WS_SYSMENU.0
+                | WS_MINIMIZEBOX.0
+                | WS_MAXIMIZEBOX.0;
+            let sanitized = strip_non_client_decoration_styles(proposed);
+            assert_ne!(sanitized & WS_VISIBLE.0, 0);
+            assert_eq!(sanitized & WS_CAPTION.0, 0);
+            assert_eq!(sanitized & WS_THICKFRAME.0, 0);
+            assert_eq!(sanitized & WS_SYSMENU.0, 0);
+            assert_eq!(sanitized & WS_MINIMIZEBOX.0, 0);
+            assert_eq!(sanitized & WS_MAXIMIZEBOX.0, 0);
         }
     }
 }

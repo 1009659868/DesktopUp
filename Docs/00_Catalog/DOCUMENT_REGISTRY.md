@@ -86,7 +86,8 @@
 | `C_Workstreams/DesktopRuntimeProductionization/20_Log/2026-08/2026-08-09_cdrp01_collapse_sync_bugfix.md` | C/Log | C-DRP-01 收起目标尺寸同步缺陷修复与 Release 实测 | `FIX VERIFIED` |
 | `C_Workstreams/DesktopRuntimeProductionization/20_Log/2026-08/2026-08-09_cdrp02_responsive_scaling_scope.md` | C/Log | C-DRP-02 分辨率/DPI 响应缩放范围与验证矩阵 | `ACCEPTED / PLANNED` |
 | `C_Workstreams/DesktopRuntimeProductionization/20_Log/2026-08/2026-08-09_cdrp02_single_host_and_responsive_scale.md` | C/Log | C-DRP-02 单宿主、响应缩放实施与主屏 Release 证据 | `IMPLEMENTED / PHYSICAL MATRIX PENDING` |
-| `C_Workstreams/DesktopRuntimeProductionization/20_Log/2026-08/2026-08-09_cdrp02_cold_start_dwm_strip_fix.md` | C/Log | C-DRP-02 冷启动顶部 DWM 白条初始化顺序修复与实屏验证 | `FIX VERIFIED` |
+| `C_Workstreams/DesktopRuntimeProductionization/20_Log/2026-08/2026-08-09_cdrp02_cold_start_dwm_strip_fix.md` | C/Log | C-DRP-02 冷启动顶部 DWM 白条初始化顺序第一轮修复 | `PARTIAL FIX / SUPERSEDED` |
+| `C_Workstreams/DesktopRuntimeProductionization/20_Log/2026-08/2026-08-10_cdrp02_cold_start_caption_invariant.md` | C/Log | C-DRP-02 冷启动标题栏 style 重新写入根因与消息级不变量 | `IMPLEMENTED / USER RETEST PENDING` |
 | `C_Workstreams/DesktopRuntimeProductionization/30_Sync/COLD_START.md` | C/Sync | 当前 C 工作流接手阅读入口 | `ACTIVE` |
 | `C_Workstreams/DesktopRuntimeProductionization/30_Sync/CURRENT_HANDOFF.md` | C/Sync | 当前生产宿主可执行位置 | `ACTIVE` |
 | `Reference/RELATED_PROJECTS.md` | Reference | 同类项目调研 | `REFERENCE` |

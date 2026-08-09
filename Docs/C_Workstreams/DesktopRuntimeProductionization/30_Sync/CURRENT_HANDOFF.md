@@ -15,15 +15,16 @@
 - C-DRP-02 代码闭环已实现：唯一桌面宿主拓扑、DisplayTopology scale policy、monitor/renderer 比例分层、effective logical work area、响应宿主尺寸与前端等比呈现均已落地；
 - 当前 2560×1440 / WebView renderer 1.2 环境得到 responsive `1.074`、effective `1.2888`；收起宿主/区域 `657×175 / 631×149`，展开宿主 `657×531`，DOM 与 viewport 无裁切；
 - HostTopology 实测 `1` 个桌面宿主、`1` 个隐藏控制中心、总计 `2` 个 WebView，单宿主不变量为真；
-- 冷启动顶部 DWM 白条已关闭：宿主初始隐藏，`hostSurfaceReady` 握手按“样式/FRAMECHANGED → 最终尺寸 → 最终 region → CSS 稳定 → 显示”收口；展开状态全新 Release 实屏验证无需先收起即可正常显示；
-- `pnpm run check` 45 项 Node/契约测试、Rust 31 项测试、UI/Release build、CDP 展开/收起往返和 Win32/实屏探针通过；
+- 冷启动顶部 DWM 白条第一轮结论已撤销：用户复测证明 ready 顺序不是充分条件；异常现场 Win32 style `0x14C80000` 显示 `WS_CAPTION` 被 Tauri/tao 后续生命周期重新写回；
+- 第二轮已在 `WM_STYLECHANGING` 建立非客户区 style 不变量；5 次连续冷启动均为无 caption 的 `0x14000000`，第 6 次实屏无白条，当前等待用户再次退出/启动确认；
+- `pnpm run check` 46 项 Node/契约测试、Rust 32 项测试、UI/Release build、连续冷启动 Win32 style 与实屏探针通过；
 - C-DRP-02 尚未关闭：当前机器只有一台物理显示器，混合 DPI/负坐标副屏/主屏切换/热插拔矩阵待用户环境。
 
 ## 精确下一步
 
 关闭 C-DRP-02 的剩余物理矩阵：
 
-1. 用户目视确认当前单屏响应缩放后的展开/收起海报无裁切、按钮命中正常；
+1. 用户退出并重新启动当前新版 Release，确认首次可见无顶部白条，再验证展开/收起无裁切、按钮命中正常；
 2. 若存在第二显示器，将宿主拖入副屏，记录两屏分辨率、Windows 缩放、HostSurface targetDisplayId/responsive/effective scale 和 Win32 矩形；
 3. 执行混合 DPI 跨屏往返、主屏切换、重启恢复和可用时的热插拔；确认视觉比例相近、命中吻合、锚点不漂移；
 4. 物理矩阵通过后把 C-DRP-02 标为 `COMPLETE`，再激活 C-DRP-03；失败则保留主屏单海报回退并记录限制。

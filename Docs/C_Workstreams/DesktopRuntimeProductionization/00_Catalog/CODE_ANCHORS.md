@@ -30,6 +30,7 @@
 - [`scripts/probe-poster-cdp.mjs`](../../../../scripts/probe-poster-cdp.mjs)：仅测试启动参数下的 Release DOM/RuntimeSnapshot 与展开/收起往返探针；普通 Release 不开放 CDP。
 - [`tests/host-presentation.test.mjs`](../../../../tests/host-presentation.test.mjs)、[`tests/runtime-surface.test.mjs`](../../../../tests/runtime-surface.test.mjs) 与 Rust `host_topology` tests：单宿主、响应矩阵、renderer/monitor 分层和宿主/命中同尺度保护。
 - [`src-tauri/src/lib.rs`](../../../../src-tauri/src/lib.rs) 的 `PosterSurfaceLifecycle`/`mark_poster_surface_ready` 与 [`app/src/poster-surface.js`](../../../../app/src/poster-surface.js) 的 ready 握手：冷启动先隐藏宿主，按宿主样式、最终尺寸、最终 region、CSS 稳定帧顺序完成后再显示，防止 Windows 11 DWM 顶部白条。
+- [`src-tauri/src/desktop_host.rs`](../../../../src-tauri/src/desktop_host.rs) 的 `WM_STYLECHANGING`/`strip_non_client_decoration_styles`：在 Win32 消息边界阻止 Tauri/tao 后续生命周期重新写回 `WS_CAPTION` 等非客户区 style；一次性初始化顺序不能替代该不变量。
 
 ## C-DRP-02 剩余证据
 
