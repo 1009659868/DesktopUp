@@ -36,19 +36,37 @@ test("FPS reporting only runs for the animated sampler mode", () => {
 test("performance sample records the canonical snapshot fields", () => {
   const sample = buildPerformanceSample({
     memoryBytes: 1024 * 1024 * 50,
+    privateWorkingSetBytes: 1024 * 1024 * 8,
+    privateCommitBytes: 1024 * 1024 * 10,
     processCount: 3,
+    processTreeWorkingSetBytes: 1024 * 1024 * 240,
+    processTreePrivateWorkingSetBytes: 1024 * 1024 * 180,
+    processTreePrivateCommitBytes: 1024 * 1024 * 210,
+    processTreeProcessCount: 6,
+    processTreeMeasurementComplete: true,
     posterFps: 30,
     cpuMs: 12,
     pauseState: "activeAnimated",
-    elapsedMs: 99
+    elapsedMs: 99,
+    buildProfile: "release",
+    hostContractVersion: 1
   }, "activeAnimated");
   assert.equal(sample.mode, "activeAnimated");
   assert.equal(sample.memoryBytes, 1024 * 1024 * 50);
+  assert.equal(sample.privateWorkingSetBytes, 1024 * 1024 * 8);
+  assert.equal(sample.privateCommitBytes, 1024 * 1024 * 10);
   assert.equal(sample.processCount, 3);
+  assert.equal(sample.processTreeWorkingSetBytes, 1024 * 1024 * 240);
+  assert.equal(sample.processTreePrivateWorkingSetBytes, 1024 * 1024 * 180);
+  assert.equal(sample.processTreePrivateCommitBytes, 1024 * 1024 * 210);
+  assert.equal(sample.processTreeProcessCount, 6);
+  assert.equal(sample.processTreeMeasurementComplete, true);
   assert.equal(sample.posterFps, 30);
   assert.equal(sample.cpuMs, 12);
   assert.equal(sample.pauseState, "activeAnimated");
   assert.equal(sample.elapsedMs, 99);
+  assert.equal(sample.buildProfile, "release");
+  assert.equal(sample.hostContractVersion, 1);
 });
 
 test("performance labels map the four baseline states", () => {

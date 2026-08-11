@@ -1,6 +1,6 @@
 # 文档登记表
 
-最后检查：2026-08-09
+最后检查：2026-08-11
 
 | 文档 | 层级 | 职责 | 状态 |
 | --- | --- | --- | --- |
@@ -36,14 +36,16 @@
 | `A_Project/20_Log/PROJECT_CHANGELOG.md` | A/Log | 项目级更迭记录 | `ACTIVE` |
 | `A_Project/30_Sync/COLD_START.md` | A/Sync | A 层接手阅读入口 | `ACTIVE` |
 | `A_Project/30_Sync/CURRENT_HANDOFF.md` | A/Sync | A 层当前状态 | `ACTIVE` |
-| `B_Modules/DesktopRuntimeFoundation/00_Catalog/C_WORKSTREAM_INDEX.md` | B/Catalog | 桌面运行时工作流索引 | `ACTIVE` |
-| `B_Modules/DesktopRuntimeFoundation/10_Plan/MODULE_PLAN_V1.md` | B/Plan | 单全局桌面运行时 V1 模块计划 | `ACTIVE` |
+| `B_Modules/DesktopRuntimeFoundation/00_Catalog/C_WORKSTREAM_INDEX.md` | B/Catalog | 桌面运行时工作流索引 | `INACTIVE — C-DRP COMPLETE` |
+| `B_Modules/DesktopRuntimeFoundation/10_Plan/MODULE_PLAN_V1.md` | B/Plan | 单全局桌面运行时 V1 模块计划 | `INACTIVE — C-RLC PLANNED` |
 | `B_Modules/DesktopRuntimeFoundation/10_Plan/MODULE_PLAN.md` | B/Plan | 旧桌面运行时模块计划 | `SUPERSEDED` |
-| `B_Modules/DesktopRuntimeFoundation/20_Log/MODULE_LOG.md` | B/Log | 桌面运行时里程碑记录 | `ACTIVE` |
-| `B_Modules/DesktopRuntimeFoundation/30_Sync/COLD_START.md` | B/Sync | B 层接手阅读入口 | `ACTIVE` |
-| `B_Modules/DesktopRuntimeFoundation/30_Sync/CURRENT_HANDOFF.md` | B/Sync | 桌面运行时当前交接 | `ACTIVE` |
-| `B_Modules/PosterCoreRuntime/00_Catalog/C_WORKSTREAM_INDEX.md` | B/Catalog | 海报核心工作流索引 | `PLANNED NEXT` |
-| `B_Modules/PosterCoreRuntime/10_Plan/MODULE_PLAN.md` | B/Plan | 海报核心运行时模块计划 | `PLANNED NEXT` |
+| `B_Modules/DesktopRuntimeFoundation/20_Log/MODULE_LOG.md` | B/Log | 桌面运行时里程碑记录 | `INACTIVE` |
+| `B_Modules/DesktopRuntimeFoundation/30_Sync/COLD_START.md` | B/Sync | B 层接手阅读入口 | `INACTIVE` |
+| `B_Modules/DesktopRuntimeFoundation/30_Sync/CURRENT_HANDOFF.md` | B/Sync | 桌面运行时当前交接 | `INACTIVE` |
+| `B_Modules/PosterCoreRuntime/00_Catalog/C_WORKSTREAM_INDEX.md` | B/Catalog | 海报核心工作流索引 | `ACTIVE` |
+| `B_Modules/PosterCoreRuntime/10_Plan/MODULE_PLAN.md` | B/Plan | 海报核心运行时模块计划 | `ACTIVE` |
+| `B_Modules/PosterCoreRuntime/30_Sync/COLD_START.md` | B/Sync | 海报核心接手阅读入口 | `ACTIVE` |
+| `B_Modules/PosterCoreRuntime/30_Sync/CURRENT_HANDOFF.md` | B/Sync | 海报核心当前交接 | `ACTIVE` |
 | `B_Modules/TemplatePlatform/00_Catalog/C_WORKSTREAM_INDEX.md` | B/Catalog | 模板平台工作流索引 | `PLANNED` |
 | `B_Modules/TemplatePlatform/10_Plan/MODULE_PLAN.md` | B/Plan | Shadow DOM 与模板生命周期计划 | `PLANNED` |
 | `B_Modules/CollectionAndLaunch/00_Catalog/C_WORKSTREAM_INDEX.md` | B/Catalog | 收纳与启动工作流索引 | `PLANNED` |
@@ -78,18 +80,36 @@
 | `C_Workstreams/DesktopHostFeasibility/20_Log/2026-08/2026-08-06_cdhf08_decision_closure.md` | C/Log | C-DHF-08 宿主决策封板记录 | `COMPLETE` |
 | `C_Workstreams/DesktopHostFeasibility/30_Sync/COLD_START.md` | C/Sync | 已关闭 C 工作流追溯入口 | `COMPLETE` |
 | `C_Workstreams/DesktopHostFeasibility/30_Sync/CURRENT_HANDOFF.md` | C/Sync | 已关闭宿主可行性交接 | `COMPLETE` |
-| `C_Workstreams/DesktopRuntimeProductionization/00_Catalog/TASK_INDEX.md` | C/Catalog | 生产宿主任务索引 | `ACTIVE` |
-| `C_Workstreams/DesktopRuntimeProductionization/00_Catalog/CODE_ANCHORS.md` | C/Catalog | 生产宿主代码定位 | `ACTIVE` |
-| `C_Workstreams/DesktopRuntimeProductionization/10_Plan/WORKSTREAM_PLAN.md` | C/Plan | 单全局生产宿主收敛计划 | `ACTIVE` |
+| `C_Workstreams/DesktopRuntimeProductionization/00_Catalog/TASK_INDEX.md` | C/Catalog | 生产宿主任务索引 | `COMPLETE` |
+| `C_Workstreams/DesktopRuntimeProductionization/00_Catalog/CODE_ANCHORS.md` | C/Catalog | 生产宿主代码定位 | `COMPLETE` |
+| `C_Workstreams/DesktopRuntimeProductionization/10_Plan/WORKSTREAM_PLAN.md` | C/Plan | 单全局生产宿主收敛计划 | `COMPLETE` |
 | `C_Workstreams/DesktopRuntimeProductionization/20_Log/2026-08/2026-08-09_plan_activation.md` | C/Log | C-DRP 激活与路线重排记录 | `COMPLETE` |
 | `C_Workstreams/DesktopRuntimeProductionization/20_Log/2026-08/2026-08-09_cdrp01_host_contract.md` | C/Log | C-DRP-01 版本化宿主契约实施与验证 | `COMPLETE` |
 | `C_Workstreams/DesktopRuntimeProductionization/20_Log/2026-08/2026-08-09_cdrp01_collapse_sync_bugfix.md` | C/Log | C-DRP-01 收起目标尺寸同步缺陷修复与 Release 实测 | `FIX VERIFIED` |
 | `C_Workstreams/DesktopRuntimeProductionization/20_Log/2026-08/2026-08-09_cdrp02_responsive_scaling_scope.md` | C/Log | C-DRP-02 分辨率/DPI 响应缩放范围与验证矩阵 | `ACCEPTED / PLANNED` |
 | `C_Workstreams/DesktopRuntimeProductionization/20_Log/2026-08/2026-08-09_cdrp02_single_host_and_responsive_scale.md` | C/Log | C-DRP-02 单宿主、响应缩放实施与主屏 Release 证据 | `IMPLEMENTED / PHYSICAL MATRIX PENDING` |
 | `C_Workstreams/DesktopRuntimeProductionization/20_Log/2026-08/2026-08-09_cdrp02_cold_start_dwm_strip_fix.md` | C/Log | C-DRP-02 冷启动顶部 DWM 白条初始化顺序第一轮修复 | `PARTIAL FIX / SUPERSEDED` |
-| `C_Workstreams/DesktopRuntimeProductionization/20_Log/2026-08/2026-08-10_cdrp02_cold_start_caption_invariant.md` | C/Log | C-DRP-02 冷启动标题栏 style 重新写入根因与消息级不变量 | `IMPLEMENTED / USER RETEST PENDING` |
-| `C_Workstreams/DesktopRuntimeProductionization/30_Sync/COLD_START.md` | C/Sync | 当前 C 工作流接手阅读入口 | `ACTIVE` |
-| `C_Workstreams/DesktopRuntimeProductionization/30_Sync/CURRENT_HANDOFF.md` | C/Sync | 当前生产宿主可执行位置 | `ACTIVE` |
+| `C_Workstreams/DesktopRuntimeProductionization/20_Log/2026-08/2026-08-10_cdrp02_cold_start_caption_invariant.md` | C/Log | C-DRP-02 冷启动标题栏 style 重新写入根因、消息级不变量与用户验收 | `COMPLETE — USER ACCEPTED` |
+| `C_Workstreams/DesktopRuntimeProductionization/20_Log/2026-08/2026-08-10_cdrp02_acceptance_cdrp03_registry.md` | C/Log | C-DRP-02 用户验收/物理矩阵延期与 C-DRP-03 表面登记首个切片 | `C-DRP-03 COMPLETE` |
+| `C_Workstreams/DesktopRuntimeProductionization/20_Log/2026-08/2026-08-10_cdrp03_single_poster_passthrough_rework.md` | C/Log | C-DRP-03 单海报空白穿透失败、视觉/输入分离重做与最终人工验收 | `COMPLETE — USER ACCEPTED` |
+| `C_Workstreams/DesktopRuntimeProductionization/20_Log/2026-08/2026-08-10_cdrp04_recovery_coordinator_first_slice.md` | C/Log | C-DRP-04 恢复入口审计、单一协调器与 Win+D 有界 Z 序防护 | `COMPLETE — USER ACCEPTED` |
+| `C_Workstreams/DesktopRuntimeProductionization/20_Log/2026-08/2026-08-10_cdrp05_lifecycle_interface_first_slice.md` | C/Log | C-DRP-05 统一生命周期、锁外发布、无持续轮询与 Release 矩阵 | `COMPLETE — USER ACCEPTED` |
+| `C_Workstreams/DesktopRuntimeProductionization/20_Log/2026-08/2026-08-11_cdrp06_release_performance_gate_first_slice.md` | C/Log | C-DRP-06 早期窗口性能门、产物证据与后继接口边界 | `SUPERSEDED — STABLE-STATE FAIL` |
+| `C_Workstreams/DesktopRuntimeProductionization/20_Log/2026-08/2026-08-11_cdrp06_stable_working_set_correction.md` | C/Log | C-DRP-06 稳定态纠正、双预算、懒创建、v3/v4 性能、Release 烟雾与平台限制关闭 | `COMPLETE — USER ACCEPTED LIMIT` |
+| `C_Workstreams/DesktopRuntimeProductionization/30_Sync/COLD_START.md` | C/Sync | 已关闭生产宿主追溯入口 | `COMPLETE` |
+| `C_Workstreams/DesktopRuntimeProductionization/30_Sync/CURRENT_HANDOFF.md` | C/Sync | 已关闭生产宿主交接 | `COMPLETE` |
+| `C_Workstreams/PosterContractBaseline/00_Catalog/TASK_INDEX.md` | C/Catalog | 海报契约任务索引 | `ACTIVE` |
+| `C_Workstreams/PosterContractBaseline/00_Catalog/CODE_ANCHORS.md` | C/Catalog | 海报契约代码定位 | `ACTIVE` |
+| `C_Workstreams/PosterContractBaseline/10_Plan/WORKSTREAM_PLAN.md` | C/Plan | 版本化海报契约与行为基线 | `ACTIVE` |
+| `C_Workstreams/PosterContractBaseline/10_Plan/C_PSS_INPUT_CONTRACT_V1.md` | C/Plan | C-PSS 可依赖的正式 schema、legacy 与失败边界冻结输入 | `FROZEN INPUT — C-PSS NOT ACTIVE` |
+| `C_Workstreams/PosterContractBaseline/20_Log/2026-08/2026-08-11_activation_and_contract_audit.md` | C/Log | C-PCB 激活、现有模型审计与 JS 契约首切片 | `COMPLETE — SUPERSEDED` |
+| `C_Workstreams/PosterContractBaseline/20_Log/2026-08/2026-08-11_cpcb01_contract_parity_and_cpcb02_geometry_audit.md` | C/Log | C-PCB-01 JS/Rust 同构、共享矩阵与 C-PCB-02 几何证据 | `C-PCB-01 COMPLETE / C-PCB-02 ACTIVE` |
+| `C_Workstreams/PosterContractBaseline/20_Log/2026-08/2026-08-11_cpcb02_geometry_contract_and_cpcb03_activation.md` | C/Log | C-PCB-02 几何契约与 C-PCB-03 激活 | `C-PCB-02 COMPLETE / C-PCB-03 ACTIVE` |
+| `C_Workstreams/PosterContractBaseline/20_Log/2026-08/2026-08-11_cpcb03_permission_contract_and_cpcb04_activation.md` | C/Log | C-PCB-03 标题栏权限矩阵与 C-PCB-04 激活 | `C-PCB-03 COMPLETE / C-PCB-04 ACTIVE` |
+| `C_Workstreams/PosterContractBaseline/20_Log/2026-08/2026-08-11_cpcb04_template_failure_contract_and_cpcb05_activation.md` | C/Log | C-PCB-04 模板失败契约与 C-PCB-05 激活 | `C-PCB-04 COMPLETE / C-PCB-05 ACTIVE` |
+| `C_Workstreams/PosterContractBaseline/20_Log/2026-08/2026-08-11_cpcb05_contract_seal_release_candidate.md` | C/Log | legacy bridge、公共契约封板、C-PSS 输入、Release Z 序修复与人工回归门 | `AUTOMATION PASS / USER RELEASE REGRESSION PENDING` |
+| `C_Workstreams/PosterContractBaseline/30_Sync/COLD_START.md` | C/Sync | 当前 C 工作流接手入口 | `ACTIVE` |
+| `C_Workstreams/PosterContractBaseline/30_Sync/CURRENT_HANDOFF.md` | C/Sync | 当前海报契约可执行位置 | `ACTIVE` |
 | `Reference/RELATED_PROJECTS.md` | Reference | 同类项目调研 | `REFERENCE` |
 | `Rules/DOCUMENT_GOVERNANCE.md` | Rules | 文档权威和同步规则 | `ACTIVE` |
 | `Rules/GIT_STRATEGY.md` | Rules | 分支、同步、提交、合并和仓库卫生 | `ACTIVE` |

@@ -6,6 +6,6 @@
 2. [`TASK_INDEX.md`](../00_Catalog/TASK_INDEX.md)
 3. [`CURRENT_HANDOFF.md`](CURRENT_HANDOFF.md)
 4. [`CODE_ANCHORS.md`](../00_Catalog/CODE_ANCHORS.md)
-5. 最近一份 [`20_Log`](../20_Log/2026-08/2026-08-10_cdrp02_cold_start_caption_invariant.md)
+5. 最近一份 [20_Log](../20_Log/2026-08/2026-08-11_cdrp06_stable_working_set_correction.md)
 
-接手后先运行 `git status --short --branch` 和现有检查。保留 C-DHF 已验证结论和 C-DRP-01 的 `host-contract-v1`；下一项是把 A0 独立海报窗口收敛为单全局宿主拓扑，不直接实现海报模板、真实快捷方式或视觉改版。
+接手后先运行 `git status --short --branch`。C-DRP-01..06 已关闭；用户接受“当前发布基线只认证主屏单海报”的平台限制，多显示器、混合 DPI、负坐标副屏、主屏切换、跨屏重启和热插拔未认证。本目录只作追溯，当前活动链请进入 [`PosterContractBaseline`](../../PosterContractBaseline/30_Sync/COLD_START.md)。

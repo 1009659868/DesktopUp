@@ -1,30 +1,35 @@
 import { normalizedPoster } from "./model.js";
 import {
-  STORAGE_KEY,
-  buildPosterMarkup,
-  createDefaultSnapshot,
-  isPosterSnapshot,
-  readFirstPoster,
-  readPosterSnapshot,
-  readSharedPosterSnapshot,
-  replaceFirstPoster,
-  writePosterSnapshot,
-  writeSharedPosterSnapshot
+  buildPosterMarkup
 } from "./poster-core.js";
+import {
+  LEGACY_POSTER_STORAGE_KEY,
+  createLegacyDefaultSnapshot,
+  isLegacyPosterSnapshot,
+  readFirstLegacyPoster,
+  readLegacyPosterSnapshot,
+  readSharedLegacyPosterSnapshot,
+  replaceFirstLegacyPoster,
+  writeLegacyPosterSnapshot,
+  writeSharedLegacyPosterSnapshot
+} from "./poster-legacy-bridge.js";
 import {
   applyPosterAction,
   buildHostSurfaceSyncArgs,
   createRuntimeState,
   isRuntimeSuspended,
+  measuredInteractionRegion,
+  runtimeMode,
   posterInteractionMode,
   selectedPoster
 } from "./poster-runtime.js";
 import { isReportingFps } from "./performance-monitor.js";
 import { hostPresentationCssVariables } from "./host-presentation.js";
+const ACTIVE_ANIMATION_FRAME_INTERVAL_MS = 1000 / 30;
 const POSTER_SURFACE_GUTTER = 10;
 const POSTER_CORNER_RADIUS = 16;
 const POSTER_COLLAPSED_HEIGHT = 116;
-const fallbackPoster = normalizedPoster(createDefaultSnapshot().posters[0]);
+const fallbackPoster = normalizedPoster(createLegacyDefaultSnapshot().posters[0]);
 
 const surface = document.querySelector("#poster-surface");
 const toast = document.querySelector("#poster-toast");
@@ -34,13 +39,12 @@ let runtime = createRuntimeState({
 });
 let toastTimer = null;
 let launchClickTimer = null;
-let manuallyPaused = false;
-let automaticallyPaused = false;
 let nativeSurfaceSyncTimer = null;
 let hostSurfaceRevision = 0;
 let nativeSurfaceReady = false;
 let fpsRafId = null;
 let frameCount = 0;
+let fpsTimerId = null;
 let fpsLastSample = performance.now();
 let lastReportedFps = null;
 
@@ -49,12 +53,12 @@ function nativeInvoke() {
 }
 
 function runtimeFromSnapshot(snapshot) {
-  const first = readFirstPoster(snapshot, fallbackPoster);
+  const first = readFirstLegacyPoster(snapshot, fallbackPoster);
   return createRuntimeState({ selectedPosterId: first.id, posters: [first] });
 }
 
 async function loadRuntime() {
-  const snapshot = await readSharedPosterSnapshot(localStorage, nativeInvoke());
+  const snapshot = await readSharedLegacyPosterSnapshot(localStorage, nativeInvoke());
   return runtimeFromSnapshot(snapshot);
 }
 
@@ -69,11 +73,11 @@ function persistPoster(patch) {
     patch
   });
   const next = currentPoster();
-  const snapshot = readPosterSnapshot(localStorage) ?? createDefaultSnapshot();
-  void writeSharedPosterSnapshot(
+  const snapshot = readLegacyPosterSnapshot(localStorage) ?? createLegacyDefaultSnapshot();
+  void writeSharedLegacyPosterSnapshot(
     localStorage,
     nativeInvoke(),
-    replaceFirstPoster(snapshot, next)
+    replaceFirstLegacyPoster(snapshot, next)
   );
   render();
   syncNativeSurface();
@@ -88,6 +92,44 @@ function showToast(message) {
 
 function render() {
   surface.innerHTML = buildPosterMarkup(currentPoster(), { surface: "native" });
+}
+
+function logicalRegionForElement(element, posterElement, visualRect, regionId, cornerRadius = 0) {
+  return measuredInteractionRegion({
+    regionId,
+    cornerRadius,
+    surfaceRect: surface.getBoundingClientRect(),
+    surfaceSize: { width: surface.offsetWidth, height: surface.offsetHeight },
+    posterRect: posterElement.getBoundingClientRect(),
+    elementRect: element.getBoundingClientRect(),
+    visualRect
+  });
+}
+
+function collectSinglePosterInteractionRegions(posterElement, posterId, visualRect) {
+  const regions = [];
+  const header = posterElement.querySelector("[data-native-drag]");
+  if (header) {
+    const headerRegion = logicalRegionForElement(
+      header,
+      posterElement,
+      visualRect,
+      `poster-${posterId}-header`,
+      POSTER_CORNER_RADIUS
+    );
+    if (headerRegion) regions.push(headerRegion);
+  }
+  posterElement.querySelectorAll('[data-action="launch"]').forEach((tile, index) => {
+    const tileRegion = logicalRegionForElement(
+      tile,
+      posterElement,
+      visualRect,
+      `poster-${posterId}-item-${index}`,
+      6
+    );
+    if (tileRegion) regions.push(tileRegion);
+  });
+  return regions;
 }
 
 function applyHostPresentation(hostSurface) {
@@ -127,17 +169,25 @@ async function syncNativeSurface() {
     const posterElement = surface.querySelector(".poster");
     if (!posterElement) return;
     hostSurfaceRevision += 1;
-    const args = buildHostSurfaceSyncArgs(currentPoster(), {
+    const poster = currentPoster();
+    const visualRect = {
       x: posterElement.offsetLeft,
       y: posterElement.offsetTop,
-      width: posterElement.offsetWidth,
-      height: posterElement.offsetHeight
-    }, {
+      width: poster.width,
+      height: poster.collapsed ? POSTER_COLLAPSED_HEIGHT : poster.height
+    };
+    const interactionRegions = collectSinglePosterInteractionRegions(
+      posterElement,
+      poster.id,
+      visualRect
+    );
+    const args = buildHostSurfaceSyncArgs(poster, visualRect, {
       revision: hostSurfaceRevision,
       deviceScaleFactor,
       surfaceGutter: POSTER_SURFACE_GUTTER,
       collapsedHeight: POSTER_COLLAPSED_HEIGHT,
       cornerRadius: POSTER_CORNER_RADIUS,
+      interactionRegions,
       placementIntent: { kind: "preserve" }
     });
     const result = await invokeNative("sync_host_surface", args);
@@ -157,25 +207,26 @@ function scheduleNativeSurfaceSync() {
   nativeSurfaceSyncTimer = window.setTimeout(syncNativeSurface, 120);
 }
 
+function applyRuntimePresentation() {
+  surface.classList.toggle("is-runtime-paused", isRuntimeSuspended(runtime, document.hidden));
+  const pauseState = runtimeMode(runtime, document.hidden);
+  surface.classList.toggle("is-performance-static", pauseState === "activeStatic");
+  surface.classList.toggle("is-performance-animated", pauseState === "activeAnimated");
+  surface.classList.toggle("is-performance-paused", pauseState === "paused");
+  surface.classList.toggle("is-performance-stopped", pauseState === "stopped");
+  document.body.dataset.runtimePauseReason = runtime.pauseReasons.join(",");
+  document.body.dataset.runtimeMode = pauseState;
+  document.body.dataset.performanceMode = runtime.performanceMode;
+  syncFpsSampling();
+}
+
 function applyRuntimePauseState(snapshot = {}) {
   if (Number.isSafeInteger(snapshot?.hostSurface?.revision)) {
     hostSurfaceRevision = Math.max(hostSurfaceRevision, snapshot.hostSurface.revision);
   }
   runtime = applyPosterAction(runtime, { type: "applyRuntimeSnapshot", snapshot });
   applyHostPresentation(runtime.hostSurface);
-  manuallyPaused = runtime.manuallyPaused;
-  automaticallyPaused = runtime.automaticallyPaused;
-  surface.classList.toggle("is-runtime-paused", isRuntimeSuspended(runtime, document.hidden));
-  const pauseState = runtime.performanceMode === "auto"
-    ? (isRuntimeSuspended(runtime, document.hidden) ? "paused" : "activeStatic")
-    : runtime.performanceMode;
-  surface.classList.toggle("is-performance-static", pauseState === "activeStatic");
-  surface.classList.toggle("is-performance-animated", pauseState === "activeAnimated");
-  surface.classList.toggle("is-performance-paused", pauseState === "paused");
-  surface.classList.toggle("is-performance-stopped", pauseState === "stopped");
-  document.body.dataset.runtimePauseReason = runtime.pauseReasons.join(",");
-  document.body.dataset.performanceMode = runtime.performanceMode;
-  syncFpsSampling();
+  applyRuntimePresentation();
 }
 
 function reportPosterFps(fps) {
@@ -185,11 +236,15 @@ function reportPosterFps(fps) {
 }
 
 function shouldSampleFps() {
-  const mode = document.body.dataset.performanceMode || "auto";
+  const mode = runtimeMode(runtime, document.hidden);
   return isReportingFps(mode, isRuntimeSuspended(runtime, document.hidden), document.hidden);
 }
 
 function stopFpsSampling() {
+  if (fpsTimerId != null) {
+    window.clearTimeout(fpsTimerId);
+    fpsTimerId = null;
+  }
   if (fpsRafId != null) {
     cancelAnimationFrame(fpsRafId);
     fpsRafId = null;
@@ -199,10 +254,22 @@ function stopFpsSampling() {
 }
 
 function sampleFrame(now) {
+function scheduleNextFpsFrame() {
+  fpsTimerId = window.setTimeout(() => {
+    fpsTimerId = null;
+    if (!shouldSampleFps()) {
+      stopFpsSampling();
+      return;
+    }
+    fpsRafId = requestAnimationFrame(sampleFrame);
+  }, ACTIVE_ANIMATION_FRAME_INTERVAL_MS);
+}
+
   if (!shouldSampleFps()) {
     stopFpsSampling();
     return;
   }
+  fpsRafId = null;
   frameCount += 1;
   const elapsed = now - fpsLastSample;
   if (elapsed >= 2000) {
@@ -210,15 +277,15 @@ function sampleFrame(now) {
     frameCount = 0;
     fpsLastSample = now;
   }
-  fpsRafId = requestAnimationFrame(sampleFrame);
+  scheduleNextFpsFrame();
 }
 
 function syncFpsSampling() {
   if (shouldSampleFps()) {
-    if (fpsRafId == null) {
+    if (fpsRafId == null && fpsTimerId == null) {
       fpsLastSample = performance.now();
       frameCount = 0;
-      fpsRafId = requestAnimationFrame(sampleFrame);
+      scheduleNextFpsFrame();
     }
   } else {
     stopFpsSampling();
@@ -253,6 +320,10 @@ surface.addEventListener("click", (event) => {
   }
 });
 
+surface.addEventListener("contextmenu", (event) => {
+  event.preventDefault();
+});
+
 surface.addEventListener("pointerdown", (event) => {
   if (!event.target.closest("[data-native-drag]") || event.target.closest("button")) return;
   const poster = currentPoster();
@@ -273,8 +344,8 @@ surface.addEventListener("dblclick", (event) => {
 });
 
 window.addEventListener("storage", (event) => {
-  if (event.key !== STORAGE_KEY) return;
-  runtime = runtimeFromSnapshot(readPosterSnapshot(localStorage));
+  if (event.key !== LEGACY_POSTER_STORAGE_KEY) return;
+  runtime = runtimeFromSnapshot(readLegacyPosterSnapshot(localStorage));
   render();
   syncNativeSurface();
 });
@@ -282,11 +353,7 @@ window.addEventListener("storage", (event) => {
 window.addEventListener("resize", scheduleNativeSurfaceSync);
 
 document.addEventListener("visibilitychange", () => {
-  applyRuntimePauseState({
-    manuallyPaused,
-    automaticallyPaused,
-    pauseReasons: document.body.dataset.runtimePauseReason?.split(",").filter(Boolean) ?? []
-  });
+  applyRuntimePresentation();
 });
 
 async function connectNativeControls() {
@@ -294,12 +361,12 @@ async function connectNativeControls() {
   if (!listen) return;
   const snapshot = await invokeNative("runtime_state");
   if (snapshot) applyRuntimePauseState(snapshot);
-  await listen("runtime-pause-state", (event) => {
+  await listen("runtime-state-changed", (event) => {
     applyRuntimePauseState(event.payload ?? {});
   });
   await listen("poster-snapshot-updated", (event) => {
-    if (!isPosterSnapshot(event.payload)) return;
-    writePosterSnapshot(localStorage, event.payload);
+    if (!isLegacyPosterSnapshot(event.payload)) return;
+    writeLegacyPosterSnapshot(localStorage, event.payload);
     runtime = runtimeFromSnapshot(event.payload);
     render();
     syncNativeSurface();

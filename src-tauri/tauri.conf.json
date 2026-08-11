@@ -13,20 +13,6 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "label": "main",
-        "title": "Desktop-Up · A0 Demo",
-        "width": 1440,
-        "height": 900,
-        "minWidth": 1100,
-        "minHeight": 720,
-        "center": true,
-        "visible": false,
-        "resizable": true,
-        "decorations": true,
-        "transparent": false,
-        "shadow": true
-      },
-      {
         "label": "poster",
         "title": "",
         "url": "poster.html",

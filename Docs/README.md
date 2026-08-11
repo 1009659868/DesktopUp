@@ -15,8 +15,8 @@ Desktop-Up（暂定名）是一个面向 Windows 11 的低资源桌面海报启�
 
 ```text
 A: DesktopUP V1 落地计划 / V1-P1 生产宿主与核心契约
-  -> B: Desktop Runtime Foundation / 单全局桌面运行时
-     -> C: Desktop Runtime Productionization / C-DRP ACTIVE
+  -> B: Poster Core Runtime / 海报核心运行时
+     -> C: Poster Contract Baseline / C-PCB ACTIVE
 ```
 
 ## 设计与计划入口

@@ -1,8 +1,8 @@
 # A 层当前交接
 
-最后更新：2026-08-09
+最后更新：2026-08-11
 
-状态：`V1-P1 ACTIVE / C-DRP-02 IN PROGRESS`
+状态：`V1-P1 ACTIVE / C-PCB-05 CONTRACT SEAL AND C-PSS HANDOFF`
 
 ## 已建立
 
@@ -22,14 +22,20 @@
 - [`DesktopUP V1 落地推进计划`](../10_Plan/DESKTOPUP_V1_IMPLEMENTATION_PLAN.md) 已成为唯一活跃 A 实施计划，拆分为 9 个 B 模块和 35 个 C 工作流；旧 `PROJECT_MAINLINE.md` 与 `DELIVERY_PLAN_V0.1.md` 已冻结。
 - 2026-08-09 路线调整为先完成生产宿主/核心契约，再交付“仅添加 + 真实启动”可用 MVP 和安全收纳 MVP，之后建设完整模板、布局、主题、AI 与游戏平台来源；新增 C-PSS，并将旧 C-LRC 拆为 C-LCH/C-RCV。
 - C-DRP-01 已完成版本化 HostSurface/DisplayTopology/InteractionRegion/RuntimeSnapshot 契约；海报前端改用单次 `sync_host_surface`，旧两步命令仅保留为同一内部路径的兼容包装。Release 实机窗口尺寸、圆角命中区域、单实例和响应状态通过。
-- C-DRP-02 主屏代码闭环已实现：唯一桌面宿主、有效逻辑工作区、monitor/renderer 比例分层、响应宿主尺寸、同尺度命中和前端等比呈现通过自动化与 Release；真实混合 DPI 跨屏矩阵尚未完成，因此任务保持 `IN PROGRESS`。
+- C-DRP-02 主屏代码闭环、冷启动去白条、收起/展开裁切和按钮命中已通过自动化、Release 与用户复测；第二显示器/混合 DPI 物理矩阵由用户明确延期至 C-DRP-06，因此 C-DRP-02 关闭当前门但不声称多屏实机通过；
+- C-DRP-03 已按单海报范围完成：同一登记项拆分完整 `visualRegion` 与标题栏/卡片 `interactionRegions`，零/一/多/重叠仅指输入矩形，不代表多海报产品能力；
+- 用户在最新 Release 上确认空白框选、桌面右键、原生快捷方式、六张卡片、标题栏拖动/锁定、无白条与收起/展开均通过，C-DRP-03 已关闭；
 - 已建立 WorkerW 安全适配与 ToolWindow 自动回退诊断；本机无可见 WorkerW，当前采用已验证回退，不强挂隐藏 Shell 窗口。
-- 单海报透明边界、按钮/拖动与桌面输入人工矩阵已经通过，C-DHF-03 完成。
+- C-DRP-03 的旧版 FAIL 截图与新版 PASS 矩阵均保留为历史证据；第二显示器/混合 DPI 等物理矩阵仍延期至 C-DRP-06。
 - C-DHF-04 已实现原生位置持久化、显示器工作区锚点和显示/Shell 事件恢复基础；重启恢复与模拟离屏拉回通过，真实 Win+D、Explorer、多屏和 DPI 矩阵仍待完成。
 - 2026-08-04 决定撤回原 `impl/poster-redesign-a0` 的 M1 完成/封板结论：原实现存在模板、状态、窗口几何和测试契约的结构性缺陷，不作为 V1 代码基线；设计文档继续有效。
 - 2026-08-08 已修复 Dev/Release 海报状态分裂、大尺寸破坏性截断、锁定派生状态与提示错误、托盘快捷操作误开主页、首次快照丢海报和任务栏可见等缺陷；采用过渡 Rust JSON 共享桥接，正式状态仓库由后续 C-PSS 收敛。
-- 同日后续修复 ToolWindow 点击后覆盖普通应用与顶部亮带：当前海报不可激活，原生锚定在 `Progman` 正上方，独立桌面表面不再运行可能被自动暂停冻结的入场位移动画；自动探针通过，等待用户目视确认。
+- 同日后续修复 ToolWindow 点击后覆盖普通应用与顶部亮带：当前海报不可激活并原生锚定在 `Progman` 正上方；2026-08-10 用户确认新版 Release 首次显示无顶部白条，收起/展开无裁切且按钮命中正常。
 
+- C-DRP-04 的最终 Release 连续 Win+D 已由用户确认较稳定并接受通过；多屏/DPI 物理矩阵仍延期至 C-DRP-06；
+- C-DRP-05 的版本化 lifecycle、锁外统一事件、状态优先显隐、退出状态、前端乱序保护和静态/暂停无持续轮询已通过自动测试、Release/NSIS 与用户 5/5 人工矩阵，任务关闭；
+- C-DRP-06 已按用户确认升级为主进程 50 MiB + 完整进程树 256 MiB 私有工作集双预算，并将控制中心改为首次请求创建；`performance-gate-v3` / `performance-baseline-v4`、58 项前端/契约、52 项 Rust、Release/NSIS 和最新版普通 Release 四项烟雾全部通过；用户随后接受主屏单海报认证限制，C-DRP-06 与 C-DRP 关闭；
+- 活动链已切换到 B-PCR / C-PCB。C-PCB-01 已完成正式 v1 契约与 A0 legacy 分流；C-PCB-02 已完成工作区派生默认几何；C-PCB-03 已完成标题栏权限矩阵；C-PCB-04 已完成正常默认、用户模板和内部 fallback 的结构化 JS/Rust 共享失败矩阵，全量 JS 83/83、Rust 65/65 通过。当前进入 C-PCB-05 契约封板与 C-PSS 交接；现有 Release 投影尚未由新模板解析器接管；
 ## 尚未完成
 
 - C-DHF-04/05 剩余物理矩阵（Explorer 真重启、热插拔、主屏/DPI 切换等）因物理环境延后；已确认的真实游戏全屏、Win+L、显示器关闭/唤醒通过；
@@ -46,7 +52,7 @@
 
 ## 下一动作
 
-当前 `C-DHF-01..08` 已全部关闭，`V1-P0` 宿主硬门具备关闭结论。当前只激活 [`C-DRP Desktop Runtime Productionization`](../../C_Workstreams/DesktopRuntimeProductionization/30_Sync/CURRENT_HANDOFF.md)，下一步完成 C-DRP-02 的单全局宿主、统一显示坐标与分辨率/DPI 响应缩放；C-PCB 排在其后，不同时激活。在此之前不把 V1-P1 或 M1 海报实现标记为完成。
+当前 `C-DHF-01..08`、`C-DRP-01..06` 与 `C-PCB-01..04` 已关闭；当前只激活 [C-PCB Poster Contract Baseline](../../C_Workstreams/PosterContractBaseline/30_Sync/CURRENT_HANDOFF.md) 内的 C-PCB-05 契约封板与 C-PSS 交接。当前默认与发布范围仍为单海报；多显示器、混合 DPI、负坐标副屏、主屏切换、跨屏重启和热插拔未认证。
 
 A1 真实快捷方式能力保持排队状态；C-ROD/C-PAA/C-LCH 只允许用户主动触发的只读发现、仅添加和启动，任何真实文件移动必须等待 C-SVT 的保险库、账本、逐批确认和故障注入通过。
 

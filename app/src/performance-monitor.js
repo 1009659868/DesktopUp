@@ -37,11 +37,20 @@ export function buildPerformanceSample(snapshot, mode, sampledAt = new Date().to
   return {
     mode: normalizePerformanceMode(mode),
     memoryBytes: Number(snapshot?.memoryBytes ?? 0),
+    privateWorkingSetBytes: Number(snapshot?.privateWorkingSetBytes ?? 0),
+    privateCommitBytes: Number(snapshot?.privateCommitBytes ?? 0),
     processCount: Number(snapshot?.processCount ?? 0),
+    processTreeWorkingSetBytes: Number(snapshot?.processTreeWorkingSetBytes ?? 0),
+    processTreePrivateWorkingSetBytes: Number(snapshot?.processTreePrivateWorkingSetBytes ?? 0),
+    processTreePrivateCommitBytes: Number(snapshot?.processTreePrivateCommitBytes ?? 0),
+    processTreeProcessCount: Number(snapshot?.processTreeProcessCount ?? 0),
+    processTreeMeasurementComplete: snapshot?.processTreeMeasurementComplete === true,
     posterFps: Number(snapshot?.posterFps ?? 0),
     cpuMs: Number(snapshot?.cpuMs ?? 0),
     pauseState: snapshot?.pauseState ?? "unknown",
     elapsedMs: Number(snapshot?.elapsedMs ?? 0),
-    sampledAt
+    sampledAt,
+    buildProfile: snapshot?.buildProfile ?? "unknown",
+    hostContractVersion: Number(snapshot?.hostContractVersion ?? 0)
   };
 }

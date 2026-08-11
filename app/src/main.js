@@ -5,22 +5,25 @@ import {
   resizeWithinBounds
 } from "./model.js";
 import {
-  STORAGE_KEY,
-  buildPosterMarkup,
-  createDefaultSnapshot,
-  DEFAULT_CATALOG,
-  isPosterSnapshot,
-  readPosterSnapshot,
-  readSharedPosterSnapshot,
-  toDemoItem,
-  writePosterSnapshot,
-  writeSharedPosterSnapshot
+  buildPosterMarkup
 } from "./poster-core.js";
+import {
+  LEGACY_POSTER_STORAGE_KEY,
+  LEGACY_DEFAULT_CATALOG,
+  createLegacyDefaultSnapshot,
+  isLegacyPosterSnapshot,
+  readLegacyPosterSnapshot,
+  readSharedLegacyPosterSnapshot,
+  toLegacyDemoItem,
+  writeLegacyPosterSnapshot,
+  writeSharedLegacyPosterSnapshot
+} from "./poster-legacy-bridge.js";
 import {
   applyPosterAction,
   buildRuntimeSyncArgs,
   createRuntimeState,
   isRuntimeSuspended,
+  runtimeMode,
   posterInteractionMode,
   posterSnapshot,
   selectedPoster as runtimeSelectedPoster
@@ -54,13 +57,14 @@ const densityControl = document.querySelector("#density-control");
 const autoCollapseControl = document.querySelector("#auto-collapse");
 const autostartControl = document.querySelector("#autostart-control");
 
-let state = createRuntimeState(createDefaultSnapshot());
+let state = createRuntimeState(createLegacyDefaultSnapshot());
 let gesture = null;
 let toastTimer = null;
 let launchClickTimer = null;
-let automaticallyPaused = false;
-let automaticPauseReasons = [];
-let perfPollTimer = null;
+const PERFORMANCE_SAMPLE_INTERVAL_MS = 2000;
+const PERFORMANCE_SAMPLE_COUNT = 6;
+const PERFORMANCE_MAIN_PRIVATE_WORKING_SET_BUDGET_BYTES = 50 * 1024 * 1024;
+const PERFORMANCE_TREE_PRIVATE_WORKING_SET_BUDGET_BYTES = 256 * 1024 * 1024;
 let performanceCollecting = false;
 
 function nativeInvoke() {
@@ -68,12 +72,12 @@ function nativeInvoke() {
 }
 
 async function loadState() {
-  const snapshot = await readSharedPosterSnapshot(localStorage, nativeInvoke());
-  return createRuntimeState(snapshot ?? createDefaultSnapshot());
+  const snapshot = await readSharedLegacyPosterSnapshot(localStorage, nativeInvoke());
+  return createRuntimeState(snapshot ?? createLegacyDefaultSnapshot());
 }
 
 function saveState() {
-  void writeSharedPosterSnapshot(localStorage, nativeInvoke(), posterSnapshot(state));
+  void writeSharedLegacyPosterSnapshot(localStorage, nativeInvoke(), posterSnapshot(state));
 }
 
 function selectedPoster() {
@@ -83,9 +87,7 @@ function selectedPoster() {
 function render() {
   app.classList.toggle("is-editing", state.editMode);
   app.classList.toggle("is-paused", state.manuallyPaused || isRuntimeSuspended(state, document.hidden));
-  const pauseState = state.performanceMode === "auto"
-    ? (isRuntimeSuspended(state, document.hidden) ? "paused" : "activeStatic")
-    : state.performanceMode;
+  const pauseState = runtimeMode(state, document.hidden);
   app.classList.toggle("is-performance-static", pauseState === "activeStatic");
   app.classList.toggle("is-performance-animated", pauseState === "activeAnimated");
   app.classList.toggle("is-performance-paused", pauseState === "paused");
@@ -143,9 +145,12 @@ function renderInspector() {
 function renderRuntime() {
   const runtimeSuspended = isRuntimeSuspended(state, document.hidden);
   const isPaused = state.manuallyPaused || runtimeSuspended;
+  const automaticPauseReasons = state.pauseReasons;
   runtimeChip.classList.toggle("is-paused", isPaused);
   runtimeChip.querySelector("strong").textContent = isPaused ? "PAUSED" : "STATIC";
-  runtimeChip.querySelector("small").textContent = runtimeSuspended
+  runtimeChip.querySelector("small").textContent = state.manuallyPaused
+    ? "手动暂停 · 0 FPS"
+    : runtimeSuspended
     ? automaticPauseReasons.includes("displayOff")
       ? "显示器关闭 · 0 FPS"
       : automaticPauseReasons.includes("sessionLocked")
@@ -155,13 +160,11 @@ function renderRuntime() {
           : automaticPauseReasons.includes("maximizedForeground")
             ? "最大化覆盖 · 0 FPS"
             : "窗口不可见 · 0 FPS"
-    : state.manuallyPaused
-      ? "手动暂停 · 0 FPS"
-      : "按需绘制";
+    : "按需绘制";
 }
 
 function renderPerformance(snapshot = {}) {
-  const memory = formatMemoryBytes(snapshot.memoryBytes);
+  const memory = formatMemoryBytes(snapshot.privateWorkingSetBytes);
   const fps = snapshot.posterFps != null && snapshot.posterFps > 0
     ? `${Math.round(snapshot.posterFps)}`
     : "--";
@@ -170,12 +173,17 @@ function renderPerformance(snapshot = {}) {
     perfChip.querySelector("small").textContent = `FPS ${fps}`;
     perfChip.classList.toggle(
       "is-good",
-      snapshot.memoryBytes != null && snapshot.memoryBytes < 192 * 1024 * 1024
+      snapshot.privateWorkingSetBytes != null
+        && snapshot.privateWorkingSetBytes <= PERFORMANCE_MAIN_PRIVATE_WORKING_SET_BUDGET_BYTES
+        && snapshot.processTreePrivateWorkingSetBytes != null
+        && snapshot.processTreePrivateWorkingSetBytes
+          <= PERFORMANCE_TREE_PRIVATE_WORKING_SET_BUDGET_BYTES
+        && snapshot.processTreeMeasurementComplete === true
     );
   }
   if (perfMemory) perfMemory.textContent = memory;
   if (perfFps) perfFps.textContent = fps;
-  if (perfProcesses) perfProcesses.textContent = String(snapshot.processCount ?? "--");
+  if (perfProcesses) perfProcesses.textContent = String(snapshot.processTreeProcessCount ?? "--");
   if (perfCpu) perfCpu.textContent = formatCpuMs(snapshot.cpuMs);
   if (perfState) perfState.textContent = performanceModeLabel(snapshot.pauseState ?? state.performanceMode);
 
@@ -196,11 +204,6 @@ async function pollPerformance() {
   }
 }
 
-function startPerformancePolling() {
-  pollPerformance();
-  perfPollTimer = setInterval(pollPerformance, 2000);
-}
-
 async function collectPerformanceBaseline() {
   const invoke = window.__TAURI__?.core?.invoke;
   if (!invoke) {
@@ -213,16 +216,16 @@ async function collectPerformanceBaseline() {
   perfCollect.textContent = "采集中...";
   const samples = [];
   try {
-    for (let index = 0; index < 5; index += 1) {
+    for (let index = 0; index < PERFORMANCE_SAMPLE_COUNT; index += 1) {
       const snapshot = await invoke("get_performance_snapshot");
       samples.push(buildPerformanceSample(snapshot, state.performanceMode));
       renderPerformance(snapshot);
-      if (index < 4) {
-        await new Promise((resolve) => setTimeout(resolve, 2000));
+      if (index < PERFORMANCE_SAMPLE_COUNT - 1) {
+        await new Promise((resolve) => setTimeout(resolve, PERFORMANCE_SAMPLE_INTERVAL_MS));
       }
     }
-    await invoke("save_performance_baseline", { samples });
-    showToast("性能基线已保存");
+    const gate = await invoke("save_performance_baseline", { samples });
+    showToast(gate?.passed ? "性能门通过，基线已保存" : "性能门未通过，已保存诊断证据");
   } catch {
     showToast("性能采样失败");
   } finally {
@@ -238,16 +241,14 @@ function applyPerformanceMode(mode) {
     value: normalizePerformanceMode(mode)
   });
   render();
-  syncNativeRuntimeState();
 }
 
 function applyNativePauseSnapshot(snapshot = {}) {
   state = applyPosterAction(state, { type: "applyRuntimeSnapshot", snapshot });
-  automaticallyPaused = state.automaticallyPaused;
-  automaticPauseReasons = state.pauseReasons;
   pauseToggle.setAttribute("aria-pressed", String(state.manuallyPaused));
   renderRuntime();
   app.classList.toggle("is-paused", state.manuallyPaused || isRuntimeSuspended(state, document.hidden));
+  void pollPerformance();
 }
 
 function updatePoster(id, patch) {
@@ -414,8 +415,8 @@ pauseToggle.addEventListener("click", () => {
 });
 
 document.querySelector("#reset-layout").addEventListener("click", () => {
-  state = createRuntimeState(createDefaultSnapshot());
-  localStorage.removeItem(STORAGE_KEY);
+  state = createRuntimeState(createLegacyDefaultSnapshot());
+  localStorage.removeItem(LEGACY_POSTER_STORAGE_KEY);
   render();
   showToast("画布已恢复到 Demo 默认布局");
 });
@@ -450,30 +451,23 @@ perfCollect.addEventListener("click", collectPerformanceBaseline);
 
 document.querySelector("#add-game").addEventListener("click", () => {
   const poster = selectedPoster();
-  const catalogEntry = DEFAULT_CATALOG[poster.items.length % DEFAULT_CATALOG.length];
-  const nextItem = toDemoItem(catalogEntry, poster.items.length);
+  const catalogEntry = LEGACY_DEFAULT_CATALOG[poster.items.length % LEGACY_DEFAULT_CATALOG.length];
+  const nextItem = toLegacyDemoItem(catalogEntry, poster.items.length);
   nextItem.id = `${nextItem.id}-${Date.now()}`;
   updatePoster(poster.id, { collapsed: false, items: [...poster.items, nextItem] });
   showToast(`${nextItem.title} 已加入，布局已自动更新`);
 });
 
 document.addEventListener("visibilitychange", () => {
-  state = applyPosterAction(state, {
-    type: "applyRuntimeSnapshot",
-    snapshot: {
-      automaticallyPaused,
-      pauseReasons: automaticPauseReasons
-    }
-  });
   renderRuntime();
   app.classList.toggle("is-paused", state.manuallyPaused || isRuntimeSuspended(state, document.hidden));
 });
 
 window.addEventListener("storage", (event) => {
-  if (event.key !== STORAGE_KEY) return;
+  if (event.key !== LEGACY_POSTER_STORAGE_KEY) return;
   const editMode = state.editMode;
   const manuallyPaused = state.manuallyPaused;
-  const snapshot = readPosterSnapshot(localStorage) ?? createDefaultSnapshot();
+  const snapshot = readLegacyPosterSnapshot(localStorage) ?? createLegacyDefaultSnapshot();
   state = applyPosterAction(createRuntimeState(snapshot), { type: "setEditMode", value: editMode });
   state = applyPosterAction(state, { type: "setManualPaused", value: manuallyPaused });
   render();
@@ -488,14 +482,14 @@ async function connectNativeControls() {
       applyNativePauseSnapshot(await invoke("runtime_state"));
     } catch {}
   }
-  await listen("runtime-pause-state", (event) => {
+  await listen("runtime-state-changed", (event) => {
     applyNativePauseSnapshot(event.payload ?? {});
   });
   await listen("poster-snapshot-updated", (event) => {
-    if (!isPosterSnapshot(event.payload)) return;
+    if (!isLegacyPosterSnapshot(event.payload)) return;
     const editMode = state.editMode;
     const manuallyPaused = state.manuallyPaused;
-    writePosterSnapshot(localStorage, event.payload);
+    writeLegacyPosterSnapshot(localStorage, event.payload);
     state = applyPosterAction(createRuntimeState(event.payload), {
       type: "setEditMode",
       value: editMode
@@ -546,11 +540,11 @@ async function bootstrap() {
   try {
     state = await loadState();
   } catch {
-    state = createRuntimeState(createDefaultSnapshot());
+    state = createRuntimeState(createLegacyDefaultSnapshot());
   }
   saveState();
   render();
-  startPerformancePolling();
+  void pollPerformance();
   connectNativeControls().catch(() => {});
 }
 

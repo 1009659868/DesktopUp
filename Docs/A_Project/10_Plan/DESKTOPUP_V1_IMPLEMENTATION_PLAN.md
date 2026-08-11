@@ -34,7 +34,7 @@
 | 阶段 | 目标 | B 模块 | 退出条件 | 状态 |
 | --- | --- | --- | --- | --- |
 | V1-P0 | 关闭桌面宿主遗留硬门 | Desktop Runtime Foundation | C-DHF-04..08 全部形成 PASS、接受回退或明确阻塞结论 | `COMPLETE` |
-| V1-P1 | 生产宿主、核心契约与数据基线 | Desktop Runtime Foundation、Poster Core Runtime、Distribution Lifecycle | 单全局宿主接口、单状态源、版本化 SQLite 仓库、运行生命周期和安装/数据目录契约通过 | `ACTIVE — C-DRP` |
+| V1-P1 | 生产宿主、核心契约与数据基线 | Desktop Runtime Foundation、Poster Core Runtime、Distribution Lifecycle | 单全局宿主接口、单状态源、版本化 SQLite 仓库、运行生命周期和安装/数据目录契约通过 | `ACTIVE — C-PCB` |
 | V1-P2 | 落地透明大幅面海报 | Poster Core Runtime | Transparent Default、大幅面、展开/收起、锁定、暂停和 Release 实机矩阵通过 | `PLANNED` |
 | V1-P3 | 交付“仅添加 + 真实启动”可用 MVP | Collection and Launch | 主动只读发现、逐项预览、仅添加和真实启动闭环通过；不移动用户文件 | `PLANNED` |
 | V1-P4 | 交付安全收纳 MVP | Collection and Launch | 保险库、两阶段账本、安全收纳、撤销、异常恢复和卸载恢复接口通过 | `PLANNED` |
@@ -58,8 +58,8 @@
 
 | ID | B 模块 | 责任 | 直接依赖 | 状态 |
 | --- | --- | --- | --- | --- |
-| B-DRF | Desktop Runtime Foundation | 单全局桌面宿主、Shell/显示恢复、暂停、托盘、单实例、自启和运行时性能 | 无 | `ACTIVE` |
-| B-PCR | Poster Core Runtime | 海报状态仓库、几何、透明大幅面、自制标题栏、交互命中和宿主同步 | B-DRF | `PLANNED NEXT` |
+| B-DRF | Desktop Runtime Foundation | 单全局桌面宿主、Shell/显示恢复、暂停、托盘、单实例、自启和运行时性能 | 无 | `INACTIVE — C-DRP COMPLETE / C-RLC PLANNED` |
+| B-PCR | Poster Core Runtime | 海报状态仓库、几何、透明大幅面、自制标题栏、交互命中和宿主同步 | B-DRF | `ACTIVE — C-PCB` |
 | B-TPL | Template Platform | Shadow DOM 运行时、fallback、三套内置模板、热切换、完整模板包生命周期 | B-PCR | `PLANNED` |
 | B-COL | Collection and Launch | 快捷方式发现、预览、仅添加、保险库事务、启动、撤销与恢复 | B-PCR | `PLANNED` |
 | B-LAR | Layout and Ranking | 启动统计、排序、衰减、对数缩放、弹性布局、锚定与拖拽 | B-COL, B-PCR | `PLANNED` |
@@ -75,14 +75,14 @@
 | C 工作流 | 可验证结果 | 依赖 | 状态 |
 | --- | --- | --- | --- |
 | C-DHF Desktop Host Feasibility | 关闭 Win+D、Explorer、多屏/DPI、暂停、性能、托盘和宿主决策硬门 | 无 | `COMPLETE` |
-| C-DRP Desktop Runtime Productionization | 将验证原型收敛为单全局生产宿主、分辨率/DPI 响应显示拓扑与稳定接口 | C-DHF | `ACTIVE` |
+| C-DRP Desktop Runtime Productionization | 将验证原型收敛为单全局生产宿主、分辨率/DPI 响应显示拓扑与稳定接口 | C-DHF | `COMPLETE — PRIMARY-SCREEN SINGLE-POSTER CERTIFIED` |
 | C-RLC Runtime Lifecycle and Quick Access | 单实例、控制中心、托盘、自启、退出与 TaskbarCreated 恢复 | C-DRP | `PLANNED` |
 
 ### B-PCR：Poster Core Runtime
 
 | C 工作流 | 可验证结果 | 依赖 | 状态 |
 | --- | --- | --- | --- |
-| C-PCB Poster Contract Baseline | 冻结状态 schema、宿主/海报边界、窗口几何所有权、默认快照和失败回退行为测试 | C-DRP | `PLANNED NEXT` |
+| C-PCB Poster Contract Baseline | 冻结状态 schema、宿主/海报边界、窗口几何所有权、默认快照和失败回退行为测试 | C-DRP | `ACTIVE` |
 | C-PSS Poster State Store | 版本化 SQLite schema、迁移、仓库接口和过渡 JSON 桥接替换 | C-PCB | `PLANNED` |
 | C-LST Large Surface and Transparency | 主屏右侧大幅面透明海报、稳定透明背景与位置恢复 | C-PSS, C-DRP | `PLANNED` |
 | C-PSI Poster State and Interaction | EXPANDED/COLLAPSED、USING/EDITING、锁定、标题栏拖动、海报框拉伸（含最小/最大尺寸限制）、命中区域和暂停同步 | C-LST | `PLANNED` |
@@ -154,8 +154,8 @@
 
 ```text
 A: DESKTOPUP_V1_IMPLEMENTATION_PLAN / V1-P1
-└─ B: Desktop Runtime Foundation / B-DRF
-   └─ C: Desktop Runtime Productionization / C-DRP ACTIVE
+└─ B: Poster Core Runtime / B-PCR
+   └─ C: Poster Contract Baseline / C-PCB ACTIVE
 ```
 
 当前推进顺序：
@@ -171,7 +171,7 @@ C-DRP 单全局生产宿主
 → C-SVT / C-RCV 安全收纳 MVP
 ```
 
-`C-DHF-01..08` 已全部关闭，`V1-P0` 宿主硬门具备关闭结论。当前只激活 `C-DRP`；`C-PCB` 是唯一后继工作流，不得与 `C-DRP` 同时标记 `ACTIVE`，也不得将 V1-P1 或 M1 标记为实施通过。
+`C-DHF-01..08` 与 `C-DRP-01..06` 已关闭；C-DRP 的发布认证范围明确限制为主屏单海报，多显示器/DPI/热插拔未认证。当前只激活 `C-PCB`；C-PSS 是唯一后继工作流，不得与 C-PCB 同时标记 `ACTIVE`，也不得将 V1-P1 或 M1 标记为实施通过。
 
 ## 7. 性能预算与迁移门
 

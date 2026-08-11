@@ -1,8 +1,11 @@
 export const HOST_CONTRACT_VERSION = 1;
 export const HOST_GEOMETRY_OWNER = "nativeHost";
+export const SURFACE_REGISTRY_VERSION = 1;
 
 const MAX_IDENTIFIER_LENGTH = 96;
 const MAX_SURFACE_LOGICAL_EXTENT = 8192;
+const MAX_REGISTERED_SURFACES = 64;
+const MAX_INTERACTION_REGIONS = 256;
 
 function assertIdentifier(field, value) {
   if (typeof value !== "string"
@@ -71,6 +74,64 @@ function normalizedInteractionRegion(region, logicalSize) {
   };
 }
 
+function normalizedSurfaceRegistry(registry, logicalSize, revision) {
+  if (registry == null) return null;
+  if (registry.registryVersion != null
+    && registry.registryVersion !== SURFACE_REGISTRY_VERSION) {
+    throw new RangeError(`unsupported surface registry version ${registry.registryVersion}`);
+  }
+  const registryRevision = Number(registry.revision ?? revision);
+  if (!Number.isSafeInteger(registryRevision) || registryRevision !== revision) {
+    throw new RangeError("surfaceRegistry.revision must match the host surface revision");
+  }
+  if (!Array.isArray(registry.surfaces)) {
+    throw new TypeError("surfaceRegistry.surfaces must be an array");
+  }
+  if (registry.surfaces.length > MAX_REGISTERED_SURFACES) {
+    throw new RangeError(`surfaceRegistry may contain at most ${MAX_REGISTERED_SURFACES} surfaces`);
+  }
+
+  const surfaceIds = new Set();
+  const regionIds = new Set();
+  let regionCount = 0;
+  const surfaces = registry.surfaces.map((surface) => {
+    assertIdentifier("surfaceRegistry.surfaces.surfaceId", surface?.surfaceId);
+    if (surfaceIds.has(surface.surfaceId)) {
+      throw new RangeError(`duplicate surfaceId ${surface.surfaceId}`);
+    }
+    surfaceIds.add(surface.surfaceId);
+    const visualRegion = normalizedInteractionRegion(surface.visualRegion, logicalSize);
+    if (!visualRegion) {
+      throw new TypeError("surface visualRegion is required");
+    }
+
+    if (!Array.isArray(surface.interactionRegions)) {
+      throw new TypeError("surface interactionRegions must be an array");
+    }
+    regionCount += surface.interactionRegions.length;
+    if (regionCount > MAX_INTERACTION_REGIONS) {
+      throw new RangeError(
+        `surfaceRegistry may contain at most ${MAX_INTERACTION_REGIONS} interaction regions`
+      );
+    }
+    const interactionRegions = surface.interactionRegions.map((region) => {
+      const normalized = normalizedInteractionRegion(region, logicalSize);
+      if (regionIds.has(normalized.regionId)) {
+        throw new RangeError(`duplicate regionId ${normalized.regionId}`);
+      }
+      regionIds.add(normalized.regionId);
+      return normalized;
+    });
+    return { surfaceId: surface.surfaceId, visualRegion, interactionRegions };
+  });
+
+  return {
+    registryVersion: SURFACE_REGISTRY_VERSION,
+    revision: registryRevision,
+    surfaces
+  };
+}
+
 export function createHostSurfaceRequest(input = {}) {
   if (input.contractVersion != null && input.contractVersion !== HOST_CONTRACT_VERSION) {
     throw new RangeError(`unsupported host contract version ${input.contractVersion}`);
@@ -91,6 +152,14 @@ export function createHostSurfaceRequest(input = {}) {
   assertFiniteRange("scaleFactor", scaleFactor, 0.5, 4);
   const userScale = Number(input.userScale ?? 1);
   assertFiniteRange("userScale", userScale, 0.5, 2);
+  const interactionRegion = normalizedInteractionRegion(input.interactionRegion, logicalSize);
+  const surfaceRegistry = normalizedSurfaceRegistry(input.surfaceRegistry, logicalSize, revision);
+  if (interactionRegion && surfaceRegistry) {
+    throw new TypeError(
+      "host surface request cannot combine legacy interactionRegion with surfaceRegistry"
+    );
+  }
+
 
   return {
     contractVersion: HOST_CONTRACT_VERSION,
@@ -100,7 +169,8 @@ export function createHostSurfaceRequest(input = {}) {
     scaleFactor,
     userScale,
     placementIntent: normalizedPlacementIntent(input.placementIntent),
-    interactionRegion: normalizedInteractionRegion(input.interactionRegion, logicalSize)
+    interactionRegion,
+    surfaceRegistry
   };
 }
 

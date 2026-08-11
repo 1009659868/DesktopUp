@@ -1,8 +1,13 @@
+use std::collections::HashSet;
+
 use serde::{Deserialize, Serialize};
 
 pub const HOST_CONTRACT_VERSION: u32 = 1;
+pub const SURFACE_REGISTRY_VERSION: u32 = 1;
 const MAX_SURFACE_LOGICAL_EXTENT: f64 = 8192.0;
 const MAX_IDENTIFIER_LENGTH: usize = 96;
+const MAX_REGISTERED_SURFACES: usize = 64;
+const MAX_INTERACTION_REGIONS: usize = 256;
 
 fn default_user_scale() -> f64 {
     1.0
@@ -57,6 +62,89 @@ pub struct InteractionRegion {
     pub corner_radius: f64,
 }
 
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SurfaceRegistration {
+    pub surface_id: String,
+    pub visual_region: InteractionRegion,
+    #[serde(default)]
+    pub interaction_regions: Vec<InteractionRegion>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SurfaceRegistry {
+    pub registry_version: u32,
+    pub revision: u64,
+    #[serde(default)]
+    pub surfaces: Vec<SurfaceRegistration>,
+}
+
+impl SurfaceRegistry {
+    fn validate(&self, host_revision: u64, logical_size: &LogicalSize) -> Result<(), String> {
+        if self.registry_version != SURFACE_REGISTRY_VERSION {
+            return Err(format!(
+                "unsupported surface registry version {}; expected {}",
+                self.registry_version, SURFACE_REGISTRY_VERSION
+            ));
+        }
+        if self.revision != host_revision {
+            return Err(
+                "surfaceRegistry.revision must match the host surface revision".to_string(),
+            );
+        }
+        if self.surfaces.len() > MAX_REGISTERED_SURFACES {
+            return Err(format!(
+                "surfaceRegistry may contain at most {MAX_REGISTERED_SURFACES} surfaces"
+            ));
+        }
+
+        let mut surface_ids = HashSet::new();
+        let mut region_ids = HashSet::new();
+        let mut region_count = 0usize;
+        for surface in &self.surfaces {
+            validate_identifier("surfaceRegistry.surfaces.surfaceId", &surface.surface_id)?;
+            if !surface_ids.insert(surface.surface_id.as_str()) {
+                return Err(format!(
+                    "surfaceRegistry contains duplicate surfaceId {}",
+                    surface.surface_id
+                ));
+            }
+            validate_region(&surface.visual_region, logical_size)?;
+            region_count = region_count.saturating_add(surface.interaction_regions.len());
+            if region_count > MAX_INTERACTION_REGIONS {
+                return Err(format!(
+                    "surfaceRegistry may contain at most {MAX_INTERACTION_REGIONS} interaction regions"
+                ));
+            }
+            for region in &surface.interaction_regions {
+                validate_region(region, logical_size)?;
+                if !region_ids.insert(region.region_id.as_str()) {
+                    return Err(format!(
+                        "surfaceRegistry contains duplicate regionId {}",
+                        region.region_id
+                    ));
+                }
+            }
+        }
+        Ok(())
+    }
+
+    pub fn interaction_regions(&self) -> Vec<InteractionRegion> {
+        self.surfaces
+            .iter()
+            .flat_map(|surface| surface.interaction_regions.iter().cloned())
+            .collect()
+    }
+
+    pub fn visual_regions(&self) -> Vec<InteractionRegion> {
+        self.surfaces
+            .iter()
+            .map(|surface| surface.visual_region.clone())
+            .collect()
+    }
+}
+
 #[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum HostPlacementIntent {
@@ -81,7 +169,10 @@ pub struct HostSurfaceRequest {
     pub user_scale: f64,
     #[serde(default)]
     pub placement_intent: HostPlacementIntent,
+    #[serde(default)]
     pub interaction_region: Option<InteractionRegion>,
+    #[serde(default)]
+    pub surface_registry: Option<SurfaceRegistry>,
 }
 
 impl HostSurfaceRequest {
@@ -105,8 +196,17 @@ impl HostSurfaceRequest {
             return Err("userScale must be finite and between 0.5 and 2.0".to_string());
         }
         validate_placement_intent(&self.placement_intent)?;
+        if self.interaction_region.is_some() && self.surface_registry.is_some() {
+            return Err(
+                "host surface request cannot combine legacy interactionRegion with surfaceRegistry"
+                    .to_string(),
+            );
+        }
         if let Some(region) = self.interaction_region.as_ref() {
             validate_region(region, &self.logical_size)?;
+        }
+        if let Some(registry) = self.surface_registry.as_ref() {
+            registry.validate(self.revision, &self.logical_size)?;
         }
 
         let effective_scale_factor = self.scale_factor * self.user_scale;
@@ -241,6 +341,22 @@ pub struct ValidatedHostSurface {
 }
 
 impl ValidatedHostSurface {
+    pub fn visual_regions(&self) -> Vec<InteractionRegion> {
+        self.request
+            .surface_registry
+            .as_ref()
+            .map(SurfaceRegistry::visual_regions)
+            .unwrap_or_else(|| self.request.interaction_region.iter().cloned().collect())
+    }
+
+    pub fn interaction_regions(&self) -> Vec<InteractionRegion> {
+        self.request
+            .surface_registry
+            .as_ref()
+            .map(SurfaceRegistry::interaction_regions)
+            .unwrap_or_else(|| self.request.interaction_region.iter().cloned().collect())
+    }
+
     pub fn resolve_display_scale(
         mut self,
         target_display_id: Option<String>,
@@ -302,6 +418,7 @@ pub struct HostSurfaceSnapshot {
     pub effective_scale_factor: f64,
     pub placement_intent: HostPlacementIntent,
     pub interaction_region: Option<InteractionRegion>,
+    pub surface_registry: Option<SurfaceRegistry>,
 }
 
 impl Default for HostSurfaceSnapshot {
@@ -323,7 +440,31 @@ impl Default for HostSurfaceSnapshot {
             effective_scale_factor: 1.0,
             placement_intent: HostPlacementIntent::default(),
             interaction_region: None,
+            surface_registry: None,
         }
+    }
+}
+
+impl HostSurfaceSnapshot {
+    pub fn visual_regions(&self) -> Vec<InteractionRegion> {
+        self.surface_registry
+            .as_ref()
+            .map(SurfaceRegistry::visual_regions)
+            .unwrap_or_else(|| self.interaction_region.iter().cloned().collect())
+    }
+
+    pub fn interaction_regions(&self) -> Vec<InteractionRegion> {
+        self.surface_registry
+            .as_ref()
+            .map(SurfaceRegistry::interaction_regions)
+            .unwrap_or_else(|| self.interaction_region.iter().cloned().collect())
+    }
+
+    pub fn registered_surface_count(&self) -> usize {
+        self.surface_registry
+            .as_ref()
+            .map(|registry| registry.surfaces.len())
+            .unwrap_or_else(|| usize::from(self.interaction_region.is_some()))
     }
 }
 
@@ -346,6 +487,7 @@ impl From<ValidatedHostSurface> for HostSurfaceSnapshot {
             effective_scale_factor: validated.effective_scale_factor,
             placement_intent: validated.request.placement_intent,
             interaction_region: validated.request.interaction_region,
+            surface_registry: validated.request.surface_registry,
         }
     }
 }
@@ -465,9 +607,54 @@ mod tests {
                 },
                 corner_radius: 18.0,
             }),
+            surface_registry: None,
         }
     }
 
+    fn valid_registry_request() -> HostSurfaceRequest {
+        let mut request = valid_request();
+        request.interaction_region = None;
+        request.surface_registry = Some(SurfaceRegistry {
+            registry_version: SURFACE_REGISTRY_VERSION,
+            revision: request.revision,
+            surfaces: vec![SurfaceRegistration {
+                surface_id: "poster-primary".to_string(),
+                visual_region: InteractionRegion {
+                    region_id: "poster-primary-visual".to_string(),
+                    rect: LogicalRect {
+                        x: 10.0,
+                        y: 10.0,
+                        width: 480.0,
+                        height: 380.0,
+                    },
+                    corner_radius: 18.0,
+                },
+                interaction_regions: vec![
+                    InteractionRegion {
+                        region_id: "poster-primary-body".to_string(),
+                        rect: LogicalRect {
+                            x: 10.0,
+                            y: 10.0,
+                            width: 480.0,
+                            height: 60.0,
+                        },
+                        corner_radius: 12.0,
+                    },
+                    InteractionRegion {
+                        region_id: "poster-primary-tile".to_string(),
+                        rect: LogicalRect {
+                            x: 180.0,
+                            y: 40.0,
+                            width: 300.0,
+                            height: 260.0,
+                        },
+                        corner_radius: 12.0,
+                    },
+                ],
+            }],
+        });
+        request
+    }
     #[test]
     fn request_serializes_with_versioned_camel_case_contract() {
         let value = serde_json::to_value(valid_request()).unwrap();
@@ -477,6 +664,79 @@ mod tests {
         assert_eq!(value["interactionRegion"]["regionId"], "poster-primary");
     }
 
+    #[test]
+    fn surface_registry_serializes_and_flattens_overlapping_regions() {
+        let request = valid_registry_request();
+        let value = serde_json::to_value(&request).unwrap();
+        assert_eq!(
+            value["surfaceRegistry"]["registryVersion"],
+            SURFACE_REGISTRY_VERSION
+        );
+        assert_eq!(
+            value["surfaceRegistry"]["surfaces"]
+                .as_array()
+                .unwrap()
+                .len(),
+            1
+        );
+
+        let validated = request.validate().unwrap();
+        assert_eq!(validated.visual_regions().len(), 1);
+        assert_eq!(validated.interaction_regions().len(), 2);
+        let snapshot = HostSurfaceSnapshot::from(validated);
+        assert_eq!(snapshot.registered_surface_count(), 1);
+        assert_eq!(snapshot.visual_regions().len(), 1);
+        assert_eq!(snapshot.interaction_regions().len(), 2);
+        assert!(snapshot.interaction_region.is_none());
+    }
+
+    #[test]
+    fn surface_registry_accepts_zero_regions_and_rejects_ambiguous_or_duplicate_entries() {
+        let mut empty = valid_registry_request();
+        empty.surface_registry.as_mut().unwrap().surfaces.clear();
+        assert!(empty.validate().unwrap().interaction_regions().is_empty());
+
+        let mut mismatched_revision = valid_registry_request();
+        mismatched_revision
+            .surface_registry
+            .as_mut()
+            .unwrap()
+            .revision += 1;
+        assert!(mismatched_revision
+            .validate()
+            .unwrap_err()
+            .contains("must match"));
+
+        let mut duplicate_surface = valid_registry_request();
+        let first_surface = duplicate_surface
+            .surface_registry
+            .as_ref()
+            .unwrap()
+            .surfaces[0]
+            .clone();
+        duplicate_surface
+            .surface_registry
+            .as_mut()
+            .unwrap()
+            .surfaces
+            .push(first_surface);
+        assert!(duplicate_surface
+            .validate()
+            .unwrap_err()
+            .contains("duplicate surfaceId"));
+
+        let mut duplicate_region = valid_registry_request();
+        duplicate_region.surface_registry.as_mut().unwrap().surfaces[0].interaction_regions[1]
+            .region_id = "poster-primary-body".to_string();
+        assert!(duplicate_region
+            .validate()
+            .unwrap_err()
+            .contains("duplicate regionId"));
+
+        let mut ambiguous = valid_registry_request();
+        ambiguous.interaction_region = valid_request().interaction_region;
+        assert!(ambiguous.validate().unwrap_err().contains("cannot combine"));
+    }
     #[test]
     fn request_validation_rejects_unknown_versions_and_invalid_regions() {
         let mut request = valid_request();

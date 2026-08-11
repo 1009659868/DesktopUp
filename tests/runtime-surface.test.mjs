@@ -1,15 +1,17 @@
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
+import { buildPosterMarkup } from "../app/src/poster-core.js";
 import {
-  STORAGE_KEY,
-  buildPosterMarkup,
-  readPosterSnapshot,
-  writePosterSnapshot
-} from "../app/src/poster-core.js";
+  LEGACY_POSTER_STORAGE_KEY,
+  readLegacyPosterSnapshot,
+  writeLegacyPosterSnapshot
+} from "../app/src/poster-legacy-bridge.js";
 
 const tauriConfig = JSON.parse(readFileSync("src-tauri/tauri.conf.json", "utf8"));
+const controlCenterRuntime = readFileSync("app/src/main.js", "utf8");
 const nativeRuntime = readFileSync("src-tauri/src/lib.rs", "utf8");
+const desktopHostRuntime = readFileSync("src-tauri/src/desktop_host.rs", "utf8");
 const posterSurfaceRuntime = readFileSync("app/src/poster-surface.js", "utf8");
 const releaseExe = "src-tauri/target/release/desktop-up.exe";
 
@@ -26,13 +28,22 @@ function memoryStorage() {
   };
 }
 
-test("cold start surface contract is configured in Tauri", () => {
+test("cold start creates only the poster WebView and defers the control center", () => {
   const main = windowConfig("main");
   const poster = windowConfig("poster");
 
-  assert.ok(main, "main control-center window must be configured");
+  assert.equal(main, undefined, "control center must not allocate a cold-start WebView");
   assert.ok(poster, "poster surface window must be configured");
-  assert.equal(main.visible, false, "control center must stay hidden on cold start");
+  assert.match(nativeRuntime, /WebviewWindowBuilder::new\(/);
+  assert.match(nativeRuntime, /CONTROL_CENTER_WINDOW_LABEL/);
+  assert.match(
+    nativeRuntime,
+    /std::thread::spawn(move || run_main_window_action(app, action))/
+  );
+  assert.match(nativeRuntime, /struct MainWindowCoordinator/);
+  assert.match(nativeRuntime, /pending_controls: Mutex<Vec<String>>/);
+  assert.match(nativeRuntime, /fn mark_main_window_ready/);
+  assert.match(nativeRuntime, /PageLoadEvent::Finished/);
   assert.equal(
     poster.visible,
     false,
@@ -68,7 +79,7 @@ test("cold start reveals the poster only after native geometry and CSS presentat
   assert.ok(readinessFinalize, "cold-start native finalization path must exist");
   assert.ok(
     readinessFinalize.indexOf("configure_poster_host(&app, true)?")
-      < readinessFinalize.indexOf("desktop_host::apply_interaction_region"),
+      < readinessFinalize.indexOf("desktop_host::apply_surface_regions"),
     "the final window region must be applied after SWP_FRAMECHANGED host configuration"
   );
   assert.match(posterSurfaceRuntime, /applyHostPresentation\(result\?\.hostSurface\)/);
@@ -81,6 +92,26 @@ test("native style changes cannot restore a Windows caption after cold start", (
   assert.match(desktopHost, /strip_non_client_decoration_styles\(style\.styleNew\)/);
 });
 
+test("collapse and expand preserve the current poster top-left after initial sync", () => {
+  const placementStart = nativeRuntime.indexOf("fn apply_host_placement_intent");
+  const placementEnd = nativeRuntime.indexOf("fn update_host_surface_diagnostics");
+  const placementPath = nativeRuntime.slice(placementStart, placementEnd);
+  assert.match(placementPath, /HostPlacementIntent::Preserve/);
+  assert.match(placementPath, /if is_initial_surface_sync/);
+  assert.match(placementPath, /restore_poster_placement/);
+  assert.match(placementPath, /set_position\(current_position\)/);
+
+  const syncStart = nativeRuntime.indexOf("fn apply_host_surface_request");
+  const syncEnd = nativeRuntime.indexOf("#[tauri::command]", syncStart);
+  const syncPath = nativeRuntime.slice(syncStart, syncEnd);
+  const captureIndex = syncPath.indexOf("let current_position = window.outer_position()");
+  const resizeIndex = syncPath.indexOf(".set_size(");
+  const placementIndex = syncPath.indexOf("apply_host_placement_intent(");
+  assert.ok(captureIndex >= 0, "surface resize must capture the current top-left");
+  assert.ok(captureIndex < resizeIndex, "top-left must be captured before changing height");
+  assert.ok(resizeIndex < placementIndex, "the captured top-left must be restored after resize");
+});
+
 test("runtime configuration contains exactly one global transparent desktop host", () => {
   const hostWindows = tauriConfig.app.windows.filter((window) =>
     window.label === "poster" || window.url === "poster.html"
@@ -91,15 +122,247 @@ test("runtime configuration contains exactly one global transparent desktop host
   assert.equal(hostWindows[0].skipTaskbar, true);
 });
 
-test("native host size and interaction region share the resolved display scale", () => {
-  const interactionApply = nativeRuntime.match(
-    /desktop_host::apply_interaction_region\([\s\S]*?\)\?;/
+test("native host size and both region maps share the resolved display scale", () => {
+  const regionApply = nativeRuntime.match(
+    /desktop_host::apply_surface_regions\([\s\S]*?validated\.effective_scale_factor[\s\S]*?\)\?;/
   )?.[0];
-  assert.ok(interactionApply, "native interaction application path must exist");
-  assert.match(interactionApply, /validated\.effective_scale_factor/);
-  assert.doesNotMatch(interactionApply, /validated\.request\.scale_factor/);
+  assert.ok(regionApply, "native visual and input region application path must exist");
+  assert.match(regionApply, /&visual_regions/);
+  assert.match(regionApply, /&interaction_regions/);
+  assert.doesNotMatch(regionApply, /validated\.request\.scale_factor/);
+});
+test("native host preserves the visual silhouette while blank poster areas pass through", () => {
+  const desktopHost = readFileSync("src-tauri/src/desktop_host.rs", "utf8");
+  assert.match(desktopHost, /for region in visual_regions/);
+  assert.match(desktopHost, /SetWindowRgn\(hwnd, Some\(combined\), true\)/);
+  assert.match(desktopHost, /update_input_hit_regions\(input_regions, device_scale_factor\)/);
+  assert.match(desktopHost, /SetWindowsHookExW\(WH_MOUSE_LL/);
+  assert.match(desktopHost, /WS_EX_TRANSPARENT/);
+  assert.match(posterSurfaceRuntime, /collectSinglePosterInteractionRegions/);
+  assert.match(posterSurfaceRuntime, /querySelectorAll\([^\n]*data-action=[^\n]*launch/);
+  assert.match(posterSurfaceRuntime, /addEventListener\("contextmenu"/);
+  assert.match(posterSurfaceRuntime, /event\.preventDefault\(\)/);
 });
 
+test("desktop recovery funnels native and manual triggers through one coordinator", () => {
+  const desktopHost = readFileSync("src-tauri/src/desktop_host.rs", "utf8");
+  assert.match(desktopHost, /recovery_count: u64/);
+  assert.match(desktopHost, /last_recovery_trigger: Option<String>/);
+  assert.match(desktopHost, /HOST_RECOVERY_PENDING/);
+  assert.match(desktopHost, /merge_host_recovery_request\(&mut pending, generation, trigger\)/);
+  assert.doesNotMatch(desktopHost, /restore_after_shell_or_display_event/);
+
+  const workerPath = desktopHost.match(
+    /fn run_shell_recovery_worker[\s\S]*?unsafe extern "system" fn shell_foreground_event/
+  )?.[0];
+  assert.ok(workerPath, "the coalescing native recovery worker must exist");
+  assert.match(workerPath, /HOST_RECOVERY_GENERATION\.load\(Ordering::Acquire\) == generation/);
+  assert.match(workerPath, /handler\(request\.clone\(\)\)/);
+
+  const shellEventPath = desktopHost.match(
+    /unsafe extern "system" fn shell_foreground_event[\s\S]*?fn run_shell_foreground_hook/
+  )?.[0];
+  assert.ok(shellEventPath, "the native Shell event callback must exist");
+  assert.match(shellEventPath, /guard_tool_window_during_shell_transition\(\)/);
+  assert.ok(
+    shellEventPath.indexOf("guard_tool_window_during_shell_transition()")
+      < shellEventPath.indexOf("queue_host_recovery(trigger)"),
+    "the ToolWindow transition guard must run before delayed recovery is queued"
+  );
+  assert.match(
+    shellEventPath,
+    /is_shell_foreground && !is_shell_window[\s\S]*?release_tool_window_shell_z_order_guard\(\)/
+  );
+
+  const shellGuardPath = desktopHost.match(
+    /fn guard_tool_window_during_shell_transition[\s\S]*?pub fn repair_shell_host/
+  )?.[0];
+  assert.ok(shellGuardPath, "the bounded Shell Z-order guard must exist");
+  assert.match(shellGuardPath, /HWND_TOPMOST/);
+  assert.match(shellGuardPath, /HWND_NOTOPMOST/);
+  assert.match(shellGuardPath, /SWP_NOACTIVATE/);
+  assert.doesNotMatch(shellGuardPath, /SWP_FRAMECHANGED/);
+  assert.match(workerPath, /SHELL_Z_ORDER_GUARD_MS/);
+  assert.match(workerPath, /release_tool_window_shell_z_order_guard\(\)/);
+  assert.ok(
+    workerPath.indexOf("release_tool_window_shell_z_order_guard()")
+
+      < workerPath.indexOf("handler(request.clone())"),
+    "the temporary topmost guard must be released before coordinated recovery"
+  );
+  assert.match(
+    desktopHost,
+    /pub fn set_poster_visibility_intent[\s\S]*?if !visible[\s\S]*?release_tool_window_shell_z_order_guard\(\)/
+  );
+
+  const coordinatorPath = nativeRuntime.match(
+    /fn recover_desktop_host[\s\S]*?\n}\r?\n\r?\n#\[tauri::command\]/
+  )?.[0];
+  assert.ok(coordinatorPath, "the single application recovery coordinator must exist");
+  assert.match(coordinatorPath, /configure_poster_host\(app, true\)\?/);
+  assert.match(coordinatorPath, /resync_host_surface_for_display_change\(app\)\?/);
+  assert.match(coordinatorPath, /last_recovery_trigger = Some\(trigger_summary\)/);
+  assert.match(coordinatorPath, /request\.is_shell_only\(\)/);
+  assert.match(coordinatorPath, /desktop_host::repair_shell_host/);
+  assert.match(coordinatorPath, /last_recovery_action = Some\(recovery_action\.to_string\(\)\)/);
+  assert.ok(
+    coordinatorPath.indexOf("desktop_host::repair_shell_host")
+      < coordinatorPath.indexOf("configure_poster_host(app, true)?"),
+    "shell repair must return before full host reconfiguration"
+  );
+
+  const shellRepairPath = desktopHost.match(
+    /pub fn repair_shell_host[\s\S]*?fn take_pending_host_recovery_request/
+  )?.[0];
+  assert.ok(shellRepairPath, "the lightweight shell repair path must exist");
+  assert.match(shellRepairPath, /anchor_poster_surface_windows_to_desktop/);
+  assert.doesNotMatch(shellRepairPath, /SWP_FRAMECHANGED|restore_poster_placement|SetWindowRgn/);
+  const fallbackAnchorPath = desktopHost.match(
+    /fn fallback_z_order_anchor[\s\S]*?fn anchor_tool_window_to_desktop/
+  )?.[0];
+  assert.ok(fallbackAnchorPath, "the ToolWindow fallback anchor path must exist");
+  assert.match(fallbackAnchorPath, /shell_windows\(\)/);
+  assert.match(fallbackAnchorPath, /window\.is_progman/);
+  assert.doesNotMatch(desktopHost, /FindWindowW/);
+
+  const scalePath = nativeRuntime.match(
+    /WindowEvent::ScaleFactorChanged[\s\S]*?WindowEvent::Destroyed/
+  )?.[0];
+  assert.ok(scalePath, "the Tauri scale-factor recovery route must exist");
+  assert.match(scalePath, /request_host_recovery/);
+  assert.doesNotMatch(scalePath, /restore_poster_window_placement/);
+
+  const reconnectPath = nativeRuntime.match(
+    /fn reconnect_desktop_host[\s\S]*?\n}/
+  )?.[0];
+  assert.ok(reconnectPath, "the manual reconnect route must exist");
+  assert.match(reconnectPath, /recover_desktop_host/);
+  assert.match(reconnectPath, /HostRecoveryTrigger::ManualReconnect/);
+});
+
+test("runtime lifecycle uses one lock-safe event and state-first visibility path", () => {
+  const lifecycleRuntime = readFileSync("src-tauri/src/runtime_lifecycle.rs", "utf8");
+  assert.match(nativeRuntime, /mod runtime_lifecycle;/);
+  assert.match(nativeRuntime, /runtime_lifecycle: RuntimeLifecycleSnapshot/);
+  assert.match(nativeRuntime, /app\.emit\("runtime-state-changed", snapshot\.clone\(\)\)/);
+  assert.match(lifecycleRuntime, /event_count = self\.event_count\.saturating_add\(1\)/);
+  assert.match(lifecycleRuntime, /self\.generation = self\.generation\.saturating_add\(1\)/);
+
+  const mutationPath = nativeRuntime.match(
+    /fn mutate_runtime_state[\s\S]*?\n}\r?\n\r?\nfn publish_runtime_snapshot/
+  )?.[0];
+  assert.ok(mutationPath, "runtime mutation must have one lock-only helper");
+  assert.doesNotMatch(mutationPath, /publish_diagnostics|schedule_runtime_outputs|run_on_main_thread/);
+
+  const hostSurfacePath = nativeRuntime.match(
+    /fn apply_host_surface_request[\s\S]*?fn sync_host_surface/
+  )?.[0];
+  assert.ok(
+    hostSurfacePath.indexOf("inspect_host_topology(app)")
+      < hostSurfacePath.lastIndexOf("runtime_state.0.lock()"),
+    "host topology inspection must precede the RuntimeState write lock"
+  );
+  const configurePath = nativeRuntime.match(
+    /fn configure_poster_host[\s\S]*?fn recover_desktop_host/
+  )?.[0];
+  assert.ok(
+    configurePath.indexOf("resolve_display_topology(&window)")
+      < configurePath.indexOf("state.0.lock()")
+  );
+  assert.ok(
+    configurePath.indexOf("inspect_host_topology(app)")
+      < configurePath.indexOf("state.0.lock()")
+  );
+  assert.match(
+    nativeRuntime,
+    /let host_topology = inspect_host_topology\(app\.handle\(\)\);[\s\S]*?snapshot\.host_topology = host_topology/
+  );
+
+  const visibilityPath = nativeRuntime.match(
+    /fn set_poster_visibility[\s\S]*?\n}\r?\n\r?\nfn reset_poster_surface_initialization/
+  )?.[0];
+  assert.ok(visibilityPath, "poster visibility transition must exist");
+  assert.ok(
+    visibilityPath.indexOf("mutate_runtime_state")
+      < visibilityPath.indexOf("apply_native_poster_visibility"),
+    "poster visibility state must commit before native show or hide"
+  );
+  const nativeVisibilityPath = nativeRuntime.match(
+    /fn apply_native_poster_visibility[\s\S]*?\n}\r?\n\r?\nfn set_poster_visibility/
+  )?.[0];
+  assert.ok(nativeVisibilityPath, "native poster visibility path must exist");
+  assert.match(nativeVisibilityPath, /desktop_host::show_poster_at_desktop_layer\(&window\)/);
+  assert.doesNotMatch(nativeVisibilityPath, /window\.show\(\)/);
+  const nativeShowPath = desktopHostRuntime.match(
+    /pub fn show_poster_at_desktop_layer[\s\S]*?pub fn repair_shell_host/
+  )?.[0];
+  assert.ok(nativeShowPath, "the atomic native poster show path must exist");
+  assert.match(nativeShowPath, /ShowWindow\(hwnd, SW_SHOWNOACTIVATE\)/);
+  assert.match(nativeShowPath, /anchor_poster_surface_windows_to_desktop\(\)/);
+  assert.match(nativeShowPath, /settle_poster_desktop_layer_after_show\(\)/);
+  assert.ok(nativeShowPath.indexOf("ShowWindow") < nativeShowPath.indexOf("anchor_poster_surface_windows_to_desktop"));
+  const layerSettlePath = desktopHostRuntime.match(
+    /fn settle_poster_desktop_layer_after_show[\s\S]*?pub fn show_poster_at_desktop_layer/
+  )?.[0];
+  assert.ok(layerSettlePath, "the bounded post-show desktop-layer settle path must exist");
+  assert.match(desktopHostRuntime, /POST_SHOW_DESKTOP_LAYER_SETTLE_DELAYS_MS: \[u64; 3\] = \[16, 48, 96\]/);
+  assert.match(layerSettlePath, /for delay_ms in POST_SHOW_DESKTOP_LAYER_SETTLE_DELAYS_MS/);
+  assert.match(layerSettlePath, /anchor_poster_surface_windows_to_desktop\(\)/);
+  assert.doesNotMatch(layerSettlePath, /POSTER_VISIBLE_INTENT\.load|TOOL_WINDOW_FALLBACK_ACTIVE\.load/);
+  const posterWindowsPath = desktopHostRuntime.match(
+    /unsafe extern "system" fn collect_poster_surface_window[\s\S]*?fn fallback_z_order_anchor/
+  )?.[0];
+  assert.ok(posterWindowsPath, "the native poster surface window set must have one owner");
+  assert.match(posterWindowsPath, /GetCurrentProcessId\(\)/);
+  assert.match(posterWindowsPath, /IsWindowVisible\(hwnd\)/);
+  assert.match(posterWindowsPath, /WS_EX_TOOLWINDOW/);
+  assert.match(posterWindowsPath, /WS_EX_NOACTIVATE/);
+  assert.match(posterWindowsPath, /tray_icon_app/);
+  assert.match(posterWindowsPath, /Tao Thread Event Target/);
+  assert.match(nativeShowPath, /TOOL_WINDOW_FALLBACK_ACTIVE\.store\(true, Ordering::Release\)/);
+  assert.doesNotMatch(layerSettlePath, /while\s*\(/);
+
+  const quitPath = nativeRuntime.match(
+    /"quit" => \{[\s\S]*?app\.exit\(0\);/
+  )?.[0];
+  assert.ok(quitPath, "tray exit route must exist");
+  assert.ok(
+    quitPath.indexOf("begin_runtime_exit")
+      < quitPath.indexOf("app.exit(0)"),
+    "exit lifecycle must publish before the process exits"
+  );
+  assert.match(nativeRuntime, /tauri::RunEvent::ExitRequested/);
+  assert.match(posterSurfaceRuntime, /listen\("runtime-state-changed"/);
+  assert.doesNotMatch(posterSurfaceRuntime, /listen\("runtime-pause-state"/);
+});
+
+test("static paused and stopped surfaces do not keep a render polling loop", () => {
+  assert.doesNotMatch(posterSurfaceRuntime, /setInterval\(/);
+  assert.doesNotMatch(controlCenterRuntime, /setInterval\(/);
+  assert.match(posterSurfaceRuntime, /function shouldSampleFps\(\)[\s\S]*?runtimeMode/);
+  assert.match(
+    posterSurfaceRuntime,
+    /function sampleFrame[\s\S]*?if \(!shouldSampleFps\(\)\)[\s\S]*?stopFpsSampling\(\)/
+  );
+  assert.match(posterSurfaceRuntime, /cancelAnimationFrame\(fpsRafId\)/);
+  assert.match(posterSurfaceRuntime, /ACTIVE_ANIMATION_FRAME_INTERVAL_MS = 1000 \/ 30/);
+  assert.match(posterSurfaceRuntime, /clearTimeout\(fpsTimerId\)/);
+  assert.match(controlCenterRuntime, /PERFORMANCE_SAMPLE_COUNT = 6/);
+  assert.match(controlCenterRuntime, /PERFORMANCE_MAIN_PRIVATE_WORKING_SET_BUDGET_BYTES = 50 \* 1024 \* 1024/);
+  assert.match(controlCenterRuntime, /PERFORMANCE_TREE_PRIVATE_WORKING_SET_BUDGET_BYTES = 256 \* 1024 \* 1024/);
+});
+
+test("release performance gate only starts from an explicit diagnostic argument", () => {
+  assert.match(nativeRuntime, /--cdrp-performance-gate/);
+  assert.match(nativeRuntime, /fn performance_probe_requested\(\)/);
+  assert.match(nativeRuntime, /fn start_release_performance_probe/);
+  assert.match(nativeRuntime, /performance-baseline-v4\.json/);
+  assert.match(nativeRuntime, /PERFORMANCE_STABILIZATION_MIN_MS/);
+  assert.match(nativeRuntime, /private_working_set_bytes/);
+  assert.match(nativeRuntime, /process_tree_private_working_set_bytes/);
+  assert.match(nativeRuntime, /process_tree_measurement_complete/);
+  assert.match(nativeRuntime, /app\.exit\(if report\.passed \{ 0 \} else \{ 2 \}\)/);
+});
 test("release executable uses the Windows GUI subsystem", { skip: !existsSync(releaseExe) }, () => {
   const pe = readFileSync(releaseExe);
   const peOffset = pe.readUInt32LE(0x3c);
@@ -114,16 +377,16 @@ test("release executable uses the Windows GUI subsystem", { skip: !existsSync(re
 
 test("poster snapshot storage is a single shared contract", () => {
   const storage = memoryStorage();
-  assert.equal(readPosterSnapshot(storage), null, "empty storage must produce no snapshot");
+  assert.equal(readLegacyPosterSnapshot(storage), null, "empty storage must produce no snapshot");
 
-  storage.setItem(STORAGE_KEY, "{");
-  assert.equal(readPosterSnapshot(storage), null, "corrupt JSON must not crash the loader");
+  storage.setItem(LEGACY_POSTER_STORAGE_KEY, "{");
+  assert.equal(readLegacyPosterSnapshot(storage), null, "corrupt JSON must not crash the loader");
 
-  writePosterSnapshot(storage, {
+  writeLegacyPosterSnapshot(storage, {
     selectedPosterId: "night-ops",
     posters: [{ id: "night-ops", title: "NIGHT OPS" }]
   });
-  const snapshot = readPosterSnapshot(storage);
+  const snapshot = readLegacyPosterSnapshot(storage);
   assert.equal(snapshot.selectedPosterId, "night-ops");
   assert.equal(snapshot.posters[0].title, "NIGHT OPS");
 });

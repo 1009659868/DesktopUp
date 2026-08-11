@@ -3,11 +3,12 @@ import assert from "node:assert/strict";
 import {
   HOST_CONTRACT_VERSION,
   HOST_GEOMETRY_OWNER,
+  SURFACE_REGISTRY_VERSION,
   createHostSurfaceRequest,
   isCompatibleHostSnapshot
 } from "../app/src/host-contract.js";
 import { buildHostSurfaceSyncArgs } from "../app/src/poster-runtime.js";
-import { createDefaultSnapshot } from "../app/src/poster-core.js";
+import { createLegacyDefaultSnapshot } from "../app/src/poster-legacy-bridge.js";
 
 test("host surface request has a versioned native-owned contract", () => {
   const request = createHostSurfaceRequest({
@@ -70,8 +71,88 @@ test("host surface request rejects invalid versions, scales, and regions", () =>
   }), /userScale/);
 });
 
+test("surface registry supports zero or multiple overlapping regions on one poster", () => {
+  const empty = createHostSurfaceRequest({
+    revision: 9,
+    logicalSize: { width: 300, height: 200 },
+    surfaceRegistry: { registryVersion: 1, revision: 9, surfaces: [] }
+  });
+  assert.equal(empty.surfaceRegistry.registryVersion, SURFACE_REGISTRY_VERSION);
+  assert.deepEqual(empty.surfaceRegistry.surfaces, []);
+
+  const multiple = createHostSurfaceRequest({
+    revision: 10,
+    logicalSize: { width: 300, height: 200 },
+    surfaceRegistry: {
+      registryVersion: SURFACE_REGISTRY_VERSION,
+      revision: 10,
+      surfaces: [{
+        surfaceId: "poster-a",
+        visualRegion: {
+          regionId: "poster-a-visual",
+          rect: { x: 0, y: 0, width: 300, height: 200 },
+          cornerRadius: 16
+        },
+        interactionRegions: [
+          {
+            regionId: "poster-a-header",
+            rect: { x: 0, y: 0, width: 300, height: 64 },
+            cornerRadius: 16
+          },
+          {
+            regionId: "poster-a-tile",
+            rect: { x: 120, y: 40, width: 180, height: 160 },
+            cornerRadius: 12
+          }
+        ]
+      }]
+    }
+  });
+  assert.equal(multiple.surfaceRegistry.surfaces.length, 1);
+  assert.equal(multiple.surfaceRegistry.surfaces[0].visualRegion.rect.width, 300);
+  assert.equal(multiple.surfaceRegistry.surfaces[0].interactionRegions.length, 2);
+});
+
+test("surface registry rejects revision mismatch, duplicate ids, and legacy ambiguity", () => {
+  const base = {
+    revision: 11,
+    logicalSize: { width: 200, height: 200 },
+    surfaceRegistry: {
+      registryVersion: SURFACE_REGISTRY_VERSION,
+      revision: 11,
+      surfaces: [{
+        surfaceId: "poster-a",
+        visualRegion: {
+          regionId: "poster-a-visual",
+          rect: { x: 0, y: 0, width: 200, height: 200 },
+          cornerRadius: 8
+        },
+        interactionRegions: [{
+          regionId: "poster-a-body",
+          rect: { x: 0, y: 0, width: 100, height: 100 },
+          cornerRadius: 8
+        }]
+      }]
+    }
+  };
+  assert.throws(() => createHostSurfaceRequest({
+    ...base,
+    surfaceRegistry: { ...base.surfaceRegistry, revision: 12 }
+  }), /must match/);
+  assert.throws(() => createHostSurfaceRequest({
+    ...base,
+    surfaceRegistry: {
+      ...base.surfaceRegistry,
+      surfaces: [...base.surfaceRegistry.surfaces, base.surfaceRegistry.surfaces[0]]
+    }
+  }), /duplicate surfaceId/);
+  assert.throws(() => createHostSurfaceRequest({
+    ...base,
+    interactionRegion: base.surfaceRegistry.surfaces[0].interactionRegions[0]
+  }), /cannot combine/);
+});
 test("poster adapter submits one canonical host surface request", () => {
-  const poster = createDefaultSnapshot().posters[0];
+  const poster = createLegacyDefaultSnapshot().posters[0];
   const args = buildHostSurfaceSyncArgs(
     poster,
     { x: 10, y: 10, width: poster.width, height: poster.height },
@@ -79,7 +160,19 @@ test("poster adapter submits one canonical host surface request", () => {
       revision: 3,
       surfaceGutter: 10,
       deviceScaleFactor: 1.25,
-      cornerRadius: 18
+      cornerRadius: 18,
+      interactionRegions: [
+        {
+          regionId: "poster-night-ops-header",
+          rect: { x: 10, y: 10, width: poster.width, height: 64 },
+          cornerRadius: 18
+        },
+        {
+          regionId: "poster-night-ops-tile",
+          rect: { x: 42, y: 92, width: 146, height: 100 },
+          cornerRadius: 6
+        }
+      ]
     }
   );
 
@@ -88,13 +181,19 @@ test("poster adapter submits one canonical host surface request", () => {
     width: poster.width + 20,
     height: poster.height + 20
   });
-  assert.equal(args.request.interactionRegion.rect.width, poster.width);
+  const registry = args.request.surfaceRegistry;
+  assert.equal(args.request.interactionRegion, null);
+  assert.equal(registry.registryVersion, SURFACE_REGISTRY_VERSION);
+  assert.equal(registry.revision, args.request.revision);
+  assert.equal(registry.surfaces[0].visualRegion.rect.width, poster.width);
+  assert.equal(registry.surfaces[0].interactionRegions.length, 2);
+  assert.equal(registry.surfaces[0].interactionRegions[0].rect.height, 64);
   assert.equal(args.request.userScale, 1);
 });
 
 test("collapsed poster uses the target height instead of a stale expanded measurement", () => {
   const poster = {
-    ...createDefaultSnapshot().posters[0],
+    ...createLegacyDefaultSnapshot().posters[0],
     collapsed: true
   };
   const args = buildHostSurfaceSyncArgs(
@@ -113,7 +212,7 @@ test("collapsed poster uses the target height instead of a stale expanded measur
     width: poster.width + 20,
     height: 136
   });
-  assert.deepEqual(args.request.interactionRegion.rect, {
+  assert.deepEqual(args.request.surfaceRegistry.surfaces[0].interactionRegions[0].rect, {
     x: 10,
     y: 10,
     width: poster.width,
@@ -122,7 +221,7 @@ test("collapsed poster uses the target height instead of a stale expanded measur
 });
 
 test("expanded poster restores its full target height after collapse", () => {
-  const poster = createDefaultSnapshot().posters[0];
+  const poster = createLegacyDefaultSnapshot().posters[0];
   const args = buildHostSurfaceSyncArgs(
     poster,
     { x: 10, y: 10, width: poster.width, height: poster.height },
@@ -136,7 +235,10 @@ test("expanded poster restores its full target height after collapse", () => {
   );
 
   assert.equal(args.request.logicalSize.height, poster.height + 20);
-  assert.equal(args.request.interactionRegion.rect.height, poster.height);
+  assert.equal(
+    args.request.surfaceRegistry.surfaces[0].interactionRegions[0].rect.height,
+    poster.height
+  );
 });
 
 test("host snapshot compatibility requires the native geometry owner", () => {

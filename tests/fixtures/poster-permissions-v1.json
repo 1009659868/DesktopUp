@@ -1,0 +1,97 @@
+[
+  {
+    "name": "expanded using unlocked active static",
+    "valid": true,
+    "input": { "presentationMode": "expanded", "interactionMode": "using", "runtimeMode": "activeStatic", "isLocked": false },
+    "effectiveInteractionMode": "using",
+    "allowedActions": ["dragFromTitlebar", "togglePresentation", "toggleLock", "singleActivateItem", "explicitActivateItem", "openPosterMenu", "openItemMenu", "autoCollapse"]
+  },
+  {
+    "name": "collapsed using unlocked active static",
+    "valid": true,
+    "input": { "presentationMode": "collapsed", "interactionMode": "using", "runtimeMode": "activeStatic", "isLocked": false },
+    "effectiveInteractionMode": "using",
+    "allowedActions": ["dragFromTitlebar", "togglePresentation", "toggleLock", "expandFromTitleText", "openPosterMenu", "autoCollapse"]
+  },
+  {
+    "name": "expanded using locked keeps daily actions",
+    "valid": true,
+    "input": { "presentationMode": "expanded", "interactionMode": "using", "runtimeMode": "activeStatic", "isLocked": true },
+    "effectiveInteractionMode": "using",
+    "allowedActions": ["togglePresentation", "toggleLock", "singleActivateItem", "explicitActivateItem", "openPosterMenu", "openItemMenu", "autoCollapse"]
+  },
+  {
+    "name": "collapsed using locked can expand and unlock",
+    "valid": true,
+    "input": { "presentationMode": "collapsed", "interactionMode": "using", "runtimeMode": "activeStatic", "isLocked": true },
+    "effectiveInteractionMode": "using",
+    "allowedActions": ["togglePresentation", "toggleLock", "expandFromTitleText", "openPosterMenu", "autoCollapse"]
+  },
+  {
+    "name": "expanded editing unlocked enables mutation",
+    "valid": true,
+    "input": { "presentationMode": "expanded", "interactionMode": "editing", "runtimeMode": "activeStatic", "isLocked": false },
+    "effectiveInteractionMode": "editing",
+    "allowedActions": ["dragFromTitlebar", "dragFromContent", "togglePresentation", "toggleLock", "explicitActivateItem", "selectItem", "reorderItem", "resizePoster", "openPosterMenu", "openItemMenu"]
+  },
+  {
+    "name": "collapsed editing unlocked retains titlebar only mutation",
+    "valid": true,
+    "input": { "presentationMode": "collapsed", "interactionMode": "editing", "runtimeMode": "activeStatic", "isLocked": false },
+    "effectiveInteractionMode": "editing",
+    "allowedActions": ["dragFromTitlebar", "togglePresentation", "toggleLock", "expandFromTitleText", "openPosterMenu"]
+  },
+  {
+    "name": "expanded editing locked resolves to using",
+    "valid": true,
+    "input": { "presentationMode": "expanded", "interactionMode": "editing", "runtimeMode": "activeStatic", "isLocked": true },
+    "effectiveInteractionMode": "using",
+    "allowedActions": ["togglePresentation", "toggleLock", "singleActivateItem", "explicitActivateItem", "openPosterMenu", "openItemMenu", "autoCollapse"]
+  },
+  {
+    "name": "collapsed editing locked resolves to using",
+    "valid": true,
+    "input": { "presentationMode": "collapsed", "interactionMode": "editing", "runtimeMode": "activeStatic", "isLocked": true },
+    "effectiveInteractionMode": "using",
+    "allowedActions": ["togglePresentation", "toggleLock", "expandFromTitleText", "openPosterMenu", "autoCollapse"]
+  },
+  {
+    "name": "active animated has the same input permissions",
+    "valid": true,
+    "input": { "presentationMode": "expanded", "interactionMode": "using", "runtimeMode": "activeAnimated", "isLocked": false },
+    "effectiveInteractionMode": "using",
+    "allowedActions": ["dragFromTitlebar", "togglePresentation", "toggleLock", "singleActivateItem", "explicitActivateItem", "openPosterMenu", "openItemMenu", "autoCollapse"]
+  },
+  {
+    "name": "paused denies all input",
+    "valid": true,
+    "input": { "presentationMode": "expanded", "interactionMode": "editing", "runtimeMode": "paused", "isLocked": false },
+    "effectiveInteractionMode": "using",
+    "allowedActions": []
+  },
+  {
+    "name": "stopped denies all input",
+    "valid": true,
+    "input": { "presentationMode": "collapsed", "interactionMode": "using", "runtimeMode": "stopped", "isLocked": false },
+    "effectiveInteractionMode": "using",
+    "allowedActions": []
+  },
+  {
+    "name": "reject unknown presentation",
+    "valid": false,
+    "input": { "presentationMode": "hidden", "interactionMode": "using", "runtimeMode": "activeStatic", "isLocked": false },
+    "errorCode": "invalid_presentation_mode"
+  },
+  {
+    "name": "reject unknown interaction",
+    "valid": false,
+    "input": { "presentationMode": "expanded", "interactionMode": "arranging", "runtimeMode": "activeStatic", "isLocked": false },
+    "errorCode": "invalid_interaction_mode"
+  },
+  {
+    "name": "reject unknown runtime",
+    "valid": false,
+    "input": { "presentationMode": "expanded", "interactionMode": "using", "runtimeMode": "sleeping", "isLocked": false },
+    "errorCode": "invalid_runtime_mode"
+  }
+]

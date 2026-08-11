@@ -1,3 +1,4 @@
+use crate::host_contract::InteractionRegion;
 use serde::Serialize;
 
 #[derive(Clone, Debug, Serialize)]
@@ -10,6 +11,15 @@ pub struct DesktopHostDiagnostics {
     pub fallback_reason: Option<String>,
     pub interaction_region_count: usize,
     pub interaction_region: Option<String>,
+    pub surface_registry_version: u32,
+    pub surface_registry_revision: u64,
+    pub registered_surface_count: usize,
+    pub recovery_count: u64,
+    pub recovery_generation: usize,
+    pub recovery_event_count: usize,
+    pub last_recovery_trigger: Option<String>,
+    pub last_recovery_action: Option<String>,
+    pub last_recovery_error: Option<String>,
 }
 
 impl Default for DesktopHostDiagnostics {
@@ -22,6 +32,15 @@ impl Default for DesktopHostDiagnostics {
             fallback_reason: None,
             interaction_region_count: 0,
             interaction_region: None,
+            surface_registry_version: 0,
+            surface_registry_revision: 0,
+            registered_surface_count: 0,
+            recovery_count: 0,
+            recovery_generation: 0,
+            recovery_event_count: 0,
+            last_recovery_trigger: None,
+            last_recovery_action: None,
+            last_recovery_error: None,
         }
     }
 }
@@ -35,17 +54,140 @@ impl DesktopHostDiagnostics {
         }
     }
 }
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum HostRecoveryTrigger {
+    ShellForeground,
+    ShellLifecycle,
+    DisplayChange,
+    DpiChange,
+    WorkAreaChange,
+    TauriScaleFactorChanged,
+    ManualReconnect,
+}
+
+impl HostRecoveryTrigger {
+    fn bit(self) -> usize {
+        1usize << self as usize
+    }
+
+    fn label(self) -> &'static str {
+        match self {
+            Self::ShellForeground => "shellForeground",
+            Self::ShellLifecycle => "shellLifecycle",
+            Self::DisplayChange => "displayChange",
+            Self::DpiChange => "dpiChange",
+            Self::WorkAreaChange => "workAreaChange",
+            Self::TauriScaleFactorChanged => "tauriScaleFactorChanged",
+            Self::ManualReconnect => "manualReconnect",
+        }
+    }
+}
+
+const HOST_RECOVERY_TRIGGERS: [HostRecoveryTrigger; 7] = [
+    HostRecoveryTrigger::ShellForeground,
+    HostRecoveryTrigger::ShellLifecycle,
+    HostRecoveryTrigger::DisplayChange,
+    HostRecoveryTrigger::DpiChange,
+    HostRecoveryTrigger::WorkAreaChange,
+    HostRecoveryTrigger::TauriScaleFactorChanged,
+    HostRecoveryTrigger::ManualReconnect,
+];
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HostRecoveryRequest {
+    pub generation: usize,
+    pub event_count: usize,
+    reason_mask: usize,
+}
+
+impl HostRecoveryRequest {
+    pub fn single(trigger: HostRecoveryTrigger) -> Self {
+        Self::from_mask(0, 1, trigger.bit())
+    }
+
+    pub fn is_shell_only(&self) -> bool {
+        let shell_mask =
+            HostRecoveryTrigger::ShellForeground.bit() | HostRecoveryTrigger::ShellLifecycle.bit();
+        self.reason_mask != 0 && self.reason_mask & !shell_mask == 0
+    }
+
+    fn from_mask(generation: usize, event_count: usize, reason_mask: usize) -> Self {
+        Self {
+            generation,
+            event_count: event_count.max(1),
+            reason_mask,
+        }
+    }
+
+    pub fn trigger_summary(&self) -> String {
+        let triggers: Vec<&str> = HOST_RECOVERY_TRIGGERS
+            .iter()
+            .copied()
+            .filter(|trigger| self.reason_mask & trigger.bit() != 0)
+            .map(HostRecoveryTrigger::label)
+            .collect();
+        if triggers.is_empty() {
+            "unknown".to_string()
+        } else {
+            triggers.join(",")
+        }
+    }
+}
+
+fn merge_host_recovery_request(
+    pending: &mut Option<HostRecoveryRequest>,
+    generation: usize,
+    trigger: HostRecoveryTrigger,
+) {
+    if let Some(request) = pending.as_mut() {
+        request.generation = generation;
+        request.event_count = request.event_count.saturating_add(1);
+        request.reason_mask |= trigger.bit();
+    } else {
+        *pending = Some(HostRecoveryRequest::from_mask(generation, 1, trigger.bit()));
+    }
+}
+
+#[cfg(test)]
+mod recovery_tests {
+    use super::{merge_host_recovery_request, HostRecoveryRequest, HostRecoveryTrigger};
+
+    #[test]
+    fn recovery_requests_merge_reasons_and_count_burst_events() {
+        let mut pending = None;
+        merge_host_recovery_request(&mut pending, 6, HostRecoveryTrigger::ShellForeground);
+        merge_host_recovery_request(&mut pending, 9, HostRecoveryTrigger::DpiChange);
+        let request = pending.expect("merged recovery request");
+        assert_eq!(request.generation, 9);
+        assert_eq!(request.event_count, 2);
+        assert_eq!(request.trigger_summary(), "shellForeground,dpiChange");
+        assert!(!request.is_shell_only());
+        let mut shell_pending = None;
+        merge_host_recovery_request(&mut shell_pending, 10, HostRecoveryTrigger::ShellLifecycle);
+        assert!(shell_pending
+            .expect("shell recovery request")
+            .is_shell_only());
+
+        let manual = HostRecoveryRequest::single(HostRecoveryTrigger::ManualReconnect);
+        assert_eq!(manual.generation, 0);
+        assert_eq!(manual.event_count, 1);
+        assert_eq!(manual.trigger_summary(), "manualReconnect");
+    }
+}
 
 #[cfg(target_os = "windows")]
 mod platform {
-    use super::DesktopHostDiagnostics;
+    use super::{
+        merge_host_recovery_request, DesktopHostDiagnostics, HostRecoveryRequest,
+        HostRecoveryTrigger, InteractionRegion,
+    };
     use crate::placement::PosterPlacement;
     use std::{
         env,
         sync::{
             atomic::{AtomicBool, AtomicIsize, AtomicUsize, Ordering},
             mpsc::{sync_channel, Receiver, SyncSender},
-            Mutex, OnceLock,
+            Arc, Mutex, OnceLock, RwLock,
         },
         thread,
         time::Duration,
@@ -59,33 +201,42 @@ mod platform {
                 DWMWA_NCRENDERING_POLICY, DWMWA_WINDOW_CORNER_PREFERENCE, DWMWCP_DONOTROUND,
             },
             Graphics::Gdi::{
-                CreateRoundRectRgn, DeleteObject, EnumDisplayMonitors, GetMonitorInfoW,
-                MonitorFromPoint, MonitorFromWindow, ScreenToClient, SetWindowRgn, HDC, HGDIOBJ,
-                HMONITOR, MONITORINFO, MONITORINFOEXW, MONITOR_DEFAULTTONEAREST,
+                CombineRgn, CreateRectRgn, CreateRoundRectRgn, DeleteObject, EnumDisplayMonitors,
+                GetMonitorInfoW, MonitorFromPoint, MonitorFromWindow, ScreenToClient, SetWindowRgn,
+                HDC, HGDIOBJ, HMONITOR, HRGN, MONITORINFO, MONITORINFOEXW,
+                MONITOR_DEFAULTTONEAREST, RGN_ERROR, RGN_OR,
             },
+            System::Threading::GetCurrentProcessId,
             UI::{
                 Accessibility::{SetWinEventHook, UnhookWinEvent, HWINEVENTHOOK},
                 Shell::{DefSubclassProc, RemoveWindowSubclass, SetWindowSubclass},
                 WindowsAndMessaging::{
-                    DispatchMessageW, EnumWindows, FindWindowExW, FindWindowW, GetClassNameW,
-                    GetMessageW, GetParent, GetWindow, GetWindowLongPtrW, GetWindowRect, IsWindow,
-                    IsWindowVisible, SetParent, SetWindowLongPtrW, SetWindowPos, ShowWindow,
-                    TranslateMessage, EVENT_OBJECT_CREATE, EVENT_OBJECT_SHOW,
+                    CallNextHookEx, DispatchMessageW, EnumWindows, FindWindowExW, GetClassNameW,
+                    GetMessageW, GetParent, GetWindow, GetWindowLongPtrW, GetWindowRect,
+                    GetWindowThreadProcessId, IsWindowVisible, SendMessageW, SetParent,
+                    SetWindowLongPtrW, SetWindowPos, SetWindowsHookExW, ShowWindow,
+                    TranslateMessage, UnhookWindowsHookEx, EVENT_OBJECT_CREATE, EVENT_OBJECT_SHOW,
                     EVENT_SYSTEM_FOREGROUND, GWL_EXSTYLE, GWL_STYLE, GW_HWNDPREV, HWND_BOTTOM,
-                    HWND_TOP, MA_NOACTIVATE, MSG, OBJID_WINDOW, STYLESTRUCT, SWP_ASYNCWINDOWPOS,
-                    SWP_FRAMECHANGED, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SWP_NOZORDER,
-                    SWP_SHOWWINDOW, SW_SHOWNOACTIVATE, WINEVENT_OUTOFCONTEXT, WM_DESTROY,
-                    WM_DISPLAYCHANGE, WM_DPICHANGED, WM_EXITSIZEMOVE, WM_MOUSEACTIVATE, WM_MOVING,
-                    WM_SETTINGCHANGE, WM_STYLECHANGING, WS_CAPTION, WS_CHILD, WS_EX_APPWINDOW,
-                    WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_MAXIMIZEBOX, WS_MINIMIZEBOX, WS_POPUP,
-                    WS_SYSMENU, WS_THICKFRAME,
+                    HWND_NOTOPMOST, HWND_TOP, HWND_TOPMOST, MA_NOACTIVATE, MSG, MSLLHOOKSTRUCT,
+                    OBJID_WINDOW, STYLESTRUCT, SWP_ASYNCWINDOWPOS, SWP_FRAMECHANGED,
+                    SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SWP_NOZORDER, SW_SHOWNOACTIVATE,
+                    WH_MOUSE_LL, WINEVENT_OUTOFCONTEXT, WM_APP, WM_DESTROY, WM_DISPLAYCHANGE,
+                    WM_DPICHANGED, WM_EXITSIZEMOVE, WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MBUTTONDOWN,
+                    WM_MBUTTONUP, WM_MOUSEACTIVATE, WM_MOUSEHWHEEL, WM_MOUSEMOVE, WM_MOUSEWHEEL,
+                    WM_MOVING, WM_RBUTTONDOWN, WM_RBUTTONUP, WM_SETTINGCHANGE, WM_STYLECHANGING,
+                    WM_XBUTTONDOWN, WM_XBUTTONUP, WS_CAPTION, WS_CHILD, WS_EX_APPWINDOW,
+                    WS_EX_LAYERED, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TRANSPARENT,
+                    WS_MAXIMIZEBOX, WS_MINIMIZEBOX, WS_POPUP, WS_SYSMENU, WS_THICKFRAME,
                 },
             },
         },
     };
 
     const SHELL_RECOVERY_SETTLE_MS: u64 = 140;
+    const SHELL_Z_ORDER_GUARD_MS: u64 = 48;
+    const POST_SHOW_DESKTOP_LAYER_SETTLE_DELAYS_MS: [u64; 3] = [16, 48, 96];
     const POSTER_WINDOW_SUBCLASS_ID: usize = 0x4455_5031;
+    const WM_POSTER_INPUT_PASSTHROUGH: u32 = WM_APP + 0x451;
     const NON_CLIENT_DECORATION_STYLES: u32 =
         WS_CAPTION.0 | WS_THICKFRAME.0 | WS_SYSMENU.0 | WS_MINIMIZEBOX.0 | WS_MAXIMIZEBOX.0;
 
@@ -99,15 +250,22 @@ mod platform {
     // transient Windows 11/DWM non-client strip before the first size/region invalidation.
     static POSTER_VISIBLE_INTENT: AtomicBool = AtomicBool::new(false);
     static TOOL_WINDOW_FALLBACK_ACTIVE: AtomicBool = AtomicBool::new(false);
-    static PLACEMENT_RECOVERY_ACTIVE: AtomicBool = AtomicBool::new(false);
-    static PLACEMENT_RECOVERY_GENERATION: AtomicUsize = AtomicUsize::new(0);
-    static SHELL_RECOVERY_SENDER: OnceLock<SyncSender<()>> = OnceLock::new();
-    static LAST_POSTER_PLACEMENT: OnceLock<Mutex<Option<PosterPlacement>>> = OnceLock::new();
+    static SHELL_Z_ORDER_GUARD_ACTIVE: AtomicBool = AtomicBool::new(false);
+    static HOST_RECOVERY_ACTIVE: AtomicBool = AtomicBool::new(false);
+    static HOST_RECOVERY_GENERATION: AtomicUsize = AtomicUsize::new(0);
+    static HOST_RECOVERY_PENDING: OnceLock<Mutex<Option<HostRecoveryRequest>>> = OnceLock::new();
+    static HOST_RECOVERY_SENDER: OnceLock<SyncSender<()>> = OnceLock::new();
+    type HostRecoveryHandler = Arc<dyn Fn(HostRecoveryRequest) + Send + Sync>;
+    static INPUT_HIT_REGIONS: OnceLock<RwLock<Vec<PhysicalHitRegion>>> = OnceLock::new();
+    static INPUT_PASSTHROUGH_ACTIVE: AtomicBool = AtomicBool::new(false);
+    static INPUT_MOUSE_BUTTON_ACTIVE: AtomicBool = AtomicBool::new(false);
+    static INPUT_MOUSE_HOOK_STARTED: OnceLock<()> = OnceLock::new();
 
     #[derive(Clone, Copy)]
     struct ShellWindow {
         hwnd: HWND,
         is_workerw: bool,
+        is_progman: bool,
         has_shell_view: bool,
         visible: bool,
     }
@@ -117,6 +275,48 @@ mod platform {
         handle: HMONITOR,
         device: String,
         work_area: RECT,
+    }
+
+    #[derive(Clone, Copy, Debug, PartialEq)]
+    struct PhysicalHitRegion {
+        left: i32,
+        top: i32,
+        right: i32,
+        bottom: i32,
+        radius: i32,
+    }
+
+    impl PhysicalHitRegion {
+        fn contains(self, x: i32, y: i32) -> bool {
+            if x < self.left || x > self.right || y < self.top || y > self.bottom {
+                return false;
+            }
+            let radius = self
+                .radius
+                .max(0)
+                .min((self.right - self.left) / 2)
+                .min((self.bottom - self.top) / 2);
+            if radius == 0
+                || (x >= self.left + radius && x <= self.right - radius)
+                || (y >= self.top + radius && y <= self.bottom - radius)
+            {
+                return true;
+            }
+
+            let center_x = if x < self.left + radius {
+                self.left + radius
+            } else {
+                self.right - radius
+            };
+            let center_y = if y < self.top + radius {
+                self.top + radius
+            } else {
+                self.bottom - radius
+            };
+            let dx = i64::from(x - center_x);
+            let dy = i64::from(y - center_y);
+            dx * dx + dy * dy <= i64::from(radius) * i64::from(radius)
+        }
     }
 
     unsafe extern "system" fn collect_shell_window(hwnd: HWND, lparam: LPARAM) -> BOOL {
@@ -131,6 +331,7 @@ mod platform {
             windows.push(ShellWindow {
                 hwnd,
                 is_workerw: class == "WorkerW",
+                is_progman: class == "Progman",
                 has_shell_view,
                 visible: IsWindowVisible(hwnd).as_bool(),
             });
@@ -287,19 +488,6 @@ mod platform {
         }
     }
 
-    fn remember_poster_placement(placement: &PosterPlacement) {
-        let placement_slot = LAST_POSTER_PLACEMENT.get_or_init(|| Mutex::new(None));
-        if let Ok(mut current) = placement_slot.lock() {
-            *current = Some(placement.clone());
-        }
-    }
-
-    fn remembered_poster_placement() -> Option<PosterPlacement> {
-        LAST_POSTER_PLACEMENT
-            .get()
-            .and_then(|placement| placement.lock().ok().and_then(|value| value.clone()))
-    }
-
     fn capture_poster_placement_for_hwnd(hwnd: HWND) -> Result<PosterPlacement, String> {
         let mut window_rect = RECT::default();
         unsafe { GetWindowRect(hwnd, &mut window_rect) }.map_err(|error| error.to_string())?;
@@ -325,7 +513,6 @@ mod platform {
             window_rect.left,
             window_rect.top,
         );
-        remember_poster_placement(&placement);
         Ok(placement)
     }
 
@@ -340,7 +527,6 @@ mod platform {
         hwnd: HWND,
         placement: &PosterPlacement,
     ) -> Result<(), String> {
-        remember_poster_placement(placement);
         let mut window_rect = RECT::default();
         unsafe { GetWindowRect(hwnd, &mut window_rect) }.map_err(|error| error.to_string())?;
         let monitors = available_monitors();
@@ -412,14 +598,6 @@ mod platform {
         restore_poster_placement_for_hwnd(hwnd, placement)
     }
 
-    pub fn restore_poster_window_placement(
-        window: &tauri::Window,
-        placement: &PosterPlacement,
-    ) -> Result<(), String> {
-        let hwnd = window.hwnd().map_err(|error| error.to_string())?;
-        restore_poster_placement_for_hwnd(hwnd, placement)
-    }
-
     fn remember_poster_window(hwnd: HWND) {
         POSTER_HWND.store(hwnd.0 as isize, Ordering::Release);
     }
@@ -429,10 +607,51 @@ mod platform {
         (raw != 0).then(|| HWND(raw as *mut core::ffi::c_void))
     }
 
-    fn fallback_z_order_anchor(hwnd: HWND) -> HWND {
+    unsafe extern "system" fn collect_poster_surface_window(hwnd: HWND, lparam: LPARAM) -> BOOL {
+        let windows = &mut *(lparam.0 as *mut Vec<HWND>);
+        let mut process_id = 0;
+        GetWindowThreadProcessId(hwnd, Some(&mut process_id));
+        if process_id != GetCurrentProcessId()
+            || !IsWindowVisible(hwnd).as_bool()
+            || !is_top_level_tool_window(hwnd)
+        {
+            return BOOL(1);
+        }
+
+        let extended_style = GetWindowLongPtrW(hwnd, GWL_EXSTYLE) as u32;
+        if extended_style & WS_EX_TOOLWINDOW.0 == 0 || extended_style & WS_EX_NOACTIVATE.0 == 0 {
+            return BOOL(1);
+        }
+
+        let class = class_name(hwnd);
+        if matches!(
+            class.as_deref(),
+            Some("tray_icon_app" | "Tao Thread Event Target")
+        ) {
+            return BOOL(1);
+        }
+        windows.push(hwnd);
+        BOOL(1)
+    }
+
+    fn poster_surface_windows() -> Vec<HWND> {
+        let mut windows = Vec::new();
         unsafe {
-            FindWindowW(w!("Progman"), PCWSTR::null())
-                .ok()
+            let _ = EnumWindows(
+                Some(collect_poster_surface_window),
+                LPARAM((&mut windows as *mut Vec<HWND>) as isize),
+            );
+        }
+        windows
+    }
+
+    fn fallback_z_order_anchor(hwnd: HWND) -> HWND {
+        let progman = shell_windows()
+            .into_iter()
+            .find(|window| window.is_progman)
+            .map(|window| window.hwnd);
+        unsafe {
+            progman
                 .and_then(|progman| GetWindow(progman, GW_HWNDPREV).ok())
                 .and_then(|anchor| {
                     if anchor == hwnd {
@@ -461,57 +680,179 @@ mod platform {
         }
     }
 
-    fn restore_after_shell_or_display_event() -> Result<(), String> {
-        if !POSTER_VISIBLE_INTENT.load(Ordering::Acquire) {
-            return Ok(());
+    fn anchor_tool_window_to_desktop_immediately(hwnd: HWND) -> Result<(), String> {
+        let z_order_anchor = fallback_z_order_anchor(hwnd);
+        unsafe {
+            SetWindowPos(
+                hwnd,
+                Some(z_order_anchor),
+                0,
+                0,
+                0,
+                0,
+                SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE,
+            )
+            .map_err(|error| error.to_string())
         }
-
-        let Some(hwnd) = poster_window() else {
-            return Ok(());
-        };
-        if !unsafe { IsWindow(Some(hwnd)).as_bool() } {
-            return Ok(());
-        }
-
-        if TOOL_WINDOW_FALLBACK_ACTIVE.load(Ordering::Acquire) {
-            let mut screen_rect = RECT::default();
-            unsafe { GetWindowRect(hwnd, &mut screen_rect) }.map_err(|error| error.to_string())?;
-            let z_order_anchor = fallback_z_order_anchor(hwnd);
-            unsafe {
-                let _ = ShowWindow(hwnd, SW_SHOWNOACTIVATE);
-                SetWindowPos(
-                    hwnd,
-                    Some(z_order_anchor),
-                    screen_rect.left,
-                    screen_rect.top,
-                    0,
-                    0,
-                    SWP_NOSIZE | SWP_NOACTIVATE | SWP_ASYNCWINDOWPOS | SWP_SHOWWINDOW,
-                )
-                .map_err(|error| error.to_string())?;
-            }
-        }
-        if let Some(placement) = remembered_poster_placement() {
-            restore_poster_placement_for_hwnd(hwnd, &placement)?;
-        }
-        Ok(())
     }
 
-    fn run_shell_recovery_worker(receiver: Receiver<()>) {
-        while receiver.recv().is_ok() {
-            loop {
-                PLACEMENT_RECOVERY_ACTIVE.store(true, Ordering::Release);
-                let generation = PLACEMENT_RECOVERY_GENERATION.load(Ordering::Acquire);
-                thread::sleep(Duration::from_millis(SHELL_RECOVERY_SETTLE_MS));
-                while receiver.try_recv().is_ok() {}
-                if let Err(error) = restore_after_shell_or_display_event() {
-                    eprintln!("failed to restore poster after host recovery event: {error}");
+    fn anchor_poster_surface_windows_to_desktop() -> Result<bool, String> {
+        let windows = poster_surface_windows();
+        if windows.is_empty() {
+            return Ok(false);
+        }
+        for hwnd in windows {
+            anchor_tool_window_to_desktop_immediately(hwnd)?;
+        }
+        Ok(true)
+    }
+
+    fn guard_tool_window_during_shell_transition() {
+        if !POSTER_VISIBLE_INTENT.load(Ordering::Acquire)
+            || !TOOL_WINDOW_FALLBACK_ACTIVE.load(Ordering::Acquire)
+        {
+            return;
+        }
+        if let Some(hwnd) = poster_window() {
+            let guarded = unsafe {
+                SetWindowPos(
+                    hwnd,
+                    Some(HWND_TOPMOST),
+                    0,
+                    0,
+                    0,
+                    0,
+                    SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE,
+                )
+            }
+            .is_ok();
+            if guarded {
+                SHELL_Z_ORDER_GUARD_ACTIVE.store(true, Ordering::Release);
+            }
+        }
+    }
+
+    fn release_tool_window_shell_z_order_guard() {
+        if !SHELL_Z_ORDER_GUARD_ACTIVE.load(Ordering::Acquire) {
+            return;
+        }
+        let Some(hwnd) = poster_window() else {
+            SHELL_Z_ORDER_GUARD_ACTIVE.store(false, Ordering::Release);
+            return;
+        };
+        let released = unsafe {
+            SetWindowPos(
+                hwnd,
+                Some(HWND_NOTOPMOST),
+                0,
+                0,
+                0,
+                0,
+                SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE,
+            )
+        }
+        .is_ok();
+        if released {
+            SHELL_Z_ORDER_GUARD_ACTIVE.store(false, Ordering::Release);
+            let _ = anchor_poster_surface_windows_to_desktop();
+        }
+    }
+
+    fn is_top_level_tool_window(hwnd: HWND) -> bool {
+        match unsafe { GetParent(hwnd) } {
+            Ok(parent) => parent.0.is_null(),
+            Err(_) => true,
+        }
+    }
+
+    fn settle_poster_desktop_layer_after_show() -> Result<(), String> {
+        thread::Builder::new()
+            .name("desktop-up-post-show-layer-settle".to_string())
+            .spawn(|| {
+                for delay_ms in POST_SHOW_DESKTOP_LAYER_SETTLE_DELAYS_MS {
+                    thread::sleep(Duration::from_millis(delay_ms));
+                    match anchor_poster_surface_windows_to_desktop() {
+                        Ok(true) => {}
+                        Ok(false) | Err(_) => return,
+                    }
                 }
-                PLACEMENT_RECOVERY_ACTIVE.store(false, Ordering::Release);
-                if PLACEMENT_RECOVERY_GENERATION.load(Ordering::Acquire) == generation {
+            })
+            .map(|_| ())
+            .map_err(|error| error.to_string())
+    }
+
+    pub fn show_poster_at_desktop_layer(window: &tauri::WebviewWindow) -> Result<(), String> {
+        let hwnd = window.hwnd().map_err(|error| error.to_string())?;
+        remember_poster_window(hwnd);
+        unsafe {
+            let _ = ShowWindow(hwnd, SW_SHOWNOACTIVATE);
+        }
+        if is_top_level_tool_window(hwnd) {
+            TOOL_WINDOW_FALLBACK_ACTIVE.store(true, Ordering::Release);
+            anchor_poster_surface_windows_to_desktop()?;
+            settle_poster_desktop_layer_after_show()
+        } else {
+            Ok(())
+        }
+    }
+
+    pub fn repair_shell_host(window: &tauri::WebviewWindow) -> Result<bool, String> {
+        let hwnd = window.hwnd().map_err(|error| error.to_string())?;
+        remember_poster_window(hwnd);
+        if TOOL_WINDOW_FALLBACK_ACTIVE.load(Ordering::Acquire) || is_top_level_tool_window(hwnd) {
+            TOOL_WINDOW_FALLBACK_ACTIVE.store(true, Ordering::Release);
+            anchor_poster_surface_windows_to_desktop()?;
+            return Ok(true);
+        }
+
+        let parent = unsafe { GetParent(hwnd) }.map_err(|error| error.to_string())?;
+        Ok(!parent.0.is_null() && matches!(class_name(parent).as_deref(), Some("WorkerW")))
+    }
+
+    fn take_pending_host_recovery_request(receiver: &Receiver<()>) -> Option<HostRecoveryRequest> {
+        let pending = HOST_RECOVERY_PENDING.get_or_init(|| Mutex::new(None));
+        let mut pending = pending.lock().ok()?;
+        let request = pending.take();
+        while receiver.try_recv().is_ok() {}
+        request
+    }
+
+    fn clear_host_recovery_if_idle(generation: usize) {
+        let pending = HOST_RECOVERY_PENDING.get_or_init(|| Mutex::new(None));
+        let Ok(pending) = pending.lock() else {
+            return;
+        };
+        if HOST_RECOVERY_GENERATION.load(Ordering::Acquire) == generation && pending.is_none() {
+            HOST_RECOVERY_ACTIVE.store(false, Ordering::Release);
+        }
+    }
+
+    fn run_shell_recovery_worker(receiver: Receiver<()>, handler: HostRecoveryHandler) {
+        while receiver.recv().is_ok() {
+            HOST_RECOVERY_ACTIVE.store(true, Ordering::Release);
+            loop {
+                let generation = HOST_RECOVERY_GENERATION.load(Ordering::Acquire);
+                thread::sleep(Duration::from_millis(SHELL_Z_ORDER_GUARD_MS));
+                while receiver.try_recv().is_ok() {}
+                if HOST_RECOVERY_GENERATION.load(Ordering::Acquire) != generation {
+                    continue;
+                }
+                release_tool_window_shell_z_order_guard();
+                thread::sleep(Duration::from_millis(
+                    SHELL_RECOVERY_SETTLE_MS - SHELL_Z_ORDER_GUARD_MS,
+                ));
+                while receiver.try_recv().is_ok() {}
+                if HOST_RECOVERY_GENERATION.load(Ordering::Acquire) == generation {
                     break;
                 }
             }
+
+            let Some(request) = take_pending_host_recovery_request(&receiver) else {
+                HOST_RECOVERY_ACTIVE.store(false, Ordering::Release);
+                continue;
+            };
+            handler(request.clone());
+            clear_host_recovery_if_idle(request.generation);
         }
     }
 
@@ -527,13 +868,24 @@ mod platform {
         let is_shell_foreground = event == EVENT_SYSTEM_FOREGROUND;
         let is_shell_lifecycle = (EVENT_OBJECT_CREATE..=EVENT_OBJECT_SHOW).contains(&event)
             && object_id == OBJID_WINDOW.0;
-        if (!is_shell_foreground && !is_shell_lifecycle) || hwnd.0.is_null() {
+        if hwnd.0.is_null() {
             return;
         }
-        if !matches!(class_name(hwnd).as_deref(), Some("Progman" | "WorkerW")) {
+        let is_shell_window = matches!(class_name(hwnd).as_deref(), Some("Progman" | "WorkerW"));
+        if is_shell_foreground && !is_shell_window {
+            release_tool_window_shell_z_order_guard();
             return;
         }
-        queue_host_recovery();
+        if (!is_shell_foreground && !is_shell_lifecycle) || !is_shell_window {
+            return;
+        }
+        let trigger = if is_shell_foreground {
+            HostRecoveryTrigger::ShellForeground
+        } else {
+            HostRecoveryTrigger::ShellLifecycle
+        };
+        guard_tool_window_during_shell_transition();
+        queue_host_recovery(trigger);
     }
 
     fn run_shell_foreground_hook() {
@@ -575,16 +927,185 @@ mod platform {
         }
     }
 
-    fn queue_host_recovery() {
-        if let Some(sender) = SHELL_RECOVERY_SENDER.get() {
-            PLACEMENT_RECOVERY_ACTIVE.store(true, Ordering::Release);
-            PLACEMENT_RECOVERY_GENERATION.fetch_add(1, Ordering::AcqRel);
-            let _ = sender.try_send(());
+    fn queue_host_recovery(trigger: HostRecoveryTrigger) {
+        if !POSTER_VISIBLE_INTENT.load(Ordering::Acquire) {
+            return;
         }
+        let Some(sender) = HOST_RECOVERY_SENDER.get() else {
+            return;
+        };
+        let pending = HOST_RECOVERY_PENDING.get_or_init(|| Mutex::new(None));
+        let Ok(mut pending) = pending.lock() else {
+            eprintln!("failed to lock the desktop host recovery queue");
+            return;
+        };
+
+        HOST_RECOVERY_ACTIVE.store(true, Ordering::Release);
+        let generation = HOST_RECOVERY_GENERATION
+            .fetch_add(1, Ordering::AcqRel)
+            .wrapping_add(1);
+        merge_host_recovery_request(&mut pending, generation, trigger);
+        let _ = sender.try_send(());
+    }
+
+    pub fn request_host_recovery(trigger: HostRecoveryTrigger) {
+        queue_host_recovery(trigger);
     }
 
     pub fn placement_recovery_in_progress() -> bool {
-        PLACEMENT_RECOVERY_ACTIVE.load(Ordering::Acquire)
+        HOST_RECOVERY_ACTIVE.load(Ordering::Acquire)
+    }
+
+    fn input_passthrough_extended_style(current_style: u32, passthrough: bool) -> u32 {
+        if passthrough {
+            current_style | WS_EX_TRANSPARENT.0 | WS_EX_LAYERED.0
+        } else {
+            current_style & !WS_EX_TRANSPARENT.0
+        }
+    }
+    fn poster_input_extended_style(current_style: u32, passthrough: bool) -> u32 {
+        input_passthrough_extended_style(tool_window_extended_style(current_style), passthrough)
+    }
+
+    fn apply_input_passthrough(hwnd: HWND, passthrough: bool) {
+        INPUT_PASSTHROUGH_ACTIVE.store(passthrough, Ordering::Release);
+        let current_style = unsafe { GetWindowLongPtrW(hwnd, GWL_EXSTYLE) as u32 };
+        let next_style = poster_input_extended_style(current_style, passthrough);
+        if next_style != current_style {
+            unsafe {
+                SetWindowLongPtrW(hwnd, GWL_EXSTYLE, next_style as isize);
+                let _ = SetWindowPos(
+                    hwnd,
+                    None,
+                    0,
+                    0,
+                    0,
+                    0,
+                    SWP_NOZORDER | SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_FRAMECHANGED,
+                );
+            }
+        }
+    }
+
+    fn input_hit_at_screen_point(point: POINT) -> Option<bool> {
+        let hwnd = poster_window()?;
+        if !unsafe { IsWindowVisible(hwnd).as_bool() } {
+            return None;
+        }
+        let mut window_rect = RECT::default();
+        if unsafe { GetWindowRect(hwnd, &mut window_rect) }.is_err()
+            || point.x < window_rect.left
+            || point.x >= window_rect.right
+            || point.y < window_rect.top
+            || point.y >= window_rect.bottom
+        {
+            return None;
+        }
+        let local_x = point.x - window_rect.left;
+        let local_y = point.y - window_rect.top;
+        let hit = INPUT_HIT_REGIONS
+            .get_or_init(|| RwLock::new(Vec::new()))
+            .read()
+            .map(|regions| {
+                regions
+                    .iter()
+                    .any(|region| region.contains(local_x, local_y))
+            })
+            .unwrap_or(true);
+        Some(hit)
+    }
+
+    fn request_input_passthrough(passthrough: bool) {
+        if INPUT_PASSTHROUGH_ACTIVE.load(Ordering::Acquire) == passthrough {
+            return;
+        }
+        if let Some(hwnd) = poster_window() {
+            unsafe {
+                SendMessageW(
+                    hwnd,
+                    WM_POSTER_INPUT_PASSTHROUGH,
+                    Some(WPARAM(usize::from(passthrough))),
+                    None,
+                );
+            }
+        }
+    }
+
+    unsafe extern "system" fn input_mouse_hook(
+        code: i32,
+        wparam: WPARAM,
+        lparam: LPARAM,
+    ) -> LRESULT {
+        if code >= 0 {
+            let message = wparam.0 as u32;
+            let button_down = matches!(
+                message,
+                WM_LBUTTONDOWN | WM_RBUTTONDOWN | WM_MBUTTONDOWN | WM_XBUTTONDOWN
+            );
+            let button_up = matches!(
+                message,
+                WM_LBUTTONUP | WM_RBUTTONUP | WM_MBUTTONUP | WM_XBUTTONUP
+            );
+            let should_probe = matches!(
+                message,
+                WM_MOUSEMOVE
+                    | WM_MOUSEWHEEL
+                    | WM_MOUSEHWHEEL
+                    | WM_LBUTTONDOWN
+                    | WM_RBUTTONDOWN
+                    | WM_MBUTTONDOWN
+                    | WM_XBUTTONDOWN
+            );
+
+            if button_up {
+                INPUT_MOUSE_BUTTON_ACTIVE.store(false, Ordering::Release);
+            } else if should_probe && !INPUT_MOUSE_BUTTON_ACTIVE.load(Ordering::Acquire) {
+                if let Some(details) = (lparam.0 as *const MSLLHOOKSTRUCT).as_ref() {
+                    if let Some(hit) = input_hit_at_screen_point(details.pt) {
+                        request_input_passthrough(!hit);
+                    }
+                }
+                if button_down {
+                    INPUT_MOUSE_BUTTON_ACTIVE.store(true, Ordering::Release);
+                }
+            }
+        }
+        CallNextHookEx(None, code, wparam, lparam)
+    }
+
+    fn run_input_mouse_hook(ready: SyncSender<Result<(), String>>) {
+        unsafe {
+            let hook = match SetWindowsHookExW(WH_MOUSE_LL, Some(input_mouse_hook), None, 0) {
+                Ok(hook) => hook,
+                Err(error) => {
+                    let _ = ready.send(Err(error.to_string()));
+                    return;
+                }
+            };
+            let _ = ready.send(Ok(()));
+            let mut message = MSG::default();
+            while GetMessageW(&mut message, None, 0, 0).0 > 0 {
+                let _ = TranslateMessage(&message);
+                DispatchMessageW(&message);
+            }
+            let _ = UnhookWindowsHookEx(hook);
+        }
+    }
+
+    fn install_input_mouse_hook() -> Result<(), String> {
+        if INPUT_MOUSE_HOOK_STARTED.get().is_some() {
+            return Ok(());
+        }
+        let (ready_sender, ready_receiver) = sync_channel(1);
+        thread::Builder::new()
+            .name("desktop-up-input-hit-test".to_string())
+            .spawn(move || run_input_mouse_hook(ready_sender))
+            .map_err(|error| error.to_string())?;
+        ready_receiver
+            .recv_timeout(Duration::from_secs(2))
+            .map_err(|error| format!("poster input mouse hook did not start: {error}"))??;
+        let _ = INPUT_MOUSE_HOOK_STARTED.set(());
+        Ok(())
     }
 
     unsafe extern "system" fn poster_window_subclass(
@@ -595,6 +1116,18 @@ mod platform {
         subclass_id: usize,
         _reference_data: usize,
     ) -> LRESULT {
+        if message == WM_POSTER_INPUT_PASSTHROUGH {
+            apply_input_passthrough(hwnd, wparam.0 != 0);
+            return LRESULT(0);
+        }
+        if message == WM_STYLECHANGING && wparam.0 as i32 == GWL_EXSTYLE.0 {
+            if let Some(style) = (lparam.0 as *mut STYLESTRUCT).as_mut() {
+                style.styleNew = poster_input_extended_style(
+                    style.styleNew,
+                    INPUT_PASSTHROUGH_ACTIVE.load(Ordering::Acquire),
+                );
+            }
+        }
         if message == WM_STYLECHANGING && wparam.0 as i32 == GWL_STYLE.0 {
             // Tauri/tao may reapply its cached top-level style while the initially hidden
             // WebView is shown. Enforce the desktop-host invariant at the Win32 boundary so
@@ -662,29 +1195,41 @@ mod platform {
             }
             return LRESULT(MA_NOACTIVATE as isize);
         }
-        if matches!(message, WM_DISPLAYCHANGE | WM_DPICHANGED | WM_SETTINGCHANGE) {
-            queue_host_recovery();
-        } else if message == WM_DESTROY {
-            let _ = RemoveWindowSubclass(hwnd, Some(poster_window_subclass), subclass_id);
-            POSTER_HWND.store(0, Ordering::Release);
+        match message {
+            WM_DISPLAYCHANGE => queue_host_recovery(HostRecoveryTrigger::DisplayChange),
+            WM_DPICHANGED => queue_host_recovery(HostRecoveryTrigger::DpiChange),
+            WM_SETTINGCHANGE => queue_host_recovery(HostRecoveryTrigger::WorkAreaChange),
+            WM_DESTROY => {
+                let _ = RemoveWindowSubclass(hwnd, Some(poster_window_subclass), subclass_id);
+                POSTER_HWND.store(0, Ordering::Release);
+            }
+            _ => {}
         }
         DefSubclassProc(hwnd, message, wparam, lparam)
     }
 
-    pub fn install_shell_foreground_monitor(window: &tauri::WebviewWindow) -> Result<(), String> {
+    pub fn install_shell_foreground_monitor<F>(
+        window: &tauri::WebviewWindow,
+        recovery_handler: F,
+    ) -> Result<(), String>
+    where
+        F: Fn(HostRecoveryRequest) + Send + Sync + 'static,
+    {
         let hwnd = window.hwnd().map_err(|error| error.to_string())?;
         remember_poster_window(hwnd);
-        if SHELL_RECOVERY_SENDER.get().is_some() {
+        install_input_mouse_hook()?;
+        if HOST_RECOVERY_SENDER.get().is_some() {
             return Ok(());
         }
 
+        let recovery_handler: HostRecoveryHandler = Arc::new(recovery_handler);
         let (sender, receiver) = sync_channel(1);
-        SHELL_RECOVERY_SENDER
+        HOST_RECOVERY_SENDER
             .set(sender)
             .map_err(|_| "shell foreground monitor was already initialized".to_string())?;
         thread::Builder::new()
             .name("desktop-up-shell-recovery".to_string())
-            .spawn(move || run_shell_recovery_worker(receiver))
+            .spawn(move || run_shell_recovery_worker(receiver, recovery_handler))
             .map_err(|error| error.to_string())?;
         thread::Builder::new()
             .name("desktop-up-shell-events".to_string())
@@ -706,6 +1251,9 @@ mod platform {
 
     pub fn set_poster_visibility_intent(visible: bool) {
         POSTER_VISIBLE_INTENT.store(visible, Ordering::Release);
+        if !visible {
+            release_tool_window_shell_z_order_guard();
+        }
     }
 
     fn set_common_extended_style(hwnd: HWND) {
@@ -873,6 +1421,7 @@ mod platform {
                             fallback_reason: None,
                             interaction_region_count: 0,
                             interaction_region: None,
+                            ..DesktopHostDiagnostics::default()
                         };
                     }
                     Err(error) => request_error = Some(error),
@@ -912,51 +1461,131 @@ mod platform {
             },
             interaction_region_count: 0,
             interaction_region: None,
+            ..DesktopHostDiagnostics::default()
         }
     }
 
-    pub fn apply_interaction_region(
+    fn scaled_interaction_bounds(
+        region: &InteractionRegion,
+        device_scale_factor: f64,
+    ) -> (i32, i32, i32, i32, i32) {
+        let scale = device_scale_factor.clamp(0.125, 16.0);
+        let left = (region.rect.x.max(0.0) * scale).round() as i32;
+        let top = (region.rect.y.max(0.0) * scale).round() as i32;
+        let right = ((region.rect.x + region.rect.width.max(1.0)) * scale)
+            .round()
+            .max((left + 1) as f64) as i32;
+        let bottom = ((region.rect.y + region.rect.height.max(1.0)) * scale)
+            .round()
+            .max((top + 1) as f64) as i32;
+        let radius = (region.corner_radius.max(0.0) * scale).round() as i32;
+        (left, top, right, bottom, radius)
+    }
+
+    fn allocate_visual_region(
+        region: &InteractionRegion,
+        device_scale_factor: f64,
+    ) -> Result<HRGN, String> {
+        let (left, top, right, bottom, radius) =
+            scaled_interaction_bounds(region, device_scale_factor);
+        let native_region = if radius > 0 {
+            unsafe { CreateRoundRectRgn(left, top, right + 1, bottom + 1, radius * 2, radius * 2) }
+        } else {
+            unsafe { CreateRectRgn(left, top, right + 1, bottom + 1) }
+        };
+        if native_region.is_invalid() {
+            return Err(format!(
+                "failed to allocate visual region {}",
+                region.region_id
+            ));
+        }
+        Ok(native_region)
+    }
+
+    fn update_input_hit_regions(
+        regions: &[InteractionRegion],
+        device_scale_factor: f64,
+    ) -> Result<(), String> {
+        let physical_regions = regions
+            .iter()
+            .map(|region| {
+                let (left, top, right, bottom, radius) =
+                    scaled_interaction_bounds(region, device_scale_factor);
+                PhysicalHitRegion {
+                    left,
+                    top,
+                    right,
+                    bottom,
+                    radius,
+                }
+            })
+            .collect();
+        *INPUT_HIT_REGIONS
+            .get_or_init(|| RwLock::new(Vec::new()))
+            .write()
+            .map_err(|error| error.to_string())? = physical_regions;
+        Ok(())
+    }
+
+    pub fn apply_surface_regions(
         window: &tauri::WebviewWindow,
-        x: f64,
-        y: f64,
-        width: f64,
-        height: f64,
-        corner_radius: f64,
+        visual_regions: &[InteractionRegion],
+        input_regions: &[InteractionRegion],
         device_scale_factor: f64,
     ) -> Result<(), String> {
         let hwnd = window.hwnd().map_err(|error| error.to_string())?;
-        let scale = device_scale_factor.clamp(0.5, 4.0);
-        let left = (x.max(0.0) * scale).round() as i32;
-        let top = (y.max(0.0) * scale).round() as i32;
-        let right = ((x + width.max(1.0)) * scale).round() as i32;
-        let bottom = ((y + height.max(1.0)) * scale).round() as i32;
-        let radius = (corner_radius.max(0.0) * scale).round() as i32;
-        let region =
-            unsafe { CreateRoundRectRgn(left, top, right + 1, bottom + 1, radius * 2, radius * 2) };
-        if region.is_invalid() {
-            return Err("failed to allocate the poster interaction region".to_string());
+        let combined = unsafe { CreateRectRgn(0, 0, 0, 0) };
+        if combined.is_invalid() {
+            return Err("failed to allocate the combined visual region".to_string());
         }
 
-        let result = unsafe { SetWindowRgn(hwnd, Some(region), true) };
+        for region in visual_regions {
+            let component = match allocate_visual_region(region, device_scale_factor) {
+                Ok(component) => component,
+                Err(error) => {
+                    unsafe {
+                        let _ = DeleteObject(HGDIOBJ(combined.0));
+                    }
+                    return Err(error);
+                }
+            };
+            let combine_result =
+                unsafe { CombineRgn(Some(combined), Some(combined), Some(component), RGN_OR) };
+            unsafe {
+                let _ = DeleteObject(HGDIOBJ(component.0));
+            }
+            if combine_result == RGN_ERROR {
+                unsafe {
+                    let _ = DeleteObject(HGDIOBJ(combined.0));
+                }
+                return Err("failed to merge a visual region".to_string());
+            }
+        }
+
+        let result = unsafe { SetWindowRgn(hwnd, Some(combined), true) };
         if result == 0 {
             unsafe {
-                let _ = DeleteObject(HGDIOBJ(region.0));
+                let _ = DeleteObject(HGDIOBJ(combined.0));
             }
-            return Err("failed to apply the poster interaction region".to_string());
+            return Err("failed to apply the combined visual region".to_string());
         }
-        // After a successful SetWindowRgn call, Windows owns the region handle.
-        Ok(())
+        // Windows owns the visual region handle. Input hit testing stays independent so
+        // semi-transparent poster background can remain visible while input passes through.
+        update_input_hit_regions(input_regions, device_scale_factor)
     }
 
     #[cfg(test)]
     mod tests {
         use super::{
-            rect_contains, strip_non_client_decoration_styles, tool_window_extended_style,
+            poster_input_extended_style, rect_contains, scaled_interaction_bounds,
+            strip_non_client_decoration_styles, tool_window_extended_style, PhysicalHitRegion,
         };
+        use crate::host_contract::{InteractionRegion, LogicalRect};
         use windows::Win32::Foundation::RECT;
         use windows::Win32::UI::WindowsAndMessaging::{
-            WS_CAPTION, WS_EX_APPWINDOW, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_MAXIMIZEBOX,
-            WS_MINIMIZEBOX, WS_SYSMENU, WS_THICKFRAME, WS_VISIBLE,
+            WS_CAPTION, WS_EX_APPWINDOW, WS_EX_LAYERED, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW,
+            WS_EX_TRANSPARENT, WS_MAXIMIZEBOX, WS_MINIMIZEBOX, WS_SYSMENU, WS_THICKFRAME,
+            WS_VISIBLE,
         };
 
         #[test]
@@ -1002,6 +1631,69 @@ mod platform {
         }
 
         #[test]
+        fn interaction_bounds_scale_once_across_dpi_matrix() {
+            let region = InteractionRegion {
+                region_id: "poster-primary".to_string(),
+                rect: LogicalRect {
+                    x: 10.0,
+                    y: 12.0,
+                    width: 100.0,
+                    height: 80.0,
+                },
+                corner_radius: 16.0,
+            };
+
+            assert_eq!(
+                scaled_interaction_bounds(&region, 1.0),
+                (10, 12, 110, 92, 16)
+            );
+            assert_eq!(
+                scaled_interaction_bounds(&region, 1.25),
+                (13, 15, 138, 115, 20)
+            );
+            assert_eq!(
+                scaled_interaction_bounds(&region, 2.0),
+                (20, 24, 220, 184, 32)
+            );
+        }
+        #[test]
+        fn rounded_hit_regions_exclude_clipped_corners_and_outside_points() {
+            let region = PhysicalHitRegion {
+                left: 0,
+                top: 0,
+                right: 100,
+                bottom: 80,
+                radius: 12,
+            };
+
+            assert!(!region.contains(0, 0));
+            assert!(!region.contains(1, 1));
+            assert!(region.contains(12, 0));
+            assert!(region.contains(0, 12));
+            assert!(region.contains(50, 40));
+            assert!(!region.contains(-1, 40));
+            assert!(!region.contains(101, 40));
+        }
+
+        #[test]
+        fn input_passthrough_style_preserves_layering_and_host_window_flags() {
+            let base = WS_EX_APPWINDOW.0;
+            let passthrough = poster_input_extended_style(base, true);
+            assert_ne!(passthrough & WS_EX_TRANSPARENT.0, 0);
+            assert_ne!(passthrough & WS_EX_LAYERED.0, 0);
+            assert_ne!(passthrough & WS_EX_TOOLWINDOW.0, 0);
+            assert_ne!(passthrough & WS_EX_NOACTIVATE.0, 0);
+            assert_eq!(passthrough & WS_EX_APPWINDOW.0, 0);
+
+            let interactive = poster_input_extended_style(passthrough, false);
+            assert_eq!(interactive & WS_EX_TRANSPARENT.0, 0);
+            assert_ne!(interactive & WS_EX_LAYERED.0, 0);
+            assert_ne!(interactive & WS_EX_TOOLWINDOW.0, 0);
+            assert_ne!(interactive & WS_EX_NOACTIVATE.0, 0);
+            assert_eq!(interactive & WS_EX_APPWINDOW.0, 0);
+        }
+
+        #[test]
         fn later_style_changes_cannot_restore_native_decorations() {
             let proposed = WS_VISIBLE.0
                 | WS_CAPTION.0
@@ -1022,9 +1714,10 @@ mod platform {
 
 #[cfg(target_os = "windows")]
 pub use platform::{
-    apply_interaction_region, capture_poster_window_placement, configure,
+    apply_surface_regions, capture_poster_window_placement, configure,
     install_shell_foreground_monitor, placement_recovery_in_progress, poster_work_area_size,
-    restore_poster_placement, restore_poster_window_placement, set_poster_visibility_intent,
+    repair_shell_host, request_host_recovery, restore_poster_placement,
+    set_poster_visibility_intent, show_poster_at_desktop_layer,
 };
 
 #[cfg(not(target_os = "windows"))]
@@ -1038,9 +1731,28 @@ pub fn configure(_window: &tauri::WebviewWindow, _prefer_workerw: bool) -> Deskt
 }
 
 #[cfg(not(target_os = "windows"))]
-pub fn install_shell_foreground_monitor(_window: &tauri::WebviewWindow) -> Result<(), String> {
+pub fn install_shell_foreground_monitor<F>(
+    _window: &tauri::WebviewWindow,
+    _recovery_handler: F,
+) -> Result<(), String>
+where
+    F: Fn(HostRecoveryRequest) + Send + Sync + 'static,
+{
     Ok(())
 }
+
+#[cfg(not(target_os = "windows"))]
+pub fn show_poster_at_desktop_layer(window: &tauri::WebviewWindow) -> Result<(), String> {
+    window.show().map_err(|error| error.to_string())
+}
+
+#[cfg(not(target_os = "windows"))]
+pub fn repair_shell_host(_window: &tauri::WebviewWindow) -> Result<bool, String> {
+    Ok(false)
+}
+
+#[cfg(not(target_os = "windows"))]
+pub fn request_host_recovery(_trigger: HostRecoveryTrigger) {}
 
 #[cfg(not(target_os = "windows"))]
 pub fn set_poster_visibility_intent(_visible: bool) {}
@@ -1079,26 +1791,10 @@ pub fn capture_poster_window_placement(
 }
 
 #[cfg(not(target_os = "windows"))]
-pub fn restore_poster_window_placement(
-    window: &tauri::Window,
-    placement: &crate::placement::PosterPlacement,
-) -> Result<(), String> {
-    window
-        .set_position(tauri::PhysicalPosition::new(
-            placement.fallback_x,
-            placement.fallback_y,
-        ))
-        .map_err(|error| error.to_string())
-}
-
-#[cfg(not(target_os = "windows"))]
-pub fn apply_interaction_region(
+pub fn apply_surface_regions(
     _window: &tauri::WebviewWindow,
-    _x: f64,
-    _y: f64,
-    _width: f64,
-    _height: f64,
-    _corner_radius: f64,
+    _visual_regions: &[InteractionRegion],
+    _input_regions: &[InteractionRegion],
     _device_scale_factor: f64,
 ) -> Result<(), String> {
     Ok(())

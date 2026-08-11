@@ -1,0 +1,159 @@
+[
+  {
+    "name": "valid single-poster contract sample",
+    "valid": true,
+    "snapshot": {
+      "contractVersion": 1,
+      "revision": 0,
+      "selectedPosterId": "poster-primary",
+      "posters": [{
+        "id": "poster-primary",
+        "title": "DESKTOP COLLECTION",
+        "subtitle": "",
+        "monitorIdentity": "primary",
+        "anchor": "top-right",
+        "normalizedRect": { "x": 1, "y": 0 },
+        "width": 490,
+        "height": 392,
+        "collapsedState": "expanded",
+        "autoCollapseEnabled": false,
+        "autoCollapseDelaySeconds": 3,
+        "isLocked": false,
+        "layoutKind": "grid",
+        "layoutSpec": {},
+        "templateKey": "transparent-default"
+      }]
+    }
+  },
+  {
+    "name": "unknown contract version",
+    "valid": false,
+    "snapshot": {
+      "contractVersion": 99,
+      "revision": 0,
+      "selectedPosterId": "poster-primary",
+      "posters": [{
+        "id": "poster-primary",
+        "title": "DESKTOP COLLECTION",
+        "subtitle": "",
+        "monitorIdentity": "primary",
+        "anchor": "top-right",
+        "normalizedRect": { "x": 1, "y": 0 },
+        "width": 490,
+        "height": 392,
+        "collapsedState": "expanded",
+        "autoCollapseEnabled": false,
+        "autoCollapseDelaySeconds": 3,
+        "isLocked": false,
+        "layoutKind": "grid",
+        "layoutSpec": {},
+        "templateKey": "transparent-default"
+      }]
+    }
+  },
+  {
+    "name": "dangling selected poster",
+    "valid": false,
+    "snapshot": {
+      "contractVersion": 1,
+      "revision": 0,
+      "selectedPosterId": "missing",
+      "posters": [{
+        "id": "poster-primary",
+        "title": "DESKTOP COLLECTION",
+        "subtitle": "",
+        "monitorIdentity": "primary",
+        "anchor": "top-right",
+        "normalizedRect": { "x": 1, "y": 0 },
+        "width": 490,
+        "height": 392,
+        "collapsedState": "expanded",
+        "autoCollapseEnabled": false,
+        "autoCollapseDelaySeconds": 3,
+        "isLocked": false,
+        "layoutKind": "grid",
+        "layoutSpec": {},
+        "templateKey": "transparent-default"
+      }]
+    }
+  },
+  {
+    "name": "runtime state leaked into persistence",
+    "valid": false,
+    "snapshot": {
+      "contractVersion": 1,
+      "revision": 0,
+      "selectedPosterId": "poster-primary",
+      "posters": [{
+        "id": "poster-primary",
+        "title": "DESKTOP COLLECTION",
+        "subtitle": "",
+        "monitorIdentity": "primary",
+        "anchor": "top-right",
+        "normalizedRect": { "x": 1, "y": 0 },
+        "width": 490,
+        "height": 392,
+        "collapsedState": "expanded",
+        "autoCollapseEnabled": false,
+        "autoCollapseDelaySeconds": 3,
+        "isLocked": false,
+        "layoutKind": "grid",
+        "layoutSpec": {},
+        "templateKey": "transparent-default",
+        "runtimeMode": "paused"
+      }]
+    }
+  },
+  {
+    "name": "internal fallback persisted",
+    "valid": false,
+    "snapshot": {
+      "contractVersion": 1,
+      "revision": 0,
+      "selectedPosterId": "poster-primary",
+      "posters": [{
+        "id": "poster-primary",
+        "title": "DESKTOP COLLECTION",
+        "subtitle": "",
+        "monitorIdentity": "primary",
+        "anchor": "top-right",
+        "normalizedRect": { "x": 1, "y": 0 },
+        "width": 490,
+        "height": 392,
+        "collapsedState": "expanded",
+        "autoCollapseEnabled": false,
+        "autoCollapseDelaySeconds": 3,
+        "isLocked": false,
+        "layoutKind": "grid",
+        "layoutSpec": {},
+        "templateKey": "minimal-fallback"
+      }]
+    }
+  },
+  {
+    "name": "invalid geometry delay and layout spec",
+    "valid": false,
+    "snapshot": {
+      "contractVersion": 1,
+      "revision": 0,
+      "selectedPosterId": "poster-primary",
+      "posters": [{
+        "id": "poster-primary",
+        "title": "DESKTOP COLLECTION",
+        "subtitle": "",
+        "monitorIdentity": "primary",
+        "anchor": "top-right",
+        "normalizedRect": { "x": 1.1, "y": 0 },
+        "width": 0,
+        "height": 392,
+        "collapsedState": "expanded",
+        "autoCollapseEnabled": false,
+        "autoCollapseDelaySeconds": 0,
+        "isLocked": false,
+        "layoutKind": "grid",
+        "layoutSpec": [],
+        "templateKey": "transparent-default"
+      }]
+    }
+  }
+]

@@ -4,4 +4,4 @@
 2. 阅读 [`C_WORKSTREAM_INDEX.md`](../00_Catalog/C_WORKSTREAM_INDEX.md)。
 3. 阅读 [`CURRENT_HANDOFF.md`](CURRENT_HANDOFF.md)。
 4. 将 [`DesktopHostFeasibility`](../../../C_Workstreams/DesktopHostFeasibility/30_Sync/CURRENT_HANDOFF.md) 作为已完成输入基线。
-5. 进入当前活跃工作流 [`DesktopRuntimeProductionization`](../../../C_Workstreams/DesktopRuntimeProductionization/30_Sync/COLD_START.md)。
+5. 将 [`DesktopRuntimeProductionization`](../../../C_Workstreams/DesktopRuntimeProductionization/30_Sync/COLD_START.md) 作为已关闭生产宿主输入；当前活动链请转到 [`PosterCoreRuntime`](../../PosterCoreRuntime/30_Sync/COLD_START.md)。

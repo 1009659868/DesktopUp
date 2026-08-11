@@ -1,8 +1,8 @@
 # Desktop Runtime Foundation 当前交接
 
-最后更新：2026-08-09
+最后更新：2026-08-11
 
-状态：`ACTIVE AT B-DRF / C-DRP-02 IN PROGRESS`
+状态：`INACTIVE — C-DRP COMPLETE / C-RLC PLANNED`
 
 ## 当前事实
 
@@ -24,11 +24,15 @@
 - V1 已冻结单全局宿主、主屏右侧、默认解锁展开和未锁定 USING 自制标题栏拖动契约；这些是目标设计，当前 A0 独立窗体实现尚未对齐和验证；
 - 当前模块计划已切换到 [`MODULE_PLAN_V1.md`](../10_Plan/MODULE_PLAN_V1.md)；旧 `MODULE_PLAN.md` 已冻结。模块路线为 C-DHF → C-DRP → C-RLC。
 - C-DRP-01 已建立 `host-contract-v1`：Rust 与前端共用 contractVersion/revision/surfaceId/logicalSize/scaleFactor/placementIntent/interactionRegion 字段；RuntimeSnapshot 同步暴露 HostSurface 与 DisplayTopology，原生宿主是唯一窗口几何写入者。
-- C-DRP-02 主屏代码闭环已实现并通过 Release：唯一宿主不变量、monitor/renderer 比例分层、effective logical work area、0.80–1.25 响应策略、CSS 等比呈现和同尺度原生命中均已落地；当前仅剩真实混合 DPI 跨屏物理矩阵，因此仍为 `IN PROGRESS`。
+- C-DRP-02 主屏代码闭环、新版 Release 冷启动无顶部白条、收起/展开无裁切与按钮命中已由用户确认；第二显示器/混合 DPI 等物理矩阵继续延期至 C-DRP-06；
+- C-DRP-03 单海报视觉/输入分离、桌面空白穿透、卡片/标题栏/锁定交互及收起/展开顶部锚点均已由用户人工矩阵确认，任务关闭；
 
 ## 下一动作
+- C-DRP-04 最终 ToolWindow Release 的连续 Win+D 已由用户接受通过；
+- C-DRP-05 已统一自动/手动暂停、显隐、ready、FPS 与退出，自动验证、Release/NSIS 和用户 5/5 人工矩阵通过，任务关闭；
+- C-DRP-06 已按用户确认升级为主进程 50 MiB + 完整进程树 256 MiB 私有工作集双预算，并将控制中心改为首次请求创建；`performance-gate-v3` / `performance-baseline-v4`、58 项前端/契约、52 项 Rust、Release/NSIS 和最新版普通 Release 四项烟雾全部通过；用户随后接受主屏单海报认证限制，任务关闭；
 
-`C-DHF-01..08` 与 `C-DRP-01` 已 `COMPLETE`。当前唯一活跃工作流仍是 [`C-DRP Desktop Runtime Productionization`](../../../C_Workstreams/DesktopRuntimeProductionization/10_Plan/WORKSTREAM_PLAN.md)，精确下一步为 C-DRP-02 单全局宿主拓扑、统一显示坐标和分辨率/DPI 响应缩放；`C-PCB Poster Contract Baseline` 排在 C-DRP 完成之后。海报 schema、海报内部几何、用户缩放偏好和标题栏语义归属 B-PCR/C-PCB，C-DRP 只定义宿主边界、显示适配与传输契约。
+`C-DHF-01..08` 与 `C-DRP-01..06` 已关闭。当前发布基线只认证主屏单海报；多显示器、混合 DPI、负坐标副屏、主屏切换、跨屏重启和热插拔未认证。活动链已交接到 [Poster Core Runtime / C-PCB](../../PosterCoreRuntime/30_Sync/CURRENT_HANDOFF.md)。
 
 ## 不得提前进行
 

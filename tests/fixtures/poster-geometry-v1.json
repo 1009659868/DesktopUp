@@ -1,0 +1,53 @@
+[
+  {
+    "name": "1920x1080 primary work area",
+    "valid": true,
+    "workArea": { "displayId": "primary-1080p", "isPrimary": true, "width": 1920, "height": 1080 },
+    "expected": {
+      "posterRect": { "x": 1474, "y": 24, "width": 422, "height": 1032 },
+      "expandedHost": { "offset": { "x": 1464, "y": 14 }, "logicalSize": { "width": 442, "height": 1052 } },
+      "collapsedHost": { "offset": { "x": 1464, "y": 14 }, "logicalSize": { "width": 442, "height": 80 } },
+      "normalizedRect": { "x": 0.9905277401894452, "y": 0.5 }
+    }
+  },
+  {
+    "name": "1366x768 primary work area",
+    "valid": true,
+    "workArea": { "displayId": "primary-768p", "isPrimary": true, "width": 1366, "height": 768 },
+    "expected": {
+      "posterRect": { "x": 1041, "y": 24, "width": 301, "height": 720 },
+      "expandedHost": { "offset": { "x": 1031, "y": 14 }, "logicalSize": { "width": 321, "height": 740 } },
+      "collapsedHost": { "offset": { "x": 1031, "y": 14 }, "logicalSize": { "width": 321, "height": 80 } },
+      "normalizedRect": { "x": 0.9866028708133971, "y": 0.5 }
+    }
+  },
+  {
+    "name": "3840x2160 primary work area",
+    "valid": true,
+    "workArea": { "displayId": "primary-4k", "isPrimary": true, "width": 3840, "height": 2160 },
+    "expected": {
+      "posterRect": { "x": 2971, "y": 24, "width": 845, "height": 2112 },
+      "expandedHost": { "offset": { "x": 2961, "y": 14 }, "logicalSize": { "width": 865, "height": 2132 } },
+      "collapsedHost": { "offset": { "x": 2961, "y": 14 }, "logicalSize": { "width": 865, "height": 80 } },
+      "normalizedRect": { "x": 0.9952941176470588, "y": 0.5 }
+    }
+  },
+  {
+    "name": "reject non-primary display for the V1 default",
+    "valid": false,
+    "workArea": { "displayId": "secondary", "isPrimary": false, "width": 1920, "height": 1080 },
+    "errorCode": "primary_display_required"
+  },
+  {
+    "name": "reject work area narrower than the width policy",
+    "valid": false,
+    "workArea": { "displayId": "primary-narrow", "isPrimary": true, "width": 500, "height": 768 },
+    "errorCode": "work_area_too_narrow"
+  },
+  {
+    "name": "reject work area shorter than the expanded minimum",
+    "valid": false,
+    "workArea": { "displayId": "primary-short", "isPrimary": true, "width": 1366, "height": 280 },
+    "errorCode": "work_area_too_short"
+  }
+]

@@ -1,5 +1,9 @@
 import { moveWithinBounds, normalizedPoster, resizeWithinBounds } from "./model.js";
-import { HOST_CONTRACT_VERSION, createHostSurfaceRequest } from "./host-contract.js";
+import {
+  HOST_CONTRACT_VERSION,
+  SURFACE_REGISTRY_VERSION,
+  createHostSurfaceRequest
+} from "./host-contract.js";
 
 export const PERFORMANCE_MODES = Object.freeze([
   "auto",
@@ -8,6 +12,112 @@ export const PERFORMANCE_MODES = Object.freeze([
   "paused",
   "stopped"
 ]);
+
+export const RUNTIME_LIFECYCLE_CONTRACT_VERSION = 1;
+const RUNTIME_PHASES = Object.freeze(["starting", "running", "exiting"]);
+const RUNTIME_MODES = Object.freeze([
+  "activeStatic",
+  "activeAnimated",
+  "paused",
+  "stopped"
+]);
+
+function requestedRuntimeMode(input) {
+  if (input.phase === "exiting" || !input.posterVisible || !input.hostSurfaceReady) {
+    return "stopped";
+  }
+  if (input.manuallyPaused || input.automaticallyPaused || input.performanceMode === "paused") {
+    return "paused";
+  }
+  if (input.performanceMode === "stopped") return "stopped";
+  if (input.performanceMode === "activeAnimated") return "activeAnimated";
+  if (input.performanceMode === "activeStatic") return "activeStatic";
+  return Number(input.posterFps) > 0 ? "activeAnimated" : "activeStatic";
+}
+
+function normalizedRuntimeLifecycle(snapshot = {}, fallback = {}) {
+  const raw = snapshot.runtimeLifecycle ?? {};
+  const previous = fallback.runtimeLifecycle ?? {};
+  const visibility = snapshot.runtimeVisibility ?? fallback.runtimeVisibility ?? {};
+  const manuallyPaused = Boolean(
+    raw.manuallyPaused ?? snapshot.manuallyPaused ?? fallback.manuallyPaused ?? false
+  );
+  const automaticallyPaused = Boolean(
+    raw.automaticallyPaused
+      ?? snapshot.automaticallyPaused
+      ?? visibility.automaticallyPaused
+      ?? fallback.automaticallyPaused
+      ?? false
+  );
+  const posterVisible = Boolean(
+    raw.posterVisible ?? snapshot.posterVisible ?? fallback.posterVisible ?? true
+  );
+  const hostSurfaceReady = Boolean(
+    raw.hostSurfaceReady ?? snapshot.hostSurfaceReady ?? fallback.hostSurfaceReady ?? false
+  );
+  const pauseReasons =
+    raw.pauseReasons ?? snapshot.pauseReasons ?? visibility.pauseReasons ?? fallback.pauseReasons ?? [];
+  const phase = RUNTIME_PHASES.includes(raw.phase)
+    ? raw.phase
+    : hostSurfaceReady ? "running" : "starting";
+  const performanceMode = PERFORMANCE_MODES.includes(snapshot.performanceMode)
+    ? snapshot.performanceMode
+    : fallback.performanceMode ?? "auto";
+  const posterFps = Number(snapshot.posterFps ?? fallback.posterFps ?? 0);
+  const derivedMode = requestedRuntimeMode({
+    phase,
+    posterVisible,
+    hostSurfaceReady,
+    manuallyPaused,
+    automaticallyPaused,
+    performanceMode,
+    posterFps
+  });
+
+  return {
+    contractVersion:
+      raw.contractVersion ?? previous.contractVersion ?? RUNTIME_LIFECYCLE_CONTRACT_VERSION,
+    generation: Number.isSafeInteger(raw.generation)
+      ? raw.generation
+      : previous.generation ?? 0,
+    eventCount: Number.isSafeInteger(raw.eventCount)
+      ? raw.eventCount
+      : previous.eventCount ?? 0,
+    phase,
+    mode: RUNTIME_MODES.includes(raw.mode) ? raw.mode : derivedMode,
+    manuallyPaused,
+    automaticallyPaused,
+    effectivePaused: Boolean(
+      raw.effectivePaused
+        ?? snapshot.effectivePaused
+        ?? (manuallyPaused || automaticallyPaused)
+    ),
+    posterVisible,
+    hostSurfaceReady,
+    pauseReasons: Array.isArray(pauseReasons) ? pauseReasons : [],
+    lastTrigger: raw.lastTrigger ?? previous.lastTrigger ?? "frontendFallback"
+  };
+}
+
+function withLocalLifecycle(state, patch = {}) {
+  const next = { ...state, ...patch };
+  const lifecycle = normalizedRuntimeLifecycle({
+    ...next,
+    runtimeLifecycle: {
+      ...state.runtimeLifecycle,
+      ...patch,
+      mode: undefined,
+      phase: state.runtimeLifecycle?.phase
+    }
+  }, state);
+  lifecycle.mode = requestedRuntimeMode({
+    ...next,
+    ...lifecycle,
+    performanceMode: next.performanceMode,
+    posterFps: next.posterFps
+  });
+  return { ...next, runtimeLifecycle: lifecycle };
+}
 
 export function deriveAllLocked(posters) {
   return Array.isArray(posters)
@@ -20,29 +130,25 @@ export function createRuntimeState(snapshot) {
     ? snapshot.posters.map(normalizedPoster)
     : [];
   const visibility = snapshot?.runtimeVisibility ?? {};
-  const pauseReasons = snapshot?.pauseReasons ?? visibility.pauseReasons ?? [];
-  const automaticallyPaused = Boolean(
-    snapshot?.automaticallyPaused ?? visibility.automaticallyPaused ?? false
-  );
-  const manuallyPaused = Boolean(snapshot?.manuallyPaused ?? false);
+  const runtimeLifecycle = normalizedRuntimeLifecycle(snapshot ?? {});
 
   return {
     contractVersion: snapshot?.contractVersion ?? HOST_CONTRACT_VERSION,
     selectedPosterId: snapshot?.selectedPosterId ?? posters[0]?.id ?? null,
     posters,
     editMode: Boolean(snapshot?.editMode ?? false),
-    manuallyPaused,
-    automaticallyPaused,
-    effectivePaused: Boolean(
-      snapshot?.effectivePaused ?? (manuallyPaused || automaticallyPaused)
-    ),
+    manuallyPaused: runtimeLifecycle.manuallyPaused,
+    automaticallyPaused: runtimeLifecycle.automaticallyPaused,
+    effectivePaused: runtimeLifecycle.effectivePaused,
     allLocked: deriveAllLocked(posters),
-    posterVisible: snapshot?.posterVisible ?? true,
-    hostSurfaceReady: Boolean(snapshot?.hostSurfaceReady ?? false),
-    pauseReasons: Array.isArray(pauseReasons) ? pauseReasons : [],
+    posterVisible: runtimeLifecycle.posterVisible,
+    hostSurfaceReady: runtimeLifecycle.hostSurfaceReady,
+    pauseReasons: runtimeLifecycle.pauseReasons,
+    posterFps: Number(snapshot?.posterFps ?? 0),
     performanceMode: PERFORMANCE_MODES.includes(snapshot?.performanceMode)
       ? snapshot.performanceMode
       : "auto",
+    runtimeLifecycle,
     runtimeVisibility: visibility,
     hostSurface: snapshot?.hostSurface ?? null,
     displayTopology: snapshot?.displayTopology ?? null,
@@ -60,7 +166,16 @@ export function posterInteractionMode(state, poster = selectedPoster(state)) {
 }
 
 export function isRuntimeSuspended(state, documentHidden = false) {
-  return Boolean(state.effectivePaused) || Boolean(documentHidden);
+  const mode = runtimeMode(state, documentHidden);
+  return mode === "paused" || mode === "stopped";
+}
+
+export function runtimeMode(state, documentHidden = false) {
+  const mode = state.runtimeLifecycle?.mode
+    ?? requestedRuntimeMode({ ...state, phase: state.hostSurfaceReady ? "running" : "starting" });
+  if (documentHidden && mode !== "stopped") return "paused";
+  if (state.effectivePaused && mode !== "stopped") return "paused";
+  return mode;
 }
 
 export function posterSnapshot(state) {
@@ -81,6 +196,8 @@ export function buildRuntimeSnapshot(state) {
     posterVisible: state.posterVisible,
     hostSurfaceReady: state.hostSurfaceReady,
     pauseReasons: state.pauseReasons,
+    posterFps: state.posterFps,
+    runtimeLifecycle: state.runtimeLifecycle,
     runtimeVisibility: state.runtimeVisibility,
     hostSurface: state.hostSurface,
     displayTopology: state.displayTopology,
@@ -105,51 +222,58 @@ export function applyPosterAction(state, action) {
     case "setEditMode":
       return { ...state, editMode: Boolean(action.value) };
     case "setPerformanceMode":
-      return {
+      return withLocalLifecycle(state, {
         ...state,
         performanceMode: PERFORMANCE_MODES.includes(action.value)
           ? action.value
           : "auto"
-      };
+      });
     case "toggleManualPause": {
       const manuallyPaused = !state.manuallyPaused;
-      return {
-        ...state,
+      return withLocalLifecycle(state, {
         manuallyPaused,
         effectivePaused: manuallyPaused || state.automaticallyPaused
-      };
+      });
     }
     case "setManualPaused": {
       const manuallyPaused = Boolean(action.value);
-      return {
-        ...state,
+      return withLocalLifecycle(state, {
         manuallyPaused,
         effectivePaused: manuallyPaused || state.automaticallyPaused
-      };
+      });
     }
     case "applyRuntimeSnapshot": {
       const raw = action.snapshot ?? {};
+      const incomingGeneration = raw.runtimeLifecycle?.generation;
+      const currentGeneration = state.runtimeLifecycle?.generation;
+      const incomingEventCount = raw.runtimeLifecycle?.eventCount;
+      const currentEventCount = state.runtimeLifecycle?.eventCount;
+      if (Number.isSafeInteger(incomingGeneration)
+        && Number.isSafeInteger(currentGeneration)
+        && (incomingGeneration < currentGeneration
+          || (incomingGeneration === currentGeneration
+            && Number.isSafeInteger(incomingEventCount)
+            && Number.isSafeInteger(currentEventCount)
+            && incomingEventCount < currentEventCount))) {
+        return state;
+      }
+      const runtimeLifecycle = normalizedRuntimeLifecycle(raw, state);
       const visibility = raw.runtimeVisibility ?? state.runtimeVisibility ?? {};
-      const automaticallyPaused = Boolean(
-        raw.automaticallyPaused ?? visibility.automaticallyPaused ?? state.automaticallyPaused
-      );
-      const manuallyPaused = Boolean(raw.manuallyPaused ?? state.manuallyPaused);
-      const pauseReasons = raw.pauseReasons ?? visibility.pauseReasons ?? state.pauseReasons;
       return {
         ...state,
         editMode: raw.editMode ?? state.editMode,
-        manuallyPaused,
-        automaticallyPaused,
-        effectivePaused: Boolean(
-          raw.effectivePaused ?? (manuallyPaused || automaticallyPaused)
-        ),
+        manuallyPaused: runtimeLifecycle.manuallyPaused,
+        automaticallyPaused: runtimeLifecycle.automaticallyPaused,
+        effectivePaused: runtimeLifecycle.effectivePaused,
         allLocked: deriveAllLocked(state.posters),
-        posterVisible: raw.posterVisible ?? state.posterVisible,
-        hostSurfaceReady: Boolean(raw.hostSurfaceReady ?? state.hostSurfaceReady),
-        pauseReasons: Array.isArray(pauseReasons) ? pauseReasons : [],
+        posterVisible: runtimeLifecycle.posterVisible,
+        hostSurfaceReady: runtimeLifecycle.hostSurfaceReady,
+        pauseReasons: runtimeLifecycle.pauseReasons,
+        posterFps: Number(raw.posterFps ?? state.posterFps ?? 0),
         performanceMode: PERFORMANCE_MODES.includes(raw.performanceMode)
           ? raw.performanceMode
           : state.performanceMode,
+        runtimeLifecycle,
         runtimeVisibility: visibility,
         contractVersion: raw.contractVersion ?? state.contractVersion,
         hostSurface: raw.hostSurface ?? state.hostSurface,
@@ -232,9 +356,67 @@ export function buildInteractionRegionArgs(rect, options = {}) {
   };
 }
 
+export function measuredInteractionRegion(input = {}) {
+  const surfaceRect = input.surfaceRect;
+  const surfaceSize = input.surfaceSize;
+  const posterRect = input.posterRect;
+  const visualRect = input.visualRect;
+  const elementRect = input.elementRect;
+  const values = [
+    surfaceRect?.width,
+    surfaceRect?.height,
+    surfaceSize?.width,
+    surfaceSize?.height,
+    posterRect?.left,
+    posterRect?.top,
+    posterRect?.width,
+    elementRect?.left,
+    elementRect?.top,
+    elementRect?.width,
+    elementRect?.height,
+    visualRect?.x,
+    visualRect?.y,
+    visualRect?.width,
+    visualRect?.height
+  ];
+  if (values.some((value) => !Number.isFinite(Number(value)))) return null;
+  if (elementRect.width <= 0 || elementRect.height <= 0 || posterRect.width <= 0) return null;
+
+  const transformX = surfaceRect.width > 0 ? surfaceSize.width / surfaceRect.width : 1;
+  const transformY = surfaceRect.height > 0 ? surfaceSize.height / surfaceRect.height : 1;
+  const posterLayoutWidth = posterRect.width * transformX;
+  if (posterLayoutWidth <= 0 || visualRect.width <= 0 || visualRect.height <= 0) return null;
+  const layoutWidthScale = visualRect.width / posterLayoutWidth;
+  const measured = {
+    left: visualRect.x
+      + (elementRect.left - posterRect.left) * transformX * layoutWidthScale,
+    top: visualRect.y + (elementRect.top - posterRect.top) * transformY,
+    right: visualRect.x
+      + (elementRect.left - posterRect.left + elementRect.width)
+        * transformX * layoutWidthScale,
+    bottom: visualRect.y
+      + (elementRect.top - posterRect.top + elementRect.height) * transformY
+  };
+  const left = Math.max(visualRect.x, measured.left);
+  const top = Math.max(visualRect.y, measured.top);
+  const right = Math.min(visualRect.x + visualRect.width, measured.right);
+  const bottom = Math.min(visualRect.y + visualRect.height, measured.bottom);
+  if (right <= left || bottom <= top) return null;
+  const width = right - left;
+  const height = bottom - top;
+
+  return {
+    regionId: input.regionId,
+    rect: { x: left, y: top, width, height },
+    cornerRadius: Math.min(Number(input.cornerRadius ?? 0), width / 2, height / 2)
+  };
+}
+
 export function buildHostSurfaceSyncArgs(poster, rect, options = {}) {
   const source = normalizedPoster(poster);
   const surfaceGutter = Number(options.surfaceGutter ?? 0);
+  const revision = options.revision ?? 1;
+  const registrySurfaceId = options.registrySurfaceId ?? `poster-${source.id}`;
   const contentHeight = source.collapsed
     ? Number(options.collapsedHeight ?? 116)
     : source.height;
@@ -244,23 +426,47 @@ export function buildHostSurfaceSyncArgs(poster, rect, options = {}) {
     width: source.width,
     height: contentHeight
   } : null;
+  const interactionRegions = Array.isArray(options.interactionRegions)
+    ? options.interactionRegions.map((region, index) => ({
+        regionId: region.regionId ?? `${registrySurfaceId}-input-${index}`,
+        rect: {
+          x: Number(region.rect?.x ?? region.x ?? 0),
+          y: Number(region.rect?.y ?? region.y ?? 0),
+          width: Number(region.rect?.width ?? region.width ?? 0),
+          height: Number(region.rect?.height ?? region.height ?? 0)
+        },
+        cornerRadius: Number(region.cornerRadius ?? 0)
+      }))
+    : interactionRect ? [{
+        regionId: options.regionId ?? `${registrySurfaceId}-legacy-input`,
+        rect: interactionRect,
+        cornerRadius: options.cornerRadius ?? 0
+      }] : [];
   const logicalSize = {
     width: source.width + surfaceGutter * 2,
     height: contentHeight + surfaceGutter * 2
   };
   return {
     request: createHostSurfaceRequest({
-      revision: options.revision ?? 1,
+      revision,
       surfaceId: options.surfaceId ?? "poster-host",
       logicalSize,
       scaleFactor: options.deviceScaleFactor ?? 1,
       userScale: options.userScale ?? 1,
       placementIntent: options.placementIntent ?? { kind: "preserve" },
-      interactionRegion: interactionRect ? {
-        regionId: options.regionId ?? `poster-${source.id}`,
-        rect: interactionRect,
-        cornerRadius: options.cornerRadius ?? 0
-      } : null
+      surfaceRegistry: {
+        registryVersion: SURFACE_REGISTRY_VERSION,
+        revision,
+        surfaces: [{
+          surfaceId: registrySurfaceId,
+          visualRegion: {
+            regionId: `${registrySurfaceId}-visual`,
+            rect: interactionRect,
+            cornerRadius: options.cornerRadius ?? 0
+          },
+          interactionRegions
+        }]
+      }
     })
   };
 }

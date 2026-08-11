@@ -1,0 +1,98 @@
+[
+  {
+    "name": "healthy transparent default renders normally",
+    "valid": true,
+    "input": { "snapshotStatus": "valid", "requestedTemplateKey": "transparent-default", "requestedTemplateStatus": "available", "fallbackTemplateStatus": "available" },
+    "expected": { "renderTemplateKey": "transparent-default", "selection": "requested", "reason": null, "fallbackFailureReason": null }
+  },
+  {
+    "name": "healthy user template renders normally",
+    "valid": true,
+    "input": { "snapshotStatus": "valid", "requestedTemplateKey": "neon-hud", "requestedTemplateStatus": "available", "fallbackTemplateStatus": "available" },
+    "expected": { "renderTemplateKey": "neon-hud", "selection": "requested", "reason": null, "fallbackFailureReason": null }
+  },
+  {
+    "name": "missing user template uses ephemeral fallback",
+    "valid": true,
+    "input": { "snapshotStatus": "valid", "requestedTemplateKey": "neon-hud", "requestedTemplateStatus": "missing", "fallbackTemplateStatus": "available" },
+    "expected": { "renderTemplateKey": "minimal-fallback", "selection": "minimalFallback", "reason": "requested_template_missing", "fallbackFailureReason": null }
+  },
+  {
+    "name": "invalid user template uses ephemeral fallback",
+    "valid": true,
+    "input": { "snapshotStatus": "valid", "requestedTemplateKey": "cinema-lightbox", "requestedTemplateStatus": "invalid", "fallbackTemplateStatus": "available" },
+    "expected": { "renderTemplateKey": "minimal-fallback", "selection": "minimalFallback", "reason": "requested_template_invalid", "fallbackFailureReason": null }
+  },
+  {
+    "name": "unknown user template uses ephemeral fallback",
+    "valid": true,
+    "input": { "snapshotStatus": "valid", "requestedTemplateKey": "future-template", "requestedTemplateStatus": "unknown", "fallbackTemplateStatus": "available" },
+    "expected": { "renderTemplateKey": "minimal-fallback", "selection": "minimalFallback", "reason": "requested_template_unknown", "fallbackFailureReason": null }
+  },
+  {
+    "name": "missing normal default remains distinct from fallback",
+    "valid": true,
+    "input": { "snapshotStatus": "valid", "requestedTemplateKey": "transparent-default", "requestedTemplateStatus": "missing", "fallbackTemplateStatus": "available" },
+    "expected": { "renderTemplateKey": "minimal-fallback", "selection": "minimalFallback", "reason": "default_template_missing", "fallbackFailureReason": null }
+  },
+  {
+    "name": "invalid normal default remains distinct from fallback",
+    "valid": true,
+    "input": { "snapshotStatus": "valid", "requestedTemplateKey": "transparent-default", "requestedTemplateStatus": "invalid", "fallbackTemplateStatus": "available" },
+    "expected": { "renderTemplateKey": "minimal-fallback", "selection": "minimalFallback", "reason": "default_template_invalid", "fallbackFailureReason": null }
+  },
+  {
+    "name": "persisted fallback cannot become a normal selection",
+    "valid": true,
+    "input": { "snapshotStatus": "valid", "requestedTemplateKey": "minimal-fallback", "requestedTemplateStatus": "available", "fallbackTemplateStatus": "available" },
+    "expected": { "renderTemplateKey": "minimal-fallback", "selection": "minimalFallback", "reason": "fallback_cannot_be_selected", "fallbackFailureReason": null }
+  },
+  {
+    "name": "invalid snapshot uses fallback without resetting persistence",
+    "valid": true,
+    "input": { "snapshotStatus": "invalid", "requestedTemplateKey": null, "requestedTemplateStatus": "unknown", "fallbackTemplateStatus": "available" },
+    "expected": { "renderTemplateKey": "minimal-fallback", "selection": "minimalFallback", "reason": "snapshot_invalid", "fallbackFailureReason": null }
+  },
+  {
+    "name": "snapshot recovery failure uses fallback",
+    "valid": true,
+    "input": { "snapshotStatus": "recoveryFailed", "requestedTemplateKey": "neon-hud", "requestedTemplateStatus": "unknown", "fallbackTemplateStatus": "available" },
+    "expected": { "renderTemplateKey": "minimal-fallback", "selection": "minimalFallback", "reason": "snapshot_recovery_failed", "fallbackFailureReason": null }
+  },
+  {
+    "name": "missing fallback reports unavailable rendering",
+    "valid": true,
+    "input": { "snapshotStatus": "valid", "requestedTemplateKey": "neon-hud", "requestedTemplateStatus": "missing", "fallbackTemplateStatus": "missing" },
+    "expected": { "renderTemplateKey": null, "selection": "unavailable", "reason": "requested_template_missing", "fallbackFailureReason": "minimal_fallback_missing" }
+  },
+  {
+    "name": "invalid fallback reports unavailable rendering",
+    "valid": true,
+    "input": { "snapshotStatus": "invalid", "requestedTemplateKey": null, "requestedTemplateStatus": "unknown", "fallbackTemplateStatus": "invalid" },
+    "expected": { "renderTemplateKey": null, "selection": "unavailable", "reason": "snapshot_invalid", "fallbackFailureReason": "minimal_fallback_invalid" }
+  },
+  {
+    "name": "reject unknown snapshot status",
+    "valid": false,
+    "input": { "snapshotStatus": "partial", "requestedTemplateKey": "neon-hud", "requestedTemplateStatus": "available", "fallbackTemplateStatus": "available" },
+    "errorCode": "invalid_snapshot_status"
+  },
+  {
+    "name": "valid snapshot requires requested key",
+    "valid": false,
+    "input": { "snapshotStatus": "valid", "requestedTemplateKey": null, "requestedTemplateStatus": "unknown", "fallbackTemplateStatus": "available" },
+    "errorCode": "requested_template_key_required"
+  },
+  {
+    "name": "reject unknown requested template status",
+    "valid": false,
+    "input": { "snapshotStatus": "valid", "requestedTemplateKey": "neon-hud", "requestedTemplateStatus": "disabled", "fallbackTemplateStatus": "available" },
+    "errorCode": "invalid_requested_template_status"
+  },
+  {
+    "name": "reject unknown fallback status",
+    "valid": false,
+    "input": { "snapshotStatus": "valid", "requestedTemplateKey": "neon-hud", "requestedTemplateStatus": "missing", "fallbackTemplateStatus": "unknown" },
+    "errorCode": "invalid_fallback_template_status"
+  }
+]

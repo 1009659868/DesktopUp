@@ -2,7 +2,7 @@
 
 最后检查：2026-08-09
 
-状态：`ACTIVE`
+状态：`INACTIVE — C-DRP COMPLETE / C-RLC PLANNED`
 
 上层计划：[`DESKTOPUP_V1_IMPLEMENTATION_PLAN.md`](../../../A_Project/10_Plan/DESKTOPUP_V1_IMPLEMENTATION_PLAN.md)
 
@@ -17,12 +17,12 @@
 | C 工作流 | 结果 | 依赖 | 状态 |
 | --- | --- | --- | --- |
 | Desktop Host Feasibility (`C-DHF`) | 关闭宿主可行性、恢复、暂停、性能和托盘硬门 | 无 | `COMPLETE` |
-| Desktop Runtime Productionization (`C-DRP`) | 把原型收敛为单全局生产宿主和稳定接口 | C-DHF | `ACTIVE` |
+| Desktop Runtime Productionization (`C-DRP`) | 把原型收敛为单全局生产宿主和稳定接口 | C-DHF | `COMPLETE — PRIMARY-SCREEN SINGLE-POSTER CERTIFIED` |
 | Runtime Lifecycle and Quick Access (`C-RLC`) | 单实例、控制中心、托盘、自启、退出和 TaskbarCreated 恢复 | C-DRP | `PLANNED` |
 
 ## 3. 当前任务顺序
 
-`C-DHF-01..08 COMPLETE → C-DRP ACTIVE → C-RLC`
+`C-DHF-01..08 COMPLETE → C-DRP COMPLETE → C-RLC PLANNED`
 
 ## 4. 模块完成信号
 
