@@ -52,7 +52,7 @@
 
 ## 下一动作
 
-当前 `C-DHF-01..08`、`C-DRP-01..06`、`C-PCB-01..05` 与 `C-PSS-01..04` 已关闭。当前进入 [C-PSS](../../C_Workstreams/PosterStateStore/30_Sync/CURRENT_HANDOFF.md) 的 C-PSS-05 Release 恢复门；下一轮先按用户要求执行 Git 同步，再通过隔离数据库副本与故障注入验证损坏、未来 schema、事务失败、CAS 冲突和备份恢复。当前默认与发布范围仍为单海报；多显示器、混合 DPI、负坐标副屏、主屏切换、跨屏重启和热插拔未认证。
+当前 `C-DHF-01..08`、`C-DRP-01..06`、`C-PCB-01..05` 与 `C-PSS-01..04` 已关闭。当前进入 [C-PSS](../../C_Workstreams/PosterStateStore/30_Sync/CURRENT_HANDOFF.md) 的 C-PSS-05 Release 恢复门；Git 同步检查点 `b447f1f` 已创建，本轮推送完成后通过隔离数据库副本与故障注入验证损坏、未来 schema、事务失败、CAS 冲突和备份恢复。当前默认与发布范围仍为单海报；多显示器、混合 DPI、负坐标副屏、主屏切换、跨屏重启和热插拔未认证。
 
 A1 真实快捷方式能力保持排队状态；C-ROD/C-PAA/C-LCH 只允许用户主动触发的只读发现、仅添加和启动，任何真实文件移动必须等待 C-SVT 的保险库、账本、逐批确认和故障注入通过。
 

@@ -22,9 +22,9 @@
 
 ## 精确下一步
 
-当前进入 [C-PSS 当前交接](../../../C_Workstreams/PosterStateStore/30_Sync/CURRENT_HANDOFF.md) 的 C-PSS-05：下一轮先执行用户要求的 Git 同步，再用隔离数据库副本和故障注入完成损坏、未来 schema、事务失败、CAS 冲突、备份恢复与 Release 核心回归。
+当前进入 [C-PSS 当前交接](../../../C_Workstreams/PosterStateStore/30_Sync/CURRENT_HANDOFF.md) 的 C-PSS-05：Git 同步检查点 `b447f1f` 已创建，本轮推送后用隔离数据库副本和故障注入完成损坏、未来 schema、事务失败、CAS 冲突、备份恢复与 Release 核心回归。
 
 ## 工作区注意事项
 
-- 当前分支：`impl/poster-redesign-V1`；下一轮用户已明确要求执行 Git 同步，在同步前先核对工作树、远端与提交范围。
+- 当前分支：`impl/poster-redesign-V1`；本地与远端同步基点无分叉，实施检查点为 `b447f1f`，本轮完成相邻交接提交后推送。
 - C-PSS-05 关闭前不删除 legacy 读取能力、原始来源或已生成备份；不得在无恢复副本时损坏真实用户数据库。

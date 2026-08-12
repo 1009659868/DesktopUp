@@ -7,4 +7,4 @@
 3. [`CURRENT_HANDOFF.md`](CURRENT_HANDOFF.md)
 4. 当前 C 工作流 [`PosterStateStore`](../../../C_Workstreams/PosterStateStore/30_Sync/COLD_START.md)
 
-接手后先运行 `git status --short --branch`。C-PCB 与 C-PSS-04 已关闭，C-PSS-05 是当前唯一活跃 C；下一轮先按用户要求完成 Git 同步，再用隔离副本推进恢复矩阵。门关闭前不删除 legacy 读取能力、备份或原始来源。
+接手后先运行 `git status --short --branch`。C-PCB 与 C-PSS-04 已关闭，C-PSS-05 是当前唯一活跃 C；Git 同步检查点 `b447f1f` 已创建，本轮推送后用隔离副本推进恢复矩阵。门关闭前不删除 legacy 读取能力、备份或原始来源。
