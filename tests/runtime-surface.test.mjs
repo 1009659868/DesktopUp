@@ -4,9 +4,9 @@ import test from "node:test";
 import { buildPosterMarkup } from "../app/src/poster-core.js";
 import {
   LEGACY_POSTER_STORAGE_KEY,
-  readLegacyPosterSnapshot,
-  writeLegacyPosterSnapshot
+  inspectLocalLegacyPosterSource
 } from "../app/src/poster-legacy-bridge.js";
+import { POSTER_STATE_LOAD_COMMAND } from "../app/src/poster-state-store.js";
 
 const tauriConfig = JSON.parse(readFileSync("src-tauri/tauri.conf.json", "utf8"));
 const controlCenterRuntime = readFileSync("app/src/main.js", "utf8");
@@ -375,20 +375,36 @@ test("release executable uses the Windows GUI subsystem", { skip: !existsSync(re
   );
 });
 
-test("poster snapshot storage is a single shared contract", () => {
+test("SQLite is authoritative while the legacy browser source remains read-only", () => {
   const storage = memoryStorage();
-  assert.equal(readLegacyPosterSnapshot(storage), null, "empty storage must produce no snapshot");
+  assert.equal(POSTER_STATE_LOAD_COMMAND, "load_poster_state");
+  assert.match(nativeRuntime, /PosterStateRepository::open/);
+  assert.match(nativeRuntime, /fn load_poster_state/);
+  assert.match(nativeRuntime, /fn replace_poster_state/);
+  assert.match(nativeRuntime, /fn migrate_poster_state/);
+  assert.doesNotMatch(nativeRuntime, /save_poster_snapshot/);
+
+  assert.deepEqual(
+    inspectLocalLegacyPosterSource(storage),
+    { status: "noData" },
+    "an absent legacy browser source must remain distinguishable from rejection"
+  );
 
   storage.setItem(LEGACY_POSTER_STORAGE_KEY, "{");
-  assert.equal(readLegacyPosterSnapshot(storage), null, "corrupt JSON must not crash the loader");
+  const corruptSource = inspectLocalLegacyPosterSource(storage);
+  assert.equal(corruptSource.status, "rejected");
+  assert.equal(corruptSource.code, "corruptJson");
 
-  writeLegacyPosterSnapshot(storage, {
+  const rawLegacy = JSON.stringify({
     selectedPosterId: "night-ops",
     posters: [{ id: "night-ops", title: "NIGHT OPS" }]
   });
-  const snapshot = readLegacyPosterSnapshot(storage);
-  assert.equal(snapshot.selectedPosterId, "night-ops");
-  assert.equal(snapshot.posters[0].title, "NIGHT OPS");
+  storage.setItem(LEGACY_POSTER_STORAGE_KEY, rawLegacy);
+  const legacySource = inspectLocalLegacyPosterSource(storage);
+  assert.equal(legacySource.status, "loaded");
+  assert.equal(legacySource.kind, "legacyA0");
+  assert.equal(legacySource.snapshot.posters[0].title, "NIGHT OPS");
+  assert.equal(storage.getItem(LEGACY_POSTER_STORAGE_KEY), rawLegacy, "inspection must not rewrite the source");
 });
 
 test("poster core renders the native surface without demo controls", () => {

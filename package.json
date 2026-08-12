@@ -7,7 +7,7 @@
   "scripts": {
     "build": "node scripts/build-ui.mjs",
     "dev": "node scripts/serve-ui.mjs",
-    "check": "node --check app/src/model.js && node --check app/src/host-contract.js && node --check app/src/host-presentation.js && node --check app/src/main.js && node --check app/src/performance-monitor.js && node --check app/src/poster-geometry.js && node --check app/src/poster-permissions.js && node --check app/src/poster-template-resolution.js && node --check app/src/poster-contract.js && node --check app/src/poster-legacy-bridge.js && node --check app/src/poster-core.js && node --check app/src/poster-runtime.js && node --check app/src/poster-surface.js && node --check scripts/probe-poster-cdp.mjs && node --check scripts/run-performance-gate.mjs && node --test tests/*.test.mjs && node scripts/check-doc-links.mjs",
+    "check": "node --check app/src/model.js && node --check app/src/host-contract.js && node --check app/src/host-presentation.js && node --check app/src/main.js && node --check app/src/performance-monitor.js && node --check app/src/poster-geometry.js && node --check app/src/poster-permissions.js && node --check app/src/poster-template-resolution.js && node --check app/src/poster-contract.js && node --check app/src/poster-legacy-bridge.js && node --check app/src/poster-state-store.js && node --check app/src/poster-core.js && node --check app/src/poster-runtime.js && node --check app/src/poster-surface.js && node --check scripts/probe-poster-cdp.mjs && node --check scripts/run-performance-gate.mjs && node --test tests/*.test.mjs && node scripts/check-doc-links.mjs",
     "probe:performance-gate": "node scripts/run-performance-gate.mjs",
     "tauri:dev": "cargo tauri dev",
     "tauri:build": "cargo tauri build"

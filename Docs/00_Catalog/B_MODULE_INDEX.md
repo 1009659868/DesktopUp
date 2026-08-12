@@ -5,7 +5,7 @@
 | ID | B 能力 | 权威计划 | 状态 | C 工作流数 |
 | --- | --- | --- | --- | --- |
 | B-DRF | Desktop Runtime Foundation | [`MODULE_PLAN_V1.md`](../B_Modules/DesktopRuntimeFoundation/10_Plan/MODULE_PLAN_V1.md) | `INACTIVE — C-DRP COMPLETE / C-RLC PLANNED` | 3 |
-| B-PCR | Poster Core Runtime | [`MODULE_PLAN.md`](../B_Modules/PosterCoreRuntime/10_Plan/MODULE_PLAN.md) | `ACTIVE — C-PCB` | 5 |
+| B-PCR | Poster Core Runtime | [`MODULE_PLAN.md`](../B_Modules/PosterCoreRuntime/10_Plan/MODULE_PLAN.md) | `ACTIVE — C-PSS` | 5 |
 | B-TPL | Template Platform | [`MODULE_PLAN.md`](../B_Modules/TemplatePlatform/10_Plan/MODULE_PLAN.md) | `PLANNED` | 4 |
 | B-COL | Collection and Launch | [`MODULE_PLAN.md`](../B_Modules/CollectionAndLaunch/10_Plan/MODULE_PLAN.md) | `PLANNED` | 5 |
 | B-LAR | Layout and Ranking | [`MODULE_PLAN.md`](../B_Modules/LayoutAndRanking/10_Plan/MODULE_PLAN.md) | `PLANNED` | 4 |

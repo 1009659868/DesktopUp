@@ -54,22 +54,31 @@ test("C-PCB public persistence field allowlists are sealed for C-PSS", () => {
   ]);
 });
 
-test("A0 storage and native JSON commands have exactly one frontend bridge owner", () => {
+test("A0 sources are read-only and formal state commands have one frontend owner", () => {
   const appSources = sourceFiles("app/src", ".js");
-  for (const token of [
-    "desktop-up.a0-demo.v1",
-    "load_poster_snapshot",
-    "save_poster_snapshot"
-  ]) {
+  for (const token of ["desktop-up.a0-demo.v1", "inspect_poster_snapshot"]) {
     assert.deepEqual(filesContaining(appSources, token), ["poster-legacy-bridge.js"], token);
   }
+  for (const token of [
+    "load_poster_state",
+    "replace_poster_state",
+    "migrate_poster_state",
+    "poster_state_bootstrap_context"
+  ]) {
+    assert.deepEqual(filesContaining(appSources, token), ["poster-state-store.js"], token);
+  }
+  assert.deepEqual(filesContaining(appSources, "load_poster_snapshot"), []);
+  assert.deepEqual(filesContaining(appSources, "save_poster_snapshot"), []);
 
   const posterCore = readFileSync("app/src/poster-core.js", "utf8");
   const controlCenter = readFileSync("app/src/main.js", "utf8");
   const posterSurface = readFileSync("app/src/poster-surface.js", "utf8");
-  assert.doesNotMatch(posterCore, /legacy|localStorage|load_poster_snapshot|save_poster_snapshot/i);
-  assert.match(controlCenter, /from "\.\/poster-legacy-bridge\.js"/);
-  assert.match(posterSurface, /from "\.\/poster-legacy-bridge\.js"/);
+  const combined = appSources.map((file) => file.source).join("\n");
+  assert.doesNotMatch(posterCore, /legacy|localStorage|poster_state/i);
+  assert.match(controlCenter, /from "\.\/poster-state-store\.js"/);
+  assert.match(posterSurface, /from "\.\/poster-state-store\.js"/);
+  assert.doesNotMatch(posterSurface, /poster-legacy-bridge/);
+  assert.doesNotMatch(combined, /localStorage\.(setItem|removeItem)/);
 });
 
 test("frontend host projection uses only the canonical surface command", () => {

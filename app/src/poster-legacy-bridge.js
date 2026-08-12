@@ -1,9 +1,13 @@
-import { normalizedPoster } from "./model.js";
+import { adaptLegacyPosterSnapshot } from "./poster-contract.js";
 
 export const POSTER_LEGACY_BRIDGE_CONTRACT_VERSION = 1;
 export const LEGACY_POSTER_STORAGE_KEY = "desktop-up.a0-demo.v1";
-export const LEGACY_POSTER_LOAD_COMMAND = "load_poster_snapshot";
-export const LEGACY_POSTER_SAVE_COMMAND = "save_poster_snapshot";
+export const LEGACY_POSTER_INSPECT_COMMAND = "inspect_poster_snapshot";
+export const LEGACY_SHARED_SOURCE_KEY = "poster-snapshot-bridge-v1.json";
+export const LEGACY_POSTER_SOURCE_KINDS = Object.freeze([
+  "sharedJson",
+  "localStorage"
+]);
 
 export const LEGACY_DEFAULT_CATALOG = Object.freeze([
   ["AFTERLIGHT", "AL", "violet"],
@@ -19,6 +23,23 @@ export const LEGACY_DEFAULT_CATALOG = Object.freeze([
 
 function isObject(value) {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function cloneJson(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function source(kind, key) {
+  return { kind, key };
+}
+
+function rejectedSource(sourceIdentity, code, message) {
+  return {
+    status: "rejected",
+    source: sourceIdentity,
+    code,
+    message
+  };
 }
 
 export function classifyLegacyPosterSnapshot(snapshot) {
@@ -41,67 +62,124 @@ export function isLegacyPosterSnapshot(snapshot) {
 
 export function readLegacyPosterSnapshot(storage) {
   try {
-    const snapshot = JSON.parse(storage.getItem(LEGACY_POSTER_STORAGE_KEY));
+    const raw = storage.getItem(LEGACY_POSTER_STORAGE_KEY);
+    if (raw == null) return null;
+    const snapshot = JSON.parse(raw);
     return isLegacyPosterSnapshot(snapshot) ? snapshot : null;
   } catch {
     return null;
   }
 }
 
-export function writeLegacyPosterSnapshot(storage, snapshot) {
-  if (!isLegacyPosterSnapshot(snapshot)) return false;
-  storage.setItem(LEGACY_POSTER_STORAGE_KEY, JSON.stringify(snapshot));
-  return true;
-}
-
-export async function readSharedLegacyPosterSnapshot(storage, invoke) {
-  const localSnapshot = readLegacyPosterSnapshot(storage);
-  if (typeof invoke !== "function") return localSnapshot;
-
+export function inspectLocalLegacyPosterSource(storage) {
+  const sourceIdentity = source("localStorage", LEGACY_POSTER_STORAGE_KEY);
+  let raw;
   try {
-    const sharedSnapshot = await invoke(LEGACY_POSTER_LOAD_COMMAND);
-    const sharedClassification = classifyLegacyPosterSnapshot(sharedSnapshot);
-    if (sharedClassification.accepted) {
-      writeLegacyPosterSnapshot(storage, sharedSnapshot);
-      return sharedSnapshot;
-    }
-    if (sharedClassification.kind === "formal") {
-      return localSnapshot;
-    }
-    if (isLegacyPosterSnapshot(localSnapshot)) {
-      await invoke(LEGACY_POSTER_SAVE_COMMAND, { snapshot: localSnapshot });
-    }
-  } catch {
-    return localSnapshot;
+    raw = storage?.getItem?.(LEGACY_POSTER_STORAGE_KEY);
+  } catch (error) {
+    return rejectedSource(sourceIdentity, "readFailed", String(error));
   }
-  return localSnapshot;
-}
+  if (raw == null) return { status: "noData" };
 
-export async function writeSharedLegacyPosterSnapshot(storage, invoke, snapshot) {
-  if (!writeLegacyPosterSnapshot(storage, snapshot)) return false;
-  if (typeof invoke !== "function") return true;
+  let snapshot;
   try {
-    const sharedSnapshot = await invoke(LEGACY_POSTER_LOAD_COMMAND);
-    if (classifyLegacyPosterSnapshot(sharedSnapshot).kind === "formal") {
-      return false;
-    }
-    await invoke(LEGACY_POSTER_SAVE_COMMAND, { snapshot });
-    return true;
-  } catch {
-    return false;
+    snapshot = JSON.parse(raw);
+  } catch (error) {
+    return rejectedSource(sourceIdentity, "corruptJson", String(error));
   }
+  const classification = classifyLegacyPosterSnapshot(snapshot);
+  if (classification.accepted) {
+    return { status: "loaded", kind: "legacyA0", source: sourceIdentity, snapshot };
+  }
+  if (classification.kind === "formal") {
+    return { status: "loaded", kind: "formalV1", source: sourceIdentity, snapshot };
+  }
+  return rejectedSource(sourceIdentity, classification.reason, "Unsupported local legacy source.");
 }
 
-export function readFirstLegacyPoster(snapshot, fallback) {
-  return normalizedPoster(snapshot?.posters?.[0] ?? fallback);
+export async function inspectLegacyPosterSource(storage, invoke) {
+  if (typeof invoke !== "function") return inspectLocalLegacyPosterSource(storage);
+  const sourceIdentity = source("sharedJson", LEGACY_SHARED_SOURCE_KEY);
+  let shared;
+  try {
+    shared = await invoke(LEGACY_POSTER_INSPECT_COMMAND);
+  } catch (error) {
+    return rejectedSource(sourceIdentity, "inspectCommandFailed", String(error));
+  }
+
+  if (shared?.status === "rejected") {
+    return rejectedSource(sourceIdentity, shared.code ?? "sharedSourceRejected", shared.message ?? "");
+  }
+  if (shared?.status === "loaded") {
+    const classification = classifyLegacyPosterSnapshot(shared.snapshot);
+    const kindMatches = (shared.kind === "legacyA0" && classification.accepted)
+      || (shared.kind === "formalV1" && classification.kind === "formal");
+    if (!kindMatches) {
+      return rejectedSource(
+        sourceIdentity,
+        "sharedSourceClassificationMismatch",
+        "Native and frontend legacy source classifications disagree."
+      );
+    }
+    return {
+      status: "loaded",
+      kind: shared.kind,
+      source: sourceIdentity,
+      snapshot: cloneJson(shared.snapshot)
+    };
+  }
+  if (shared?.status !== "noData") {
+    return rejectedSource(
+      sourceIdentity,
+      "invalidInspectResult",
+      "Native legacy inspection returned an unsupported result."
+    );
+  }
+  return inspectLocalLegacyPosterSource(storage);
 }
 
-export function replaceFirstLegacyPoster(snapshot, next) {
+export function prepareLegacyPosterMigration(legacySnapshot, {
+  workArea,
+  sourceKind,
+  sourceKey
+} = {}) {
+  const classification = classifyLegacyPosterSnapshot(legacySnapshot);
+  const sourceIsValid = LEGACY_POSTER_SOURCE_KINDS.includes(sourceKind)
+    && typeof sourceKey === "string"
+    && Boolean(sourceKey.trim());
+  if (!classification.accepted || !sourceIsValid) {
+    return {
+      ok: false,
+      request: null,
+      errors: [{
+        path: classification.accepted ? "$.source" : "$",
+        code: classification.accepted ? "invalid_legacy_source" : classification.reason,
+        message: classification.accepted
+          ? "Legacy migration requires a supported source kind and non-empty source key."
+          : "Legacy migration requires an unversioned A0 snapshot with a posters array."
+      }]
+    };
+  }
+
+  const legacyEnvelope = cloneJson(legacySnapshot);
+  const firstPoster = legacyEnvelope.posters[0];
+  const projectedSnapshot = {
+    selectedPosterId: typeof firstPoster?.id === "string" ? firstPoster.id : "",
+    posters: firstPoster === undefined ? [] : [cloneJson(firstPoster)]
+  };
+  const adapted = adaptLegacyPosterSnapshot(projectedSnapshot, { workArea });
+  const request = {
+    source: { kind: sourceKind, key: sourceKey },
+    legacySnapshot: legacyEnvelope,
+    adaptedSnapshot: adapted.snapshot,
+    adapterMigrations: cloneJson(adapted.migrations),
+    adapterErrors: cloneJson(adapted.errors)
+  };
+
   return {
-    ...snapshot,
-    posters: snapshot.posters.length
-      ? snapshot.posters.map((entry, index) => index === 0 ? next : entry)
-      : [next]
+    ok: adapted.ok,
+    request,
+    errors: cloneJson(adapted.errors)
   };
 }
 

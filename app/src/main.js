@@ -8,16 +8,14 @@ import {
   buildPosterMarkup
 } from "./poster-core.js";
 import {
-  LEGACY_POSTER_STORAGE_KEY,
   LEGACY_DEFAULT_CATALOG,
-  createLegacyDefaultSnapshot,
-  isLegacyPosterSnapshot,
-  readLegacyPosterSnapshot,
-  readSharedLegacyPosterSnapshot,
-  toLegacyDemoItem,
-  writeLegacyPosterSnapshot,
-  writeSharedLegacyPosterSnapshot
+  toLegacyDemoItem
 } from "./poster-legacy-bridge.js";
+import {
+  POSTER_STATE_UPDATED_EVENT,
+  PosterStateClient,
+  createEphemeralPosterRuntimeSnapshot
+} from "./poster-state-store.js";
 import {
   applyPosterAction,
   buildRuntimeSyncArgs,
@@ -25,7 +23,6 @@ import {
   isRuntimeSuspended,
   runtimeMode,
   posterInteractionMode,
-  posterSnapshot,
   selectedPoster as runtimeSelectedPoster
 } from "./poster-runtime.js";
 import {
@@ -57,7 +54,8 @@ const densityControl = document.querySelector("#density-control");
 const autoCollapseControl = document.querySelector("#auto-collapse");
 const autostartControl = document.querySelector("#autostart-control");
 
-let state = createRuntimeState(createLegacyDefaultSnapshot());
+const posterState = new PosterStateClient({ invoke: nativeInvoke(), storage: localStorage });
+let state = createRuntimeState(createEphemeralPosterRuntimeSnapshot());
 let gesture = null;
 let toastTimer = null;
 let launchClickTimer = null;
@@ -72,12 +70,23 @@ function nativeInvoke() {
 }
 
 async function loadState() {
-  const snapshot = await readSharedLegacyPosterSnapshot(localStorage, nativeInvoke());
-  return createRuntimeState(snapshot ?? createLegacyDefaultSnapshot());
+  const result = await posterState.bootstrap();
+  document.body.dataset.posterStateStatus = result.status;
+  if (result.status !== "ready") {
+    throw new Error(result.message ?? "poster state bootstrap rejected");
+  }
+  return createRuntimeState(posterState.runtimeSnapshot());
 }
 
 function saveState() {
-  void writeSharedLegacyPosterSnapshot(localStorage, nativeInvoke(), posterSnapshot(state));
+  void posterState.saveRuntimeState(state).then((result) => {
+    if (result?.status === "rejected") {
+      document.body.dataset.posterStateStatus = "rejected";
+      showToast("海报状态保存失败，原状态已保留");
+    } else if (result?.status === "stored") {
+      document.body.dataset.posterStateStatus = "ready";
+    }
+  });
 }
 
 function selectedPoster() {
@@ -414,11 +423,16 @@ pauseToggle.addEventListener("click", () => {
   showToast(state.manuallyPaused ? "动态效果已暂停" : "动态效果已恢复");
 });
 
-document.querySelector("#reset-layout").addEventListener("click", () => {
-  state = createRuntimeState(createLegacyDefaultSnapshot());
-  localStorage.removeItem(LEGACY_POSTER_STORAGE_KEY);
+document.querySelector("#reset-layout").addEventListener("click", async () => {
+  const result = await posterState.resetDefault();
+  if (result.status !== "ready") {
+    showToast("默认布局写入失败，原状态已保留");
+    return;
+  }
+  state = createRuntimeState(posterState.runtimeSnapshot());
+  document.body.dataset.posterStateStatus = "ready";
   render();
-  showToast("画布已恢复到 Demo 默认布局");
+  showToast("画布已恢复到正式默认布局");
 });
 
 document.querySelector("#theme-list").addEventListener("click", (event) => {
@@ -463,16 +477,6 @@ document.addEventListener("visibilitychange", () => {
   app.classList.toggle("is-paused", state.manuallyPaused || isRuntimeSuspended(state, document.hidden));
 });
 
-window.addEventListener("storage", (event) => {
-  if (event.key !== LEGACY_POSTER_STORAGE_KEY) return;
-  const editMode = state.editMode;
-  const manuallyPaused = state.manuallyPaused;
-  const snapshot = readLegacyPosterSnapshot(localStorage) ?? createLegacyDefaultSnapshot();
-  state = applyPosterAction(createRuntimeState(snapshot), { type: "setEditMode", value: editMode });
-  state = applyPosterAction(state, { type: "setManualPaused", value: manuallyPaused });
-  render();
-});
-
 async function connectNativeControls() {
   const listen = window.__TAURI__?.event?.listen;
   if (!listen) return;
@@ -485,16 +489,16 @@ async function connectNativeControls() {
   await listen("runtime-state-changed", (event) => {
     applyNativePauseSnapshot(event.payload ?? {});
   });
-  await listen("poster-snapshot-updated", (event) => {
-    if (!isLegacyPosterSnapshot(event.payload)) return;
+  await listen(POSTER_STATE_UPDATED_EVENT, (event) => {
+    if (!posterState.acceptSnapshot(event.payload)) return;
     const editMode = state.editMode;
     const manuallyPaused = state.manuallyPaused;
-    writeLegacyPosterSnapshot(localStorage, event.payload);
-    state = applyPosterAction(createRuntimeState(event.payload), {
+    state = applyPosterAction(createRuntimeState(posterState.runtimeSnapshot()), {
       type: "setEditMode",
       value: editMode
     });
     state = applyPosterAction(state, { type: "setManualPaused", value: manuallyPaused });
+    document.body.dataset.posterStateStatus = "ready";
     render();
   });
   await listen("runtime-control", (event) => {
@@ -540,9 +544,10 @@ async function bootstrap() {
   try {
     state = await loadState();
   } catch {
-    state = createRuntimeState(createLegacyDefaultSnapshot());
+    state = createRuntimeState(createEphemeralPosterRuntimeSnapshot());
+    document.body.dataset.posterStateStatus = "rejected";
+    showToast("正式海报状态不可用；当前仅显示未持久化的安全预览");
   }
-  saveState();
   render();
   void pollPerformance();
   connectNativeControls().catch(() => {});

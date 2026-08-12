@@ -1,8 +1,8 @@
 # Poster Contract Baseline 工作流计划
 
-日期：2026-08-11
+日期：2026-08-12
 
-状态：`ACTIVE — C-PCB / C-PCB-05 CONTRACT SEAL AND C-PSS HANDOFF`
+状态：`COMPLETE — C-PCB-01..05 PASS / C-PSS INPUT FROZEN`
 
 ## 1. 目的
 
@@ -79,7 +79,7 @@
 
 结果：JS/Rust 同构测试通过，A0 bridge 只有一个隔离入口，宿主 canonical 接口无新增兼容调用，当前单海报 Release 核心回归通过并形成 C-PSS 输入。
 
-状态：`IN PROGRESS — AUTO GATES PASS / USER RELEASE REGRESSION PENDING`
+状态：`COMPLETE — AUTO GATES AND USER RELEASE REGRESSION PASS`
 
 ## 5. 完成门
 

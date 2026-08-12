@@ -1,18 +1,11 @@
-import { normalizedPoster } from "./model.js";
 import {
   buildPosterMarkup
 } from "./poster-core.js";
 import {
-  LEGACY_POSTER_STORAGE_KEY,
-  createLegacyDefaultSnapshot,
-  isLegacyPosterSnapshot,
-  readFirstLegacyPoster,
-  readLegacyPosterSnapshot,
-  readSharedLegacyPosterSnapshot,
-  replaceFirstLegacyPoster,
-  writeLegacyPosterSnapshot,
-  writeSharedLegacyPosterSnapshot
-} from "./poster-legacy-bridge.js";
+  POSTER_STATE_UPDATED_EVENT,
+  PosterStateClient,
+  createEphemeralPosterRuntimeSnapshot
+} from "./poster-state-store.js";
 import {
   applyPosterAction,
   buildHostSurfaceSyncArgs,
@@ -29,14 +22,11 @@ const ACTIVE_ANIMATION_FRAME_INTERVAL_MS = 1000 / 30;
 const POSTER_SURFACE_GUTTER = 10;
 const POSTER_CORNER_RADIUS = 16;
 const POSTER_COLLAPSED_HEIGHT = 116;
-const fallbackPoster = normalizedPoster(createLegacyDefaultSnapshot().posters[0]);
 
 const surface = document.querySelector("#poster-surface");
 const toast = document.querySelector("#poster-toast");
-let runtime = createRuntimeState({
-  selectedPosterId: fallbackPoster.id,
-  posters: [fallbackPoster]
-});
+const posterState = new PosterStateClient({ invoke: nativeInvoke(), storage: localStorage });
+let runtime = createRuntimeState(createEphemeralPosterRuntimeSnapshot());
 let toastTimer = null;
 let launchClickTimer = null;
 let nativeSurfaceSyncTimer = null;
@@ -52,14 +42,17 @@ function nativeInvoke() {
   return window.__TAURI__?.core?.invoke;
 }
 
-function runtimeFromSnapshot(snapshot) {
-  const first = readFirstLegacyPoster(snapshot, fallbackPoster);
-  return createRuntimeState({ selectedPosterId: first.id, posters: [first] });
+function runtimeFromPosterState() {
+  return createRuntimeState(posterState.runtimeSnapshot());
 }
 
 async function loadRuntime() {
-  const snapshot = await readSharedLegacyPosterSnapshot(localStorage, nativeInvoke());
-  return runtimeFromSnapshot(snapshot);
+  const result = await posterState.bootstrap();
+  document.body.dataset.posterStateStatus = result.status;
+  if (result.status !== "ready") {
+    throw new Error(result.message ?? "poster state bootstrap rejected");
+  }
+  return runtimeFromPosterState();
 }
 
 function currentPoster() {
@@ -72,13 +65,14 @@ function persistPoster(patch) {
     posterId: currentPoster().id,
     patch
   });
-  const next = currentPoster();
-  const snapshot = readLegacyPosterSnapshot(localStorage) ?? createLegacyDefaultSnapshot();
-  void writeSharedLegacyPosterSnapshot(
-    localStorage,
-    nativeInvoke(),
-    replaceFirstLegacyPoster(snapshot, next)
-  );
+  void posterState.saveRuntimeState(runtime).then((result) => {
+    if (result?.status === "rejected") {
+      document.body.dataset.posterStateStatus = "rejected";
+      showToast("海报状态保存失败，原状态已保留");
+    } else if (result?.status === "stored") {
+      document.body.dataset.posterStateStatus = "ready";
+    }
+  });
   render();
   syncNativeSurface();
 }
@@ -343,13 +337,6 @@ surface.addEventListener("dblclick", (event) => {
   if (item) showToast(`Demo：准备启动 ${item.title}，并标记为最近活跃`);
 });
 
-window.addEventListener("storage", (event) => {
-  if (event.key !== LEGACY_POSTER_STORAGE_KEY) return;
-  runtime = runtimeFromSnapshot(readLegacyPosterSnapshot(localStorage));
-  render();
-  syncNativeSurface();
-});
-
 window.addEventListener("resize", scheduleNativeSurfaceSync);
 
 document.addEventListener("visibilitychange", () => {
@@ -364,10 +351,11 @@ async function connectNativeControls() {
   await listen("runtime-state-changed", (event) => {
     applyRuntimePauseState(event.payload ?? {});
   });
-  await listen("poster-snapshot-updated", (event) => {
-    if (!isLegacyPosterSnapshot(event.payload)) return;
-    writeLegacyPosterSnapshot(localStorage, event.payload);
-    runtime = runtimeFromSnapshot(event.payload);
+  await listen(POSTER_STATE_UPDATED_EVENT, (event) => {
+    if (!posterState.acceptSnapshot(event.payload)) return;
+    const next = runtimeFromPosterState();
+    runtime = applyPosterAction(next, { type: "applyRuntimeSnapshot", snapshot: runtime });
+    document.body.dataset.posterStateStatus = "ready";
     render();
     syncNativeSurface();
   });
@@ -377,7 +365,9 @@ async function bootstrap() {
   try {
     runtime = await loadRuntime();
   } catch {
-    runtime = runtimeFromSnapshot(null);
+    runtime = createRuntimeState(createEphemeralPosterRuntimeSnapshot());
+    document.body.dataset.posterStateStatus = "rejected";
+    showToast("正式海报状态不可用；当前仅显示未持久化的安全预览");
   }
   render();
   await connectNativeControls().catch(() => {});

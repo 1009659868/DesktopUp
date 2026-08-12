@@ -98,18 +98,26 @@
 | `C_Workstreams/DesktopRuntimeProductionization/20_Log/2026-08/2026-08-11_cdrp06_stable_working_set_correction.md` | C/Log | C-DRP-06 稳定态纠正、双预算、懒创建、v3/v4 性能、Release 烟雾与平台限制关闭 | `COMPLETE — USER ACCEPTED LIMIT` |
 | `C_Workstreams/DesktopRuntimeProductionization/30_Sync/COLD_START.md` | C/Sync | 已关闭生产宿主追溯入口 | `COMPLETE` |
 | `C_Workstreams/DesktopRuntimeProductionization/30_Sync/CURRENT_HANDOFF.md` | C/Sync | 已关闭生产宿主交接 | `COMPLETE` |
-| `C_Workstreams/PosterContractBaseline/00_Catalog/TASK_INDEX.md` | C/Catalog | 海报契约任务索引 | `ACTIVE` |
-| `C_Workstreams/PosterContractBaseline/00_Catalog/CODE_ANCHORS.md` | C/Catalog | 海报契约代码定位 | `ACTIVE` |
-| `C_Workstreams/PosterContractBaseline/10_Plan/WORKSTREAM_PLAN.md` | C/Plan | 版本化海报契约与行为基线 | `ACTIVE` |
-| `C_Workstreams/PosterContractBaseline/10_Plan/C_PSS_INPUT_CONTRACT_V1.md` | C/Plan | C-PSS 可依赖的正式 schema、legacy 与失败边界冻结输入 | `FROZEN INPUT — C-PSS NOT ACTIVE` |
+| `C_Workstreams/PosterContractBaseline/00_Catalog/TASK_INDEX.md` | C/Catalog | 海报契约任务索引 | `COMPLETE` |
+| `C_Workstreams/PosterContractBaseline/00_Catalog/CODE_ANCHORS.md` | C/Catalog | 海报契约代码定位 | `COMPLETE` |
+| `C_Workstreams/PosterContractBaseline/10_Plan/WORKSTREAM_PLAN.md` | C/Plan | 版本化海报契约与行为基线 | `COMPLETE` |
+| `C_Workstreams/PosterContractBaseline/10_Plan/C_PSS_INPUT_CONTRACT_V1.md` | C/Plan | C-PSS 可依赖的正式 schema、legacy 与失败边界冻结输入 | `FROZEN INPUT — CONSUMED BY C-PSS` |
 | `C_Workstreams/PosterContractBaseline/20_Log/2026-08/2026-08-11_activation_and_contract_audit.md` | C/Log | C-PCB 激活、现有模型审计与 JS 契约首切片 | `COMPLETE — SUPERSEDED` |
 | `C_Workstreams/PosterContractBaseline/20_Log/2026-08/2026-08-11_cpcb01_contract_parity_and_cpcb02_geometry_audit.md` | C/Log | C-PCB-01 JS/Rust 同构、共享矩阵与 C-PCB-02 几何证据 | `C-PCB-01 COMPLETE / C-PCB-02 ACTIVE` |
 | `C_Workstreams/PosterContractBaseline/20_Log/2026-08/2026-08-11_cpcb02_geometry_contract_and_cpcb03_activation.md` | C/Log | C-PCB-02 几何契约与 C-PCB-03 激活 | `C-PCB-02 COMPLETE / C-PCB-03 ACTIVE` |
 | `C_Workstreams/PosterContractBaseline/20_Log/2026-08/2026-08-11_cpcb03_permission_contract_and_cpcb04_activation.md` | C/Log | C-PCB-03 标题栏权限矩阵与 C-PCB-04 激活 | `C-PCB-03 COMPLETE / C-PCB-04 ACTIVE` |
 | `C_Workstreams/PosterContractBaseline/20_Log/2026-08/2026-08-11_cpcb04_template_failure_contract_and_cpcb05_activation.md` | C/Log | C-PCB-04 模板失败契约与 C-PCB-05 激活 | `C-PCB-04 COMPLETE / C-PCB-05 ACTIVE` |
-| `C_Workstreams/PosterContractBaseline/20_Log/2026-08/2026-08-11_cpcb05_contract_seal_release_candidate.md` | C/Log | legacy bridge、公共契约封板、C-PSS 输入、Release Z 序修复与人工回归门 | `AUTOMATION PASS / USER RELEASE REGRESSION PENDING` |
-| `C_Workstreams/PosterContractBaseline/30_Sync/COLD_START.md` | C/Sync | 当前 C 工作流接手入口 | `ACTIVE` |
-| `C_Workstreams/PosterContractBaseline/30_Sync/CURRENT_HANDOFF.md` | C/Sync | 当前海报契约可执行位置 | `ACTIVE` |
+| `C_Workstreams/PosterContractBaseline/20_Log/2026-08/2026-08-11_cpcb05_contract_seal_release_candidate.md` | C/Log | legacy bridge、公共契约封板、C-PSS 输入、Release Z 序修复与人工回归门 | `COMPLETE — USER REGRESSION PASS` |
+| `C_Workstreams/PosterContractBaseline/30_Sync/COLD_START.md` | C/Sync | 已关闭海报契约追溯入口 | `COMPLETE` |
+| `C_Workstreams/PosterContractBaseline/30_Sync/CURRENT_HANDOFF.md` | C/Sync | 已关闭海报契约交接 | `COMPLETE` |
+| `C_Workstreams/PosterStateStore/00_Catalog/TASK_INDEX.md` | C/Catalog | 状态仓库任务索引 | `ACTIVE` |
+| `C_Workstreams/PosterStateStore/00_Catalog/CODE_ANCHORS.md` | C/Catalog | 状态仓库代码定位 | `ACTIVE` |
+| `C_Workstreams/PosterStateStore/10_Plan/WORKSTREAM_PLAN.md` | C/Plan | SQLite schema、仓库、迁移与过渡桥切换计划 | `ACTIVE` |
+| `C_Workstreams/PosterStateStore/20_Log/2026-08/2026-08-12_cpss01_activation_and_schema_baseline.md` | C/Log | C-PSS 激活、存储决策与 schema 基线 | `C-PSS-01 COMPLETE / C-PSS-02 ACTIVE` |
+| `C_Workstreams/PosterStateStore/20_Log/2026-08/2026-08-12_cpss02_load_replace_cas.md` | C/Log | C-PSS-02 结构化加载、原子替换、CAS 与失败保留 | `C-PSS-02 COMPLETE / C-PSS-03 ACTIVE` |
+| `C_Workstreams/PosterStateStore/20_Log/2026-08/2026-08-12_cpss03_legacy_migration_source_retention.md` | C/Log | C-PSS-03 legacy 第一海报迁移、完整原始备份、幂等与失败保留 | `C-PSS-03 COMPLETE / C-PSS-04 ACTIVE` |
+| `C_Workstreams/PosterStateStore/30_Sync/COLD_START.md` | C/Sync | 当前状态仓库接手入口 | `ACTIVE` |
+| `C_Workstreams/PosterStateStore/30_Sync/CURRENT_HANDOFF.md` | C/Sync | 当前状态仓库可执行位置 | `ACTIVE` |
 | `Reference/RELATED_PROJECTS.md` | Reference | 同类项目调研 | `REFERENCE` |
 | `Rules/DOCUMENT_GOVERNANCE.md` | Rules | 文档权威和同步规则 | `ACTIVE` |
 | `Rules/GIT_STRATEGY.md` | Rules | 分支、同步、提交、合并和仓库卫生 | `ACTIVE` |

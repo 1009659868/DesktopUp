@@ -1,26 +1,27 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  LEGACY_POSTER_LOAD_COMMAND,
-  LEGACY_POSTER_SAVE_COMMAND,
+  LEGACY_POSTER_INSPECT_COMMAND,
   LEGACY_POSTER_STORAGE_KEY,
+  LEGACY_SHARED_SOURCE_KEY,
   POSTER_LEGACY_BRIDGE_CONTRACT_VERSION,
   classifyLegacyPosterSnapshot,
   createLegacyDefaultSnapshot,
-  readFirstLegacyPoster,
-  readLegacyPosterSnapshot,
-  readSharedLegacyPosterSnapshot,
-  replaceFirstLegacyPoster,
-  writeLegacyPosterSnapshot,
-  writeSharedLegacyPosterSnapshot
+  inspectLegacyPosterSource,
+  inspectLocalLegacyPosterSource,
+  readLegacyPosterSnapshot
 } from "../app/src/poster-legacy-bridge.js";
 
-function memoryStorage() {
-  const values = new Map();
+function memoryStorage(initial = new Map()) {
+  const values = new Map(initial);
+  let writes = 0;
   return {
     getItem: (key) => values.has(key) ? values.get(key) : null,
-    setItem: (key, value) => values.set(key, String(value)),
-    removeItem: (key) => values.delete(key)
+    setItem: (key, value) => {
+      writes += 1;
+      values.set(key, String(value));
+    },
+    writes: () => writes
   };
 }
 
@@ -43,101 +44,107 @@ test("legacy bridge classifies A0, formal and malformed snapshots without overla
   });
 });
 
-test("legacy storage accepts only unversioned A0 snapshot shape", () => {
-  const storage = memoryStorage();
-  assert.equal(readLegacyPosterSnapshot(storage), null);
-
-  storage.setItem(LEGACY_POSTER_STORAGE_KEY, "{");
-  assert.equal(readLegacyPosterSnapshot(storage), null);
-
+test("legacy storage compatibility read is read-only", () => {
   const legacy = { selectedPosterId: "night-ops", posters: [{ id: "night-ops" }] };
-  assert.equal(writeLegacyPosterSnapshot(storage, legacy), true);
+  const storage = memoryStorage(new Map([
+    [LEGACY_POSTER_STORAGE_KEY, JSON.stringify(legacy)]
+  ]));
   assert.deepEqual(readLegacyPosterSnapshot(storage), legacy);
+  assert.equal(storage.writes(), 0);
+
+  const corrupt = memoryStorage(new Map([[LEGACY_POSTER_STORAGE_KEY, "{"]]));
+  assert.equal(readLegacyPosterSnapshot(corrupt), null);
+  assert.equal(corrupt.writes(), 0);
+});
+
+test("local legacy inspection distinguishes absent, corrupt, A0, formal and invalid sources", () => {
+  assert.deepEqual(inspectLocalLegacyPosterSource(memoryStorage()), { status: "noData" });
+
+  const corrupt = inspectLocalLegacyPosterSource(memoryStorage(new Map([
+    [LEGACY_POSTER_STORAGE_KEY, "{"]
+  ])));
+  assert.equal(corrupt.status, "rejected");
+  assert.equal(corrupt.code, "corruptJson");
+
+  const legacy = { selectedPosterId: "legacy", posters: [{ id: "legacy" }] };
+  const loadedLegacy = inspectLocalLegacyPosterSource(memoryStorage(new Map([
+    [LEGACY_POSTER_STORAGE_KEY, JSON.stringify(legacy)]
+  ])));
+  assert.deepEqual(loadedLegacy, {
+    status: "loaded",
+    kind: "legacyA0",
+    source: { kind: "localStorage", key: LEGACY_POSTER_STORAGE_KEY },
+    snapshot: legacy
+  });
 
   const formal = { contractVersion: 1, revision: 0, selectedPosterId: "formal", posters: [] };
-  assert.equal(writeLegacyPosterSnapshot(storage, formal), false);
-  assert.deepEqual(readLegacyPosterSnapshot(storage), legacy);
+  const loadedFormal = inspectLocalLegacyPosterSource(memoryStorage(new Map([
+    [LEGACY_POSTER_STORAGE_KEY, JSON.stringify(formal)]
+  ])));
+  assert.equal(loadedFormal.status, "loaded");
+  assert.equal(loadedFormal.kind, "formalV1");
+
+  const invalid = inspectLocalLegacyPosterSource(memoryStorage(new Map([
+    [LEGACY_POSTER_STORAGE_KEY, JSON.stringify({ nope: true })]
+  ])));
+  assert.equal(invalid.status, "rejected");
+  assert.equal(invalid.code, "invalid_legacy_snapshot");
 });
 
-test("shared legacy bridge prefers Rust A0 state and migrates local fallback", async () => {
-  const storage = memoryStorage();
+test("shared JSON inspection is preferred and never writes localStorage", async () => {
   const local = { selectedPosterId: "local", posters: [{ id: "local" }] };
   const shared = { selectedPosterId: "shared", posters: [{ id: "shared" }] };
-  writeLegacyPosterSnapshot(storage, local);
-
-  const preferred = await readSharedLegacyPosterSnapshot(storage, async (command) => {
-    assert.equal(command, LEGACY_POSTER_LOAD_COMMAND);
-    return shared;
-  });
-  assert.deepEqual(preferred, shared);
-  assert.deepEqual(readLegacyPosterSnapshot(storage), shared);
-
-  let migrated = null;
-  const fallbackStorage = memoryStorage();
-  writeLegacyPosterSnapshot(fallbackStorage, local);
-  const migratedSnapshot = await readSharedLegacyPosterSnapshot(fallbackStorage, async (command, args) => {
-    if (command === LEGACY_POSTER_LOAD_COMMAND) return null;
-    if (command === LEGACY_POSTER_SAVE_COMMAND) migrated = args.snapshot;
-  });
-  assert.deepEqual(migratedSnapshot, local);
-  assert.deepEqual(migrated, local);
-
-  const next = { selectedPosterId: "next", posters: [{ id: "next" }] };
-  await writeSharedLegacyPosterSnapshot(fallbackStorage, async (command, args) => {
-    if (command === LEGACY_POSTER_LOAD_COMMAND) return null;
-    assert.equal(command, LEGACY_POSTER_SAVE_COMMAND);
-    assert.deepEqual(args.snapshot, next);
-  }, next);
-  assert.deepEqual(readLegacyPosterSnapshot(fallbackStorage), next);
-});
-
-test("formal shared snapshot is never consumed or overwritten by the A0 bridge", async () => {
-  const storage = memoryStorage();
-  const local = { selectedPosterId: "local", posters: [{ id: "local" }] };
-  const formal = {
-    contractVersion: 1,
-    revision: 7,
-    selectedPosterId: "poster-primary",
-    posters: []
-  };
-  const commands = [];
-  writeLegacyPosterSnapshot(storage, local);
-
-  const result = await readSharedLegacyPosterSnapshot(storage, async (command) => {
-    commands.push(command);
-    return formal;
+  const storage = memoryStorage(new Map([
+    [LEGACY_POSTER_STORAGE_KEY, JSON.stringify(local)]
+  ]));
+  const result = await inspectLegacyPosterSource(storage, async (command) => {
+    assert.equal(command, LEGACY_POSTER_INSPECT_COMMAND);
+    return { status: "loaded", kind: "legacyA0", snapshot: shared };
   });
 
-  assert.deepEqual(result, local);
-  assert.deepEqual(commands, [LEGACY_POSTER_LOAD_COMMAND]);
+  assert.deepEqual(result, {
+    status: "loaded",
+    kind: "legacyA0",
+    source: { kind: "sharedJson", key: LEGACY_SHARED_SOURCE_KEY },
+    snapshot: shared
+  });
+  assert.equal(storage.writes(), 0);
   assert.deepEqual(readLegacyPosterSnapshot(storage), local);
-
-  const writeResult = await writeSharedLegacyPosterSnapshot(storage, async (command) => {
-    commands.push(command);
-    return formal;
-  }, local);
-  assert.equal(writeResult, false);
-  assert.deepEqual(commands, [LEGACY_POSTER_LOAD_COMMAND, LEGACY_POSTER_LOAD_COMMAND]);
 });
 
-test("legacy bridge owns the existing two-poster demo default", () => {
+test("rejected shared source fails closed instead of falling back or rewriting", async () => {
+  const local = { selectedPosterId: "local", posters: [{ id: "local" }] };
+  const storage = memoryStorage(new Map([
+    [LEGACY_POSTER_STORAGE_KEY, JSON.stringify(local)]
+  ]));
+  const result = await inspectLegacyPosterSource(storage, async () => ({
+    status: "rejected",
+    code: "corruptJson",
+    message: "invalid JSON"
+  }));
+  assert.equal(result.status, "rejected");
+  assert.equal(result.code, "corruptJson");
+  assert.equal(result.source.kind, "sharedJson");
+  assert.equal(storage.writes(), 0);
+});
+
+test("absent shared source falls back to read-only local inspection", async () => {
+  const local = { selectedPosterId: "local", posters: [{ id: "local" }] };
+  const storage = memoryStorage(new Map([
+    [LEGACY_POSTER_STORAGE_KEY, JSON.stringify(local)]
+  ]));
+  const result = await inspectLegacyPosterSource(storage, async () => ({ status: "noData" }));
+  assert.equal(result.status, "loaded");
+  assert.equal(result.kind, "legacyA0");
+  assert.equal(result.source.kind, "localStorage");
+  assert.equal(storage.writes(), 0);
+});
+
+test("legacy bridge retains the existing two-poster demo only as source/fixture data", () => {
   const snapshot = createLegacyDefaultSnapshot();
   assert.equal(snapshot.selectedPosterId, "night-ops");
   assert.equal(snapshot.posters.length, 2);
-  assert.equal(snapshot.posters[0].locked, false);
   assert.equal(snapshot.posters[0].items.length, 6);
   assert.equal(snapshot.posters[1].items.length, 3);
   assert.equal(Object.hasOwn(snapshot, "contractVersion"), false);
-});
-
-test("legacy bridge reads and replaces the projected first poster without mutation", () => {
-  const snapshot = createLegacyDefaultSnapshot();
-  const first = readFirstLegacyPoster(snapshot, snapshot.posters[0]);
-  assert.equal(first.id, "night-ops");
-
-  const next = { ...first, title: "RENAMED OPS" };
-  const updated = replaceFirstLegacyPoster(snapshot, next);
-  assert.equal(updated.posters[0].title, "RENAMED OPS");
-  assert.equal(updated.posters[1].id, "indie-arcade");
-  assert.equal(snapshot.posters[0].title, "NIGHT OPS", "legacy helper must not mutate its source");
 });

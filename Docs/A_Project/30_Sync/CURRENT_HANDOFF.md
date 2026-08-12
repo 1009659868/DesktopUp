@@ -1,8 +1,8 @@
 # A 层当前交接
 
-最后更新：2026-08-11
+最后更新：2026-08-12
 
-状态：`V1-P1 ACTIVE / C-PCB-05 CONTRACT SEAL AND C-PSS HANDOFF`
+状态：`V1-P1 ACTIVE / C-PSS-05 RELEASE RECOVERY GATE`
 
 ## 已建立
 
@@ -35,7 +35,7 @@
 - C-DRP-04 的最终 Release 连续 Win+D 已由用户确认较稳定并接受通过；多屏/DPI 物理矩阵仍延期至 C-DRP-06；
 - C-DRP-05 的版本化 lifecycle、锁外统一事件、状态优先显隐、退出状态、前端乱序保护和静态/暂停无持续轮询已通过自动测试、Release/NSIS 与用户 5/5 人工矩阵，任务关闭；
 - C-DRP-06 已按用户确认升级为主进程 50 MiB + 完整进程树 256 MiB 私有工作集双预算，并将控制中心改为首次请求创建；`performance-gate-v3` / `performance-baseline-v4`、58 项前端/契约、52 项 Rust、Release/NSIS 和最新版普通 Release 四项烟雾全部通过；用户随后接受主屏单海报认证限制，C-DRP-06 与 C-DRP 关闭；
-- 活动链已切换到 B-PCR / C-PCB。C-PCB-01 已完成正式 v1 契约与 A0 legacy 分流；C-PCB-02 已完成工作区派生默认几何；C-PCB-03 已完成标题栏权限矩阵；C-PCB-04 已完成正常默认、用户模板和内部 fallback 的结构化 JS/Rust 共享失败矩阵，全量 JS 83/83、Rust 65/65 通过。当前进入 C-PCB-05 契约封板与 C-PSS 交接；现有 Release 投影尚未由新模板解析器接管；
+- C-PCB-01..05 与 C-PSS-01..04 已完成；SQLite 已成为唯一正式状态权威，legacy 已降为只读迁移来源，用户确认最新版 Release 的视觉、桌面交互、重启恢复和控制中心往返通过；当前推进 C-PSS-05 恢复门；
 ## 尚未完成
 
 - C-DHF-04/05 剩余物理矩阵（Explorer 真重启、热插拔、主屏/DPI 切换等）因物理环境延后；已确认的真实游戏全屏、Win+L、显示器关闭/唤醒通过；
@@ -52,7 +52,7 @@
 
 ## 下一动作
 
-当前 `C-DHF-01..08`、`C-DRP-01..06` 与 `C-PCB-01..04` 已关闭；当前只激活 [C-PCB Poster Contract Baseline](../../C_Workstreams/PosterContractBaseline/30_Sync/CURRENT_HANDOFF.md) 内的 C-PCB-05 契约封板与 C-PSS 交接。当前默认与发布范围仍为单海报；多显示器、混合 DPI、负坐标副屏、主屏切换、跨屏重启和热插拔未认证。
+当前 `C-DHF-01..08`、`C-DRP-01..06`、`C-PCB-01..05` 与 `C-PSS-01..04` 已关闭。当前进入 [C-PSS](../../C_Workstreams/PosterStateStore/30_Sync/CURRENT_HANDOFF.md) 的 C-PSS-05 Release 恢复门；下一轮先按用户要求执行 Git 同步，再通过隔离数据库副本与故障注入验证损坏、未来 schema、事务失败、CAS 冲突和备份恢复。当前默认与发布范围仍为单海报；多显示器、混合 DPI、负坐标副屏、主屏切换、跨屏重启和热插拔未认证。
 
 A1 真实快捷方式能力保持排队状态；C-ROD/C-PAA/C-LCH 只允许用户主动触发的只读发现、仅添加和启动，任何真实文件移动必须等待 C-SVT 的保险库、账本、逐批确认和故障注入通过。
 

@@ -7,6 +7,7 @@ mod poster_contract;
 pub mod poster_geometry;
 pub mod poster_permissions;
 mod poster_snapshot;
+pub mod poster_state_store;
 pub mod poster_template_resolution;
 mod runtime_lifecycle;
 mod runtime_monitor;
@@ -33,7 +34,11 @@ use performance_gate::{
     PERFORMANCE_GATE_CONTRACT, PERFORMANCE_SAMPLE_COUNT, PERFORMANCE_STABILIZATION_MIN_MS,
 };
 use placement::PlacementStore;
-use poster_snapshot::PosterSnapshotStore;
+use poster_snapshot::{PosterSnapshotLoadResult, PosterSnapshotStore};
+use poster_state_store::{
+    LegacyPosterMigrationRequest, LegacyPosterMigrationResult, PosterStateLoadResult,
+    PosterStateMutationResult, PosterStateRepository, PosterStateStoreError,
+};
 use runtime_lifecycle::{
     RuntimeLifecycleInput, RuntimeLifecycleSnapshot, RuntimeMode, RuntimePhase,
 };
@@ -321,19 +326,97 @@ fn update_runtime_state(
 }
 
 #[tauri::command]
-fn load_poster_snapshot(store: State<'_, PosterSnapshotStore>) -> Option<serde_json::Value> {
-    store.snapshot()
+fn inspect_poster_snapshot(store: State<'_, PosterSnapshotStore>) -> PosterSnapshotLoadResult {
+    store.inspect()
 }
 
 #[tauri::command]
-fn save_poster_snapshot(
+fn load_poster_state(
+    repository: State<'_, PosterStateRepository>,
+) -> Result<PosterStateLoadResult, PosterStateStoreError> {
+    repository.load()
+}
+
+fn emit_poster_state_update(app: &tauri::AppHandle, snapshot: &serde_json::Value) {
+    if let Err(error) = app.emit("poster-state-updated", snapshot.clone()) {
+        eprintln!("failed to emit poster state update: {error}");
+    }
+}
+
+#[tauri::command]
+fn replace_poster_state(
+    expected_revision: Option<u64>,
     snapshot: serde_json::Value,
     app: tauri::AppHandle,
-    store: State<'_, PosterSnapshotStore>,
-) -> Result<(), String> {
-    store.replace(snapshot.clone())?;
-    app.emit("poster-snapshot-updated", snapshot)
-        .map_err(|error| error.to_string())
+    repository: State<'_, PosterStateRepository>,
+) -> Result<PosterStateMutationResult, PosterStateStoreError> {
+    let result = repository.replace_with_expected_revision(expected_revision, snapshot)?;
+    if let PosterStateMutationResult::Stored { snapshot, .. } = &result {
+        emit_poster_state_update(&app, snapshot);
+    }
+    Ok(result)
+}
+
+#[tauri::command]
+fn migrate_poster_state(
+    request: LegacyPosterMigrationRequest,
+    app: tauri::AppHandle,
+    repository: State<'_, PosterStateRepository>,
+) -> Result<LegacyPosterMigrationResult, PosterStateStoreError> {
+    let result = repository.migrate_legacy(request)?;
+    if let LegacyPosterMigrationResult::Migrated { snapshot, .. } = &result {
+        emit_poster_state_update(&app, snapshot);
+    }
+    Ok(result)
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct PosterStatePrimaryWorkArea {
+    display_id: String,
+    is_primary: bool,
+    width: f64,
+    height: f64,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct PosterStateBootstrapContext {
+    primary_work_area: PosterStatePrimaryWorkArea,
+}
+
+fn poster_state_context_from_topology(
+    topology: &DisplayTopology,
+) -> Result<PosterStateBootstrapContext, String> {
+    let display = topology
+        .displays
+        .iter()
+        .find(|display| display.is_primary)
+        .ok_or_else(|| "primary display work area is unavailable".to_string())?;
+    let work_area = &display.effective_logical_work_area;
+    if !work_area.width.is_finite()
+        || !work_area.height.is_finite()
+        || work_area.width <= 0.0
+        || work_area.height <= 0.0
+    {
+        return Err("primary display work area is invalid".to_string());
+    }
+    Ok(PosterStateBootstrapContext {
+        primary_work_area: PosterStatePrimaryWorkArea {
+            display_id: display.display_id.clone(),
+            is_primary: true,
+            width: work_area.width,
+            height: work_area.height,
+        },
+    })
+}
+
+#[tauri::command]
+fn poster_state_bootstrap_context(
+    app: tauri::AppHandle,
+) -> Result<PosterStateBootstrapContext, String> {
+    let window = desktop_host_window(&app)?;
+    poster_state_context_from_topology(&resolve_display_topology(&window))
 }
 
 #[tauri::command]
@@ -1750,6 +1833,8 @@ pub fn run() {
                 .app_config_dir()?
                 .join("poster-snapshot-bridge-v1.json");
             app.manage(PosterSnapshotStore::open(snapshot_path));
+            let poster_state_path = app.path().app_config_dir()?.join("poster-state-v1.sqlite3");
+            app.manage(PosterStateRepository::open(poster_state_path)?);
 
             if let Some(state) = app.try_state::<RuntimeState>() {
                 let host_topology = inspect_host_topology(app.handle());
@@ -1984,8 +2069,11 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             runtime_state,
-            load_poster_snapshot,
-            save_poster_snapshot,
+            inspect_poster_snapshot,
+            load_poster_state,
+            replace_poster_state,
+            migrate_poster_state,
+            poster_state_bootstrap_context,
             desktop_host_diagnostics,
             update_runtime_state,
             start_poster_drag,
@@ -2011,6 +2099,56 @@ pub fn run() {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn poster_state_bootstrap_uses_host_confirmed_primary_logical_work_area() {
+        let topology = DisplayTopology {
+            displays: vec![
+                DisplayDescriptor {
+                    display_id: "secondary".to_string(),
+                    is_primary: false,
+                    scale_factor: 1.25,
+                    renderer_scale_factor: 1.25,
+                    bounds: PhysicalRect {
+                        x: -1920,
+                        y: 0,
+                        width: 1920,
+                        height: 1080,
+                    },
+                    work_area: PhysicalRect::default(),
+                    effective_logical_work_area: LogicalSize {
+                        width: 1536.0,
+                        height: 824.0,
+                    },
+                    responsive_scale: 1.0,
+                },
+                DisplayDescriptor {
+                    display_id: "primary".to_string(),
+                    is_primary: true,
+                    scale_factor: 1.5,
+                    renderer_scale_factor: 1.5,
+                    bounds: PhysicalRect {
+                        x: 0,
+                        y: 0,
+                        width: 2560,
+                        height: 1440,
+                    },
+                    work_area: PhysicalRect::default(),
+                    effective_logical_work_area: LogicalSize {
+                        width: 1706.666_666_666_7,
+                        height: 920.0,
+                    },
+                    responsive_scale: 1.0,
+                },
+            ],
+            ..DisplayTopology::default()
+        };
+        let context = poster_state_context_from_topology(&topology).unwrap();
+        assert_eq!(context.primary_work_area.display_id, "primary");
+        assert!(context.primary_work_area.is_primary);
+        assert_eq!(context.primary_work_area.width, 1706.666_666_666_7);
+        assert_eq!(context.primary_work_area.height, 920.0);
+    }
 
     #[test]
     fn runtime_snapshot_serializes_with_frontend_camel_case_contract() {

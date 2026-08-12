@@ -1,8 +1,8 @@
 # Poster Core Runtime 模块计划
 
-最后检查：2026-08-09
+最后检查：2026-08-12
 
-状态：`ACTIVE — C-PCB`
+状态：`ACTIVE — C-PSS`
 
 上层计划：[`DESKTOPUP_V1_IMPLEMENTATION_PLAN.md`](../../../A_Project/10_Plan/DESKTOPUP_V1_IMPLEMENTATION_PLAN.md)
 
@@ -16,8 +16,8 @@
 
 | C 工作流 | 结果 | 依赖 | 状态 |
 | --- | --- | --- | --- |
-| Poster Contract Baseline (`C-PCB`) | 状态 schema、几何所有权、默认快照、标题栏和失败回退契约测试 | C-DRP | `ACTIVE` |
-| Poster State Store (`C-PSS`) | 版本化 SQLite schema、仓库接口、迁移和过渡 JSON 桥接替换 | C-PCB | `PLANNED` |
+| Poster Contract Baseline (`C-PCB`) | 状态 schema、几何所有权、默认快照、标题栏和失败回退契约测试 | C-DRP | `COMPLETE` |
+| Poster State Store (`C-PSS`) | 版本化 SQLite schema、仓库接口、迁移和过渡 JSON 桥接替换 | C-PCB | `ACTIVE` |
 | Large Surface and Transparency (`C-LST`) | 主屏右侧大幅面透明海报与位置恢复 | C-PSS, C-DRP | `PLANNED` |
 | Poster State and Interaction (`C-PSI`) | 状态机、锁定、标题栏拖动、海报框拉伸与最小/最大尺寸限制、命中和暂停同步 | C-LST | `PLANNED` |
 | Poster Core Release Gate (`C-PCRG`) | Debug/Release、Windows 矩阵和核心性能封板 | C-PSI | `PLANNED` |

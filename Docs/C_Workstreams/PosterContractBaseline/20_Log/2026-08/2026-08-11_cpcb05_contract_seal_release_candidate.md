@@ -2,7 +2,7 @@
 
 日期：2026-08-11
 
-状态：`AUTOMATION PASS / USER RELEASE REGRESSION PENDING`
+状态：`COMPLETE — AUTOMATION AND USER RELEASE REGRESSION PASS`
 
 ## 1. 本轮目标
 
@@ -67,6 +67,10 @@
 
 ## 7. 当前结论
 
-C-PCB-05 的代码、公共输入、自动门禁、Release 构建和冷启动原生 Z 序探针已通过。C-PCB 仍保持 `ACTIVE`，等待用户完成第 6 节人工回归；确认通过后才能把 C-PCB-05 标记完成并激活 C-PSS。
+C-PCB-05 的代码、公共输入、自动门禁、Release 构建和冷启动原生 Z 序探针已通过。
+
+2026-08-12，用户确认第 6 节五项主屏单海报核心回归全部通过：连续 Win+D、普通应用覆盖层级、既有交互、控制中心重开和 Release 冷重启均满足预期。C-PCB-05 与 C-PCB 据此关闭。
+
+C-PSS 已满足依赖并取得冻结输入，但尚未激活；不得把本结论解释为 SQLite 已开始实施。
 
 当前发布认证范围仍仅为主屏单海报。第二显示器、混合 DPI、负坐标副屏、主屏切换、跨屏重启和热插拔未在本轮验证。
