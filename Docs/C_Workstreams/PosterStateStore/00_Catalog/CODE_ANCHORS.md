@@ -34,14 +34,20 @@
 - [`app/src/main.js`](../../../../app/src/main.js)：控制中心通过同一正式网关加载、重置和同步状态。
 - [`tests/poster-state-store.test.mjs`](../../../../tests/poster-state-store.test.mjs)：启动顺序、拒绝保留、正式导入、CAS 冲突和持久字段边界。
 - [`tests/poster-contract-seal.test.mjs`](../../../../tests/poster-contract-seal.test.mjs)：正式命令单一所有者、legacy 写令牌退出与 localStorage 禁写封条。
-- [`2026-08-12_cpss04_application_authority_switch.md`](../20_Log/2026-08/2026-08-12_cpss04_application_authority_switch.md)：应用权威切换、真实 Release 迁移和待人工回归证据。
+- [`2026-08-12_cpss04_application_authority_switch.md`](../20_Log/2026-08/2026-08-12_cpss04_application_authority_switch.md)：应用权威切换、真实 Release 迁移和人工回归证据。
 
 ## C-PSS-05 Release 恢复门
 
 - [`src-tauri/src/poster_state_store.rs`](../../../../src-tauri/src/poster_state_store.rs)：损坏 JSON/契约/元数据、未来 schema、外部数据库、只读/写入失败、事务回滚、CAS 冲突、备份失败与幂等恢复测试主体。
+- [`src-tauri/src/poster_state_recovery_gate.rs`](../../../../src-tauri/src/poster_state_recovery_gate.rs)：8 场景隔离恢复矩阵、生产仓库故障注入、原子结构化报告与显式 Release 前置诊断入口。
+- [`src-tauri/src/lib.rs`](../../../../src-tauri/src/lib.rs)：恢复门在 Tauri Builder/单实例初始化前分流；无显式参数时继续正常 Release 路径。
+- [`scripts/run-poster-state-recovery-gate.mjs`](../../../../scripts/run-poster-state-recovery-gate.mjs)：系统临时根、隔离环境、Release 报告校验和带路径守卫的清理生命周期。
+- [`tests/poster-state-recovery-gate.test.mjs`](../../../../tests/poster-state-recovery-gate.test.mjs)：前置顺序、8 场景集合、正式 API/故障注入和临时目录安全封条。
 - [`tests/poster-state-store.test.mjs`](../../../../tests/poster-state-store.test.mjs)：SQLite-first 重载、冲突重试、Tauri 写错误保留、内置模板重启恢复与拒绝不默认重置。
 - [`tests/runtime-surface.test.mjs`](../../../../tests/runtime-surface.test.mjs)：主屏单海报 Release 表面与 SQLite 权威/legacy 只读运行时封条。
 - [`2026-08-12_cpss05_release_recovery_gate_activation.md`](../20_Log/2026-08/2026-08-12_cpss05_release_recovery_gate_activation.md)：恢复矩阵、隔离策略与激活输入基线。
+- [`2026-08-12_cpss05_isolated_recovery_matrix_release_candidate.md`](../20_Log/2026-08/2026-08-12_cpss05_isolated_recovery_matrix_release_candidate.md)：8/8 Release 矩阵、正式状态哈希不变、构建证据与待人工核心回归。
+- [`2026-08-12_cpss05_user_release_pass_and_workstream_close.md`](../20_Log/2026-08/2026-08-12_cpss05_user_release_pass_and_workstream_close.md)：用户四项核心回归、legacy 视觉参数回弹延期边界与 C-PSS 关闭结论。
 
 ## 禁止依赖
 

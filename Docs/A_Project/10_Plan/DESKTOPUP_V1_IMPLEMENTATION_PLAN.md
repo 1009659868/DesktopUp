@@ -34,7 +34,7 @@
 | 阶段 | 目标 | B 模块 | 退出条件 | 状态 |
 | --- | --- | --- | --- | --- |
 | V1-P0 | 关闭桌面宿主遗留硬门 | Desktop Runtime Foundation | C-DHF-04..08 全部形成 PASS、接受回退或明确阻塞结论 | `COMPLETE` |
-| V1-P1 | 生产宿主、核心契约与数据基线 | Desktop Runtime Foundation、Poster Core Runtime、Distribution Lifecycle | 单全局宿主接口、单状态源、版本化 SQLite 仓库、运行生命周期和安装/数据目录契约通过 | `ACTIVE — C-PSS` |
+| V1-P1 | 生产宿主、核心契约与数据基线 | Desktop Runtime Foundation、Poster Core Runtime、Distribution Lifecycle | 单全局宿主接口、单状态源、版本化 SQLite 仓库、运行生命周期和安装/数据目录契约通过 | `ACTIVE — C-PSS COMPLETE / C-IBC NEXT` |
 | V1-P2 | 落地透明大幅面海报 | Poster Core Runtime | Transparent Default、大幅面、展开/收起、锁定、暂停和 Release 实机矩阵通过 | `PLANNED` |
 | V1-P3 | 交付“仅添加 + 真实启动”可用 MVP | Collection and Launch | 主动只读发现、逐项预览、仅添加和真实启动闭环通过；不移动用户文件 | `PLANNED` |
 | V1-P4 | 交付安全收纳 MVP | Collection and Launch | 保险库、两阶段账本、安全收纳、撤销、异常恢复和卸载恢复接口通过 | `PLANNED` |
@@ -59,14 +59,14 @@
 | ID | B 模块 | 责任 | 直接依赖 | 状态 |
 | --- | --- | --- | --- | --- |
 | B-DRF | Desktop Runtime Foundation | 单全局桌面宿主、Shell/显示恢复、暂停、托盘、单实例、自启和运行时性能 | 无 | `INACTIVE — C-DRP COMPLETE / C-RLC PLANNED` |
-| B-PCR | Poster Core Runtime | 海报状态仓库、几何、透明大幅面、自制标题栏、交互命中和宿主同步 | B-DRF | `ACTIVE — C-PSS` |
+| B-PCR | Poster Core Runtime | 海报状态仓库、几何、透明大幅面、自制标题栏、交互命中和宿主同步 | B-DRF | `INACTIVE — C-PSS COMPLETE / C-LST PLANNED` |
 | B-TPL | Template Platform | Shadow DOM 运行时、fallback、三套内置模板、热切换、完整模板包生命周期 | B-PCR | `PLANNED` |
 | B-COL | Collection and Launch | 快捷方式发现、预览、仅添加、保险库事务、启动、撤销与恢复 | B-PCR | `PLANNED` |
 | B-LAR | Layout and Ranking | 启动统计、排序、衰减、对数缩放、弹性布局、锚定与拖拽 | B-COL, B-PCR | `PLANNED` |
 | B-THA | Theme Authoring | schema 参数、素材净化、受限覆盖、预览和导入导出 | B-TPL | `PLANNED` |
 | B-AIA | Local AI Assistant | BYOK、凭据、受控命令、ChangePlan、预览、确认与撤销 | B-THA, B-COL | `PLANNED` |
 | B-GSD | Game Source Discovery | Steam、Epic、Xbox/Store 本地发现、去重与人工修正 | B-COL | `PLANNED` |
-| B-DLC | Distribution Lifecycle | 安装、升级、迁移、恢复型卸载、签名和净机发布 | 所有发布范围模块 | `PLANNED` |
+| B-DLC | Distribution Lifecycle | 安装、升级、迁移、恢复型卸载、签名和净机发布 | 所有发布范围模块 | `READY — C-IBC ACTIVATION PENDING` |
 
 ## 5. C 工作流路线图
 
@@ -83,8 +83,8 @@
 | C 工作流 | 可验证结果 | 依赖 | 状态 |
 | --- | --- | --- | --- |
 | C-PCB Poster Contract Baseline | 冻结状态 schema、宿主/海报边界、窗口几何所有权、默认快照和失败回退行为测试 | C-DRP | `COMPLETE` |
-| C-PSS Poster State Store | 版本化 SQLite schema、迁移、仓库接口和过渡 JSON 桥接替换 | C-PCB | `ACTIVE` |
-| C-LST Large Surface and Transparency | 主屏右侧大幅面透明海报、稳定透明背景与位置恢复 | C-PSS, C-DRP | `PLANNED` |
+| C-PSS Poster State Store | 版本化 SQLite schema、迁移、仓库接口和过渡 JSON 桥接替换 | C-PCB | `COMPLETE — USER RELEASE RECOVERY PASS` |
+| C-LST Large Surface and Transparency | 主屏右侧大幅面透明海报、稳定透明背景与位置恢复 | C-PSS, C-DRP | `PLANNED AFTER C-IBC/C-RLC` |
 | C-PSI Poster State and Interaction | EXPANDED/COLLAPSED、USING/EDITING、锁定、标题栏拖动、海报框拉伸（含最小/最大尺寸限制）、命中区域和暂停同步 | C-LST | `PLANNED` |
 | C-PCRG Poster Core Release Gate | Debug/Release、真实 Windows 矩阵和核心性能封板 | C-PSI | `PLANNED` |
 
@@ -145,17 +145,17 @@
 
 | C 工作流 | 可验证结果 | 依赖 | 状态 |
 | --- | --- | --- | --- |
-| C-IBC Install Baseline Contract | 安装目录、数据目录、权限、自启和运行时依赖契约 | C-DRP | `PLANNED EARLY` |
+| C-IBC Install Baseline Contract | 安装目录、数据目录、权限、自启和运行时依赖契约 | C-DRP | `NEXT — ACTIVATION PENDING` |
 | C-UGM Upgrade and Migration | 应用、数据库、模板和用户配置升级迁移与回滚 | C-PSS 与相关 schema 稳定 | `PLANNED` |
 | C-URV Uninstall and Recovery | 独立 uninstall.exe、快捷方式恢复和失败保留保险库 | C-RCV, C-UGM | `PLANNED` |
 | C-RCG Release Candidate Gate | 净机、签名、许可证、性能、安全和安装卸载矩阵 | 所有 V1 必需工作流 | `PLANNED` |
 
-## 6. 当前唯一活跃链
+## 6. 当前路线位置
 
 ```text
 A: DESKTOPUP_V1_IMPLEMENTATION_PLAN / V1-P1
-└─ B: Poster Core Runtime / B-PCR
-   └─ C: Poster State Store / C-PSS ACTIVE
+├─ C: Poster State Store / C-PSS COMPLETE
+└─ NEXT: Distribution Lifecycle / C-IBC（ACTIVATION PENDING）
 ```
 
 当前推进顺序：
@@ -163,15 +163,15 @@ A: DESKTOPUP_V1_IMPLEMENTATION_PLAN / V1-P1
 ```text
 C-DRP 单全局生产宿主
 → C-PCB 海报契约
-→ C-PSS 版本化状态仓库
-→ C-IBC 安装/数据目录早期契约
+→ C-PSS 版本化状态仓库（COMPLETE）
+→ C-IBC 安装/数据目录早期契约（NEXT — ACTIVATION PENDING）
 → C-RLC 运行生命周期
 → C-LST / C-PSI / C-PCRG 海报核心
 → C-ROD / C-PAA / C-LCH 可用 MVP
 → C-SVT / C-RCV 安全收纳 MVP
 ```
 
-`C-DHF-01..08`、`C-DRP-01..06` 与 `C-PCB-01..05` 已关闭；当前发布认证范围明确限制为主屏单海报，多显示器/DPI/热插拔未认证。当前只激活 `C-PSS`；不得将 V1-P1、M1 或完整 SQLite 切换标记为实施通过。
+`C-DHF-01..08`、`C-DRP-01..06`、`C-PCB-01..05` 与 `C-PSS-01..05` 已关闭；当前发布认证范围明确限制为主屏单海报，多显示器/DPI/热插拔未认证。当前没有活跃 C，下一候选 C-IBC 等待用户明确激活；不得将 V1-P1、M1、真实导入或最终安装/卸载标记为实施通过。控制中心 legacy 视觉参数回弹归后继 Template Platform 参数权威，不重开 C-PSS。
 
 ## 7. 性能预算与迁移门
 

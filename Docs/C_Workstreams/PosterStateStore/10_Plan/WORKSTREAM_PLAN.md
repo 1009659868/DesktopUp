@@ -2,7 +2,7 @@
 
 日期：2026-08-12
 
-状态：`ACTIVE — C-PSS / C-PSS-05 RELEASE RECOVERY GATE`
+状态：`COMPLETE — C-PSS-01..05 PASS / WORKSTREAM CLOSED`
 
 ## 1. 目的
 
@@ -62,7 +62,7 @@
 
 结果：schema 升级、损坏、冲突、重启、备份恢复与主屏单海报 Release 矩阵通过。
 
-状态：`ACTIVE — ISOLATED RECOVERY MATRIX`
+状态：`COMPLETE — AUTOMATED MATRIX AND USER RELEASE REGRESSION PASS`
 
 ## 5. 完成门
 
@@ -73,6 +73,8 @@
 - legacy 重复迁移幂等且原始数据可诊断保留；
 - SQLite 成为正式唯一权威后，过渡 bridge 按既定门退出；
 - 当前单海报 Release 的重启、视觉、交互与桌面层级无回退。
+
+上述完成门均已通过。控制中心 legacy `accent/opacity/density` 调整回弹不记为通过，作为后继 Template Platform 参数权威缺陷保留，不扩张 C-PSS schema。
 
 ## 6. 已知限制
 

@@ -11,12 +11,12 @@ Desktop-Up（暂定名）是一个面向 Windows 11 的低资源桌面海报启�
 3. 阅读 [A 层冷启动](A_Project/30_Sync/COLD_START.md)。
 4. 按 A 层指引进入当前 B 模块，再进入当前 C 工作流。
 
-当前活跃链：
+当前路线位置：
 
 ```text
-A: DesktopUP V1 落地计划 / V1-P1 生产宿主与核心契约
-  -> B: Poster Core Runtime / 海报核心运行时
-     -> C: Poster State Store / C-PSS ACTIVE
+A: DesktopUP V1 落地计划 / V1-P1 ACTIVE
+  -> C-PSS COMPLETE
+  -> NEXT: C-IBC（等待用户激活）
 ```
 
 ## 设计与计划入口

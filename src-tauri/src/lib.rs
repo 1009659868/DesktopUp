@@ -7,6 +7,7 @@ mod poster_contract;
 pub mod poster_geometry;
 pub mod poster_permissions;
 mod poster_snapshot;
+mod poster_state_recovery_gate;
 pub mod poster_state_store;
 pub mod poster_template_resolution;
 mod runtime_lifecycle;
@@ -1810,6 +1811,10 @@ fn emit_control(app: &tauri::AppHandle, payload: &str) {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    if let Some(exit_code) = poster_state_recovery_gate::run_if_requested() {
+        std::process::exit(exit_code);
+    }
+
     let application = tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             show_main_window(app);
