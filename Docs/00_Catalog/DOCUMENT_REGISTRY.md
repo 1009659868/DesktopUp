@@ -36,12 +36,12 @@
 | `A_Project/20_Log/PROJECT_CHANGELOG.md` | A/Log | 项目级更迭记录 | `ACTIVE` |
 | `A_Project/30_Sync/COLD_START.md` | A/Sync | A 层接手阅读入口 | `ACTIVE` |
 | `A_Project/30_Sync/CURRENT_HANDOFF.md` | A/Sync | A 层当前状态 | `ACTIVE` |
-| `B_Modules/DesktopRuntimeFoundation/00_Catalog/C_WORKSTREAM_INDEX.md` | B/Catalog | 桌面运行时工作流索引 | `INACTIVE — C-DRP COMPLETE` |
-| `B_Modules/DesktopRuntimeFoundation/10_Plan/MODULE_PLAN_V1.md` | B/Plan | 单全局桌面运行时 V1 模块计划 | `INACTIVE — C-RLC PLANNED` |
+| `B_Modules/DesktopRuntimeFoundation/00_Catalog/C_WORKSTREAM_INDEX.md` | B/Catalog | 桌面运行时工作流索引 | `NEXT — C-RLC READY TO ACTIVATE` |
+| `B_Modules/DesktopRuntimeFoundation/10_Plan/MODULE_PLAN_V1.md` | B/Plan | 单全局桌面运行时 V1 模块计划 | `NEXT — C-RLC READY TO ACTIVATE` |
 | `B_Modules/DesktopRuntimeFoundation/10_Plan/MODULE_PLAN.md` | B/Plan | 旧桌面运行时模块计划 | `SUPERSEDED` |
 | `B_Modules/DesktopRuntimeFoundation/20_Log/MODULE_LOG.md` | B/Log | 桌面运行时里程碑记录 | `INACTIVE` |
 | `B_Modules/DesktopRuntimeFoundation/30_Sync/COLD_START.md` | B/Sync | B 层接手阅读入口 | `INACTIVE` |
-| `B_Modules/DesktopRuntimeFoundation/30_Sync/CURRENT_HANDOFF.md` | B/Sync | 桌面运行时当前交接 | `INACTIVE` |
+| `B_Modules/DesktopRuntimeFoundation/30_Sync/CURRENT_HANDOFF.md` | B/Sync | 桌面运行时当前交接 | `NEXT — C-RLC READY TO ACTIVATE` |
 | `B_Modules/PosterCoreRuntime/00_Catalog/C_WORKSTREAM_INDEX.md` | B/Catalog | 海报核心工作流索引 | `INACTIVE — C-PSS COMPLETE` |
 | `B_Modules/PosterCoreRuntime/10_Plan/MODULE_PLAN.md` | B/Plan | 海报核心运行时模块计划 | `INACTIVE — C-PSS COMPLETE` |
 | `B_Modules/PosterCoreRuntime/30_Sync/COLD_START.md` | B/Sync | 海报核心追溯入口 | `INACTIVE` |
@@ -58,8 +58,10 @@
 | `B_Modules/LocalAIAssistant/10_Plan/MODULE_PLAN.md` | B/Plan | BYOK、受控命令和撤销计划 | `PLANNED` |
 | `B_Modules/GameSourceDiscovery/00_Catalog/C_WORKSTREAM_INDEX.md` | B/Catalog | 游戏来源发现工作流索引 | `PLANNED` |
 | `B_Modules/GameSourceDiscovery/10_Plan/MODULE_PLAN.md` | B/Plan | Steam/Epic/Xbox 发现计划 | `PLANNED` |
-| `B_Modules/DistributionLifecycle/00_Catalog/C_WORKSTREAM_INDEX.md` | B/Catalog | 分发与生命周期工作流索引 | `READY — C-IBC ACTIVATION PENDING` |
-| `B_Modules/DistributionLifecycle/10_Plan/MODULE_PLAN.md` | B/Plan | 安装、升级、卸载和发布计划 | `READY — C-IBC ACTIVATION PENDING` |
+| `B_Modules/DistributionLifecycle/00_Catalog/C_WORKSTREAM_INDEX.md` | B/Catalog | 分发与生命周期工作流索引 | `INACTIVE — C-IBC COMPLETE` |
+| `B_Modules/DistributionLifecycle/10_Plan/MODULE_PLAN.md` | B/Plan | 安装、升级、卸载和发布计划 | `INACTIVE — C-IBC COMPLETE` |
+| `B_Modules/DistributionLifecycle/30_Sync/COLD_START.md` | B/Sync | 已关闭安装基线追溯入口 | `INACTIVE` |
+| `B_Modules/DistributionLifecycle/30_Sync/CURRENT_HANDOFF.md` | B/Sync | 分发生命周期当前交接 | `INACTIVE — C-IBC COMPLETE` |
 | `C_Workstreams/DesktopHostFeasibility/00_Catalog/TASK_INDEX.md` | C/Catalog | 桌面宿主任务索引 | `COMPLETE` |
 | `C_Workstreams/DesktopHostFeasibility/00_Catalog/CODE_ANCHORS.md` | C/Catalog | 已验证前端与 Tauri 实现代码定位 | `COMPLETE` |
 | `C_Workstreams/DesktopHostFeasibility/10_Plan/WORKSTREAM_PLAN.md` | C/Plan | 桌面宿主验证计划 | `COMPLETE` |
@@ -93,7 +95,7 @@
 | `C_Workstreams/DesktopRuntimeProductionization/20_Log/2026-08/2026-08-10_cdrp02_acceptance_cdrp03_registry.md` | C/Log | C-DRP-02 用户验收/物理矩阵延期与 C-DRP-03 表面登记首个切片 | `C-DRP-03 COMPLETE` |
 | `C_Workstreams/DesktopRuntimeProductionization/20_Log/2026-08/2026-08-10_cdrp03_single_poster_passthrough_rework.md` | C/Log | C-DRP-03 单海报空白穿透失败、视觉/输入分离重做与最终人工验收 | `COMPLETE — USER ACCEPTED` |
 | `C_Workstreams/DesktopRuntimeProductionization/20_Log/2026-08/2026-08-10_cdrp04_recovery_coordinator_first_slice.md` | C/Log | C-DRP-04 恢复入口审计、单一协调器与 Win+D 有界 Z 序防护 | `COMPLETE — USER ACCEPTED` |
-| `C_Workstreams/DesktopRuntimeProductionization/20_Log/2026-08/2026-08-13_cdrp04_shell_topmost_regression_fix.md` | C/Log | C-DRP-04 普通 Shell 操作瞬时置顶回归、无 TOPMOST 修复与 Release 人工矩阵 | `AUTOMATED PASS / USER MATRIX PENDING` |
+| `C_Workstreams/DesktopRuntimeProductionization/20_Log/2026-08/2026-08-13_cdrp04_shell_topmost_regression_fix.md` | C/Log | C-DRP-04 普通 Shell 操作瞬时置顶回归、无 TOPMOST 修复与 Release 人工矩阵 | `COMPLETE — USER RELEASE MATRIX PASS` |
 | `C_Workstreams/DesktopRuntimeProductionization/20_Log/2026-08/2026-08-10_cdrp05_lifecycle_interface_first_slice.md` | C/Log | C-DRP-05 统一生命周期、锁外发布、无持续轮询与 Release 矩阵 | `COMPLETE — USER ACCEPTED` |
 | `C_Workstreams/DesktopRuntimeProductionization/20_Log/2026-08/2026-08-11_cdrp06_release_performance_gate_first_slice.md` | C/Log | C-DRP-06 早期窗口性能门、产物证据与后继接口边界 | `SUPERSEDED — STABLE-STATE FAIL` |
 | `C_Workstreams/DesktopRuntimeProductionization/20_Log/2026-08/2026-08-11_cdrp06_stable_working_set_correction.md` | C/Log | C-DRP-06 稳定态纠正、双预算、懒创建、v3/v4 性能、Release 烟雾与平台限制关闭 | `COMPLETE — USER ACCEPTED LIMIT` |
@@ -123,6 +125,20 @@
 | `C_Workstreams/PosterStateStore/20_Log/2026-08/2026-08-12_cpss05_user_release_pass_and_workstream_close.md` | C/Log | 用户四项核心回归通过、视觉参数回弹延期与 C-PSS 关闭 | `COMPLETE — C-PSS CLOSED` |
 | `C_Workstreams/PosterStateStore/30_Sync/COLD_START.md` | C/Sync | 已关闭状态仓库追溯入口 | `COMPLETE` |
 | `C_Workstreams/PosterStateStore/30_Sync/CURRENT_HANDOFF.md` | C/Sync | 已关闭状态仓库交接 | `COMPLETE` |
+| `C_Workstreams/InstallBaselineContract/00_Catalog/TASK_INDEX.md` | C/Catalog | 安装基线任务索引 | `COMPLETE` |
+| `C_Workstreams/InstallBaselineContract/00_Catalog/CODE_ANCHORS.md` | C/Catalog | 安装基线代码定位 | `COMPLETE` |
+| `C_Workstreams/InstallBaselineContract/10_Plan/WORKSTREAM_PLAN.md` | C/Plan | 安装目录、数据目录、权限、自启与依赖契约计划 | `COMPLETE` |
+| `C_Workstreams/InstallBaselineContract/10_Plan/INSTALL_BASELINE_CONTRACT_V1.md` | C/Plan | 版本化安装、路径所有权、自启与依赖冻结契约 | `FROZEN — C-IBC-01` |
+| `C_Workstreams/InstallBaselineContract/10_Plan/AUTOSTART_CLEANUP_CONTRACT_V1.md` | C/Plan | HKCU 自启、正式路径、单实例参数与恢复型清理冻结契约 | `FROZEN — C-IBC-04` |
+| `C_Workstreams/InstallBaselineContract/10_Plan/C_IBC_HANDOFF_INPUTS_V1.md` | C/Plan | 运行时依赖证据、发布缺口和四方后继输入 | `FROZEN — C-IBC-05` |
+| `C_Workstreams/InstallBaselineContract/20_Log/2026-08/2026-08-13_activation_and_cibc01_contract.md` | C/Log | C-IBC 激活、路径审计与首个契约切片 | `C-IBC-01 COMPLETE / C-IBC-02 NEXT` |
+| `C_Workstreams/InstallBaselineContract/20_Log/2026-08/2026-08-13_cibc02_runtime_path_diagnostics.md` | C/Log | 只读运行时路径解析、兼容诊断与 Release 不迁移证据 | `C-IBC-02 COMPLETE / C-IBC-03 NEXT` |
+| `C_Workstreams/InstallBaselineContract/20_Log/2026-08/2026-08-13_cibc03_install_content_probe.md` | C/Log | 运行时/构建侧只读安装内容探针、五项发布差距与 Release 证据 | `C-IBC-03 COMPLETE / C-IBC-04 NEXT` |
+| `C_Workstreams/InstallBaselineContract/20_Log/2026-08/2026-08-13_cibc04_autostart_cleanup_contract.md` | C/Log | 自启/清理冻结契约、只读 HKCU 诊断和 Release 零变更证据 | `C-IBC-04 COMPLETE / C-IBC-05 NEXT` |
+| `C_Workstreams/InstallBaselineContract/20_Log/2026-08/2026-08-13_cibc05_runtime_dependencies_handoff_gate.md` | C/Log | 运行时依赖门、十项发布缺口和 C-IBC 关闭 | `COMPLETE — C-IBC CLOSED` |
+| `C_Workstreams/InstallBaselineContract/20_Log/2026-08/2026-08-13_cibc05_private_use_packaging_resolution.md` | C/Log | 个人自用范围、原十项处理和零缺口包装门 | `COMPLETE — CONTRACT PACKAGING READY` |
+| `C_Workstreams/InstallBaselineContract/30_Sync/COLD_START.md` | C/Sync | 已关闭安装基线追溯入口 | `COMPLETE` |
+| `C_Workstreams/InstallBaselineContract/30_Sync/CURRENT_HANDOFF.md` | C/Sync | 安装基线最终交接 | `COMPLETE` |
 | `Reference/RELATED_PROJECTS.md` | Reference | 同类项目调研 | `REFERENCE` |
 | `Rules/DOCUMENT_GOVERNANCE.md` | Rules | 文档权威和同步规则 | `ACTIVE` |
 | `Rules/GIT_STRATEGY.md` | Rules | 分支、同步、提交、合并和仓库卫生 | `ACTIVE` |

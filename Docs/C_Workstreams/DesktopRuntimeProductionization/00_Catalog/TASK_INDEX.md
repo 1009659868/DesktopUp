@@ -5,7 +5,7 @@
 | C-DRP-01 宿主接口与所有权契约 | 版本化 DTO、单几何所有权和兼容测试 | C-DHF | `COMPLETE` |
 | C-DRP-02 单全局宿主拓扑 | 单 WebView、统一坐标及分辨率/DPI 响应缩放 | C-DRP-01 | `COMPLETE — PHYSICAL MATRIX DEFERRED TO C-DRP-06` |
 | C-DRP-03 单海报表面登记、合并命中与空白穿透 | 视觉轮廓/输入区分离、多区域命中和桌面空白穿透 | C-DRP-02 | `COMPLETE — USER ACCEPTED` |
-| C-DRP-04 桌面适配器与恢复协调器 | WorkerW/ToolWindow、Win+D、Shell/显示恢复幂等 | C-DRP-02..03 | `COMPLETE — 2026-08-13 MAINTENANCE USER MATRIX PENDING` |
+| C-DRP-04 桌面适配器与恢复协调器 | WorkerW/ToolWindow、Win+D、Shell/显示恢复幂等 | C-DRP-02..03 | `COMPLETE — MAINTENANCE USER PASS` |
 | C-DRP-05 暂停、可见性与生命周期接口 | 确定性状态、无持锁 UI 调用和无高频轮询 | C-DRP-01,04 | `COMPLETE — USER ACCEPTED` |
 | C-DRP-06 Release、性能与后继接口门 | Release/实机/预算通过并可交接 C-PCB | C-DRP-01..05 | `COMPLETE — USER ACCEPTED PRIMARY-SCREEN SINGLE-POSTER LIMIT` |
 

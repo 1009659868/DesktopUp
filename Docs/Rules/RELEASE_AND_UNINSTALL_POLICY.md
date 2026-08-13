@@ -28,8 +28,9 @@ DesktopUpSetup.exe
 DesktopUp.exe
 uninstall.exe
 resources/
-licenses/
 ```
+
+当前产品范围为个人自用，不要求 Cargo license metadata、许可证页面、`licenses/` 或第三方 NOTICE 载荷。如果未来转为公开分发、向他人提供安装包或引入带再分发义务的素材/组件，必须在 C-RCG 重新启用许可证审计与随附材料门。
 
 `uninstall.exe` 必须是真实可启动的一键卸载程序，不得只是打开系统设置的快捷方式。
 
@@ -76,7 +77,7 @@ licenses/
 每个发布版本至少保存：
 
 - 安装器 SHA-256；
-- 构建清单与第三方许可证；
+- 构建清单；公开分发时另附第三方许可证；
 - 新装、覆盖升级和卸载日志；
 - 开机自启开/关两条验证；
 - 有托管快捷方式、同名冲突和恢复失败三条卸载验证；

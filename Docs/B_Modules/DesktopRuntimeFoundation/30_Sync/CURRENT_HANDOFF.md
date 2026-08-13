@@ -2,7 +2,7 @@
 
 最后更新：2026-08-11
 
-状态：`INACTIVE — C-DRP COMPLETE / C-RLC PLANNED`
+状态：`NEXT — C-DRP COMPLETE / C-RLC READY TO ACTIVATE`
 
 ## 当前事实
 
@@ -32,7 +32,7 @@
 - C-DRP-05 已统一自动/手动暂停、显隐、ready、FPS 与退出，自动验证、Release/NSIS 和用户 5/5 人工矩阵通过，任务关闭；
 - C-DRP-06 已按用户确认升级为主进程 50 MiB + 完整进程树 256 MiB 私有工作集双预算，并将控制中心改为首次请求创建；`performance-gate-v3` / `performance-baseline-v4`、58 项前端/契约、52 项 Rust、Release/NSIS 和最新版普通 Release 四项烟雾全部通过；用户随后接受主屏单海报认证限制，任务关闭；
 
-`C-DHF-01..08` 与 `C-DRP-01..06` 已关闭。当前发布基线只认证主屏单海报；多显示器、混合 DPI、负坐标副屏、主屏切换、跨屏重启和热插拔未认证。活动链已交接到 [Poster Core Runtime / C-PCB](../../PosterCoreRuntime/30_Sync/CURRENT_HANDOFF.md)。
+`C-DHF-01..08`、`C-DRP-01..06` 与前置 `C-IBC-01..05` 已关闭。当前发布基线只认证主屏单海报；多显示器、混合 DPI、负坐标副屏、主屏切换、跨屏重启和热插拔未认证。C-RLC 已具备激活输入，但尚未由用户明确激活。
 
 ## 不得提前进行
 

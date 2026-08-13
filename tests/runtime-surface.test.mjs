@@ -13,7 +13,7 @@ const controlCenterRuntime = readFileSync("app/src/main.js", "utf8");
 const nativeRuntime = readFileSync("src-tauri/src/lib.rs", "utf8");
 const desktopHostRuntime = readFileSync("src-tauri/src/desktop_host.rs", "utf8");
 const posterSurfaceRuntime = readFileSync("app/src/poster-surface.js", "utf8");
-const releaseExe = "src-tauri/target/release/desktop-up.exe";
+const releaseExe = "src-tauri/target/release/DesktopUp.exe";
 
 function windowConfig(label) {
   return tauriConfig.app.windows.find((window) => window.label === label);

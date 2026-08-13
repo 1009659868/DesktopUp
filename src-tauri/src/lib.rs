@@ -1,6 +1,10 @@
+pub mod autostart_contract;
 mod desktop_host;
 mod host_contract;
 mod host_topology;
+pub mod install_baseline;
+pub mod install_paths;
+pub mod install_probe;
 mod performance_gate;
 mod placement;
 mod poster_contract;
@@ -19,6 +23,7 @@ use std::sync::{
 };
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
+use autostart_contract::{probe_autostart, AutostartDiagnostics};
 use desktop_host::{DesktopHostDiagnostics, HostRecoveryRequest, HostRecoveryTrigger};
 use host_contract::{
     virtual_bounds, DisplayDescriptor, DisplayTopology, HostPlacementIntent, HostSurfaceRequest,
@@ -30,6 +35,8 @@ use host_topology::{
     optional_desktop_host_window, responsive_scale_for_work_area, HostTopologySnapshot,
     CONTROL_CENTER_WINDOW_LABEL, DESKTOP_HOST_WINDOW_LABEL,
 };
+use install_paths::{InstallPathDiagnostics, RuntimePathResolution};
+use install_probe::{probe_install_content, InstallContentProbe};
 use performance_gate::{
     evaluate_performance_samples, PerformanceGateReport, PerformanceSample,
     PERFORMANCE_GATE_CONTRACT, PERFORMANCE_SAMPLE_COUNT, PERFORMANCE_STABILIZATION_MIN_MS,
@@ -438,6 +445,21 @@ fn desktop_host_diagnostics(
         .lock()
         .map(|snapshot| snapshot.desktop_host.clone())
         .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn install_path_diagnostics(paths: State<'_, RuntimePathResolution>) -> InstallPathDiagnostics {
+    paths.diagnostics().clone()
+}
+
+#[tauri::command]
+fn install_content_probe(paths: State<'_, RuntimePathResolution>) -> InstallContentProbe {
+    probe_install_content(paths.inner())
+}
+
+#[tauri::command]
+fn autostart_diagnostics(paths: State<'_, RuntimePathResolution>) -> AutostartDiagnostics {
+    probe_autostart(paths.inner())
 }
 
 fn monitor_matches(left: &tauri::Monitor, right: &tauri::Monitor) -> bool {
@@ -1826,20 +1848,16 @@ pub fn run() {
         .manage(MainWindowCoordinator::default())
         .manage(PerformanceClock(Instant::now()))
         .setup(|app| {
-            let placement_path = app
-                .path()
-                .app_config_dir()?
-                .join("poster-placement-v1.json");
+            let runtime_paths = install_paths::resolve_for_app(app.handle())?;
+            let placement_path = runtime_paths.placement_path();
             let placement_store = PlacementStore::open(placement_path);
             let startup_placement = placement_store.snapshot();
             app.manage(placement_store);
-            let snapshot_path = app
-                .path()
-                .app_config_dir()?
-                .join("poster-snapshot-bridge-v1.json");
+            let snapshot_path = runtime_paths.snapshot_bridge_path();
             app.manage(PosterSnapshotStore::open(snapshot_path));
-            let poster_state_path = app.path().app_config_dir()?.join("poster-state-v1.sqlite3");
+            let poster_state_path = runtime_paths.poster_state_path();
             app.manage(PosterStateRepository::open(poster_state_path)?);
+            app.manage(runtime_paths);
 
             if let Some(state) = app.try_state::<RuntimeState>() {
                 let host_topology = inspect_host_topology(app.handle());
@@ -2080,6 +2098,9 @@ pub fn run() {
             migrate_poster_state,
             poster_state_bootstrap_context,
             desktop_host_diagnostics,
+            install_path_diagnostics,
+            install_content_probe,
+            autostart_diagnostics,
             update_runtime_state,
             start_poster_drag,
             sync_host_surface,

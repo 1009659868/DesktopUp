@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 
-const releaseExecutable = resolve("src-tauri/target/release/desktop-up.exe");
+const releaseExecutable = resolve("src-tauri/target/release/DesktopUp.exe");
 const appDataDirectory = process.env.APPDATA;
 if (!existsSync(releaseExecutable)) {
   throw new Error(`Release executable was not found: ${releaseExecutable}`);

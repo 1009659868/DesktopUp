@@ -2,14 +2,70 @@
 
 本文件只记录项目级已发生事实。局部实现过程进入对应 C 工作流日志。
 
+## 2026-08-13 — 收敛个人自用包装阻断
+
+状态：`CONTRACT PACKAGING READY / RELEASE CERTIFICATION PENDING`
+
+用户确认项目当前仅供个人自用，许可证载荷相关五项不适用；若未来公开分发必须重开审计。其余五项按冻结契约修复：正式主程序 `DesktopUp.exe`、安装根 `%LOCALAPPDATA%\Programs\DesktopUp`、真实 resources 载荷、最终入口 `DesktopUpSetup.exe` 和精确 `DesktopUp` 自启清理。
+
+两层包装门均为零缺口；全量 Node/契约 130/130、Rust 111/111、Release/NSIS build 与隔离恢复 8/8 通过。净机安装、升级、恢复型卸载和签名矩阵仍未认证。
+
+## 2026-08-13 — 完成 C-IBC-05 并关闭安装基线工作流
+
+状态：`C-IBC COMPLETE / C-RLC READY TO ACTIVATE`
+
+新增 `runtime-dependency-handoff-gate-v1`：当前 Release 为 x64 Windows GUI，WebView2 download bootstrapper、静态 VC Runtime 与 bundled SQLite 证据通过；门禁为 `handoffReadyWithAssignedGaps`，但明确保持 `notReleaseReady`。
+
+五项打包、四项许可证和一项 NSIS 自启清理值名差距均已分配给 C-RCG/C-URV；C-RLC/C-UGM/C-URV/C-RCG 输入清单冻结。C-IBC-01..05 全部关闭，下一候选 C-RLC 等待用户明确激活。
+
+定向门禁 5/5、全量 Node/契约 127/127、Rust 111/111、141 份 Markdown 链接和 production UI build 通过；同源 Release 保持运行且本轮未修改用户数据、注册表或安装状态。
+
+## 2026-08-13 — 完成 C-IBC-04 自启边界与清理契约
+
+状态：`C-IBC ACTIVE — C-IBC-04 COMPLETE / C-IBC-05 NEXT`
+
+新增 `autostart-contract-v1` 与 `autostart-diagnostics-v1`，冻结 HKCU Run exact-value、默认关闭、正式路径/严格参数门和单实例语义。生产代码只读查询注册表；托盘/控制中心入口继续禁用，本机 HKCU 值在构建、启动、退出前后始终不存在。
+
+C-URV 只拥有 `DesktopUp` 值，缺失为成功，恢复失败后仍必须幂等清理，不删除父键或其他应用值。122 项前端/契约、111 项 Rust、139 份文档链接、Release/NSIS 和启动烟测通过；SQLite 哈希和目标目录状态不变。
+
+C-IBC-05 成为唯一下一任务，负责依赖证据、许可证缺口与 C-RLC/C-UGM/C-URV/C-RCG 输入交接。
+
+## 2026-08-13 — 完成 C-IBC-03 双层只读安装内容探针
+
+状态：`C-IBC ACTIVE — C-IBC-03 COMPLETE / C-IBC-04 NEXT`
+
+- 新增运行时 `install-content-probe-v1` 和构建侧 `install-artifact-probe-v1`；两者均不写安装根、不安装/卸载、不提权；
+- current-user、无提权和 NSIS 生成真实 `uninstall.exe` 得到证据；压缩 payload 未独立提取，恢复行为仍归 C-URV；
+- 当前产物的安装根、主程序名、resources、licenses 和最终安装器名五项差距已结构化记录并归 C-RCG；
+- 117 项前端/契约、104 项 Rust、137 份文档链接、Release/NSIS 和启动烟测通过；SQLite 哈希不变，目标安装/数据根未创建；
+- C-IBC-04 成为唯一下一任务，只冻结自启和清理契约，不实际写 HKCU。
+
+## 2026-08-13 — 完成 C-IBC-02 只读运行时路径诊断
+
+状态：`C-IBC ACTIVE — C-IBC-02 COMPLETE / C-IBC-03 NEXT`
+
+- 新增 `install-path-diagnostics-v1`，统一解析目标安装根、目标数据根、当前 roaming authority、当前/目标 SQLite、可执行文件位置和七个目标角色；
+- setup 统一消费路径解析快照，但 placement、legacy bridge 和 SQLite 仍打开当前 `app_config_dir()`，不创建或启用目标 LocalAppData 根；
+- 113 项前端/契约、100 项 Rust、136 份文档链接、Release/NSIS 与 Release 启停烟雾通过；启停前后 SQLite SHA-256 一致；
+- C-IBC-03 成为下一任务，只建立非破坏性安装内容和权限探针，不实际执行安装/卸载。
+
+## 2026-08-13 — C-DRP-04 维护矩阵通过并激活 C-IBC
+
+状态：`C-IBC ACTIVE — C-IBC-01 COMPLETE / C-IBC-02 NEXT`
+
+- 用户确认无 TOPMOST 维护 Release 的桌面右键关闭、刷新、Windows 文件选择器、连续 Win+D 与核心交互矩阵全部通过；C-DRP 继续保持关闭；
+- 激活 B-DLC / C-IBC 为唯一活跃链，建立完整 C 计划、任务索引、代码锚点、日志和交接；
+- C-IBC-01 冻结 `install-baseline-v1`：当前用户无提权安装、程序/数据目录分离、现有 roaming authority 保留到 C-UGM、自启默认关闭以及 WebView2/静态 VC/bundled SQLite 依赖基线；
+- 当前 NSIS 构建不是最终 `DesktopUpSetup.exe` 或独立 `uninstall.exe` 验收，下一任务为 C-IBC-02 运行时路径解析与兼容诊断。
+
 ## 2026-08-13 — 修复普通 Shell 操作触发海报瞬时置顶
 
-状态：`IMPLEMENTED — AUTOMATED PASS / USER RELEASE MATRIX PENDING`
+状态：`COMPLETE — USER RELEASE MATRIX PASS`
 
 - 定位 C-DRP-04 为 Win+D 引入的 48ms `HWND_TOPMOST/NOTOPMOST` 防护会被桌面右键关闭、刷新和 Windows 文件选择器相关 Shell 事件误触发；
 - 删除生产宿主的通用 TOPMOST 路径，收紧真实桌面 Shell 窗口识别，并改用一次事件触发、最长 140ms 的 Progman 相对重锚突发；
 - 源码契约明确禁止 `HWND_TOPMOST/NOTOPMOST` 回到生产宿主，JS/契约 105/105、Rust 89/89、Release 与 NSIS 构建通过；
-- 修复版 Release 已启动，等待桌面右键关闭、刷新、文件选择器、连续 Win+D 和既有核心交互人工矩阵；在用户确认前不标记人工通过。
+- 修复版 Release 的桌面右键关闭、刷新、文件选择器、连续 Win+D 和既有核心交互矩阵已由用户确认通过。
 
 ## 2026-08-12 — C-PSS 状态仓库与 Release 恢复门关闭
 

@@ -1,0 +1,5 @@
+DesktopUp private-use runtime resources.
+
+This directory contains application-owned static resources only. Mutable user
+state, databases, caches, logs, backups, themes, vault contents, and recovery
+records must remain outside the installation root.

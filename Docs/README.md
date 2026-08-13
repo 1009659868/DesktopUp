@@ -16,7 +16,8 @@ Desktop-Up（暂定名）是一个面向 Windows 11 的低资源桌面海报启�
 ```text
 A: DesktopUP V1 落地计划 / V1-P1 ACTIVE
   -> C-PSS COMPLETE
-  -> NEXT: C-IBC（等待用户激活）
+  -> C-IBC COMPLETE
+  -> C-RLC READY TO ACTIVATE
 ```
 
 ## 设计与计划入口

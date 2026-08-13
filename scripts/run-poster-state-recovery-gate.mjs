@@ -23,7 +23,7 @@ const EXPECTED_SCENARIOS = [
   "legacy-failure-source-retention"
 ];
 
-const releaseExecutable = resolve("src-tauri/target/release/desktop-up.exe");
+const releaseExecutable = resolve("src-tauri/target/release/DesktopUp.exe");
 if (!existsSync(releaseExecutable)) {
   throw new Error(`Release executable was not found: ${releaseExecutable}`);
 }

@@ -2,7 +2,7 @@
 
 最后更新：2026-08-13
 
-状态：`CLOSED — C-DRP-06 COMPLETE / C-DRP-04 MAINTENANCE RELEASE USER MATRIX PENDING`
+状态：`CLOSED — C-DRP-06 COMPLETE / C-DRP-04 MAINTENANCE USER PASS`
 
 ## 已建立
 
@@ -30,7 +30,7 @@
 - `pnpm run check` 53/53、Rust 39/39、Release 与 NSIS 构建通过；
 - 第一版协调器经用户实测发现连续 Win+D 闪烁；`shellRepair` 已消除 Shell-only 的完整宿主重配，但用户二次复测确认仍会在按下后立即闪，证明此前只消除了延迟重配因素，并未关闭主因；
 - 5ms 原生 Z 序探针曾确认 Shell 会在前台事件后再次把 Progman 提到海报上方，且不发送可用的 `EVENT_OBJECT_REORDER`；当时采用的 48ms `TOPMOST | NOACTIVATE` 防护经用户确认解决 Win+D 闪烁并关闭 C-DRP-04，但该方案已被 2026-08-13 的普通 Shell 操作回归证据取代；
-- 2026-08-13 维护修复已删除通用 `HWND_TOPMOST/NOTOPMOST`：桌面 Shell 事件改为真实 `Progman/SHELLDLL_DefView` 校验，并在 4–48ms、64ms、96ms 只执行相对 Progman 的有界重锚；JS/契约/文档 105/105、Rust 89/89、Release/NSIS 通过，最终 PID 52480（SHA-256 `19431138…D0C21FD`）等待桌面右键关闭、刷新、文件选择器、连续 Win+D 和核心交互人工矩阵；
+- 2026-08-13 维护修复已删除通用 `HWND_TOPMOST/NOTOPMOST`：桌面 Shell 事件改为真实 `Progman/SHELLDLL_DefView` 校验，并在 4–48ms、64ms、96ms 只执行相对 Progman 的有界重锚；JS/契约/文档 105/105、Rust 89/89、Release/NSIS 通过；用户随后确认桌面右键关闭、刷新、文件选择器、连续 Win+D 和核心交互矩阵全部通过；
 - C-DRP-05 已完成 `runtime-lifecycle-v1` 第一切片：starting/running/exiting 与 activeStatic/activeAnimated/paused/stopped 由 Rust 单一归约器裁决；
 - `generation + eventCount`、`lastTrigger`、手动/自动暂停、显隐、ready 和退出进入 RuntimeSnapshot；退出为粘性，安全暂停优先于动态模式请求；
 - RuntimeState 锁内只修改/克隆状态，诊断、托盘、窗口、HostTopology/DisplayTopology 和性能 OS 查询均在锁外；
@@ -49,7 +49,7 @@
 
 用户已选择接受“当前发布基线只认证主屏单海报”的平台限制。C-DRP-06 已关闭，活动链已交接到 [`C-PCB Poster Contract Baseline`](../../PosterContractBaseline/30_Sync/CURRENT_HANDOFF.md)。
 
-在继续下一候选工作流前，先用 2026-08-13 修复版 Release 完成 C-DRP-04 维护矩阵。该维护不重开多屏范围，也不改变 C-PSS 已关闭、C-IBC 尚待激活的主线状态；人工通过后只追加维护结论。
+2026-08-13 维护矩阵已通过；活动链已进入 C-IBC。该维护不重开多屏范围，也不改变 C-PSS 已关闭事实。
 
 第二显示器、混合 DPI、负坐标副屏、主屏切换、跨屏重启和热插拔仍未认证；后续若扩大平台认证范围，必须单独恢复物理矩阵，不得引用当前关闭结论替代。
 
