@@ -44,12 +44,13 @@
 - [`tests/host-contract.test.mjs`](../../../../tests/host-contract.test.mjs)、[`tests/poster-runtime.test.mjs`](../../../../tests/poster-runtime.test.mjs)、[`tests/runtime-surface.test.mjs`](../../../../tests/runtime-surface.test.mjs) 与 Rust tests：覆盖首次窗口/目标海报尺寸不匹配、隐藏卡片、单表面多命中区、视觉/输入分离、APPWINDOW 回写、圆角命中和 DPI 单次换算。
 ## C-DRP-04 完成锚点
 
-- [`src-tauri/src/desktop_host.rs`](../../../../src-tauri/src/desktop_host.rs)：`HostRecoveryTrigger`/`HostRecoveryRequest`、140ms 尾沿合并、互斥待处理快照和单工作器；显示/DPI/工作区消息只生成恢复请求。Shell 前台事件还会启动有界 Z 序防护，但不改写位置、尺寸或窗口 region。
+- [`src-tauri/src/desktop_host.rs`](../../../../src-tauri/src/desktop_host.rs)：`HostRecoveryTrigger`/`HostRecoveryRequest`、140ms 尾沿合并、互斥待处理快照和单工作器；显示/DPI/工作区消息只生成恢复请求。Shell 前台事件只启动有界桌面相对重锚，不改写位置、尺寸或窗口 region。
 - [`src-tauri/src/lib.rs`](../../../../src-tauri/src/lib.rs)：`HostRecoveryCoordinator` 与 `recover_desktop_host` 串行处理所有恢复；Shell-only 请求优先执行 `shellRepair`，只有挂载失效或显示/DPI/工作区/手动重连才执行宿主重配、唯一 `PlacementStore` 位置恢复和 HostSurface 新 revision 重同步。
-- [`src-tauri/src/desktop_host.rs`](../../../../src-tauri/src/desktop_host.rs) 的 `guard_tool_window_during_shell_transition` / `release_tool_window_shell_z_order_guard` / `repair_shell_host`：Progman 前台切换期间以 48ms `TOPMOST | NOACTIVATE` 防住 Shell 第二次无事件 Z 序重排，普通应用恢复前台或超时后立即 `NOTOPMOST` 并重锚；常规 `shellRepair` 仍不移动、不缩放、不使用 `SWP_FRAMECHANGED`，WorkerW 只校验父窗口。
+- [`src-tauri/src/desktop_host.rs`](../../../../src-tauri/src/desktop_host.rs) 的 `is_desktop_shell_window` / `repair_tool_window_during_shell_transition` / `repair_shell_host`：Shell 事件先校验真实 `Progman` 或带 `SHELLDLL_DefView` 的桌面窗口；ToolWindow 在 4–48ms 密集、64/96ms 收尾的事件驱动突发中只相对 Progman 重锚，生产路径不再使用 `HWND_TOPMOST/NOTOPMOST`。常规 `shellRepair` 仍不移动、不缩放、不使用 `SWP_FRAMECHANGED`。
 - [`src-tauri/src/desktop_host.rs`](../../../../src-tauri/src/desktop_host.rs) 的 `DesktopHostDiagnostics`：恢复次数、代数、真实合并事件数、最近触发原因、`lastRecoveryAction` 与最近错误可通过 RuntimeSnapshot/诊断命令观察；普通宿主重配保留历史恢复诊断。
-- [`tests/runtime-surface.test.mjs`](../../../../tests/runtime-surface.test.mjs) 与 Rust `recovery_tests`：约束入口收敛、尾沿稳定判断、原因合并、事件计数、Shell-only 在完整 configure 前返回和诊断序列化。
+- [`tests/runtime-surface.test.mjs`](../../../../tests/runtime-surface.test.mjs) 与 Rust `recovery_tests`：约束入口收敛、尾沿稳定判断、原因合并、事件计数、Shell-only 在完整 configure 前返回和诊断序列化；源码契约明确禁止 `HWND_TOPMOST/NOTOPMOST` 回到生产宿主路径。
 - [`2026-08-10_cdrp04_recovery_coordinator_first_slice.md`](../20_Log/2026-08/2026-08-10_cdrp04_recovery_coordinator_first_slice.md)：审计结论、第一切片实现、自动验证与剩余单显示器人工矩阵。
+- [`2026-08-13_cdrp04_shell_topmost_regression_fix.md`](../20_Log/2026-08/2026-08-13_cdrp04_shell_topmost_regression_fix.md)：普通桌面/Shell 操作触发瞬时置顶的回归根因、维护修复、自动证据与待执行 Release 人工矩阵。
 
 ## C-DRP-05 完成锚点
 

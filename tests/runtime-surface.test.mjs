@@ -163,37 +163,36 @@ test("desktop recovery funnels native and manual triggers through one coordinato
     /unsafe extern "system" fn shell_foreground_event[\s\S]*?fn run_shell_foreground_hook/
   )?.[0];
   assert.ok(shellEventPath, "the native Shell event callback must exist");
-  assert.match(shellEventPath, /guard_tool_window_during_shell_transition\(\)/);
+  assert.match(shellEventPath, /repair_tool_window_during_shell_transition\(\)/);
   assert.ok(
-    shellEventPath.indexOf("guard_tool_window_during_shell_transition()")
+    shellEventPath.indexOf("repair_tool_window_during_shell_transition()")
       < shellEventPath.indexOf("queue_host_recovery(trigger)"),
-    "the ToolWindow transition guard must run before delayed recovery is queued"
+    "the first desktop-relative repair must run before delayed recovery is queued"
   );
-  assert.match(
-    shellEventPath,
-    /is_shell_foreground && !is_shell_window[\s\S]*?release_tool_window_shell_z_order_guard\(\)/
-  );
+  assert.match(shellEventPath, /is_desktop_shell_window\(hwnd\)/);
 
-  const shellGuardPath = desktopHost.match(
-    /fn guard_tool_window_during_shell_transition[\s\S]*?pub fn repair_shell_host/
+  const shellTransitionRepairPath = desktopHost.match(
+    /fn repair_tool_window_during_shell_transition[\s\S]*?pub fn repair_shell_host/
   )?.[0];
-  assert.ok(shellGuardPath, "the bounded Shell Z-order guard must exist");
-  assert.match(shellGuardPath, /HWND_TOPMOST/);
-  assert.match(shellGuardPath, /HWND_NOTOPMOST/);
-  assert.match(shellGuardPath, /SWP_NOACTIVATE/);
-  assert.doesNotMatch(shellGuardPath, /SWP_FRAMECHANGED/);
-  assert.match(workerPath, /SHELL_Z_ORDER_GUARD_MS/);
-  assert.match(workerPath, /release_tool_window_shell_z_order_guard\(\)/);
-  assert.ok(
-    workerPath.indexOf("release_tool_window_shell_z_order_guard()")
-
-      < workerPath.indexOf("handler(request.clone())"),
-    "the temporary topmost guard must be released before coordinated recovery"
-  );
+  assert.ok(shellTransitionRepairPath, "the bounded Shell desktop-layer repair must exist");
+  assert.match(shellTransitionRepairPath, /POSTER_VISIBLE_INTENT/);
+  assert.match(shellTransitionRepairPath, /TOOL_WINDOW_FALLBACK_ACTIVE/);
+  assert.match(shellTransitionRepairPath, /anchor_poster_surface_windows_to_desktop\(\)/);
+  assert.doesNotMatch(shellTransitionRepairPath, /SWP_FRAMECHANGED/);
   assert.match(
     desktopHost,
-    /pub fn set_poster_visibility_intent[\s\S]*?if !visible[\s\S]*?release_tool_window_shell_z_order_guard\(\)/
+    /SHELL_DESKTOP_LAYER_REPAIR_DELAYS_MS: \[u64; 14\] =[\s\S]*?\[4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 64, 96\]/
   );
+  assert.match(workerPath, /if pending_host_recovery_includes_shell\(generation\)/);
+  assert.match(workerPath, /for repair_at_ms in SHELL_DESKTOP_LAYER_REPAIR_DELAYS_MS/);
+  assert.match(workerPath, /repair_tool_window_during_shell_transition\(\)/);
+  assert.ok(
+    workerPath.lastIndexOf("repair_tool_window_during_shell_transition()")
+      < workerPath.indexOf("handler(request.clone())"),
+    "the bounded desktop-relative repair burst must finish before coordinated recovery"
+  );
+  assert.doesNotMatch(desktopHost, /\bHWND_(?:TOPMOST|NOTOPMOST)\b/);
+  assert.doesNotMatch(desktopHost, /shell_z_order_guard/i);
 
   const coordinatorPath = nativeRuntime.match(
     /fn recover_desktop_host[\s\S]*?\n}\r?\n\r?\n#\[tauri::command\]/

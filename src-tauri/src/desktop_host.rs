@@ -105,10 +105,16 @@ impl HostRecoveryRequest {
         Self::from_mask(0, 1, trigger.bit())
     }
 
+    fn shell_mask() -> usize {
+        HostRecoveryTrigger::ShellForeground.bit() | HostRecoveryTrigger::ShellLifecycle.bit()
+    }
+
+    pub fn includes_shell(&self) -> bool {
+        self.reason_mask & Self::shell_mask() != 0
+    }
+
     pub fn is_shell_only(&self) -> bool {
-        let shell_mask =
-            HostRecoveryTrigger::ShellForeground.bit() | HostRecoveryTrigger::ShellLifecycle.bit();
-        self.reason_mask != 0 && self.reason_mask & !shell_mask == 0
+        self.reason_mask != 0 && self.reason_mask & !Self::shell_mask() == 0
     }
 
     fn from_mask(generation: usize, event_count: usize, reason_mask: usize) -> Self {
@@ -161,6 +167,7 @@ mod recovery_tests {
         assert_eq!(request.generation, 9);
         assert_eq!(request.event_count, 2);
         assert_eq!(request.trigger_summary(), "shellForeground,dpiChange");
+        assert!(request.includes_shell());
         assert!(!request.is_shell_only());
         let mut shell_pending = None;
         merge_host_recovery_request(&mut shell_pending, 10, HostRecoveryTrigger::ShellLifecycle);
@@ -172,6 +179,7 @@ mod recovery_tests {
         assert_eq!(manual.generation, 0);
         assert_eq!(manual.event_count, 1);
         assert_eq!(manual.trigger_summary(), "manualReconnect");
+        assert!(!manual.includes_shell());
     }
 }
 
@@ -217,23 +225,24 @@ mod platform {
                     SetWindowLongPtrW, SetWindowPos, SetWindowsHookExW, ShowWindow,
                     TranslateMessage, UnhookWindowsHookEx, EVENT_OBJECT_CREATE, EVENT_OBJECT_SHOW,
                     EVENT_SYSTEM_FOREGROUND, GWL_EXSTYLE, GWL_STYLE, GW_HWNDPREV, HWND_BOTTOM,
-                    HWND_NOTOPMOST, HWND_TOP, HWND_TOPMOST, MA_NOACTIVATE, MSG, MSLLHOOKSTRUCT,
-                    OBJID_WINDOW, STYLESTRUCT, SWP_ASYNCWINDOWPOS, SWP_FRAMECHANGED,
-                    SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SWP_NOZORDER, SW_SHOWNOACTIVATE,
-                    WH_MOUSE_LL, WINEVENT_OUTOFCONTEXT, WM_APP, WM_DESTROY, WM_DISPLAYCHANGE,
-                    WM_DPICHANGED, WM_EXITSIZEMOVE, WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MBUTTONDOWN,
-                    WM_MBUTTONUP, WM_MOUSEACTIVATE, WM_MOUSEHWHEEL, WM_MOUSEMOVE, WM_MOUSEWHEEL,
-                    WM_MOVING, WM_RBUTTONDOWN, WM_RBUTTONUP, WM_SETTINGCHANGE, WM_STYLECHANGING,
-                    WM_XBUTTONDOWN, WM_XBUTTONUP, WS_CAPTION, WS_CHILD, WS_EX_APPWINDOW,
-                    WS_EX_LAYERED, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TRANSPARENT,
-                    WS_MAXIMIZEBOX, WS_MINIMIZEBOX, WS_POPUP, WS_SYSMENU, WS_THICKFRAME,
+                    HWND_TOP, MA_NOACTIVATE, MSG, MSLLHOOKSTRUCT, OBJID_WINDOW, STYLESTRUCT,
+                    SWP_ASYNCWINDOWPOS, SWP_FRAMECHANGED, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE,
+                    SWP_NOZORDER, SW_SHOWNOACTIVATE, WH_MOUSE_LL, WINEVENT_OUTOFCONTEXT, WM_APP,
+                    WM_DESTROY, WM_DISPLAYCHANGE, WM_DPICHANGED, WM_EXITSIZEMOVE, WM_LBUTTONDOWN,
+                    WM_LBUTTONUP, WM_MBUTTONDOWN, WM_MBUTTONUP, WM_MOUSEACTIVATE, WM_MOUSEHWHEEL,
+                    WM_MOUSEMOVE, WM_MOUSEWHEEL, WM_MOVING, WM_RBUTTONDOWN, WM_RBUTTONUP,
+                    WM_SETTINGCHANGE, WM_STYLECHANGING, WM_XBUTTONDOWN, WM_XBUTTONUP, WS_CAPTION,
+                    WS_CHILD, WS_EX_APPWINDOW, WS_EX_LAYERED, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW,
+                    WS_EX_TRANSPARENT, WS_MAXIMIZEBOX, WS_MINIMIZEBOX, WS_POPUP, WS_SYSMENU,
+                    WS_THICKFRAME,
                 },
             },
         },
     };
 
     const SHELL_RECOVERY_SETTLE_MS: u64 = 140;
-    const SHELL_Z_ORDER_GUARD_MS: u64 = 48;
+    const SHELL_DESKTOP_LAYER_REPAIR_DELAYS_MS: [u64; 14] =
+        [4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 64, 96];
     const POST_SHOW_DESKTOP_LAYER_SETTLE_DELAYS_MS: [u64; 3] = [16, 48, 96];
     const POSTER_WINDOW_SUBCLASS_ID: usize = 0x4455_5031;
     const WM_POSTER_INPUT_PASSTHROUGH: u32 = WM_APP + 0x451;
@@ -250,7 +259,6 @@ mod platform {
     // transient Windows 11/DWM non-client strip before the first size/region invalidation.
     static POSTER_VISIBLE_INTENT: AtomicBool = AtomicBool::new(false);
     static TOOL_WINDOW_FALLBACK_ACTIVE: AtomicBool = AtomicBool::new(false);
-    static SHELL_Z_ORDER_GUARD_ACTIVE: AtomicBool = AtomicBool::new(false);
     static HOST_RECOVERY_ACTIVE: AtomicBool = AtomicBool::new(false);
     static HOST_RECOVERY_GENERATION: AtomicUsize = AtomicUsize::new(0);
     static HOST_RECOVERY_PENDING: OnceLock<Mutex<Option<HostRecoveryRequest>>> = OnceLock::new();
@@ -349,6 +357,12 @@ mod platform {
             );
         }
         windows
+    }
+
+    fn is_desktop_shell_window(hwnd: HWND) -> bool {
+        shell_windows()
+            .into_iter()
+            .any(|window| window.hwnd == hwnd && (window.is_progman || window.has_shell_view))
     }
 
     fn rect_contains(container: &RECT, target: &RECT) -> bool {
@@ -707,55 +721,13 @@ mod platform {
         Ok(true)
     }
 
-    fn guard_tool_window_during_shell_transition() {
+    fn repair_tool_window_during_shell_transition() {
         if !POSTER_VISIBLE_INTENT.load(Ordering::Acquire)
             || !TOOL_WINDOW_FALLBACK_ACTIVE.load(Ordering::Acquire)
         {
             return;
         }
-        if let Some(hwnd) = poster_window() {
-            let guarded = unsafe {
-                SetWindowPos(
-                    hwnd,
-                    Some(HWND_TOPMOST),
-                    0,
-                    0,
-                    0,
-                    0,
-                    SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE,
-                )
-            }
-            .is_ok();
-            if guarded {
-                SHELL_Z_ORDER_GUARD_ACTIVE.store(true, Ordering::Release);
-            }
-        }
-    }
-
-    fn release_tool_window_shell_z_order_guard() {
-        if !SHELL_Z_ORDER_GUARD_ACTIVE.load(Ordering::Acquire) {
-            return;
-        }
-        let Some(hwnd) = poster_window() else {
-            SHELL_Z_ORDER_GUARD_ACTIVE.store(false, Ordering::Release);
-            return;
-        };
-        let released = unsafe {
-            SetWindowPos(
-                hwnd,
-                Some(HWND_NOTOPMOST),
-                0,
-                0,
-                0,
-                0,
-                SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE,
-            )
-        }
-        .is_ok();
-        if released {
-            SHELL_Z_ORDER_GUARD_ACTIVE.store(false, Ordering::Release);
-            let _ = anchor_poster_surface_windows_to_desktop();
-        }
+        let _ = anchor_poster_surface_windows_to_desktop();
     }
 
     fn is_top_level_tool_window(hwnd: HWND) -> bool {
@@ -827,20 +799,39 @@ mod platform {
         }
     }
 
+    fn pending_host_recovery_includes_shell(generation: usize) -> bool {
+        let pending = HOST_RECOVERY_PENDING.get_or_init(|| Mutex::new(None));
+        let Ok(pending) = pending.lock() else {
+            return false;
+        };
+        pending
+            .as_ref()
+            .is_some_and(|request| request.generation == generation && request.includes_shell())
+    }
+
     fn run_shell_recovery_worker(receiver: Receiver<()>, handler: HostRecoveryHandler) {
         while receiver.recv().is_ok() {
             HOST_RECOVERY_ACTIVE.store(true, Ordering::Release);
             loop {
                 let generation = HOST_RECOVERY_GENERATION.load(Ordering::Acquire);
-                thread::sleep(Duration::from_millis(SHELL_Z_ORDER_GUARD_MS));
-                while receiver.try_recv().is_ok() {}
-                if HOST_RECOVERY_GENERATION.load(Ordering::Acquire) != generation {
+                let mut elapsed_ms = 0;
+                let mut superseded = false;
+                if pending_host_recovery_includes_shell(generation) {
+                    for repair_at_ms in SHELL_DESKTOP_LAYER_REPAIR_DELAYS_MS {
+                        thread::sleep(Duration::from_millis(repair_at_ms - elapsed_ms));
+                        elapsed_ms = repair_at_ms;
+                        while receiver.try_recv().is_ok() {}
+                        if HOST_RECOVERY_GENERATION.load(Ordering::Acquire) != generation {
+                            superseded = true;
+                            break;
+                        }
+                        repair_tool_window_during_shell_transition();
+                    }
+                }
+                if superseded {
                     continue;
                 }
-                release_tool_window_shell_z_order_guard();
-                thread::sleep(Duration::from_millis(
-                    SHELL_RECOVERY_SETTLE_MS - SHELL_Z_ORDER_GUARD_MS,
-                ));
+                thread::sleep(Duration::from_millis(SHELL_RECOVERY_SETTLE_MS - elapsed_ms));
                 while receiver.try_recv().is_ok() {}
                 if HOST_RECOVERY_GENERATION.load(Ordering::Acquire) == generation {
                     break;
@@ -872,11 +863,10 @@ mod platform {
             return;
         }
         let is_shell_window = matches!(class_name(hwnd).as_deref(), Some("Progman" | "WorkerW"));
-        if is_shell_foreground && !is_shell_window {
-            release_tool_window_shell_z_order_guard();
-            return;
-        }
-        if (!is_shell_foreground && !is_shell_lifecycle) || !is_shell_window {
+        if (!is_shell_foreground && !is_shell_lifecycle)
+            || !is_shell_window
+            || !is_desktop_shell_window(hwnd)
+        {
             return;
         }
         let trigger = if is_shell_foreground {
@@ -884,7 +874,7 @@ mod platform {
         } else {
             HostRecoveryTrigger::ShellLifecycle
         };
-        guard_tool_window_during_shell_transition();
+        repair_tool_window_during_shell_transition();
         queue_host_recovery(trigger);
     }
 
@@ -1251,9 +1241,6 @@ mod platform {
 
     pub fn set_poster_visibility_intent(visible: bool) {
         POSTER_VISIBLE_INTENT.store(visible, Ordering::Release);
-        if !visible {
-            release_tool_window_shell_z_order_guard();
-        }
     }
 
     fn set_common_extended_style(hwnd: HWND) {

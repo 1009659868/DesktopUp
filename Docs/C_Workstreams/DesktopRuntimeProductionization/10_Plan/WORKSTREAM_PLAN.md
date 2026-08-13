@@ -103,7 +103,9 @@
 
 第一版 Release 经用户实测发现连续 Win+D 闪烁。最小 `shellRepair` 消除了完整重配/resize/region 重写，但用户二次复测仍确认按下后立即闪；5ms 原生探针进一步定位为 Shell 前台事件后的第二次无事件 Progman Z 序重排。当前 ToolWindow 在该切换窗口使用 48ms `TOPMOST | NOACTIVATE` 防护，普通应用恢复前台或超时后立即降回桌面层；10 轮原生重复探针无遮挡窗口、无 topmost 残留。用户随后在最终 Release 上确认连续 Win+D 已较稳定，并接受 C-DRP-04 通过；第二显示器/混合 DPI 等物理矩阵仍延期至 C-DRP-06。
 
-状态：`COMPLETE — USER ACCEPTED / PHYSICAL MATRIX DEFERRED TO C-DRP-06`
+2026-08-13 用户报告上述临时 TOPMOST 防护在桌面右键后左键、桌面刷新和 Windows 文件选择器出现时会让海报瞬时覆盖所有程序再回落。维护修复已删除通用 `HWND_TOPMOST/NOTOPMOST` 路径，收紧真实桌面 Shell 窗口识别，并改用一次事件触发、最长 140ms 的 Progman 相对重锚突发覆盖已知 Win+D 二次重排窗口。JS/契约/文档 105/105、Rust 89/89、Release/NSIS 构建通过；新版 Release 已启动，等待上述三类操作和连续 Win+D 人工复测。旧 TOPMOST 方案只作为历史定位证据保留，不再描述当前生产实现。
+
+状态：`COMPLETE — 2026-08-13 MAINTENANCE RELEASE AWAITING USER REGRESSION MATRIX`
 
 ### C-DRP-05：暂停、可见性与生命周期接口
 

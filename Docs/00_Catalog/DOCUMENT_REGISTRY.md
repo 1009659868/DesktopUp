@@ -42,10 +42,10 @@
 | `B_Modules/DesktopRuntimeFoundation/20_Log/MODULE_LOG.md` | B/Log | 桌面运行时里程碑记录 | `INACTIVE` |
 | `B_Modules/DesktopRuntimeFoundation/30_Sync/COLD_START.md` | B/Sync | B 层接手阅读入口 | `INACTIVE` |
 | `B_Modules/DesktopRuntimeFoundation/30_Sync/CURRENT_HANDOFF.md` | B/Sync | 桌面运行时当前交接 | `INACTIVE` |
-| `B_Modules/PosterCoreRuntime/00_Catalog/C_WORKSTREAM_INDEX.md` | B/Catalog | 海报核心工作流索引 | `ACTIVE` |
-| `B_Modules/PosterCoreRuntime/10_Plan/MODULE_PLAN.md` | B/Plan | 海报核心运行时模块计划 | `ACTIVE` |
-| `B_Modules/PosterCoreRuntime/30_Sync/COLD_START.md` | B/Sync | 海报核心接手阅读入口 | `ACTIVE` |
-| `B_Modules/PosterCoreRuntime/30_Sync/CURRENT_HANDOFF.md` | B/Sync | 海报核心当前交接 | `ACTIVE` |
+| `B_Modules/PosterCoreRuntime/00_Catalog/C_WORKSTREAM_INDEX.md` | B/Catalog | 海报核心工作流索引 | `INACTIVE — C-PSS COMPLETE` |
+| `B_Modules/PosterCoreRuntime/10_Plan/MODULE_PLAN.md` | B/Plan | 海报核心运行时模块计划 | `INACTIVE — C-PSS COMPLETE` |
+| `B_Modules/PosterCoreRuntime/30_Sync/COLD_START.md` | B/Sync | 海报核心追溯入口 | `INACTIVE` |
+| `B_Modules/PosterCoreRuntime/30_Sync/CURRENT_HANDOFF.md` | B/Sync | 海报核心阶段交接 | `INACTIVE` |
 | `B_Modules/TemplatePlatform/00_Catalog/C_WORKSTREAM_INDEX.md` | B/Catalog | 模板平台工作流索引 | `PLANNED` |
 | `B_Modules/TemplatePlatform/10_Plan/MODULE_PLAN.md` | B/Plan | Shadow DOM 与模板生命周期计划 | `PLANNED` |
 | `B_Modules/CollectionAndLaunch/00_Catalog/C_WORKSTREAM_INDEX.md` | B/Catalog | 收纳与启动工作流索引 | `PLANNED` |
@@ -58,8 +58,8 @@
 | `B_Modules/LocalAIAssistant/10_Plan/MODULE_PLAN.md` | B/Plan | BYOK、受控命令和撤销计划 | `PLANNED` |
 | `B_Modules/GameSourceDiscovery/00_Catalog/C_WORKSTREAM_INDEX.md` | B/Catalog | 游戏来源发现工作流索引 | `PLANNED` |
 | `B_Modules/GameSourceDiscovery/10_Plan/MODULE_PLAN.md` | B/Plan | Steam/Epic/Xbox 发现计划 | `PLANNED` |
-| `B_Modules/DistributionLifecycle/00_Catalog/C_WORKSTREAM_INDEX.md` | B/Catalog | 分发与生命周期工作流索引 | `PLANNED` |
-| `B_Modules/DistributionLifecycle/10_Plan/MODULE_PLAN.md` | B/Plan | 安装、升级、卸载和发布计划 | `PLANNED EARLY CONTRACT` |
+| `B_Modules/DistributionLifecycle/00_Catalog/C_WORKSTREAM_INDEX.md` | B/Catalog | 分发与生命周期工作流索引 | `READY — C-IBC ACTIVATION PENDING` |
+| `B_Modules/DistributionLifecycle/10_Plan/MODULE_PLAN.md` | B/Plan | 安装、升级、卸载和发布计划 | `READY — C-IBC ACTIVATION PENDING` |
 | `C_Workstreams/DesktopHostFeasibility/00_Catalog/TASK_INDEX.md` | C/Catalog | 桌面宿主任务索引 | `COMPLETE` |
 | `C_Workstreams/DesktopHostFeasibility/00_Catalog/CODE_ANCHORS.md` | C/Catalog | 已验证前端与 Tauri 实现代码定位 | `COMPLETE` |
 | `C_Workstreams/DesktopHostFeasibility/10_Plan/WORKSTREAM_PLAN.md` | C/Plan | 桌面宿主验证计划 | `COMPLETE` |
@@ -93,6 +93,7 @@
 | `C_Workstreams/DesktopRuntimeProductionization/20_Log/2026-08/2026-08-10_cdrp02_acceptance_cdrp03_registry.md` | C/Log | C-DRP-02 用户验收/物理矩阵延期与 C-DRP-03 表面登记首个切片 | `C-DRP-03 COMPLETE` |
 | `C_Workstreams/DesktopRuntimeProductionization/20_Log/2026-08/2026-08-10_cdrp03_single_poster_passthrough_rework.md` | C/Log | C-DRP-03 单海报空白穿透失败、视觉/输入分离重做与最终人工验收 | `COMPLETE — USER ACCEPTED` |
 | `C_Workstreams/DesktopRuntimeProductionization/20_Log/2026-08/2026-08-10_cdrp04_recovery_coordinator_first_slice.md` | C/Log | C-DRP-04 恢复入口审计、单一协调器与 Win+D 有界 Z 序防护 | `COMPLETE — USER ACCEPTED` |
+| `C_Workstreams/DesktopRuntimeProductionization/20_Log/2026-08/2026-08-13_cdrp04_shell_topmost_regression_fix.md` | C/Log | C-DRP-04 普通 Shell 操作瞬时置顶回归、无 TOPMOST 修复与 Release 人工矩阵 | `AUTOMATED PASS / USER MATRIX PENDING` |
 | `C_Workstreams/DesktopRuntimeProductionization/20_Log/2026-08/2026-08-10_cdrp05_lifecycle_interface_first_slice.md` | C/Log | C-DRP-05 统一生命周期、锁外发布、无持续轮询与 Release 矩阵 | `COMPLETE — USER ACCEPTED` |
 | `C_Workstreams/DesktopRuntimeProductionization/20_Log/2026-08/2026-08-11_cdrp06_release_performance_gate_first_slice.md` | C/Log | C-DRP-06 早期窗口性能门、产物证据与后继接口边界 | `SUPERSEDED — STABLE-STATE FAIL` |
 | `C_Workstreams/DesktopRuntimeProductionization/20_Log/2026-08/2026-08-11_cdrp06_stable_working_set_correction.md` | C/Log | C-DRP-06 稳定态纠正、双预算、懒创建、v3/v4 性能、Release 烟雾与平台限制关闭 | `COMPLETE — USER ACCEPTED LIMIT` |
@@ -110,14 +111,18 @@
 | `C_Workstreams/PosterContractBaseline/20_Log/2026-08/2026-08-11_cpcb05_contract_seal_release_candidate.md` | C/Log | legacy bridge、公共契约封板、C-PSS 输入、Release Z 序修复与人工回归门 | `COMPLETE — USER REGRESSION PASS` |
 | `C_Workstreams/PosterContractBaseline/30_Sync/COLD_START.md` | C/Sync | 已关闭海报契约追溯入口 | `COMPLETE` |
 | `C_Workstreams/PosterContractBaseline/30_Sync/CURRENT_HANDOFF.md` | C/Sync | 已关闭海报契约交接 | `COMPLETE` |
-| `C_Workstreams/PosterStateStore/00_Catalog/TASK_INDEX.md` | C/Catalog | 状态仓库任务索引 | `ACTIVE` |
-| `C_Workstreams/PosterStateStore/00_Catalog/CODE_ANCHORS.md` | C/Catalog | 状态仓库代码定位 | `ACTIVE` |
-| `C_Workstreams/PosterStateStore/10_Plan/WORKSTREAM_PLAN.md` | C/Plan | SQLite schema、仓库、迁移与过渡桥切换计划 | `ACTIVE` |
+| `C_Workstreams/PosterStateStore/00_Catalog/TASK_INDEX.md` | C/Catalog | 已关闭状态仓库任务索引 | `COMPLETE` |
+| `C_Workstreams/PosterStateStore/00_Catalog/CODE_ANCHORS.md` | C/Catalog | 已关闭状态仓库代码定位 | `COMPLETE` |
+| `C_Workstreams/PosterStateStore/10_Plan/WORKSTREAM_PLAN.md` | C/Plan | SQLite schema、仓库、迁移与过渡桥切换计划 | `COMPLETE` |
 | `C_Workstreams/PosterStateStore/20_Log/2026-08/2026-08-12_cpss01_activation_and_schema_baseline.md` | C/Log | C-PSS 激活、存储决策与 schema 基线 | `C-PSS-01 COMPLETE / C-PSS-02 ACTIVE` |
 | `C_Workstreams/PosterStateStore/20_Log/2026-08/2026-08-12_cpss02_load_replace_cas.md` | C/Log | C-PSS-02 结构化加载、原子替换、CAS 与失败保留 | `C-PSS-02 COMPLETE / C-PSS-03 ACTIVE` |
 | `C_Workstreams/PosterStateStore/20_Log/2026-08/2026-08-12_cpss03_legacy_migration_source_retention.md` | C/Log | C-PSS-03 legacy 第一海报迁移、完整原始备份、幂等与失败保留 | `C-PSS-03 COMPLETE / C-PSS-04 ACTIVE` |
-| `C_Workstreams/PosterStateStore/30_Sync/COLD_START.md` | C/Sync | 当前状态仓库接手入口 | `ACTIVE` |
-| `C_Workstreams/PosterStateStore/30_Sync/CURRENT_HANDOFF.md` | C/Sync | 当前状态仓库可执行位置 | `ACTIVE` |
+| `C_Workstreams/PosterStateStore/20_Log/2026-08/2026-08-12_cpss04_application_authority_switch.md` | C/Log | SQLite 唯一正式权威切换、风格持久化修正与用户 Release 核心回归 | `C-PSS-04 COMPLETE / C-PSS-05 ACTIVE` |
+| `C_Workstreams/PosterStateStore/20_Log/2026-08/2026-08-12_cpss05_release_recovery_gate_activation.md` | C/Log | C-PSS-05 恢复矩阵、隔离策略与激活输入 | `C-PSS-05 ACTIVE` |
+| `C_Workstreams/PosterStateStore/20_Log/2026-08/2026-08-12_cpss05_isolated_recovery_matrix_release_candidate.md` | C/Log | 8/8 Release 隔离恢复、真实状态哈希不变与待人工核心回归 | `COMPLETE — USER REGRESSION PASS` |
+| `C_Workstreams/PosterStateStore/20_Log/2026-08/2026-08-12_cpss05_user_release_pass_and_workstream_close.md` | C/Log | 用户四项核心回归通过、视觉参数回弹延期与 C-PSS 关闭 | `COMPLETE — C-PSS CLOSED` |
+| `C_Workstreams/PosterStateStore/30_Sync/COLD_START.md` | C/Sync | 已关闭状态仓库追溯入口 | `COMPLETE` |
+| `C_Workstreams/PosterStateStore/30_Sync/CURRENT_HANDOFF.md` | C/Sync | 已关闭状态仓库交接 | `COMPLETE` |
 | `Reference/RELATED_PROJECTS.md` | Reference | 同类项目调研 | `REFERENCE` |
 | `Rules/DOCUMENT_GOVERNANCE.md` | Rules | 文档权威和同步规则 | `ACTIVE` |
 | `Rules/GIT_STRATEGY.md` | Rules | 分支、同步、提交、合并和仓库卫生 | `ACTIVE` |

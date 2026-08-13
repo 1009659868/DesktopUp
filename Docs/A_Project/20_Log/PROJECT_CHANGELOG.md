@@ -2,6 +2,25 @@
 
 本文件只记录项目级已发生事实。局部实现过程进入对应 C 工作流日志。
 
+## 2026-08-13 — 修复普通 Shell 操作触发海报瞬时置顶
+
+状态：`IMPLEMENTED — AUTOMATED PASS / USER RELEASE MATRIX PENDING`
+
+- 定位 C-DRP-04 为 Win+D 引入的 48ms `HWND_TOPMOST/NOTOPMOST` 防护会被桌面右键关闭、刷新和 Windows 文件选择器相关 Shell 事件误触发；
+- 删除生产宿主的通用 TOPMOST 路径，收紧真实桌面 Shell 窗口识别，并改用一次事件触发、最长 140ms 的 Progman 相对重锚突发；
+- 源码契约明确禁止 `HWND_TOPMOST/NOTOPMOST` 回到生产宿主，JS/契约 105/105、Rust 89/89、Release 与 NSIS 构建通过；
+- 修复版 Release 已启动，等待桌面右键关闭、刷新、文件选择器、连续 Win+D 和既有核心交互人工矩阵；在用户确认前不标记人工通过。
+
+## 2026-08-12 — C-PSS 状态仓库与 Release 恢复门关闭
+
+状态：`COMPLETE — USER RELEASE CORE REGRESSION PASS`
+
+- SQLite schema v1、结构化 load/replace/migrate、revision/CAS、legacy 完整备份和第一海报迁移完成；
+- SQLite 成为唯一正式状态权威，JSON/localStorage 只保留只读迁移职责；
+- Release 隔离恢复矩阵 `8/8`、正式配置目录哈希不变和用户四项正常 Release 核心回归通过，C-PSS-01..05 全部关闭；
+- 控制中心 legacy `accent/opacity/density` 视觉参数调整回弹未通过，按用户决定延期到 Template Platform 参数权威阶段，不扩张 C-PSS schema；
+- 下一候选 C-IBC 等待用户明确激活，其后进入 C-RLC。
+
 ## 2026-08-09 — 将分辨率响应缩放纳入 C-DRP-02
 
 状态：`ACCEPTED / PLANNED`

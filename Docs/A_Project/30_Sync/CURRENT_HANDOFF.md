@@ -1,8 +1,8 @@
 # A 层当前交接
 
-最后更新：2026-08-12
+最后更新：2026-08-13
 
-状态：`V1-P1 ACTIVE / C-PSS-05 RELEASE RECOVERY GATE`
+状态：`V1-P1 ACTIVE / C-PSS COMPLETE / C-DRP-04 MAINTENANCE USER MATRIX PENDING`
 
 ## 已建立
 
@@ -33,9 +33,11 @@
 - 同日后续修复 ToolWindow 点击后覆盖普通应用与顶部亮带：当前海报不可激活并原生锚定在 `Progman` 正上方；2026-08-10 用户确认新版 Release 首次显示无顶部白条，收起/展开无裁切且按钮命中正常。
 
 - C-DRP-04 的最终 Release 连续 Win+D 已由用户确认较稳定并接受通过；多屏/DPI 物理矩阵仍延期至 C-DRP-06；
+- 2026-08-13 用户报告 C-DRP-04 的旧 48ms TOPMOST 防护在桌面右键关闭、刷新和 Windows 文件选择器出现时造成瞬时覆盖普通程序；维护版已改为真实桌面 Shell 过滤和有界 Progman 相对重锚，105 项 JS/契约、89 项 Rust、Release/NSIS 通过，等待新版 Release 人工矩阵，不把自动通过提前写成人工通过；
 - C-DRP-05 的版本化 lifecycle、锁外统一事件、状态优先显隐、退出状态、前端乱序保护和静态/暂停无持续轮询已通过自动测试、Release/NSIS 与用户 5/5 人工矩阵，任务关闭；
 - C-DRP-06 已按用户确认升级为主进程 50 MiB + 完整进程树 256 MiB 私有工作集双预算，并将控制中心改为首次请求创建；`performance-gate-v3` / `performance-baseline-v4`、58 项前端/契约、52 项 Rust、Release/NSIS 和最新版普通 Release 四项烟雾全部通过；用户随后接受主屏单海报认证限制，C-DRP-06 与 C-DRP 关闭；
-- C-PCB-01..05 与 C-PSS-01..04 已完成；SQLite 已成为唯一正式状态权威，legacy 已降为只读迁移来源，用户确认最新版 Release 的视觉、桌面交互、重启恢复和控制中心往返通过；当前推进 C-PSS-05 恢复门；
+- C-PCB-01..05 与 C-PSS-01..05 已完成；SQLite 已成为唯一正式状态权威，Release 隔离恢复矩阵与用户四项核心回归通过，C-PSS 关闭；
+- 控制中心 legacy `accent/opacity/density` 视觉参数调整回弹，用户决定后续修复；该缺陷归后继 Template Platform 参数权威，不记为通过且不重开 C-PSS；
 ## 尚未完成
 
 - C-DHF-04/05 剩余物理矩阵（Explorer 真重启、热插拔、主屏/DPI 切换等）因物理环境延后；已确认的真实游戏全屏、Win+L、显示器关闭/唤醒通过；
@@ -52,7 +54,7 @@
 
 ## 下一动作
 
-当前 `C-DHF-01..08`、`C-DRP-01..06`、`C-PCB-01..05` 与 `C-PSS-01..04` 已关闭。当前进入 [C-PSS](../../C_Workstreams/PosterStateStore/30_Sync/CURRENT_HANDOFF.md) 的 C-PSS-05 Release 恢复门；Git 同步检查点 `b447f1f` 已创建，本轮推送完成后通过隔离数据库副本与故障注入验证损坏、未来 schema、事务失败、CAS 冲突和备份恢复。当前默认与发布范围仍为单海报；多显示器、混合 DPI、负坐标副屏、主屏切换、跨屏重启和热插拔未认证。
+当前 `C-DHF-01..08`、`C-DRP-01..06`、`C-PCB-01..05` 与 `C-PSS-01..05` 已关闭。先完成 2026-08-13 C-DRP-04 维护版的桌面右键、刷新、文件选择器、连续 Win+D 与核心交互人工矩阵；随后下一工作流仍是 C-IBC 安装/数据目录早期契约，等待用户明确激活，其后进入 C-RLC。当前默认与发布范围仍为单海报，多显示器、混合 DPI、负坐标副屏、主屏切换、跨屏重启和热插拔未认证。C-PSS 实现尚未提交或推送，最近远端同步基点为 `629248c`。
 
 A1 真实快捷方式能力保持排队状态；C-ROD/C-PAA/C-LCH 只允许用户主动触发的只读发现、仅添加和启动，任何真实文件移动必须等待 C-SVT 的保险库、账本、逐批确认和故障注入通过。
 
