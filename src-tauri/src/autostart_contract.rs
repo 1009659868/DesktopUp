@@ -2,6 +2,7 @@ use std::{
     fs,
     io::ErrorKind,
     path::{Path, PathBuf},
+    sync::Mutex,
 };
 
 use serde::Serialize;
@@ -12,12 +13,17 @@ pub const AUTOSTART_CONTRACT_VERSION: u32 = 1;
 pub const AUTOSTART_CONTRACT_NAME: &str = "autostart-contract-v1";
 pub const AUTOSTART_DIAGNOSTIC_VERSION: u32 = 1;
 pub const AUTOSTART_DIAGNOSTIC_NAME: &str = "autostart-diagnostics-v1";
+pub const AUTOSTART_CHANGE_CONTRACT_VERSION: u32 = 1;
+pub const AUTOSTART_CHANGE_CONTRACT_NAME: &str = "autostart-change-v1";
+pub const AUTOSTART_STATE_EVENT: &str = "autostart-state-changed";
 pub const AUTOSTART_REGISTRY_HIVE: &str = "HKEY_CURRENT_USER";
 pub const AUTOSTART_REGISTRY_SUBKEY: &str = r"Software\Microsoft\Windows\CurrentVersion\Run";
 pub const AUTOSTART_REGISTRY_VALUE_NAME: &str = "DesktopUp";
 pub const AUTOSTART_REGISTRY_VALUE_TYPE: &str = "REG_SZ";
 pub const AUTOSTART_ARGUMENT: &str = "--autostart";
 pub const EXPECTED_EXECUTABLE_NAME: &str = "DesktopUp.exe";
+#[cfg(feature = "autostart-test-root")]
+pub const TEMPORARY_AUTOSTART_TEST_EXECUTABLE: &str = r"G:\A_\Tools\Test\DesktopUp.exe";
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -77,7 +83,7 @@ pub struct AutostartContract {
 
 impl AutostartContract {
     pub fn v1(paths: &RuntimePathResolution) -> Self {
-        let expected_executable_path = paths.install_root().join(EXPECTED_EXECUTABLE_NAME);
+        let expected_executable_path = expected_executable_path(paths);
         let expected_executable_path = path_to_string(&expected_executable_path);
         Self {
             contract_version: AUTOSTART_CONTRACT_VERSION,
@@ -123,7 +129,7 @@ impl AutostartContract {
     }
 
     pub fn validate(&self, paths: &RuntimePathResolution) -> Result<(), Vec<String>> {
-        let expected_path = path_to_string(&paths.install_root().join(EXPECTED_EXECUTABLE_NAME));
+        let expected_path = path_to_string(&expected_executable_path(paths));
         let mut errors = Vec::new();
         if self.contract_version != AUTOSTART_CONTRACT_VERSION
             || self.contract_name != AUTOSTART_CONTRACT_NAME
@@ -221,6 +227,7 @@ pub struct AutostartDiagnostics {
     pub registration_state: String,
     pub effective_enabled: bool,
     pub registration_eligible: bool,
+    pub eligibility_scope: String,
     pub expected_command: String,
     pub observed_value_type: String,
     pub observed_command: String,
@@ -231,8 +238,247 @@ pub struct AutostartDiagnostics {
     pub gaps: Vec<AutostartDiagnosticGap>,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AutostartChangeResult {
+    pub contract_version: u32,
+    pub contract_name: String,
+    pub requested_enabled: bool,
+    pub outcome: String,
+    pub succeeded: bool,
+    pub changed: bool,
+    pub mutation_attempted: bool,
+    pub error_code: Option<u32>,
+    pub error: String,
+    pub before: AutostartDiagnostics,
+    pub after: AutostartDiagnostics,
+}
+
+trait AutostartRegistryBackend {
+    fn observe(&mut self) -> AutostartRegistryObservation;
+    fn write_exact(&mut self, command: &str) -> Result<(), u32>;
+    fn delete_owned(&mut self) -> Result<(), u32>;
+}
+
+pub struct AutostartCoordinator {
+    snapshot: Mutex<AutostartDiagnostics>,
+    operation: Mutex<()>,
+}
+
+impl AutostartCoordinator {
+    pub fn new(initial: AutostartDiagnostics) -> Self {
+        Self {
+            snapshot: Mutex::new(initial),
+            operation: Mutex::new(()),
+        }
+    }
+
+    pub fn snapshot(&self) -> AutostartDiagnostics {
+        self.snapshot
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .clone()
+    }
+
+    pub fn refresh(&self, paths: &RuntimePathResolution) -> AutostartDiagnostics {
+        let _operation = self
+            .operation
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        let snapshot = probe_autostart(paths);
+        self.replace_snapshot(snapshot.clone());
+        snapshot
+    }
+
+    pub fn set_enabled(
+        &self,
+        paths: &RuntimePathResolution,
+        enabled: bool,
+    ) -> AutostartChangeResult {
+        let _operation = self
+            .operation
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        let mut backend = platform::SystemRegistry;
+        let result = change_autostart_with_backend(paths, enabled, &mut backend);
+        self.replace_snapshot(result.after.clone());
+        result
+    }
+
+    pub fn toggle(&self, paths: &RuntimePathResolution) -> AutostartChangeResult {
+        let _operation = self
+            .operation
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        let mut backend = platform::SystemRegistry;
+        let before = probe_autostart_with_observation(paths, backend.observe());
+        let result =
+            change_autostart_from_before(paths, !before.effective_enabled, before, &mut backend);
+        self.replace_snapshot(result.after.clone());
+        result
+    }
+
+    fn replace_snapshot(&self, snapshot: AutostartDiagnostics) {
+        let mut current = self
+            .snapshot
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        *current = snapshot;
+    }
+}
+
 pub fn probe_autostart(paths: &RuntimePathResolution) -> AutostartDiagnostics {
-    probe_autostart_with_observation(paths, platform::read_autostart_value())
+    let mut backend = platform::SystemRegistry;
+    probe_autostart_with_observation(paths, backend.observe())
+}
+
+fn change_autostart_with_backend(
+    paths: &RuntimePathResolution,
+    enabled: bool,
+    backend: &mut impl AutostartRegistryBackend,
+) -> AutostartChangeResult {
+    let before = probe_autostart_with_observation(paths, backend.observe());
+    change_autostart_from_before(paths, enabled, before, backend)
+}
+
+fn change_autostart_from_before(
+    paths: &RuntimePathResolution,
+    enabled: bool,
+    before: AutostartDiagnostics,
+    backend: &mut impl AutostartRegistryBackend,
+) -> AutostartChangeResult {
+    if !before.registration_eligible {
+        return change_result(
+            enabled,
+            "rejectedIneligible",
+            false,
+            false,
+            false,
+            None,
+            "autostart changes require the formal installed DesktopUp.exe",
+            before.clone(),
+            before,
+        );
+    }
+    if matches!(
+        before.registration_state.as_str(),
+        "unreadable" | "unsupported"
+    ) {
+        return change_result(
+            enabled,
+            "rejectedUnreadable",
+            false,
+            false,
+            false,
+            None,
+            "autostart registration could not be read safely",
+            before.clone(),
+            before,
+        );
+    }
+
+    let mutation = if enabled {
+        match before.registration_state.as_str() {
+            "matching" => None,
+            "absent" | "drifted" => Some(backend.write_exact(&before.expected_command)),
+            _ => None,
+        }
+    } else {
+        match before.registration_state.as_str() {
+            "absent" => None,
+            "matching" | "drifted" => Some(backend.delete_owned()),
+            _ => None,
+        }
+    };
+    let mutation_attempted = mutation.is_some();
+    let changed = mutation_attempted && mutation.as_ref().is_some_and(Result::is_ok);
+
+    if let Some(Err(error_code)) = mutation {
+        let after = probe_autostart_with_observation(paths, backend.observe());
+        return change_result(
+            enabled,
+            "mutationFailed",
+            false,
+            false,
+            true,
+            Some(error_code),
+            "registry mutation failed; the read-back snapshot remains authoritative",
+            before,
+            after,
+        );
+    }
+
+    let after = if mutation_attempted {
+        probe_autostart_with_observation(paths, backend.observe())
+    } else {
+        before.clone()
+    };
+    let verified = if enabled {
+        after.registration_state == "matching" && after.effective_enabled
+    } else {
+        after.registration_state == "absent" && !after.effective_enabled
+    };
+    if !verified {
+        return change_result(
+            enabled,
+            "verificationFailed",
+            false,
+            false,
+            mutation_attempted,
+            None,
+            "registry read-back did not match the requested state",
+            before,
+            after,
+        );
+    }
+
+    let outcome = if !mutation_attempted {
+        "noChange"
+    } else if enabled && before.registration_state == "drifted" {
+        "repaired"
+    } else if enabled {
+        "enabled"
+    } else {
+        "disabled"
+    };
+    change_result(
+        enabled,
+        outcome,
+        true,
+        changed,
+        mutation_attempted,
+        None,
+        "",
+        before,
+        after,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn change_result(
+    requested_enabled: bool,
+    outcome: &str,
+    succeeded: bool,
+    changed: bool,
+    mutation_attempted: bool,
+    error_code: Option<u32>,
+    error: &str,
+    before: AutostartDiagnostics,
+    after: AutostartDiagnostics,
+) -> AutostartChangeResult {
+    AutostartChangeResult {
+        contract_version: AUTOSTART_CHANGE_CONTRACT_VERSION,
+        contract_name: AUTOSTART_CHANGE_CONTRACT_NAME.to_string(),
+        requested_enabled,
+        outcome: outcome.to_string(),
+        succeeded,
+        changed,
+        mutation_attempted,
+        error_code,
+        error: error.to_string(),
+        before,
+        after,
+    }
 }
 
 fn probe_autostart_with_observation(
@@ -247,6 +493,7 @@ fn probe_autostart_with_observation(
         paths_equal(paths.executable_path(), &target_executable_path);
     let registration_eligible =
         target_executable_kind == "file" && current_executable_matches_target;
+    let eligibility_scope = eligibility_scope(paths, &target_executable_path);
     let mut gaps = contract_errors
         .into_iter()
         .map(|detail| AutostartDiagnosticGap {
@@ -358,11 +605,12 @@ fn probe_autostart_with_observation(
         registration_state,
         effective_enabled,
         registration_eligible,
+        eligibility_scope,
         observed_value_type,
         observed_command,
         target_executable_kind,
         current_executable_matches_target,
-        current_runtime_integration: "contractOnlyCrlcPending".to_string(),
+        current_runtime_integration: "authoritativeCrlc03".to_string(),
         side_effects: AutostartDiagnosticSideEffects {
             reads_registry: cfg!(windows),
             writes_registry: false,
@@ -372,6 +620,27 @@ fn probe_autostart_with_observation(
         },
         gaps,
     }
+}
+
+fn expected_executable_path(paths: &RuntimePathResolution) -> PathBuf {
+    #[cfg(feature = "autostart-test-root")]
+    {
+        let temporary_target = PathBuf::from(TEMPORARY_AUTOSTART_TEST_EXECUTABLE);
+        if paths_equal(paths.executable_path(), &temporary_target) {
+            return temporary_target;
+        }
+    }
+    paths.install_root().join(EXPECTED_EXECUTABLE_NAME)
+}
+
+fn eligibility_scope(_paths: &RuntimePathResolution, _target: &Path) -> String {
+    #[cfg(feature = "autostart-test-root")]
+    if paths_equal(_target, Path::new(TEMPORARY_AUTOSTART_TEST_EXECUTABLE))
+        && paths_equal(_paths.executable_path(), _target)
+    {
+        return "temporaryTest".to_string();
+    }
+    "formalInstall".to_string()
 }
 
 fn expected_command(executable_path: &str) -> String {
@@ -410,20 +679,38 @@ fn path_to_string(path: &Path) -> String {
 #[cfg(windows)]
 mod platform {
     use super::{
-        AutostartRegistryObservation, AUTOSTART_REGISTRY_SUBKEY, AUTOSTART_REGISTRY_VALUE_NAME,
+        AutostartRegistryBackend, AutostartRegistryObservation, AUTOSTART_REGISTRY_SUBKEY,
+        AUTOSTART_REGISTRY_VALUE_NAME,
     };
     use windows::{
         core::PCWSTR,
         Win32::{
             Foundation::{ERROR_FILE_NOT_FOUND, ERROR_MORE_DATA, ERROR_SUCCESS},
             System::Registry::{
-                RegCloseKey, RegOpenKeyExW, RegQueryValueExW, HKEY, HKEY_CURRENT_USER,
-                KEY_QUERY_VALUE, REG_EXPAND_SZ, REG_SZ,
+                RegCloseKey, RegCreateKeyExW, RegDeleteValueW, RegOpenKeyExW, RegQueryValueExW,
+                RegSetValueExW, HKEY, HKEY_CURRENT_USER, KEY_QUERY_VALUE, KEY_SET_VALUE,
+                REG_EXPAND_SZ, REG_OPTION_NON_VOLATILE, REG_SZ,
             },
         },
     };
 
-    pub(super) fn read_autostart_value() -> AutostartRegistryObservation {
+    pub(super) struct SystemRegistry;
+
+    impl AutostartRegistryBackend for SystemRegistry {
+        fn observe(&mut self) -> AutostartRegistryObservation {
+            read_autostart_value()
+        }
+
+        fn write_exact(&mut self, command: &str) -> Result<(), u32> {
+            write_autostart_value(command)
+        }
+
+        fn delete_owned(&mut self) -> Result<(), u32> {
+            delete_autostart_value()
+        }
+    }
+
+    fn read_autostart_value() -> AutostartRegistryObservation {
         let subkey = wide_null(AUTOSTART_REGISTRY_SUBKEY);
         let value_name = wide_null(AUTOSTART_REGISTRY_VALUE_NAME);
         let mut key = HKEY::default();
@@ -449,6 +736,73 @@ mod platform {
             let _ = RegCloseKey(key);
         }
         result
+    }
+
+    fn write_autostart_value(command: &str) -> Result<(), u32> {
+        let subkey = wide_null(AUTOSTART_REGISTRY_SUBKEY);
+        let value_name = wide_null(AUTOSTART_REGISTRY_VALUE_NAME);
+        let data = command
+            .encode_utf16()
+            .chain(std::iter::once(0))
+            .flat_map(u16::to_ne_bytes)
+            .collect::<Vec<_>>();
+        let mut key = HKEY::default();
+        let open_status = unsafe {
+            RegCreateKeyExW(
+                HKEY_CURRENT_USER,
+                PCWSTR(subkey.as_ptr()),
+                None,
+                PCWSTR::null(),
+                REG_OPTION_NON_VOLATILE,
+                KEY_QUERY_VALUE | KEY_SET_VALUE,
+                None,
+                &mut key,
+                None,
+            )
+        };
+        if open_status != ERROR_SUCCESS {
+            return Err(open_status.0);
+        }
+        let write_status =
+            unsafe { RegSetValueExW(key, PCWSTR(value_name.as_ptr()), None, REG_SZ, Some(&data)) };
+        unsafe {
+            let _ = RegCloseKey(key);
+        }
+        if write_status == ERROR_SUCCESS {
+            Ok(())
+        } else {
+            Err(write_status.0)
+        }
+    }
+
+    fn delete_autostart_value() -> Result<(), u32> {
+        let subkey = wide_null(AUTOSTART_REGISTRY_SUBKEY);
+        let value_name = wide_null(AUTOSTART_REGISTRY_VALUE_NAME);
+        let mut key = HKEY::default();
+        let open_status = unsafe {
+            RegOpenKeyExW(
+                HKEY_CURRENT_USER,
+                PCWSTR(subkey.as_ptr()),
+                None,
+                KEY_QUERY_VALUE | KEY_SET_VALUE,
+                &mut key,
+            )
+        };
+        if open_status == ERROR_FILE_NOT_FOUND {
+            return Ok(());
+        }
+        if open_status != ERROR_SUCCESS {
+            return Err(open_status.0);
+        }
+        let delete_status = unsafe { RegDeleteValueW(key, PCWSTR(value_name.as_ptr())) };
+        unsafe {
+            let _ = RegCloseKey(key);
+        }
+        if delete_status == ERROR_SUCCESS || delete_status == ERROR_FILE_NOT_FOUND {
+            Ok(())
+        } else {
+            Err(delete_status.0)
+        }
     }
 
     fn read_value(key: HKEY, value_name: &[u16]) -> AutostartRegistryObservation {
@@ -519,10 +873,22 @@ mod platform {
 
 #[cfg(not(windows))]
 mod platform {
-    use super::AutostartRegistryObservation;
+    use super::{AutostartRegistryBackend, AutostartRegistryObservation};
 
-    pub(super) fn read_autostart_value() -> AutostartRegistryObservation {
-        AutostartRegistryObservation::Unsupported
+    pub(super) struct SystemRegistry;
+
+    impl AutostartRegistryBackend for SystemRegistry {
+        fn observe(&mut self) -> AutostartRegistryObservation {
+            AutostartRegistryObservation::Unsupported
+        }
+
+        fn write_exact(&mut self, _command: &str) -> Result<(), u32> {
+            Err(50)
+        }
+
+        fn delete_owned(&mut self) -> Result<(), u32> {
+            Err(50)
+        }
     }
 }
 
@@ -561,6 +927,175 @@ mod tests {
         fs::write(&executable, b"fixture").expect("write isolated executable fixture");
         let resolution = resolution_for(&root, executable);
         (root, resolution)
+    }
+
+    struct FakeRegistry {
+        observation: AutostartRegistryObservation,
+        write_count: usize,
+        delete_count: usize,
+        write_error: Option<u32>,
+        delete_error: Option<u32>,
+        ignore_mutations: bool,
+    }
+
+    impl FakeRegistry {
+        fn new(observation: AutostartRegistryObservation) -> Self {
+            Self {
+                observation,
+                write_count: 0,
+                delete_count: 0,
+                write_error: None,
+                delete_error: None,
+                ignore_mutations: false,
+            }
+        }
+    }
+
+    impl AutostartRegistryBackend for FakeRegistry {
+        fn observe(&mut self) -> AutostartRegistryObservation {
+            self.observation.clone()
+        }
+
+        fn write_exact(&mut self, command: &str) -> Result<(), u32> {
+            self.write_count += 1;
+            if let Some(error) = self.write_error {
+                return Err(error);
+            }
+            if !self.ignore_mutations {
+                self.observation = AutostartRegistryObservation::Present {
+                    value_type: AUTOSTART_REGISTRY_VALUE_TYPE.to_string(),
+                    command: command.to_string(),
+                };
+            }
+            Ok(())
+        }
+
+        fn delete_owned(&mut self) -> Result<(), u32> {
+            self.delete_count += 1;
+            if let Some(error) = self.delete_error {
+                return Err(error);
+            }
+            if !self.ignore_mutations {
+                self.observation = AutostartRegistryObservation::Absent;
+            }
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn enable_is_write_then_read_and_matching_is_idempotent() {
+        let (root, resolution) = installed_fixture("autostart-enable-change");
+        let mut registry = FakeRegistry::new(AutostartRegistryObservation::Absent);
+
+        let enabled = change_autostart_with_backend(&resolution, true, &mut registry);
+        assert!(enabled.succeeded);
+        assert!(enabled.changed);
+        assert!(enabled.mutation_attempted);
+        assert_eq!(enabled.outcome, "enabled");
+        assert_eq!(enabled.after.registration_state, "matching");
+        assert!(enabled.after.effective_enabled);
+        assert_eq!(registry.write_count, 1);
+
+        let repeated = change_autostart_with_backend(&resolution, true, &mut registry);
+        assert!(repeated.succeeded);
+        assert!(!repeated.changed);
+        assert!(!repeated.mutation_attempted);
+        assert_eq!(repeated.outcome, "noChange");
+        assert_eq!(registry.write_count, 1);
+        fs::remove_dir_all(root).expect("remove isolated fixture");
+    }
+
+    #[test]
+    fn explicit_enable_repairs_only_the_owned_drifted_value() {
+        let (root, resolution) = installed_fixture("autostart-repair-change");
+        let mut registry = FakeRegistry::new(AutostartRegistryObservation::Present {
+            value_type: "REG_EXPAND_SZ".to_string(),
+            command: r#""C:\wrong\DesktopUp.exe" --autostart"#.to_string(),
+        });
+
+        let result = change_autostart_with_backend(&resolution, true, &mut registry);
+        assert!(result.succeeded);
+        assert_eq!(result.outcome, "repaired");
+        assert_eq!(result.before.registration_state, "drifted");
+        assert_eq!(result.after.registration_state, "matching");
+        assert_eq!(registry.write_count, 1);
+        assert_eq!(registry.delete_count, 0);
+        fs::remove_dir_all(root).expect("remove isolated fixture");
+    }
+
+    #[test]
+    fn disable_deletes_only_present_owned_value_and_absence_is_idempotent() {
+        let (root, resolution) = installed_fixture("autostart-disable-change");
+        for observation in [
+            AutostartRegistryObservation::Present {
+                value_type: AUTOSTART_REGISTRY_VALUE_TYPE.to_string(),
+                command: AutostartContract::v1(&resolution).expected_command,
+            },
+            AutostartRegistryObservation::Present {
+                value_type: "REG_EXPAND_SZ".to_string(),
+                command: "drifted".to_string(),
+            },
+        ] {
+            let mut registry = FakeRegistry::new(observation);
+            let result = change_autostart_with_backend(&resolution, false, &mut registry);
+            assert!(result.succeeded);
+            assert_eq!(result.outcome, "disabled");
+            assert_eq!(result.after.registration_state, "absent");
+            assert_eq!(registry.delete_count, 1);
+            assert_eq!(registry.write_count, 0);
+        }
+
+        let mut absent = FakeRegistry::new(AutostartRegistryObservation::Absent);
+        let repeated = change_autostart_with_backend(&resolution, false, &mut absent);
+        assert!(repeated.succeeded);
+        assert_eq!(repeated.outcome, "noChange");
+        assert!(!repeated.mutation_attempted);
+        assert_eq!(absent.delete_count, 0);
+        fs::remove_dir_all(root).expect("remove isolated fixture");
+    }
+
+    #[test]
+    fn ineligible_and_unreadable_states_never_attempt_registry_mutation() {
+        let root = unique_root("autostart-rejected-change");
+        let resolution = resolution_for(&root, root.join("workspace").join("DesktopUp.exe"));
+        let mut ineligible = FakeRegistry::new(AutostartRegistryObservation::Absent);
+        let result = change_autostart_with_backend(&resolution, true, &mut ineligible);
+        assert_eq!(result.outcome, "rejectedIneligible");
+        assert!(!result.succeeded);
+        assert!(!result.mutation_attempted);
+        assert_eq!(ineligible.write_count, 0);
+
+        let (installed_root, installed) = installed_fixture("autostart-unreadable-change");
+        let mut unreadable =
+            FakeRegistry::new(AutostartRegistryObservation::Unreadable { error_code: 5 });
+        let result = change_autostart_with_backend(&installed, false, &mut unreadable);
+        assert_eq!(result.outcome, "rejectedUnreadable");
+        assert!(!result.succeeded);
+        assert_eq!(unreadable.write_count, 0);
+        assert_eq!(unreadable.delete_count, 0);
+        fs::remove_dir_all(installed_root).expect("remove isolated fixture");
+        assert!(!root.exists());
+    }
+
+    #[test]
+    fn mutation_failure_and_readback_mismatch_never_report_success() {
+        let (root, resolution) = installed_fixture("autostart-failure-change");
+        let mut failed = FakeRegistry::new(AutostartRegistryObservation::Absent);
+        failed.write_error = Some(5);
+        let result = change_autostart_with_backend(&resolution, true, &mut failed);
+        assert_eq!(result.outcome, "mutationFailed");
+        assert_eq!(result.error_code, Some(5));
+        assert!(!result.succeeded);
+        assert_eq!(result.after.registration_state, "absent");
+
+        let mut ignored = FakeRegistry::new(AutostartRegistryObservation::Absent);
+        ignored.ignore_mutations = true;
+        let result = change_autostart_with_backend(&resolution, true, &mut ignored);
+        assert_eq!(result.outcome, "verificationFailed");
+        assert!(!result.succeeded);
+        assert!(!result.changed);
+        assert_eq!(result.after.registration_state, "absent");
+        fs::remove_dir_all(root).expect("remove isolated fixture");
     }
 
     #[test]
@@ -672,6 +1207,24 @@ mod tests {
             .gaps
             .iter()
             .any(|gap| gap.code == "formalInstalledExecutableNotReady"));
+        assert!(!root.exists());
+    }
+
+    #[cfg(feature = "autostart-test-root")]
+    #[test]
+    fn temporary_test_target_requires_the_exact_feature_scoped_executable() {
+        let root = unique_root("autostart-temporary-test-scope");
+        let resolution = resolution_for(&root, PathBuf::from(TEMPORARY_AUTOSTART_TEST_EXECUTABLE));
+        let contract = AutostartContract::v1(&resolution);
+        assert_eq!(
+            contract.expected_executable_path,
+            TEMPORARY_AUTOSTART_TEST_EXECUTABLE
+        );
+        assert_eq!(contract.validate(&resolution), Ok(()));
+        assert_eq!(
+            eligibility_scope(&resolution, Path::new(TEMPORARY_AUTOSTART_TEST_EXECUTABLE)),
+            "temporaryTest"
+        );
         assert!(!root.exists());
     }
 

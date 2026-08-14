@@ -58,6 +58,7 @@ impl DesktopHostDiagnostics {
 pub enum HostRecoveryTrigger {
     ShellForeground,
     ShellLifecycle,
+    TaskbarCreated,
     DisplayChange,
     DpiChange,
     WorkAreaChange,
@@ -74,6 +75,7 @@ impl HostRecoveryTrigger {
         match self {
             Self::ShellForeground => "shellForeground",
             Self::ShellLifecycle => "shellLifecycle",
+            Self::TaskbarCreated => "taskbarCreated",
             Self::DisplayChange => "displayChange",
             Self::DpiChange => "dpiChange",
             Self::WorkAreaChange => "workAreaChange",
@@ -83,9 +85,10 @@ impl HostRecoveryTrigger {
     }
 }
 
-const HOST_RECOVERY_TRIGGERS: [HostRecoveryTrigger; 7] = [
+const HOST_RECOVERY_TRIGGERS: [HostRecoveryTrigger; 8] = [
     HostRecoveryTrigger::ShellForeground,
     HostRecoveryTrigger::ShellLifecycle,
+    HostRecoveryTrigger::TaskbarCreated,
     HostRecoveryTrigger::DisplayChange,
     HostRecoveryTrigger::DpiChange,
     HostRecoveryTrigger::WorkAreaChange,
@@ -106,7 +109,17 @@ impl HostRecoveryRequest {
     }
 
     fn shell_mask() -> usize {
-        HostRecoveryTrigger::ShellForeground.bit() | HostRecoveryTrigger::ShellLifecycle.bit()
+        HostRecoveryTrigger::ShellForeground.bit()
+            | HostRecoveryTrigger::ShellLifecycle.bit()
+            | HostRecoveryTrigger::TaskbarCreated.bit()
+    }
+
+    pub fn taskbar_created(generation: usize, event_count: usize) -> Self {
+        Self::from_mask(
+            generation,
+            event_count,
+            HostRecoveryTrigger::TaskbarCreated.bit(),
+        )
     }
 
     pub fn includes_shell(&self) -> bool {
@@ -210,8 +223,8 @@ mod platform {
             },
             Graphics::Gdi::{
                 CombineRgn, CreateRectRgn, CreateRoundRectRgn, DeleteObject, EnumDisplayMonitors,
-                GetMonitorInfoW, MonitorFromPoint, MonitorFromWindow, ScreenToClient, SetWindowRgn,
-                HDC, HGDIOBJ, HMONITOR, HRGN, MONITORINFO, MONITORINFOEXW,
+                GetMonitorInfoW, GetWindowRgn, MonitorFromPoint, MonitorFromWindow, ScreenToClient,
+                SetWindowRgn, HDC, HGDIOBJ, HMONITOR, HRGN, MONITORINFO, MONITORINFOEXW,
                 MONITOR_DEFAULTTONEAREST, RGN_ERROR, RGN_OR,
             },
             System::Threading::GetCurrentProcessId,
@@ -220,21 +233,21 @@ mod platform {
                 Shell::{DefSubclassProc, RemoveWindowSubclass, SetWindowSubclass},
                 WindowsAndMessaging::{
                     CallNextHookEx, DispatchMessageW, EnumWindows, FindWindowExW, GetClassNameW,
-                    GetMessageW, GetParent, GetWindow, GetWindowLongPtrW, GetWindowRect,
-                    GetWindowThreadProcessId, IsWindowVisible, SendMessageW, SetParent,
-                    SetWindowLongPtrW, SetWindowPos, SetWindowsHookExW, ShowWindow,
-                    TranslateMessage, UnhookWindowsHookEx, EVENT_OBJECT_CREATE, EVENT_OBJECT_SHOW,
-                    EVENT_SYSTEM_FOREGROUND, GWL_EXSTYLE, GWL_STYLE, GW_HWNDPREV, HWND_BOTTOM,
-                    HWND_TOP, MA_NOACTIVATE, MSG, MSLLHOOKSTRUCT, OBJID_WINDOW, STYLESTRUCT,
-                    SWP_ASYNCWINDOWPOS, SWP_FRAMECHANGED, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE,
-                    SWP_NOZORDER, SW_SHOWNOACTIVATE, WH_MOUSE_LL, WINEVENT_OUTOFCONTEXT, WM_APP,
-                    WM_DESTROY, WM_DISPLAYCHANGE, WM_DPICHANGED, WM_EXITSIZEMOVE, WM_LBUTTONDOWN,
-                    WM_LBUTTONUP, WM_MBUTTONDOWN, WM_MBUTTONUP, WM_MOUSEACTIVATE, WM_MOUSEHWHEEL,
-                    WM_MOUSEMOVE, WM_MOUSEWHEEL, WM_MOVING, WM_RBUTTONDOWN, WM_RBUTTONUP,
-                    WM_SETTINGCHANGE, WM_STYLECHANGING, WM_XBUTTONDOWN, WM_XBUTTONUP, WS_CAPTION,
-                    WS_CHILD, WS_EX_APPWINDOW, WS_EX_LAYERED, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW,
-                    WS_EX_TRANSPARENT, WS_MAXIMIZEBOX, WS_MINIMIZEBOX, WS_POPUP, WS_SYSMENU,
-                    WS_THICKFRAME,
+                    GetCursorPos, GetMessageW, GetParent, GetWindow, GetWindowLongPtrW,
+                    GetWindowRect, GetWindowThreadProcessId, IsWindowVisible, PostMessageW,
+                    SendMessageW, SetParent, SetWindowLongPtrW, SetWindowPos, SetWindowsHookExW,
+                    ShowWindow, TranslateMessage, UnhookWindowsHookEx, EVENT_OBJECT_CREATE,
+                    EVENT_OBJECT_SHOW, EVENT_SYSTEM_FOREGROUND, GWL_EXSTYLE, GWL_STYLE,
+                    GW_HWNDPREV, HWND_BOTTOM, HWND_TOP, MA_NOACTIVATE, MSG, MSLLHOOKSTRUCT,
+                    OBJID_WINDOW, STYLESTRUCT, SWP_ASYNCWINDOWPOS, SWP_FRAMECHANGED,
+                    SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SWP_NOZORDER, SW_SHOWNOACTIVATE,
+                    WH_MOUSE_LL, WINEVENT_OUTOFCONTEXT, WM_APP, WM_DESTROY, WM_DISPLAYCHANGE,
+                    WM_DPICHANGED, WM_EXITSIZEMOVE, WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MBUTTONDOWN,
+                    WM_MBUTTONUP, WM_MOUSEACTIVATE, WM_MOUSEHWHEEL, WM_MOUSEMOVE, WM_MOUSEWHEEL,
+                    WM_MOVING, WM_RBUTTONDOWN, WM_RBUTTONUP, WM_SETTINGCHANGE, WM_STYLECHANGING,
+                    WM_XBUTTONDOWN, WM_XBUTTONUP, WS_CAPTION, WS_CHILD, WS_EX_APPWINDOW,
+                    WS_EX_LAYERED, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TRANSPARENT,
+                    WS_MAXIMIZEBOX, WS_MINIMIZEBOX, WS_POPUP, WS_SYSMENU, WS_THICKFRAME,
                 },
             },
         },
@@ -246,6 +259,7 @@ mod platform {
     const POST_SHOW_DESKTOP_LAYER_SETTLE_DELAYS_MS: [u64; 3] = [16, 48, 96];
     const POSTER_WINDOW_SUBCLASS_ID: usize = 0x4455_5031;
     const WM_POSTER_INPUT_PASSTHROUGH: u32 = WM_APP + 0x451;
+    const WM_POSTER_DRAG_FINISHED: u32 = WM_APP + 0x452;
     const NON_CLIENT_DECORATION_STYLES: u32 =
         WS_CAPTION.0 | WS_THICKFRAME.0 | WS_SYSMENU.0 | WS_MINIMIZEBOX.0 | WS_MAXIMIZEBOX.0;
 
@@ -260,6 +274,7 @@ mod platform {
     static POSTER_VISIBLE_INTENT: AtomicBool = AtomicBool::new(false);
     static TOOL_WINDOW_FALLBACK_ACTIVE: AtomicBool = AtomicBool::new(false);
     static HOST_RECOVERY_ACTIVE: AtomicBool = AtomicBool::new(false);
+    static HOST_RECOVERY_EXITING: AtomicBool = AtomicBool::new(false);
     static HOST_RECOVERY_GENERATION: AtomicUsize = AtomicUsize::new(0);
     static HOST_RECOVERY_PENDING: OnceLock<Mutex<Option<HostRecoveryRequest>>> = OnceLock::new();
     static HOST_RECOVERY_SENDER: OnceLock<SyncSender<()>> = OnceLock::new();
@@ -268,6 +283,7 @@ mod platform {
     static INPUT_PASSTHROUGH_ACTIVE: AtomicBool = AtomicBool::new(false);
     static INPUT_MOUSE_BUTTON_ACTIVE: AtomicBool = AtomicBool::new(false);
     static INPUT_MOUSE_HOOK_STARTED: OnceLock<()> = OnceLock::new();
+    static POSTER_DRAG_STATE: OnceLock<Mutex<Option<PosterDragState>>> = OnceLock::new();
 
     #[derive(Clone, Copy)]
     struct ShellWindow {
@@ -292,6 +308,21 @@ mod platform {
         right: i32,
         bottom: i32,
         radius: i32,
+    }
+
+    #[derive(Clone, Copy, Debug)]
+    struct PosterDragState {
+        hwnd: isize,
+        cursor_origin_x: i32,
+        cursor_origin_y: i32,
+        window_origin_x: i32,
+        window_origin_y: i32,
+        window_width: i32,
+        window_height: i32,
+        z_order_anchor: isize,
+        top_level_fallback: bool,
+        last_screen_x: i32,
+        last_screen_y: i32,
     }
 
     impl PhysicalHitRegion {
@@ -721,6 +752,190 @@ mod platform {
         Ok(true)
     }
 
+    fn clamp_drag_origin(
+        left: i32,
+        top: i32,
+        width: i32,
+        height: i32,
+        work_area: &RECT,
+    ) -> (i32, i32) {
+        let max_left = (work_area.right - width.max(1)).max(work_area.left);
+        let max_top = (work_area.bottom - height.max(1)).max(work_area.top);
+        (
+            left.clamp(work_area.left, max_left),
+            top.clamp(work_area.top, max_top),
+        )
+    }
+
+    fn reapply_existing_window_region(hwnd: HWND) -> Result<(), String> {
+        let region = unsafe { CreateRectRgn(0, 0, 0, 0) };
+        if region.is_invalid() {
+            return Err("failed to allocate the poster region copy".to_string());
+        }
+
+        let region_type = unsafe { GetWindowRgn(hwnd, region) };
+        if region_type == RGN_ERROR {
+            unsafe {
+                let _ = DeleteObject(HGDIOBJ(region.0));
+            }
+            return Err("failed to read the current poster window region".to_string());
+        }
+
+        if unsafe { SetWindowRgn(hwnd, Some(region), true) } == 0 {
+            unsafe {
+                let _ = DeleteObject(HGDIOBJ(region.0));
+            }
+            return Err("failed to reapply the poster window region".to_string());
+        }
+        Ok(())
+    }
+
+    fn enforce_poster_window_frame(hwnd: HWND) -> Result<(), String> {
+        unsafe {
+            let current_style = GetWindowLongPtrW(hwnd, GWL_STYLE) as u32;
+            let next_style = strip_non_client_decoration_styles(current_style);
+            if next_style != current_style {
+                SetWindowLongPtrW(hwnd, GWL_STYLE, next_style as isize);
+            }
+
+            let current_extended_style = GetWindowLongPtrW(hwnd, GWL_EXSTYLE) as u32;
+            let next_extended_style = poster_input_extended_style(
+                current_extended_style,
+                INPUT_PASSTHROUGH_ACTIVE.load(Ordering::Acquire),
+            );
+            if next_extended_style != current_extended_style {
+                SetWindowLongPtrW(hwnd, GWL_EXSTYLE, next_extended_style as isize);
+            }
+
+            suppress_dwm_non_client_frame(hwnd);
+            let top_level = is_top_level_tool_window(hwnd);
+            let z_order_anchor = top_level.then(|| fallback_z_order_anchor(hwnd));
+            let mut flags = SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_FRAMECHANGED;
+            if !top_level {
+                flags |= SWP_NOZORDER;
+            }
+            SetWindowPos(hwnd, z_order_anchor, 0, 0, 0, 0, flags)
+                .map_err(|error| error.to_string())?;
+        }
+        reapply_existing_window_region(hwnd)
+    }
+
+    pub fn start_poster_drag(window: &tauri::WebviewWindow) -> Result<(), String> {
+        install_input_mouse_hook()?;
+        let hwnd = window.hwnd().map_err(|error| error.to_string())?;
+        if !unsafe { IsWindowVisible(hwnd).as_bool() } {
+            return Err("poster window is not visible".to_string());
+        }
+
+        let drag_state = POSTER_DRAG_STATE.get_or_init(|| Mutex::new(None));
+        let mut active = drag_state.lock().map_err(|error| error.to_string())?;
+        if active.is_some() {
+            return Ok(());
+        }
+
+        enforce_poster_window_frame(hwnd)?;
+        let mut cursor = POINT::default();
+        unsafe { GetCursorPos(&raw mut cursor) }.map_err(|error| error.to_string())?;
+        let mut rect = RECT::default();
+        unsafe { GetWindowRect(hwnd, &mut rect) }.map_err(|error| error.to_string())?;
+        let top_level_fallback =
+            TOOL_WINDOW_FALLBACK_ACTIVE.load(Ordering::Acquire) && is_top_level_tool_window(hwnd);
+        let z_order_anchor = if top_level_fallback {
+            fallback_z_order_anchor(hwnd).0 as isize
+        } else {
+            0
+        };
+        *active = Some(PosterDragState {
+            hwnd: hwnd.0 as isize,
+            cursor_origin_x: cursor.x,
+            cursor_origin_y: cursor.y,
+            window_origin_x: rect.left,
+            window_origin_y: rect.top,
+            window_width: (rect.right - rect.left).max(1),
+            window_height: (rect.bottom - rect.top).max(1),
+            z_order_anchor,
+            top_level_fallback,
+            last_screen_x: rect.left,
+            last_screen_y: rect.top,
+        });
+        if !INPUT_MOUSE_BUTTON_ACTIVE.load(Ordering::Acquire) {
+            *active = None;
+        }
+        Ok(())
+    }
+
+    fn move_active_poster_drag(point: POINT) {
+        let drag_state = POSTER_DRAG_STATE.get_or_init(|| Mutex::new(None));
+        let Ok(mut active) = drag_state.lock() else {
+            return;
+        };
+        let Some(state) = active.as_mut() else {
+            return;
+        };
+        let hwnd = HWND(state.hwnd as *mut core::ffi::c_void);
+        if !unsafe { IsWindowVisible(hwnd).as_bool() } {
+            *active = None;
+            return;
+        }
+
+        let desired_left = state.window_origin_x + point.x - state.cursor_origin_x;
+        let desired_top = state.window_origin_y + point.y - state.cursor_origin_y;
+        let monitor = unsafe { MonitorFromPoint(point, MONITOR_DEFAULTTONEAREST) };
+        let (screen_x, screen_y) = monitor_descriptor(monitor)
+            .map(|descriptor| {
+                clamp_drag_origin(
+                    desired_left,
+                    desired_top,
+                    state.window_width,
+                    state.window_height,
+                    &descriptor.work_area,
+                )
+            })
+            .unwrap_or((desired_left, desired_top));
+        if screen_x == state.last_screen_x && screen_y == state.last_screen_y {
+            return;
+        }
+
+        let mut target = POINT {
+            x: screen_x,
+            y: screen_y,
+        };
+        if !state.top_level_fallback {
+            if let Ok(parent) = unsafe { GetParent(hwnd) } {
+                if !parent.0.is_null() && !unsafe { ScreenToClient(parent, &mut target).as_bool() }
+                {
+                    return;
+                }
+            }
+        }
+
+        let mut flags = SWP_NOSIZE | SWP_NOACTIVATE | SWP_ASYNCWINDOWPOS;
+        let z_order_anchor = if state.top_level_fallback {
+            Some(HWND(state.z_order_anchor as *mut core::ffi::c_void))
+        } else {
+            flags |= SWP_NOZORDER;
+            None
+        };
+        if unsafe { SetWindowPos(hwnd, z_order_anchor, target.x, target.y, 0, 0, flags) }.is_ok() {
+            state.last_screen_x = screen_x;
+            state.last_screen_y = screen_y;
+        }
+    }
+
+    fn finish_active_poster_drag() {
+        let drag_state = POSTER_DRAG_STATE.get_or_init(|| Mutex::new(None));
+        let hwnd = drag_state
+            .lock()
+            .ok()
+            .and_then(|mut active| active.take())
+            .map(|state| HWND(state.hwnd as *mut core::ffi::c_void));
+        if let Some(hwnd) = hwnd {
+            unsafe {
+                let _ = PostMessageW(Some(hwnd), WM_POSTER_DRAG_FINISHED, WPARAM(0), LPARAM(0));
+            }
+        }
+    }
+
     fn repair_tool_window_during_shell_transition() {
         if !POSTER_VISIBLE_INTENT.load(Ordering::Acquire)
             || !TOOL_WINDOW_FALLBACK_ACTIVE.load(Ordering::Acquire)
@@ -838,6 +1053,10 @@ mod platform {
                 }
             }
 
+            if HOST_RECOVERY_EXITING.load(Ordering::Acquire) {
+                HOST_RECOVERY_ACTIVE.store(false, Ordering::Release);
+                continue;
+            }
             let Some(request) = take_pending_host_recovery_request(&receiver) else {
                 HOST_RECOVERY_ACTIVE.store(false, Ordering::Release);
                 continue;
@@ -918,7 +1137,9 @@ mod platform {
     }
 
     fn queue_host_recovery(trigger: HostRecoveryTrigger) {
-        if !POSTER_VISIBLE_INTENT.load(Ordering::Acquire) {
+        if HOST_RECOVERY_EXITING.load(Ordering::Acquire)
+            || !POSTER_VISIBLE_INTENT.load(Ordering::Acquire)
+        {
             return;
         }
         let Some(sender) = HOST_RECOVERY_SENDER.get() else {
@@ -940,6 +1161,17 @@ mod platform {
 
     pub fn request_host_recovery(trigger: HostRecoveryTrigger) {
         queue_host_recovery(trigger);
+    }
+
+    pub fn begin_exit() {
+        HOST_RECOVERY_EXITING.store(true, Ordering::Release);
+        HOST_RECOVERY_ACTIVE.store(false, Ordering::Release);
+        if let Ok(mut pending) = HOST_RECOVERY_PENDING
+            .get_or_init(|| Mutex::new(None))
+            .lock()
+        {
+            *pending = None;
+        }
     }
 
     pub fn placement_recovery_in_progress() -> bool {
@@ -1028,6 +1260,14 @@ mod platform {
     ) -> LRESULT {
         if code >= 0 {
             let message = wparam.0 as u32;
+            if let Some(details) = (lparam.0 as *const MSLLHOOKSTRUCT).as_ref() {
+                if message == WM_MOUSEMOVE {
+                    move_active_poster_drag(details.pt);
+                }
+            }
+            if message == WM_LBUTTONUP {
+                finish_active_poster_drag();
+            }
             let button_down = matches!(
                 message,
                 WM_LBUTTONDOWN | WM_RBUTTONDOWN | WM_MBUTTONDOWN | WM_XBUTTONDOWN
@@ -1110,6 +1350,12 @@ mod platform {
             apply_input_passthrough(hwnd, wparam.0 != 0);
             return LRESULT(0);
         }
+        if message == WM_POSTER_DRAG_FINISHED {
+            if let Err(error) = enforce_poster_window_frame(hwnd) {
+                eprintln!("failed to restore poster frame after drag: {error}");
+            }
+            return LRESULT(0);
+        }
         if message == WM_STYLECHANGING && wparam.0 as i32 == GWL_EXSTYLE.0 {
             if let Some(style) = (lparam.0 as *mut STYLESTRUCT).as_mut() {
                 style.styleNew = poster_input_extended_style(
@@ -1190,6 +1436,14 @@ mod platform {
             WM_DPICHANGED => queue_host_recovery(HostRecoveryTrigger::DpiChange),
             WM_SETTINGCHANGE => queue_host_recovery(HostRecoveryTrigger::WorkAreaChange),
             WM_DESTROY => {
+                if let Ok(mut active) = POSTER_DRAG_STATE.get_or_init(|| Mutex::new(None)).lock() {
+                    if active
+                        .as_ref()
+                        .is_some_and(|state| state.hwnd == hwnd.0 as isize)
+                    {
+                        *active = None;
+                    }
+                }
                 let _ = RemoveWindowSubclass(hwnd, Some(poster_window_subclass), subclass_id);
                 POSTER_HWND.store(0, Ordering::Release);
             }
@@ -1206,6 +1460,7 @@ mod platform {
         F: Fn(HostRecoveryRequest) + Send + Sync + 'static,
     {
         let hwnd = window.hwnd().map_err(|error| error.to_string())?;
+        HOST_RECOVERY_EXITING.store(false, Ordering::Release);
         remember_poster_window(hwnd);
         install_input_mouse_hook()?;
         if HOST_RECOVERY_SENDER.get().is_some() {
@@ -1564,8 +1819,9 @@ mod platform {
     #[cfg(test)]
     mod tests {
         use super::{
-            poster_input_extended_style, rect_contains, scaled_interaction_bounds,
-            strip_non_client_decoration_styles, tool_window_extended_style, PhysicalHitRegion,
+            clamp_drag_origin, poster_input_extended_style, rect_contains,
+            scaled_interaction_bounds, strip_non_client_decoration_styles,
+            tool_window_extended_style, PhysicalHitRegion,
         };
         use crate::host_contract::{InteractionRegion, LogicalRect};
         use windows::Win32::Foundation::RECT;
@@ -1681,6 +1937,32 @@ mod platform {
         }
 
         #[test]
+        fn desktop_drag_clamps_the_full_window_to_negative_and_positive_work_areas() {
+            let work_area = RECT {
+                left: -1920,
+                top: -40,
+                right: 0,
+                bottom: 1040,
+            };
+            assert_eq!(
+                clamp_drag_origin(-2500, -500, 480, 600, &work_area),
+                (-1920, -40)
+            );
+            assert_eq!(
+                clamp_drag_origin(-100, 900, 480, 600, &work_area),
+                (-480, 440)
+            );
+            assert_eq!(
+                clamp_drag_origin(-1200, 200, 480, 600, &work_area),
+                (-1200, 200)
+            );
+            assert_eq!(
+                clamp_drag_origin(-2500, -500, 2400, 1400, &work_area),
+                (-1920, -40)
+            );
+        }
+
+        #[test]
         fn later_style_changes_cannot_restore_native_decorations() {
             let proposed = WS_VISIBLE.0
                 | WS_CAPTION.0
@@ -1701,10 +1983,10 @@ mod platform {
 
 #[cfg(target_os = "windows")]
 pub use platform::{
-    apply_surface_regions, capture_poster_window_placement, configure,
+    apply_surface_regions, begin_exit, capture_poster_window_placement, configure,
     install_shell_foreground_monitor, placement_recovery_in_progress, poster_work_area_size,
     repair_shell_host, request_host_recovery, restore_poster_placement,
-    set_poster_visibility_intent, show_poster_at_desktop_layer,
+    set_poster_visibility_intent, show_poster_at_desktop_layer, start_poster_drag,
 };
 
 #[cfg(not(target_os = "windows"))]
@@ -1729,6 +2011,11 @@ where
 }
 
 #[cfg(not(target_os = "windows"))]
+pub fn start_poster_drag(window: &tauri::WebviewWindow) -> Result<(), String> {
+    window.start_dragging().map_err(|error| error.to_string())
+}
+
+#[cfg(not(target_os = "windows"))]
 pub fn show_poster_at_desktop_layer(window: &tauri::WebviewWindow) -> Result<(), String> {
     window.show().map_err(|error| error.to_string())
 }
@@ -1740,6 +2027,9 @@ pub fn repair_shell_host(_window: &tauri::WebviewWindow) -> Result<bool, String>
 
 #[cfg(not(target_os = "windows"))]
 pub fn request_host_recovery(_trigger: HostRecoveryTrigger) {}
+
+#[cfg(not(target_os = "windows"))]
+pub fn begin_exit() {}
 
 #[cfg(not(target_os = "windows"))]
 pub fn set_poster_visibility_intent(_visible: bool) {}

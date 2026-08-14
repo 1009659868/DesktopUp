@@ -1,8 +1,8 @@
 # Desktop Runtime Foundation V1 模块计划
 
-最后检查：2026-08-09
+最后检查：2026-08-14
 
-状态：`NEXT — C-DRP COMPLETE / C-RLC READY TO ACTIVATE`
+状态：`COMPLETE — C-RLC CLOSED`
 
 上层计划：[`DESKTOPUP_V1_IMPLEMENTATION_PLAN.md`](../../../A_Project/10_Plan/DESKTOPUP_V1_IMPLEMENTATION_PLAN.md)
 
@@ -18,11 +18,11 @@
 | --- | --- | --- | --- |
 | Desktop Host Feasibility (`C-DHF`) | 关闭宿主可行性、恢复、暂停、性能和托盘硬门 | 无 | `COMPLETE` |
 | Desktop Runtime Productionization (`C-DRP`) | 把原型收敛为单全局生产宿主和稳定接口 | C-DHF | `COMPLETE — PRIMARY-SCREEN SINGLE-POSTER CERTIFIED` |
-| Runtime Lifecycle and Quick Access (`C-RLC`) | 单实例、控制中心、托盘、自启、退出和 TaskbarCreated 恢复 | C-DRP, C-IBC | `READY TO ACTIVATE` |
+| [Runtime Lifecycle and Quick Access](../../../C_Workstreams/RuntimeLifecycleQuickAccess/10_Plan/WORKSTREAM_PLAN.md) (`C-RLC`) | 单实例、控制中心、托盘、自启、退出和 TaskbarCreated 恢复 | C-DRP, C-IBC | `COMPLETE` |
 
 ## 3. 当前任务顺序
 
-`C-DHF-01..08 COMPLETE → C-DRP COMPLETE → C-IBC COMPLETE → C-RLC READY TO ACTIVATE`
+`C-DHF-01..08 COMPLETE → C-DRP COMPLETE → C-IBC COMPLETE → C-RLC COMPLETE`
 
 ## 4. 模块完成信号
 

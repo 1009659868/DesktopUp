@@ -8,6 +8,8 @@ const contract = readFileSync(
 );
 const nativeRuntime = readFileSync("src-tauri/src/lib.rs", "utf8");
 const cargoManifest = readFileSync("src-tauri/Cargo.toml", "utf8");
+const controlCenter = readFileSync("app/src/main.js", "utf8");
+const controlCenterHtml = readFileSync("app/index.html", "utf8");
 
 test("C-IBC-04 freezes one exact current-user opt-in registration", () => {
   assert.match(contract, /AUTOSTART_CONTRACT_NAME: &str = "autostart-contract-v1"/);
@@ -32,22 +34,31 @@ test("only a formal DesktopUp.exe and strict autostart argument are eligible", (
   assert.match(contract, /additional_arguments_allowed: false/);
   assert.match(contract, /startPosterWithoutControlCenter/);
   assert.match(contract, /keepExistingInstanceWithoutUiChange/);
-  assert.match(contract, /current_runtime_integration: "contractOnlyCrlcPending"/);
+  assert.match(contract, /current_runtime_integration: "authoritativeCrlc03"/);
 });
 
-test("diagnostics read HKCU without any registration mutation API", () => {
+test("temporary G drive eligibility is compile-time scoped and cannot change the installer root", () => {
+  assert.match(cargoManifest, /\[features\][\s\S]*?default = \[\][\s\S]*?autostart-test-root = \[\]/);
+  assert.match(
+    contract,
+    /#\[cfg\(feature = "autostart-test-root"\)\][\s\S]*?TEMPORARY_AUTOSTART_TEST_EXECUTABLE: &str = r"G:\\A_\\Tools\\Test\\DesktopUp\.exe"/,
+  );
+  assert.match(contract, /eligibility_scope[\s\S]*?"temporaryTest"/);
+  assert.match(contract, /paths\.install_root\(\)\.join\(EXPECTED_EXECUTABLE_NAME\)/);
+});
+
+test("C-RLC-03 writes only the exact owned HKCU value after the formal path gate", () => {
   const productionSource = contract.split("#[cfg(test)]", 1)[0];
   assert.match(cargoManifest, /"Win32_System_Registry"/);
   assert.match(productionSource, /RegOpenKeyExW/);
   assert.match(productionSource, /RegQueryValueExW/);
-  assert.match(productionSource, /RegCloseKey/);
-  assert.doesNotMatch(
-    productionSource,
-    /Reg(?:Create|Set|Delete|Replace|Restore|Save|Load)|set_value|delete_value/,
-  );
-  assert.match(productionSource, /writes_registry: false/);
-  assert.match(productionSource, /changes_autostart: false/);
-  assert.match(productionSource, /launches_processes: false/);
+  assert.match(productionSource, /RegCreateKeyExW/);
+  assert.match(productionSource, /RegSetValueExW/);
+  assert.match(productionSource, /RegDeleteValueW/);
+  assert.match(productionSource, /if !before\.registration_eligible/);
+  assert.match(productionSource, /backend\.write_exact\(&before\.expected_command\)/);
+  assert.match(productionSource, /backend\.delete_owned\(\)/);
+  assert.doesNotMatch(productionSource, /HKEY_LOCAL_MACHINE|TaskScheduler|StartupFolder/);
 });
 
 test("cleanup owns only the exact value and remains mandatory after recovery failure", () => {
@@ -61,18 +72,17 @@ test("cleanup owns only the exact value and remains mandatory after recovery fai
   assert.match(contract, /requires_elevation: false/);
 });
 
-test("read-only diagnostics are registered while the autostart UI stays disabled", () => {
+test("tray and control center consume one read-back snapshot without optimistic state", () => {
   assert.match(nativeRuntime, /fn autostart_diagnostics\(/);
+  assert.match(nativeRuntime, /fn set_autostart_enabled\(/);
+  assert.match(nativeRuntime, /"autostart" => toggle_autostart\(app\)/);
+  assert.match(nativeRuntime, /tray\.sync_autostart\(&snapshot\)/);
   assert.match(
     nativeRuntime,
-    /generate_handler!\[[\s\S]*?autostart_diagnostics,/,
+    /generate_handler!\[[\s\S]*?autostart_diagnostics,[\s\S]*?set_autostart_enabled,/,
   );
-  assert.match(
-    nativeRuntime,
-    /with_id\("autostart", "开机自启（A1 接入）"\)[\s\S]*?\.enabled\(false\)/,
-  );
-  assert.doesNotMatch(
-    nativeRuntime,
-    /"autostart"\s*=>|set_autostart|enable_autostart/,
-  );
+  assert.match(controlCenter, /invoke\("set_autostart_enabled", \{ enabled \}\)/);
+  assert.match(controlCenter, /applyAutostartSnapshot\(result\?\.after/);
+  assert.match(controlCenter, /await listen\(AUTOSTART_STATE_EVENT/);
+  assert.match(controlCenterHtml, /id="autostart-control" type="checkbox" disabled/);
 });

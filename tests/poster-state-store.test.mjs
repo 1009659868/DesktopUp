@@ -4,11 +4,14 @@ import { createDefaultPosterSnapshot, validatePosterSnapshot } from "../app/src/
 import { createLegacyDefaultSnapshot } from "../app/src/poster-legacy-bridge.js";
 import {
   BUILTIN_THEME_TEMPLATE_KEYS,
+  DEFAULT_POSTER_SUBTITLE,
+  DEFAULT_POSTER_TITLE,
   POSTER_STATE_CONTEXT_COMMAND,
   POSTER_STATE_LOAD_COMMAND,
   POSTER_STATE_MIGRATE_COMMAND,
   POSTER_STATE_REPLACE_COMMAND,
   PosterStateClient,
+  isRecognizedPriorFormalDefault,
   projectPosterStateToRuntime,
   projectRuntimeToPosterState
 } from "../app/src/poster-state-store.js";
@@ -165,8 +168,74 @@ test("explicit absence creates one formal default from the native primary work a
   assert.equal(result.origin, "formalDefault");
   assert.equal(result.snapshot.revision, 0);
   assert.equal(result.snapshot.posters.length, 1);
+  assert.equal(result.snapshot.posters[0].title, DEFAULT_POSTER_TITLE);
+  assert.equal(result.snapshot.posters[0].subtitle, DEFAULT_POSTER_SUBTITLE);
   assert.equal(result.snapshot.posters[0].monitorIdentity, "primary");
   assert.equal(validatePosterSnapshot(result.snapshot).ok, true);
+});
+
+test("exact prior revision-zero formal default is recovered once through CAS", async () => {
+  const prior = createDefaultPosterSnapshot({
+    title: "DESKTOP COLLECTION",
+    primaryWorkArea: PRIMARY_WORK_AREA
+  });
+  assert.equal(isRecognizedPriorFormalDefault(prior, { primaryWorkArea: PRIMARY_WORK_AREA }), true);
+  const native = fakeNative({ initialState: prior });
+  const client = new PosterStateClient({ invoke: native.invoke, storage: memoryStorage() });
+
+  const result = await client.bootstrap();
+
+  assert.equal(result.status, "ready");
+  assert.equal(result.origin, "formalDefaultIdentityRecovery");
+  assert.equal(result.snapshot.revision, 1);
+  assert.equal(result.snapshot.posters[0].title, DEFAULT_POSTER_TITLE);
+  assert.equal(result.snapshot.posters[0].subtitle, DEFAULT_POSTER_SUBTITLE);
+  const replacements = native.calls.filter((call) => call.command === POSTER_STATE_REPLACE_COMMAND);
+  assert.equal(replacements.length, 1);
+  assert.equal(replacements[0].args.expectedRevision, 0);
+});
+
+test("prior-looking state with any user change is never recovered", async () => {
+  const changed = createDefaultPosterSnapshot({
+    title: "DESKTOP COLLECTION",
+    primaryWorkArea: PRIMARY_WORK_AREA
+  });
+  changed.posters[0].isLocked = true;
+  assert.equal(isRecognizedPriorFormalDefault(changed, { primaryWorkArea: PRIMARY_WORK_AREA }), false);
+  const native = fakeNative({ initialState: changed });
+  const client = new PosterStateClient({ invoke: native.invoke, storage: memoryStorage() });
+
+  const result = await client.bootstrap();
+
+  assert.equal(result.status, "ready");
+  assert.equal(result.origin, "sqlite");
+  assert.equal(result.snapshot.posters[0].title, "DESKTOP COLLECTION");
+  assert.equal(result.snapshot.posters[0].isLocked, true);
+  assert.equal(native.calls.some((call) => call.command === POSTER_STATE_REPLACE_COMMAND), false);
+});
+
+test("default identity recovery write failure preserves the accepted SQLite state", async () => {
+  const prior = createDefaultPosterSnapshot({
+    title: "DESKTOP COLLECTION",
+    primaryWorkArea: PRIMARY_WORK_AREA
+  });
+  const native = fakeNative({ initialState: prior });
+  const invoke = async (command, args) => {
+    if (command === POSTER_STATE_REPLACE_COMMAND) {
+      throw { code: "write_database_failed", message: "injected recovery failure" };
+    }
+    return native.invoke(command, args);
+  };
+  const client = new PosterStateClient({ invoke, storage: memoryStorage() });
+
+  const result = await client.bootstrap();
+
+  assert.equal(result.status, "ready");
+  assert.equal(result.origin, "sqlite");
+  assert.equal(result.recovery.status, "deferred");
+  assert.equal(result.recovery.code, "write_database_failed");
+  assert.deepEqual(result.snapshot, prior);
+  assert.deepEqual(client.snapshot, prior);
 });
 
 test("corrupt shared legacy input fails closed without migration or default creation", async () => {

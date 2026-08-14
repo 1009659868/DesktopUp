@@ -382,7 +382,8 @@ button {
   width: var(--poster-width);
   height: var(--poster-height);
   overflow: hidden;
-  transform: translate3d(var(--poster-x), var(--poster-y), 0);
+  transform: translate3d(var(--poster-x), var(--poster-y), 0) scale(var(--poster-scale, 1));
+  transform-origin: left top;
   border: 1px solid color-mix(in srgb, var(--poster-accent) 32%, rgba(255,255,255,.1));
   border-radius: 13px;
   background: rgba(8, 13, 19, var(--poster-opacity));

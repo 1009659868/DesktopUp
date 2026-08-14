@@ -1,10 +1,14 @@
 pub mod autostart_contract;
+#[cfg(feature = "autostart-test-root")]
+mod autostart_test_gate;
+mod control_center_lifecycle;
 mod desktop_host;
 mod host_contract;
 mod host_topology;
 pub mod install_baseline;
 pub mod install_paths;
 pub mod install_probe;
+pub mod launch_intent;
 mod performance_gate;
 mod placement;
 mod poster_contract;
@@ -16,6 +20,7 @@ pub mod poster_state_store;
 pub mod poster_template_resolution;
 mod runtime_lifecycle;
 mod runtime_monitor;
+mod taskbar_recovery;
 
 use std::sync::{
     atomic::{AtomicBool, AtomicU64, Ordering},
@@ -23,7 +28,11 @@ use std::sync::{
 };
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
-use autostart_contract::{probe_autostart, AutostartDiagnostics};
+use autostart_contract::{
+    probe_autostart, AutostartChangeResult, AutostartCoordinator, AutostartDiagnostics,
+    AUTOSTART_STATE_EVENT,
+};
+use control_center_lifecycle::{ControlCenterLifecycle, ControlCenterLifecycleSnapshot};
 use desktop_host::{DesktopHostDiagnostics, HostRecoveryRequest, HostRecoveryTrigger};
 use host_contract::{
     virtual_bounds, DisplayDescriptor, DisplayTopology, HostPlacementIntent, HostSurfaceRequest,
@@ -37,9 +46,14 @@ use host_topology::{
 };
 use install_paths::{InstallPathDiagnostics, RuntimePathResolution};
 use install_probe::{probe_install_content, InstallContentProbe};
+use launch_intent::{
+    decide_initial_from_env, decide_secondary_forwarded_arguments, LaunchIntentCoordinator,
+    LaunchIntentDiagnostics, LaunchIntentDisposition, INVALID_LAUNCH_EXIT_CODE,
+};
 use performance_gate::{
     evaluate_performance_samples, PerformanceGateReport, PerformanceSample,
-    PERFORMANCE_GATE_CONTRACT, PERFORMANCE_SAMPLE_COUNT, PERFORMANCE_STABILIZATION_MIN_MS,
+    PERFORMANCE_GATE_ARGUMENT, PERFORMANCE_GATE_CONTRACT, PERFORMANCE_SAMPLE_COUNT,
+    PERFORMANCE_STABILIZATION_MIN_MS,
 };
 use placement::PlacementStore;
 use poster_snapshot::{PosterSnapshotLoadResult, PosterSnapshotStore};
@@ -52,9 +66,10 @@ use runtime_lifecycle::{
 };
 use runtime_monitor::{RuntimeMonitorCapabilities, RuntimeVisibilitySnapshot};
 use serde::Serialize;
+use taskbar_recovery::{TaskbarRecoveryBatch, TaskbarRecoveryLifecycle, TaskbarRecoverySnapshot};
 use tauri::{
     menu::{
-        CheckMenuItem, CheckMenuItemBuilder, MenuBuilder, MenuItem, MenuItemBuilder,
+        CheckMenuItem, CheckMenuItemBuilder, Menu, MenuBuilder, MenuItem, MenuItemBuilder,
         PredefinedMenuItem, SubmenuBuilder,
     },
     tray::{MouseButton, TrayIconBuilder, TrayIconEvent},
@@ -63,6 +78,8 @@ use tauri::{
 };
 
 static POSTER_PLACEMENT_CAPTURE_ENABLED: AtomicBool = AtomicBool::new(false);
+const TRAY_ICON_ID: &str = "desktop-up-tray";
+const TRAY_TOOLTIP: &str = "Desktop-Up · 游戏海报桌面";
 
 struct PerformanceClock(Instant);
 #[derive(Default)]
@@ -74,11 +91,15 @@ struct HostRecoveryCoordinator {
 #[derive(Default)]
 struct MainWindowCoordinator {
     execution: Mutex<()>,
-    ready: AtomicBool,
-    pending_controls: Mutex<Vec<String>>,
+    lifecycle: ControlCenterLifecycle,
 }
 
 struct RuntimeState(Mutex<RuntimeSnapshot>);
+
+struct TraySurface {
+    menu: Menu<tauri::Wry>,
+    execution: Mutex<()>,
+}
 
 #[derive(Default)]
 struct HostSurfaceCoordinator(Mutex<()>);
@@ -113,6 +134,8 @@ struct RuntimeSnapshot {
     runtime_visibility: RuntimeVisibilitySnapshot,
     runtime_monitor: RuntimeMonitorCapabilities,
     runtime_lifecycle: RuntimeLifecycleSnapshot,
+    control_center: ControlCenterLifecycleSnapshot,
+    taskbar_recovery: TaskbarRecoverySnapshot,
     #[serde(skip)]
     exit_requested: bool,
 }
@@ -138,6 +161,8 @@ impl Default for RuntimeSnapshot {
             runtime_visibility: RuntimeVisibilitySnapshot::default(),
             runtime_monitor: RuntimeMonitorCapabilities::default(),
             runtime_lifecycle: RuntimeLifecycleSnapshot::default(),
+            control_center: ControlCenterLifecycleSnapshot::default(),
+            taskbar_recovery: TaskbarRecoverySnapshot::default(),
             exit_requested: false,
         }
     }
@@ -215,6 +240,7 @@ struct TrayControls {
     edit: CheckMenuItem<tauri::Wry>,
     lock_all: CheckMenuItem<tauri::Wry>,
     pause: CheckMenuItem<tauri::Wry>,
+    autostart: CheckMenuItem<tauri::Wry>,
 }
 
 impl TrayControls {
@@ -230,6 +256,194 @@ impl TrayControls {
         let _ = self.lock_all.set_checked(snapshot.all_locked);
         let _ = self.pause.set_checked(snapshot.manually_paused);
     }
+
+    fn sync_autostart(&self, snapshot: &AutostartDiagnostics) {
+        let _ = self.autostart.set_checked(snapshot.effective_enabled);
+        let _ = self
+            .autostart
+            .set_enabled(autostart_control_available(snapshot));
+        let _ = self.autostart.set_text(autostart_tray_label(snapshot));
+    }
+}
+
+fn build_tray_icon(app: &tauri::AppHandle, menu: &Menu<tauri::Wry>) -> tauri::Result<()> {
+    TrayIconBuilder::with_id(TRAY_ICON_ID)
+        .tooltip(TRAY_TOOLTIP)
+        .menu(menu)
+        .show_menu_on_left_click(false)
+        .build(app)
+        .map(|_| ())
+}
+
+fn publish_taskbar_recovery_snapshot(app: &tauri::AppHandle) {
+    let Some(state) = app.try_state::<RuntimeState>() else {
+        return;
+    };
+    if let Ok(snapshot) = state.0.lock().map(|snapshot| snapshot.clone()) {
+        publish_runtime_snapshot(app, snapshot);
+    };
+}
+
+fn reattach_taskbar_listener_on_main_thread(app: &tauri::AppHandle) -> Result<(), String> {
+    let (sender, receiver) = std::sync::mpsc::sync_channel(1);
+    app.run_on_main_thread(move || {
+        let _ = sender.send(taskbar_recovery::reattach_listener());
+    })
+    .map_err(|error| error.to_string())?;
+    receiver.recv().map_err(|error| error.to_string())?
+}
+
+fn rebuild_unique_tray_icon(app: &tauri::AppHandle) -> Result<(), String> {
+    let surface = app.state::<TraySurface>();
+    let _guard = surface
+        .execution
+        .lock()
+        .map_err(|error| error.to_string())?;
+    let registration_ready = app
+        .tray_by_id(TRAY_ICON_ID)
+        .ok_or_else(|| "the DesktopUp tray icon is absent".to_string())
+        .and_then(|tray| {
+            tray.set_tooltip(Some(TRAY_TOOLTIP))
+                .map_err(|error| error.to_string())
+        });
+    if registration_ready.is_err() {
+        drop(app.remove_tray_by_id(TRAY_ICON_ID));
+        build_tray_icon(app, &surface.menu).map_err(|error| error.to_string())?;
+        reattach_taskbar_listener_on_main_thread(app)?;
+    }
+    if let Some(runtime) = app.try_state::<RuntimeState>() {
+        if let Ok(snapshot) = runtime.0.lock().map(|snapshot| snapshot.clone()) {
+            if let Some(controls) = app.try_state::<TrayControls>() {
+                controls.sync(&snapshot);
+            }
+        }
+    }
+    if let (Some(controls), Some(autostart)) = (
+        app.try_state::<TrayControls>(),
+        app.try_state::<AutostartCoordinator>(),
+    ) {
+        controls.sync_autostart(&autostart.snapshot());
+    }
+    Ok(())
+}
+
+fn remove_tray_icon(app: &tauri::AppHandle) {
+    if let Some(surface) = app.try_state::<TraySurface>() {
+        if let Ok(_guard) = surface.execution.lock() {
+            drop(app.remove_tray_by_id(TRAY_ICON_ID));
+            return;
+        }
+    }
+    drop(app.remove_tray_by_id(TRAY_ICON_ID));
+}
+
+fn recover_after_taskbar_created(
+    app: &tauri::AppHandle,
+    batch: TaskbarRecoveryBatch,
+) -> Result<(), String> {
+    rebuild_unique_tray_icon(app)?;
+    recover_desktop_host(
+        app,
+        HostRecoveryRequest::taskbar_created(batch.generation as usize, batch.event_count as usize),
+    )?;
+    Ok(())
+}
+
+fn reconnect_desktop_host_from_ui(app: &tauri::AppHandle) {
+    let result = recover_desktop_host(
+        app,
+        HostRecoveryRequest::single(HostRecoveryTrigger::ManualReconnect),
+    )
+    .map(|_| ());
+    if let Some(lifecycle) = app.try_state::<TaskbarRecoveryLifecycle>() {
+        let _ = lifecycle.record_manual_reconnect(&result);
+    }
+    publish_taskbar_recovery_snapshot(app);
+    if let Err(error) = result {
+        eprintln!("failed to reconnect desktop host: {error}");
+    }
+}
+
+fn handle_tray_menu_event(app: &tauri::AppHandle, id: &str) {
+    match id {
+        "show" => show_main_window(app),
+        "settings" => show_and_emit(app, "open-settings"),
+        "workspace" => toggle_poster_window(app),
+        "edit" => toggle_edit_mode(app),
+        "lock-all" => toggle_all_poster_locks(app),
+        "pause" => toggle_manual_pause(app),
+        "theme-nocturne" => apply_quick_theme(app, "nocturne"),
+        "theme-ember" => apply_quick_theme(app, "ember"),
+        "theme-glass" => apply_quick_theme(app, "glass"),
+        "agent" => show_and_emit(app, "open-agent"),
+        "autostart" => toggle_autostart(app),
+        "reconnect" => reconnect_desktop_host_from_ui(app),
+        "quit" => request_runtime_exit(app, "trayExit", 0),
+        _ => {}
+    }
+}
+
+fn handle_tray_icon_event(app: &tauri::AppHandle, event: &TrayIconEvent) {
+    if event.id().as_ref() != TRAY_ICON_ID {
+        return;
+    }
+    if matches!(
+        event,
+        TrayIconEvent::DoubleClick {
+            button: MouseButton::Left,
+            ..
+        }
+    ) {
+        toggle_main_window(app);
+    }
+}
+fn autostart_control_available(snapshot: &AutostartDiagnostics) -> bool {
+    snapshot.registration_eligible
+        && !matches!(
+            snapshot.registration_state.as_str(),
+            "unreadable" | "unsupported"
+        )
+}
+
+fn autostart_tray_label(snapshot: &AutostartDiagnostics) -> &'static str {
+    if !snapshot.registration_eligible {
+        "开机自启（仅正式安装版）"
+    } else {
+        match snapshot.registration_state.as_str() {
+            "unreadable" | "unsupported" => "开机自启（状态不可读）",
+            "drifted" => "开机自启（配置需修复）",
+            _ => "开机自启",
+        }
+    }
+}
+
+fn publish_autostart_snapshot(app: &tauri::AppHandle, snapshot: AutostartDiagnostics) {
+    let ui_app = app.clone();
+    if let Err(error) = app.run_on_main_thread(move || {
+        if let Some(tray) = ui_app.try_state::<TrayControls>() {
+            tray.sync_autostart(&snapshot);
+        }
+        let _ = ui_app.emit(AUTOSTART_STATE_EVENT, snapshot);
+    }) {
+        eprintln!("failed to schedule autostart UI synchronization: {error}");
+    }
+}
+
+fn toggle_autostart(app: &tauri::AppHandle) {
+    let Some(paths) = app.try_state::<RuntimePathResolution>() else {
+        return;
+    };
+    let Some(coordinator) = app.try_state::<AutostartCoordinator>() else {
+        return;
+    };
+    let result = coordinator.toggle(paths.inner());
+    publish_autostart_snapshot(app, result.after.clone());
+    if !result.succeeded {
+        eprintln!(
+            "Desktop-Up autostart toggle rejected: {} {}",
+            result.outcome, result.error
+        );
+    }
 }
 
 fn emit_runtime_state_changed(app: &tauri::AppHandle, snapshot: &RuntimeSnapshot) {
@@ -238,9 +452,34 @@ fn emit_runtime_state_changed(app: &tauri::AppHandle, snapshot: &RuntimeSnapshot
     let _ = app.emit("runtime-pause-state", snapshot.clone());
 }
 
+fn enrich_control_center_snapshot(
+    coordinator: &MainWindowCoordinator,
+    snapshot: &mut RuntimeSnapshot,
+) {
+    if let Ok(control_center) = coordinator.lifecycle.snapshot() {
+        snapshot.control_center = control_center;
+    }
+}
+
+fn enrich_taskbar_recovery_snapshot(
+    lifecycle: &TaskbarRecoveryLifecycle,
+    snapshot: &mut RuntimeSnapshot,
+) {
+    if let Ok(taskbar_recovery) = lifecycle.snapshot() {
+        snapshot.taskbar_recovery = taskbar_recovery;
+    }
+}
+
 fn schedule_runtime_outputs(app: &tauri::AppHandle, snapshot: RuntimeSnapshot, emit_state: bool) {
     let ui_app = app.clone();
     if let Err(error) = app.run_on_main_thread(move || {
+        let mut snapshot = snapshot;
+        if let Some(coordinator) = ui_app.try_state::<MainWindowCoordinator>() {
+            enrich_control_center_snapshot(coordinator.inner(), &mut snapshot);
+        }
+        if let Some(taskbar) = ui_app.try_state::<TaskbarRecoveryLifecycle>() {
+            enrich_taskbar_recovery_snapshot(taskbar.inner(), &mut snapshot);
+        }
         if let Some(tray) = ui_app.try_state::<TrayControls>() {
             tray.sync(&snapshot);
         }
@@ -306,6 +545,17 @@ fn toggle_manual_pause(app: &tauri::AppHandle) {
     }
 }
 
+fn toggle_edit_mode(app: &tauri::AppHandle) {
+    let Some(state) = app.try_state::<RuntimeState>() else {
+        return;
+    };
+    if let Ok(updated) = mutate_runtime_state(state.inner(), "trayEditMode", |snapshot| {
+        snapshot.edit_mode = !snapshot.edit_mode;
+    }) {
+        publish_runtime_snapshot(app, updated);
+    }
+}
+
 #[tauri::command]
 fn update_runtime_state(
     edit_mode: bool,
@@ -345,12 +595,164 @@ fn load_poster_state(
     repository.load()
 }
 
+fn all_posters_locked(snapshot: &serde_json::Value) -> bool {
+    snapshot
+        .get("posters")
+        .and_then(serde_json::Value::as_array)
+        .filter(|posters| !posters.is_empty())
+        .map(|posters| {
+            posters.iter().all(|poster| {
+                poster
+                    .get("isLocked")
+                    .and_then(serde_json::Value::as_bool)
+                    .unwrap_or(false)
+            })
+        })
+        .unwrap_or(false)
+}
+
+fn sync_poster_runtime_summary(
+    app: &tauri::AppHandle,
+    snapshot: &serde_json::Value,
+    trigger: &str,
+) {
+    let Some(state) = app.try_state::<RuntimeState>() else {
+        return;
+    };
+    let all_locked = all_posters_locked(snapshot);
+    if let Ok(updated) = mutate_runtime_state(state.inner(), trigger, move |runtime| {
+        runtime.all_locked = all_locked;
+    }) {
+        publish_runtime_snapshot(app, updated);
+    }
+}
+
 fn emit_poster_state_update(app: &tauri::AppHandle, snapshot: &serde_json::Value) {
+    sync_poster_runtime_summary(app, snapshot, "posterStateChanged");
     if let Err(error) = app.emit("poster-state-updated", snapshot.clone()) {
         eprintln!("failed to emit poster state update: {error}");
     }
 }
 
+fn mutate_poster_state_with_cas(
+    repository: &PosterStateRepository,
+    mut mutate: impl FnMut(&mut serde_json::Value) -> Result<bool, String>,
+) -> Result<Option<serde_json::Value>, String> {
+    for _ in 0..3 {
+        let (revision, mut snapshot) = match repository.load().map_err(|error| error.to_string())? {
+            PosterStateLoadResult::Loaded { revision, snapshot } => (revision, snapshot),
+            PosterStateLoadResult::NoData => return Err("poster state is unavailable".to_string()),
+            PosterStateLoadResult::Rejected { code, message } => {
+                return Err(format!("{}: {message}", code.as_str()))
+            }
+        };
+        if !mutate(&mut snapshot)? {
+            return Ok(None);
+        }
+        match repository
+            .replace_with_expected_revision(Some(revision), snapshot)
+            .map_err(|error| error.to_string())?
+        {
+            PosterStateMutationResult::Stored { snapshot, .. } => return Ok(Some(snapshot)),
+            PosterStateMutationResult::Conflict { .. } => continue,
+            PosterStateMutationResult::Rejected { code, message } => {
+                return Err(format!("{}: {message}", code.as_str()))
+            }
+        }
+    }
+    Err("poster state changed repeatedly while applying tray action".to_string())
+}
+
+fn toggle_all_poster_locks_snapshot(snapshot: &mut serde_json::Value) -> Result<bool, String> {
+    let posters = snapshot
+        .get_mut("posters")
+        .and_then(serde_json::Value::as_array_mut)
+        .ok_or_else(|| "poster state has no poster array".to_string())?;
+    if posters.is_empty() {
+        return Err("poster state has no posters".to_string());
+    }
+    let should_lock = !posters.iter().all(|poster| {
+        poster
+            .get("isLocked")
+            .and_then(serde_json::Value::as_bool)
+            .unwrap_or(false)
+    });
+    for poster in posters {
+        let object = poster
+            .as_object_mut()
+            .ok_or_else(|| "poster entry is not an object".to_string())?;
+        object.insert("isLocked".to_string(), serde_json::json!(should_lock));
+    }
+    Ok(true)
+}
+
+fn apply_quick_theme_snapshot(
+    snapshot: &mut serde_json::Value,
+    template_key: &str,
+) -> Result<bool, String> {
+    let selected_poster_id = snapshot
+        .get("selectedPosterId")
+        .and_then(serde_json::Value::as_str)
+        .ok_or_else(|| "selected poster id is unavailable".to_string())?
+        .to_string();
+    let poster = snapshot
+        .get_mut("posters")
+        .and_then(serde_json::Value::as_array_mut)
+        .and_then(|posters| {
+            posters.iter_mut().find(|poster| {
+                poster.get("id").and_then(serde_json::Value::as_str)
+                    == Some(selected_poster_id.as_str())
+            })
+        })
+        .ok_or_else(|| "selected poster is unavailable".to_string())?;
+    if poster
+        .get("templateKey")
+        .and_then(serde_json::Value::as_str)
+        == Some(template_key)
+    {
+        return Ok(false);
+    }
+    poster
+        .as_object_mut()
+        .ok_or_else(|| "selected poster is not an object".to_string())?
+        .insert(
+            "templateKey".to_string(),
+            serde_json::Value::String(template_key.to_string()),
+        );
+    Ok(true)
+}
+
+fn toggle_all_poster_locks(app: &tauri::AppHandle) {
+    let Some(repository) = app.try_state::<PosterStateRepository>() else {
+        return;
+    };
+    let result = mutate_poster_state_with_cas(repository.inner(), toggle_all_poster_locks_snapshot);
+    match result {
+        Ok(Some(snapshot)) => emit_poster_state_update(app, &snapshot),
+        Ok(None) => {}
+        Err(error) => eprintln!("failed to toggle all poster locks: {error}"),
+    }
+}
+
+fn apply_quick_theme(app: &tauri::AppHandle, theme: &str) {
+    let template_key = match theme {
+        "nocturne" => "transparent-default",
+        "ember" => "builtin-ember",
+        "glass" => "builtin-glass",
+        _ => return,
+    };
+    let Some(repository) = app.try_state::<PosterStateRepository>() else {
+        return;
+    };
+    let result = mutate_poster_state_with_cas(repository.inner(), |snapshot| {
+        apply_quick_theme_snapshot(snapshot, template_key)
+    });
+    match result {
+        Ok(Some(snapshot)) => emit_poster_state_update(app, &snapshot),
+        Ok(None) => {}
+        Err(error) => eprintln!("failed to apply quick theme: {error}"),
+    }
+}
 #[tauri::command]
 fn replace_poster_state(
     expected_revision: Option<u64>,
@@ -428,12 +830,19 @@ fn poster_state_bootstrap_context(
 }
 
 #[tauri::command]
-fn runtime_state(state: State<'_, RuntimeState>) -> Result<RuntimeSnapshot, String> {
-    state
+fn runtime_state(
+    state: State<'_, RuntimeState>,
+    coordinator: State<'_, MainWindowCoordinator>,
+    taskbar: State<'_, TaskbarRecoveryLifecycle>,
+) -> Result<RuntimeSnapshot, String> {
+    let mut snapshot = state
         .0
         .lock()
         .map(|snapshot| snapshot.clone())
-        .map_err(|error| error.to_string())
+        .map_err(|error| error.to_string())?;
+    enrich_control_center_snapshot(coordinator.inner(), &mut snapshot);
+    enrich_taskbar_recovery_snapshot(taskbar.inner(), &mut snapshot);
+    Ok(snapshot)
 }
 
 #[tauri::command]
@@ -458,8 +867,32 @@ fn install_content_probe(paths: State<'_, RuntimePathResolution>) -> InstallCont
 }
 
 #[tauri::command]
-fn autostart_diagnostics(paths: State<'_, RuntimePathResolution>) -> AutostartDiagnostics {
-    probe_autostart(paths.inner())
+fn autostart_diagnostics(
+    app: tauri::AppHandle,
+    paths: State<'_, RuntimePathResolution>,
+    coordinator: State<'_, AutostartCoordinator>,
+) -> AutostartDiagnostics {
+    let snapshot = coordinator.refresh(paths.inner());
+    publish_autostart_snapshot(&app, snapshot.clone());
+    snapshot
+}
+
+#[tauri::command]
+fn set_autostart_enabled(
+    app: tauri::AppHandle,
+    paths: State<'_, RuntimePathResolution>,
+    coordinator: State<'_, AutostartCoordinator>,
+    enabled: bool,
+) -> AutostartChangeResult {
+    let result = coordinator.set_enabled(paths.inner(), enabled);
+    publish_autostart_snapshot(&app, result.after.clone());
+    result
+}
+#[tauri::command]
+fn launch_intent_diagnostics(
+    coordinator: State<'_, LaunchIntentCoordinator>,
+) -> LaunchIntentDiagnostics {
+    coordinator.diagnostics()
 }
 
 fn monitor_matches(left: &tauri::Monitor, right: &tauri::Monitor) -> bool {
@@ -795,9 +1228,8 @@ fn resync_host_surface_for_display_change(
 
 #[tauri::command]
 fn start_poster_drag(app: tauri::AppHandle) -> Result<(), String> {
-    desktop_host_window(&app)?
-        .start_dragging()
-        .map_err(|error| error.to_string())
+    let window = desktop_host_window(&app)?;
+    desktop_host::start_poster_drag(&window)
 }
 
 fn clamp_surface_physical_size(requested: (u32, u32), work_area: Option<(u32, u32)>) -> (u32, u32) {
@@ -983,6 +1415,15 @@ fn recover_desktop_host(
         .execution
         .lock()
         .map_err(|error| error.to_string())?;
+    if app
+        .state::<RuntimeState>()
+        .0
+        .lock()
+        .map(|snapshot| snapshot.runtime_lifecycle.phase == RuntimePhase::Exiting)
+        .unwrap_or(true)
+    {
+        return Err("runtime is exiting; desktop recovery is disabled".to_string());
+    }
 
     POSTER_PLACEMENT_CAPTURE_ENABLED.store(false, Ordering::Release);
     let mut recovery_action = "fullRecovery";
@@ -1026,10 +1467,16 @@ fn recover_desktop_host(
 
 #[tauri::command]
 fn reconnect_desktop_host(app: tauri::AppHandle) -> Result<DesktopHostDiagnostics, String> {
-    recover_desktop_host(
+    let result = recover_desktop_host(
         &app,
         HostRecoveryRequest::single(HostRecoveryTrigger::ManualReconnect),
-    )
+    );
+    if let Some(lifecycle) = app.try_state::<TaskbarRecoveryLifecycle>() {
+        let diagnostic = result.as_ref().map(|_| ()).map_err(Clone::clone);
+        let _ = lifecycle.record_manual_reconnect(&diagnostic);
+    }
+    publish_taskbar_recovery_snapshot(&app);
+    result
 }
 
 #[derive(Default)]
@@ -1450,7 +1897,7 @@ fn save_performance_baseline(
 }
 
 fn performance_probe_requested() -> bool {
-    std::env::args().any(|argument| argument == "--cdrp-performance-gate")
+    std::env::args().any(|argument| argument == PERFORMANCE_GATE_ARGUMENT)
 }
 
 fn performance_sample_from_snapshot(
@@ -1555,8 +2002,11 @@ fn start_release_performance_probe(app: tauri::AppHandle) {
         if let Ok(reset) = reset {
             schedule_runtime_outputs(&app, reset, false);
         }
-        begin_runtime_exit(&app, "performanceGateExit");
-        app.exit(if report.passed { 0 } else { 2 });
+        request_runtime_exit(
+            &app,
+            "performanceGateExit",
+            if report.passed { 0 } else { 2 },
+        );
     });
 }
 
@@ -1677,6 +2127,31 @@ fn begin_runtime_exit(app: &tauri::AppHandle, trigger: &str) {
     }
 }
 
+fn prepare_runtime_exit(app: &tauri::AppHandle, trigger: &str) {
+    begin_runtime_exit(app, trigger);
+    desktop_host::begin_exit();
+    if let Some(taskbar) = app.try_state::<TaskbarRecoveryLifecycle>() {
+        taskbar_recovery::begin_exit(taskbar.inner());
+    }
+    if let Some(store) = app.try_state::<PlacementStore>() {
+        if let Err(error) = store.flush() {
+            eprintln!("failed to flush poster placement before exit: {error}");
+        }
+    }
+    if let Some(window) = app.get_webview_window(CONTROL_CENTER_WINDOW_LABEL) {
+        let _ = window.destroy();
+    }
+    if let Some(window) = optional_desktop_host_window(app) {
+        let _ = window.destroy();
+    }
+    remove_tray_icon(app);
+}
+
+fn request_runtime_exit(app: &tauri::AppHandle, trigger: &str, exit_code: i32) {
+    prepare_runtime_exit(app, trigger);
+    app.exit(exit_code);
+}
+
 enum MainWindowAction {
     Show,
     Toggle,
@@ -1719,45 +2194,70 @@ fn refresh_runtime_host_topology(app: &tauri::AppHandle, trigger: &str) {
     }
 }
 
+fn publish_control_center_runtime_snapshot(app: &tauri::AppHandle) {
+    let Some(state) = app.try_state::<RuntimeState>() else {
+        return;
+    };
+    if let Ok(snapshot) = state.0.lock().map(|snapshot| snapshot.clone()) {
+        publish_runtime_snapshot(app, snapshot);
+    };
+}
+
 fn queue_or_emit_main_control(
     app: &tauri::AppHandle,
     coordinator: &MainWindowCoordinator,
     payload: String,
 ) {
-    let emit_now = match coordinator.pending_controls.lock() {
-        Ok(pending) if coordinator.ready.load(Ordering::Acquire) => {
-            drop(pending);
-            true
+    match coordinator.lifecycle.queue_or_take_ready(payload) {
+        Ok(Some(payload)) => {
+            let _ = app.emit("runtime-control", payload);
         }
-        Ok(mut pending) => {
-            pending.push(payload.clone());
-            false
-        }
-        Err(error) => {
-            eprintln!("failed to queue control-center action: {error}");
-            false
-        }
-    };
-    if emit_now {
-        let _ = app.emit("runtime-control", payload);
+        Ok(None) => {}
+        Err(error) => eprintln!("failed to queue control-center action: {error}"),
     }
+    publish_control_center_runtime_snapshot(app);
 }
 
-fn mark_main_window_ready(app: &tauri::AppHandle) {
+fn mark_main_window_ready(
+    app: &tauri::AppHandle,
+) -> Result<ControlCenterLifecycleSnapshot, String> {
     let coordinator = app.state::<MainWindowCoordinator>();
-    let pending = match coordinator.pending_controls.lock() {
-        Ok(mut pending) => {
-            coordinator.ready.store(true, Ordering::Release);
-            std::mem::take(&mut *pending)
-        }
-        Err(error) => {
-            eprintln!("failed to publish queued control-center actions: {error}");
-            Vec::new()
-        }
-    };
+    let pending = coordinator.lifecycle.mark_ready()?;
     refresh_runtime_host_topology(app, "controlCenterReady");
     for payload in pending {
         let _ = app.emit("runtime-control", payload);
+    }
+    coordinator.lifecycle.snapshot()
+}
+
+#[tauri::command]
+fn mark_control_center_ready(
+    app: tauri::AppHandle,
+) -> Result<ControlCenterLifecycleSnapshot, String> {
+    mark_main_window_ready(&app)
+}
+
+fn release_main_window(
+    app: &tauri::AppHandle,
+    coordinator: &MainWindowCoordinator,
+    window: &tauri::Window<tauri::Wry>,
+    trigger: &str,
+) {
+    match window.destroy() {
+        Ok(()) => {
+            if let Err(error) = coordinator.lifecycle.window_destroyed() {
+                eprintln!("failed to record control-center release: {error}");
+            }
+            refresh_runtime_host_topology(app, trigger);
+        }
+        Err(error) => {
+            eprintln!("failed to release control-center resources, hiding instead: {error}");
+            let _ = window.hide();
+            if let Err(error) = coordinator.lifecycle.window_hidden() {
+                eprintln!("failed to record control-center hide fallback: {error}");
+            }
+            publish_control_center_runtime_snapshot(app);
+        }
     }
 }
 
@@ -1775,30 +2275,41 @@ fn run_main_window_action(app: tauri::AppHandle, action: MainWindowAction) {
         .is_some();
     let window = match app.get_webview_window(CONTROL_CENTER_WINDOW_LABEL) {
         Some(window) => window,
-        None => {
-            coordinator.ready.store(false, Ordering::Release);
-            match build_main_window(&app) {
-                Ok(window) => {
-                    refresh_runtime_host_topology(&app, "controlCenterCreated");
-                    window
+        None => match build_main_window(&app) {
+            Ok(window) => {
+                if let Err(error) = coordinator.lifecycle.window_created() {
+                    eprintln!("failed to record control-center creation: {error}");
                 }
-                Err(error) => {
-                    eprintln!("failed to create control-center window: {error}");
-                    return;
-                }
+                refresh_runtime_host_topology(&app, "controlCenterCreated");
+                window
             }
-        }
+            Err(error) => {
+                eprintln!("failed to create control-center window: {error}");
+                return;
+            }
+        },
     };
 
     if matches!(action, MainWindowAction::Toggle) && existed && window.is_visible().unwrap_or(false)
     {
-        let _ = window.hide();
+        let release_window = window.as_ref().window();
+        release_main_window(
+            &app,
+            coordinator.inner(),
+            &release_window,
+            "controlCenterToggleReleased",
+        );
         return;
     }
 
     reveal_main_window(&window);
+    if let Err(error) = coordinator.lifecycle.window_shown() {
+        eprintln!("failed to record control-center show: {error}");
+    }
     if let MainWindowAction::ShowAndEmit(payload) = action {
         queue_or_emit_main_control(&app, coordinator.inner(), payload);
+    } else {
+        publish_control_center_runtime_snapshot(&app);
     }
 }
 
@@ -1827,28 +2338,67 @@ fn show_and_emit(app: &tauri::AppHandle, payload: &str) {
     schedule_main_window_action(app, MainWindowAction::ShowAndEmit(payload.to_string()));
 }
 
-fn emit_control(app: &tauri::AppHandle, payload: &str) {
-    let _ = app.emit("runtime-control", payload);
-}
-
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     if let Some(exit_code) = poster_state_recovery_gate::run_if_requested() {
         std::process::exit(exit_code);
     }
 
+    let initial_launch_intent = {
+        #[cfg(feature = "autostart-test-root")]
+        {
+            if autostart_test_gate::is_initial_forward_request() {
+                launch_intent::decide_initial_application_arguments(&[])
+            } else {
+                decide_initial_from_env()
+            }
+        }
+        #[cfg(not(feature = "autostart-test-root"))]
+        decide_initial_from_env()
+    };
+    if initial_launch_intent.disposition == LaunchIntentDisposition::Reject {
+        if let Ok(diagnostic) = serde_json::to_string(&initial_launch_intent) {
+            eprintln!("Desktop-Up rejected launch intent: {diagnostic}");
+        }
+        std::process::exit(INVALID_LAUNCH_EXIT_CODE);
+    }
+
     let application = tauri::Builder::default()
-        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
-            show_main_window(app);
+        .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
+            #[cfg(feature = "autostart-test-root")]
+            if autostart_test_gate::try_handle_forwarded(app, &args) {
+                return;
+            }
+            let decision = decide_secondary_forwarded_arguments(&args);
+            if let Some(coordinator) = app.try_state::<LaunchIntentCoordinator>() {
+                coordinator.record_secondary(decision.clone());
+            }
+            match decision.disposition {
+                LaunchIntentDisposition::ShowControlCenter => show_main_window(app),
+                LaunchIntentDisposition::KeepExistingUi => {}
+                LaunchIntentDisposition::Reject => {
+                    if let Ok(diagnostic) = serde_json::to_string(&decision) {
+                        eprintln!("Desktop-Up rejected secondary launch intent: {diagnostic}");
+                    }
+                }
+                LaunchIntentDisposition::StartRuntime
+                | LaunchIntentDisposition::StartDiagnosticRuntime => {
+                    eprintln!("Desktop-Up ignored an invalid secondary launch disposition");
+                }
+            }
         }))
+        .manage(LaunchIntentCoordinator::new(initial_launch_intent))
         .manage(RuntimeState::default())
         .manage(HostSurfaceCoordinator::default())
         .manage(HostRecoveryCoordinator::default())
         .manage(PosterSurfaceLifecycle::default())
         .manage(MainWindowCoordinator::default())
+        .manage(TaskbarRecoveryLifecycle::default())
         .manage(PerformanceClock(Instant::now()))
         .setup(|app| {
             let runtime_paths = install_paths::resolve_for_app(app.handle())?;
+            let autostart_snapshot = probe_autostart(&runtime_paths);
+            app.manage(AutostartCoordinator::new(autostart_snapshot.clone()));
             let placement_path = runtime_paths.placement_path();
             let placement_store = PlacementStore::open(placement_path);
             let startup_placement = placement_store.snapshot();
@@ -1856,15 +2406,28 @@ pub fn run() {
             let snapshot_path = runtime_paths.snapshot_bridge_path();
             app.manage(PosterSnapshotStore::open(snapshot_path));
             let poster_state_path = runtime_paths.poster_state_path();
-            app.manage(PosterStateRepository::open(poster_state_path)?);
+            let poster_state_repository = PosterStateRepository::open(poster_state_path)?;
+            let initial_all_locked = match poster_state_repository.load() {
+                Ok(PosterStateLoadResult::Loaded { snapshot, .. }) => all_posters_locked(&snapshot),
+                _ => false,
+            };
+            app.manage(poster_state_repository);
             app.manage(runtime_paths);
 
             if let Some(state) = app.try_state::<RuntimeState>() {
                 let host_topology = inspect_host_topology(app.handle());
                 if let Ok(mut snapshot) = state.0.lock() {
                     snapshot.host_topology = host_topology;
+                    snapshot.all_locked = initial_all_locked;
                 }
             }
+
+            let runtime_menu_snapshot = app
+                .state::<RuntimeState>()
+                .0
+                .lock()
+                .map(|snapshot| snapshot.clone())
+                .unwrap_or_default();
 
             let show_item = MenuItemBuilder::with_id("show", "打开 Desktop-Up 主页").build(app)?;
             let settings_item = MenuItemBuilder::with_id("settings", "设置…").build(app)?;
@@ -1879,16 +2442,16 @@ pub fn run() {
                     .build(app)?;
 
             let workspace_item = CheckMenuItemBuilder::with_id("workspace", "显示海报宿主")
-                .checked(true)
+                .checked(runtime_menu_snapshot.poster_visible)
                 .build(app)?;
             let edit_item = CheckMenuItemBuilder::with_id("edit", "编辑海报布局")
-                .checked(false)
+                .checked(runtime_menu_snapshot.edit_mode)
                 .build(app)?;
             let lock_item = CheckMenuItemBuilder::with_id("lock-all", "锁定全部海报")
-                .checked(false)
+                .checked(runtime_menu_snapshot.all_locked)
                 .build(app)?;
             let pause_item = CheckMenuItemBuilder::with_id("pause", "暂停动态效果")
-                .checked(false)
+                .checked(runtime_menu_snapshot.manually_paused)
                 .build(app)?;
 
             let theme_menu = SubmenuBuilder::new(app, "快捷主题")
@@ -1900,9 +2463,13 @@ pub fn run() {
             let separator_two = PredefinedMenuItem::separator(app)?;
             let agent_item =
                 MenuItemBuilder::with_id("agent", "Agent 助手（需要 API Key）").build(app)?;
-            let autostart_item = MenuItemBuilder::with_id("autostart", "开机自启（A1 接入）")
-                .enabled(false)
-                .build(app)?;
+            let autostart_item = CheckMenuItemBuilder::with_id(
+                "autostart",
+                autostart_tray_label(&autostart_snapshot),
+            )
+            .checked(autostart_snapshot.effective_enabled)
+            .enabled(autostart_control_available(&autostart_snapshot))
+            .build(app)?;
             let reconnect_item =
                 MenuItemBuilder::with_id("reconnect", "重新连接桌面宿主").build(app)?;
             let separator_three = PredefinedMenuItem::separator(app)?;
@@ -1936,49 +2503,33 @@ pub fn run() {
                 edit: edit_item,
                 lock_all: lock_item,
                 pause: pause_item,
+                autostart: autostart_item,
             });
 
-            TrayIconBuilder::with_id("desktop-up-tray")
-                .tooltip("Desktop-Up · 游戏海报桌面")
-                .menu(&menu)
-                .show_menu_on_left_click(false)
-                .on_menu_event(|app, event| match event.id.as_ref() {
-                    "show" => show_main_window(app),
-                    "settings" => show_and_emit(app, "open-settings"),
-                    "workspace" => toggle_poster_window(app),
-                    "edit" => emit_control(app, "toggle-edit"),
-                    "lock-all" => emit_control(app, "toggle-lock-all"),
-                    "pause" => toggle_manual_pause(app),
-                    "theme-nocturne" => emit_control(app, "theme:nocturne"),
-                    "theme-ember" => emit_control(app, "theme:ember"),
-                    "theme-glass" => emit_control(app, "theme:glass"),
-                    "agent" => show_and_emit(app, "open-agent"),
-                    "reconnect" => {
-                        let request =
-                            HostRecoveryRequest::single(HostRecoveryTrigger::ManualReconnect);
-                        if let Err(error) = recover_desktop_host(app, request) {
-                            eprintln!("failed to reconnect desktop host: {error}");
-                        }
-                    }
-                    "quit" => {
-                        begin_runtime_exit(app, "trayExit");
-                        if let Some(store) = app.try_state::<PlacementStore>() {
-                            if let Err(error) = store.flush() {
-                                eprintln!("failed to flush poster placement before exit: {error}");
-                            }
-                        }
-                        app.exit(0);
-                    }
-                    _ => {}
-                })
-                .on_tray_icon_event(|tray, event| match event {
-                    TrayIconEvent::DoubleClick {
-                        button: MouseButton::Left,
-                        ..
-                    } => toggle_main_window(tray.app_handle()),
-                    _ => {}
-                })
-                .build(app)?;
+            app.on_menu_event(|app, event| {
+                handle_tray_menu_event(app, event.id.as_ref());
+            });
+            app.on_tray_icon_event(|app, event| {
+                handle_tray_icon_event(app, &event);
+            });
+            build_tray_icon(app.handle(), &menu)?;
+            app.manage(TraySurface {
+                menu,
+                execution: Mutex::new(()),
+            });
+
+            let taskbar_lifecycle = app.state::<TaskbarRecoveryLifecycle>().inner().clone();
+            let taskbar_app = app.handle().clone();
+            let taskbar_status_app = app.handle().clone();
+            if let Err(error) = taskbar_recovery::install(
+                taskbar_lifecycle.clone(),
+                move |batch| recover_after_taskbar_created(&taskbar_app, batch),
+                move || publish_taskbar_recovery_snapshot(&taskbar_status_app),
+            ) {
+                let _ = taskbar_lifecycle.mark_listener_failed(error.clone());
+                publish_taskbar_recovery_snapshot(app.handle());
+                eprintln!("failed to install TaskbarCreated recovery listener: {error}");
+            }
 
             if let Some(poster) = optional_desktop_host_window(app.handle()) {
                 if let Err(error) =
@@ -2024,11 +2575,11 @@ pub fn run() {
             let app = webview.app_handle();
             if webview.label() == CONTROL_CENTER_WINDOW_LABEL {
                 if payload.event() == PageLoadEvent::Started {
-                    app.state::<MainWindowCoordinator>()
-                        .ready
-                        .store(false, Ordering::Release);
-                } else if payload.event() == PageLoadEvent::Finished {
-                    mark_main_window_ready(app);
+                    let coordinator = app.state::<MainWindowCoordinator>();
+                    if let Err(error) = coordinator.lifecycle.page_load_started() {
+                        eprintln!("failed to record control-center page load: {error}");
+                    }
+                    publish_control_center_runtime_snapshot(app);
                 }
                 return;
             }
@@ -2081,17 +2632,34 @@ pub fn run() {
                 return;
             }
 
-            if window.label() != "main" {
+            if window.label() != CONTROL_CENTER_WINDOW_LABEL {
                 return;
             }
 
-            if let WindowEvent::CloseRequested { api, .. } = event {
-                api.prevent_close();
-                let _ = window.hide();
+            match event {
+                WindowEvent::CloseRequested { api, .. } => {
+                    api.prevent_close();
+                    let coordinator = window.state::<MainWindowCoordinator>();
+                    release_main_window(
+                        window.app_handle(),
+                        coordinator.inner(),
+                        window,
+                        "controlCenterCloseReleased",
+                    );
+                }
+                WindowEvent::Destroyed => {
+                    let coordinator = window.state::<MainWindowCoordinator>();
+                    if let Err(error) = coordinator.lifecycle.window_destroyed() {
+                        eprintln!("failed to record control-center destruction: {error}");
+                    }
+                    refresh_runtime_host_topology(window.app_handle(), "controlCenterDestroyed");
+                }
+                _ => {}
             }
         })
         .invoke_handler(tauri::generate_handler![
             runtime_state,
+            mark_control_center_ready,
             inspect_poster_snapshot,
             load_poster_state,
             replace_poster_state,
@@ -2101,7 +2669,9 @@ pub fn run() {
             install_path_diagnostics,
             install_content_probe,
             autostart_diagnostics,
+            set_autostart_enabled,
             update_runtime_state,
+            launch_intent_diagnostics,
             start_poster_drag,
             sync_host_surface,
             mark_poster_surface_ready,
@@ -2117,7 +2687,7 @@ pub fn run() {
 
     application.run(|app, event| {
         if let tauri::RunEvent::ExitRequested { .. } = event {
-            begin_runtime_exit(app, "exitRequested");
+            prepare_runtime_exit(app, "exitRequested");
         }
     });
 }
@@ -2177,6 +2747,27 @@ mod tests {
     }
 
     #[test]
+    fn tray_lock_and_theme_mutations_target_formal_poster_fields() {
+        let mut snapshot = serde_json::json!({
+            "selectedPosterId": "poster-b",
+            "posters": [
+                { "id": "poster-a", "isLocked": false, "templateKey": "transparent-default" },
+                { "id": "poster-b", "isLocked": false, "templateKey": "transparent-default" }
+            ]
+        });
+
+        assert!(toggle_all_poster_locks_snapshot(&mut snapshot).unwrap());
+        assert!(all_posters_locked(&snapshot));
+        assert!(toggle_all_poster_locks_snapshot(&mut snapshot).unwrap());
+        assert!(!all_posters_locked(&snapshot));
+
+        assert!(apply_quick_theme_snapshot(&mut snapshot, "builtin-ember").unwrap());
+        assert_eq!(snapshot["posters"][0]["templateKey"], "transparent-default");
+        assert_eq!(snapshot["posters"][1]["templateKey"], "builtin-ember");
+        assert!(!apply_quick_theme_snapshot(&mut snapshot, "builtin-ember").unwrap());
+    }
+
+    #[test]
     fn runtime_snapshot_serializes_with_frontend_camel_case_contract() {
         let value = serde_json::to_value(RuntimeSnapshot::default()).unwrap();
         let object = value
@@ -2201,6 +2792,7 @@ mod tests {
             "runtimeVisibility",
             "runtimeMonitor",
             "runtimeLifecycle",
+            "controlCenter",
         ] {
             assert!(
                 object.contains_key(key),
@@ -2216,6 +2808,10 @@ mod tests {
         assert_eq!(
             value["runtimeLifecycle"]["contractVersion"],
             runtime_lifecycle::RUNTIME_LIFECYCLE_CONTRACT_VERSION
+        );
+        assert_eq!(
+            value["controlCenter"]["contractVersion"],
+            control_center_lifecycle::CONTROL_CENTER_LIFECYCLE_CONTRACT_VERSION
         );
         assert!(value.get("exitRequested").is_none());
         for key in [

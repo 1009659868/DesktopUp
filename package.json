@@ -7,6 +7,7 @@
   "scripts": {
     "build": "node scripts/build-ui.mjs",
     "dev": "node scripts/serve-ui.mjs",
+    "precheck": "node --check app/src/autostart-control.js",
     "check": "node --check app/src/model.js && node --check app/src/host-contract.js && node --check app/src/host-presentation.js && node --check app/src/main.js && node --check app/src/performance-monitor.js && node --check app/src/poster-geometry.js && node --check app/src/poster-permissions.js && node --check app/src/poster-template-resolution.js && node --check app/src/poster-contract.js && node --check app/src/poster-legacy-bridge.js && node --check app/src/poster-state-store.js && node --check app/src/poster-core.js && node --check app/src/poster-runtime.js && node --check app/src/poster-surface.js && node --check scripts/finalize-release-artifacts.mjs && node --check scripts/probe-poster-cdp.mjs && node --check scripts/probe-install-artifacts.mjs && node --check scripts/probe-runtime-dependencies.mjs && node --check scripts/run-performance-gate.mjs && node --check scripts/run-poster-state-recovery-gate.mjs && node --test tests/*.test.mjs && node scripts/check-doc-links.mjs",
     "probe:performance-gate": "node scripts/run-performance-gate.mjs",
     "probe:poster-state-recovery-gate": "node scripts/run-poster-state-recovery-gate.mjs",

@@ -90,6 +90,23 @@ const runtime = await evaluate(
   `window.__TAURI__.core.invoke("runtime_state").catch((error) => ({ probeError: String(error) }))`,
   true
 );
+const launchIntent = await evaluate(
+  send,
+  `window.__TAURI__.core.invoke("launch_intent_diagnostics").catch((error) => ({ probeError: String(error) }))`,
+  true
+);
+const autostart = await evaluate(
+  send,
+  `window.__TAURI__.core.invoke("autostart_diagnostics").catch((error) => ({ probeError: String(error) }))`,
+  true
+);
+const posterState = await evaluate(
+  send,
+  `window.__TAURI__.core.invoke("load_poster_state").catch((error) => ({ probeError: String(error) }))`,
+  true
+);
 socket.close();
 
-process.stdout.write(`${JSON.stringify({ presentation, runtime }, null, 2)}\n`);
+process.stdout.write(
+  `${JSON.stringify({ presentation, runtime, launchIntent, autostart, posterState }, null, 2)}\n`
+);

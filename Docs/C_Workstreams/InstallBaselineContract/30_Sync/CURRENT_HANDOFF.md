@@ -2,7 +2,7 @@
 
 最后更新：2026-08-13
 
-状态：`COMPLETE — C-IBC CLOSED / C-RLC READY TO ACTIVATE`
+状态：`COMPLETE — C-IBC/C-RLC/C-LST CLOSED / C-PSI NEXT`
 
 ## 已完成
 
@@ -37,7 +37,7 @@
 
 ## 精确下一步
 
-C-IBC 已关闭。下一候选为 C-RLC Runtime Lifecycle and Quick Access，等待用户明确激活；其首要输入是正式安装路径门后的自启显式 opt-in/disable、精确 `--autostart` 单实例分流，以及自启启动不得打开控制中心。C-UGM/C-URV/C-RCG 保持计划状态，不并行实施。
+C-IBC 已关闭，C-RLC 已消费冻结输入并激活；C-RLC-03 已按用户授权的 feature-scoped 临时测试门关闭，正式安装路径合同保持不变。C-RLC-04 已实现并等待默认特性 Release 人工矩阵；C-UGM/C-URV/C-RCG 保持计划状态，不并行实施。
 
 ## 禁止
 

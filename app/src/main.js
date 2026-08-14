@@ -1,9 +1,13 @@
 import {
   DENSITY_LABELS,
-  initials,
-  moveWithinBounds,
-  resizeWithinBounds
+  initials
 } from "./model.js";
+import {
+  containPosterInWorkArea,
+  movePosterFromEditorDelta,
+  projectPosterToEditor,
+  resizePosterFromEditorDelta
+} from "./poster-editor-geometry.js";
 import {
   buildPosterMarkup
 } from "./poster-core.js";
@@ -25,6 +29,11 @@ import {
   posterInteractionMode,
   selectedPoster as runtimeSelectedPoster
 } from "./poster-runtime.js";
+import {
+  AUTOSTART_STATE_EVENT,
+  autostartOutcomeMessage,
+  deriveAutostartControl
+} from "./autostart-control.js";
 import {
   buildPerformanceSample,
   formatCpuMs,
@@ -53,6 +62,7 @@ const opacityControl = document.querySelector("#opacity-control");
 const densityControl = document.querySelector("#density-control");
 const autoCollapseControl = document.querySelector("#auto-collapse");
 const autostartControl = document.querySelector("#autostart-control");
+const autostartStatus = document.querySelector("#autostart-status");
 
 const posterState = new PosterStateClient({ invoke: nativeInvoke(), storage: localStorage });
 let state = createRuntimeState(createEphemeralPosterRuntimeSnapshot());
@@ -64,9 +74,45 @@ const PERFORMANCE_SAMPLE_COUNT = 6;
 const PERFORMANCE_MAIN_PRIVATE_WORKING_SET_BUDGET_BYTES = 50 * 1024 * 1024;
 const PERFORMANCE_TREE_PRIVATE_WORKING_SET_BUDGET_BYTES = 256 * 1024 * 1024;
 let performanceCollecting = false;
+let autostartSnapshot = null;
+let autostartPending = false;
 
 function nativeInvoke() {
   return window.__TAURI__?.core?.invoke;
+}
+
+function applyAutostartSnapshot(snapshot = autostartSnapshot) {
+  if (snapshot) autostartSnapshot = snapshot;
+  const control = deriveAutostartControl(autostartSnapshot, autostartPending);
+  autostartControl.checked = control.checked;
+  autostartControl.disabled = control.disabled;
+  autostartStatus.textContent = control.status;
+  autostartControl.closest(".switch-row")?.setAttribute("data-autostart-state", control.state);
+}
+
+async function requestAutostartChange(enabled) {
+  const invoke = nativeInvoke();
+  if (!invoke || autostartPending) {
+    applyAutostartSnapshot();
+    return;
+  }
+  autostartPending = true;
+  applyAutostartSnapshot();
+  try {
+    const result = await invoke("set_autostart_enabled", { enabled });
+    applyAutostartSnapshot(result?.after ?? autostartSnapshot);
+    showToast(autostartOutcomeMessage(result));
+  } catch {
+    try {
+      applyAutostartSnapshot(await invoke("autostart_diagnostics"));
+    } catch {
+      applyAutostartSnapshot();
+    }
+    showToast("开机自启更改失败，界面已恢复为原生状态");
+  } finally {
+    autostartPending = false;
+    applyAutostartSnapshot();
+  }
 }
 
 async function loadState() {
@@ -93,7 +139,34 @@ function selectedPoster() {
   return runtimeSelectedPoster(state);
 }
 
-function render() {
+function editorGeometryContext() {
+  const bounds = stage.getBoundingClientRect();
+  const primaryWorkArea = posterState.primaryWorkArea ?? {
+    width: Number(globalThis.screen?.availWidth) || bounds.width,
+    height: Number(globalThis.screen?.availHeight) || bounds.height
+  };
+  return {
+    stage: { width: bounds.width, height: bounds.height },
+    workArea: {
+      width: primaryWorkArea.width,
+      height: primaryWorkArea.height
+    }
+  };
+}
+
+function applyEditorPosterProjection() {
+  const context = editorGeometryContext();
+  for (const poster of state.posters) {
+    const posterElement = posterLayer.querySelector(`[data-poster-id="${poster.id}"]`);
+    if (!posterElement) continue;
+    const projection = projectPosterToEditor(poster, context);
+    posterElement.style.setProperty("--poster-x", `${projection.x}px`);
+    posterElement.style.setProperty("--poster-y", `${projection.y}px`);
+    posterElement.style.setProperty("--poster-scale", String(projection.scale));
+  }
+}
+
+function renderRuntimeControls() {
   app.classList.toggle("is-editing", state.editMode);
   app.classList.toggle("is-paused", state.manuallyPaused || isRuntimeSuspended(state, document.hidden));
   const pauseState = runtimeMode(state, document.hidden);
@@ -104,10 +177,13 @@ function render() {
   editToggle.setAttribute("aria-pressed", String(state.editMode));
   editToggle.querySelector("span:last-child").textContent = state.editMode ? "完成编辑" : "进入编辑";
   pauseToggle.setAttribute("aria-pressed", String(state.manuallyPaused));
+  renderRuntime();
+}
 
+function render() {
+  renderRuntimeControls();
   renderPosters();
   renderInspector();
-  renderRuntime();
   syncNativeRuntimeState();
 }
 
@@ -126,6 +202,7 @@ function renderPosters() {
       surface: "demo"
     })
   ).join("");
+  applyEditorPosterProjection();
 }
 
 function renderInspector() {
@@ -254,9 +331,7 @@ function applyPerformanceMode(mode) {
 
 function applyNativePauseSnapshot(snapshot = {}) {
   state = applyPosterAction(state, { type: "applyRuntimeSnapshot", snapshot });
-  pauseToggle.setAttribute("aria-pressed", String(state.manuallyPaused));
-  renderRuntime();
-  app.classList.toggle("is-paused", state.manuallyPaused || isRuntimeSuspended(state, document.hidden));
+  renderRuntimeControls();
   void pollPerformance();
 }
 
@@ -348,8 +423,17 @@ posterLayer.addEventListener("pointerdown", (event) => {
     posterId: poster.id,
     originX: event.clientX,
     originY: event.clientY,
-    rect: { x: poster.x, y: poster.y, width: poster.width, height: poster.height }
+    rect: {
+      x: poster.x,
+      y: poster.y,
+      width: poster.width,
+      height: poster.height,
+      collapsed: poster.collapsed
+    },
+    context: editorGeometryContext()
   };
+  gesture.projection = projectPosterToEditor(gesture.rect, gesture.context);
+  gesture.nextRect = containPosterInWorkArea(gesture.rect, gesture.context.workArea);
   posterElement.classList.add("is-manipulating");
 });
 
@@ -361,20 +445,29 @@ window.addEventListener("pointermove", (event) => {
   if (!posterElement) return;
 
   if (gesture.type === "move") {
-    const next = moveWithinBounds(gesture.rect, stage.getBoundingClientRect(), {
-      x: gesture.rect.x + dx,
-      y: gesture.rect.y + dy
-    });
-    posterElement.style.setProperty("--poster-x", `${next.x}px`);
-    posterElement.style.setProperty("--poster-y", `${next.y}px`);
+    gesture.nextRect = movePosterFromEditorDelta(
+      gesture.rect,
+      { x: dx, y: dy },
+      gesture.projection,
+      gesture.context.workArea
+    );
   } else {
-    const next = resizeWithinBounds(gesture.rect, {
-      width: gesture.rect.width + dx,
-      height: gesture.rect.height + dy
-    });
-    posterElement.style.setProperty("--poster-width", `${next.width}px`);
-    posterElement.style.setProperty("--poster-height", `${next.height}px`);
+    gesture.nextRect = resizePosterFromEditorDelta(
+      gesture.rect,
+      { x: dx, y: dy },
+      gesture.projection,
+      gesture.context.workArea
+    );
+    posterElement.style.setProperty("--poster-width", `${gesture.nextRect.width}px`);
+    posterElement.style.setProperty("--poster-height", `${gesture.nextRect.height}px`);
   }
+  const preview = projectPosterToEditor(gesture.nextRect, {
+    ...gesture.context,
+    scale: gesture.projection.scale
+  });
+  posterElement.style.setProperty("--poster-x", `${preview.x}px`);
+  posterElement.style.setProperty("--poster-y", `${preview.y}px`);
+  posterElement.style.setProperty("--poster-scale", String(preview.scale));
 });
 
 window.addEventListener("pointerup", (event) => {
@@ -388,12 +481,11 @@ window.addEventListener("pointerup", (event) => {
 
   if (gesture.type === "move") {
     state = applyPosterAction(state, {
-      type: "movePoster",
+      type: "patchPoster",
       posterId: gesture.posterId,
-      stage: stage.getBoundingClientRect(),
-      next: {
-        x: Number.parseFloat(posterElement.style.getPropertyValue("--poster-x")),
-        y: Number.parseFloat(posterElement.style.getPropertyValue("--poster-y"))
+      patch: {
+        x: gesture.nextRect.x,
+        y: gesture.nextRect.y
       }
     });
   } else {
@@ -401,8 +493,16 @@ window.addEventListener("pointerup", (event) => {
       type: "resizePoster",
       posterId: gesture.posterId,
       next: {
-        width: Number.parseFloat(posterElement.style.getPropertyValue("--poster-width")),
-        height: Number.parseFloat(posterElement.style.getPropertyValue("--poster-height"))
+        width: gesture.nextRect.width,
+        height: gesture.nextRect.height
+      }
+    });
+    state = applyPosterAction(state, {
+      type: "patchPoster",
+      posterId: gesture.posterId,
+      patch: {
+        x: gesture.nextRect.x,
+        y: gesture.nextRect.y
       }
     });
   }
@@ -449,7 +549,9 @@ autoCollapseControl.addEventListener("change", () => {
   showToast(autoCollapseControl.checked ? "已开启自动收起演示状态" : "已关闭自动收起");
 });
 autostartControl.addEventListener("change", () => {
-  showToast(autostartControl.checked ? "Demo：开机自启已标记为开启" : "Demo：开机自启已标记为关闭");
+  const requestedEnabled = autostartControl.checked;
+  applyAutostartSnapshot();
+  void requestAutostartChange(requestedEnabled);
 });
 
 performanceModeList.addEventListener("click", (event) => {
@@ -479,57 +581,49 @@ document.addEventListener("visibilitychange", () => {
 
 async function connectNativeControls() {
   const listen = window.__TAURI__?.event?.listen;
-  if (!listen) return;
   const invoke = window.__TAURI__?.core?.invoke;
+  if (listen) {
+    await listen("runtime-state-changed", (event) => {
+      applyNativePauseSnapshot(event.payload ?? {});
+    });
+    await listen(AUTOSTART_STATE_EVENT, (event) => {
+      applyAutostartSnapshot(event.payload ?? null);
+    });
+    await listen(POSTER_STATE_UPDATED_EVENT, (event) => {
+      if (!posterState.acceptSnapshot(event.payload)) return;
+      const editMode = state.editMode;
+      const manuallyPaused = state.manuallyPaused;
+      state = applyPosterAction(createRuntimeState(posterState.runtimeSnapshot()), {
+        type: "setEditMode",
+        value: editMode
+      });
+      state = applyPosterAction(state, { type: "setManualPaused", value: manuallyPaused });
+      document.body.dataset.posterStateStatus = "ready";
+      render();
+    });
+    await listen("runtime-control", (event) => {
+      const action = String(event.payload ?? "");
+      if (action === "open-settings") {
+        document.querySelector(".inspector")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        showToast("设置面板已打开");
+      }
+      if (action === "open-agent") {
+        showToast("Agent 未启动：请先在后续设置页填写 API Key");
+      }
+    });
+  }
   if (invoke) {
     try {
       applyNativePauseSnapshot(await invoke("runtime_state"));
     } catch {}
+    try {
+      applyAutostartSnapshot(await invoke("autostart_diagnostics"));
+    } catch {
+      applyAutostartSnapshot();
+    }
   }
-  await listen("runtime-state-changed", (event) => {
-    applyNativePauseSnapshot(event.payload ?? {});
-  });
-  await listen(POSTER_STATE_UPDATED_EVENT, (event) => {
-    if (!posterState.acceptSnapshot(event.payload)) return;
-    const editMode = state.editMode;
-    const manuallyPaused = state.manuallyPaused;
-    state = applyPosterAction(createRuntimeState(posterState.runtimeSnapshot()), {
-      type: "setEditMode",
-      value: editMode
-    });
-    state = applyPosterAction(state, { type: "setManualPaused", value: manuallyPaused });
-    document.body.dataset.posterStateStatus = "ready";
-    render();
-  });
-  await listen("runtime-control", (event) => {
-    const action = String(event.payload ?? "");
-    if (action === "toggle-edit") editToggle.click();
-    if (action === "toggle-pause") pauseToggle.click();
-    if (action === "toggle-lock-all") {
-      const shouldLock = !state.posters.every((poster) => poster.locked);
-      state = applyPosterAction(state, { type: "setAllLocked", locked: shouldLock });
-      saveState();
-      render();
-      showToast(shouldLock ? "全部海报位置已锁定" : "全部海报位置已解锁");
-    }
-    if (action === "open-settings") {
-      document.querySelector(".inspector")?.scrollIntoView({ behavior: "smooth", block: "start" });
-      showToast("设置面板已打开");
-    }
-    if (action.startsWith("theme:")) {
-      const theme = action.slice("theme:".length);
-      updatePoster(selectedPoster().id, { theme });
-      showToast("已从托盘切换快捷主题");
-    }
-    if (action === "open-agent") {
-      showToast("Agent 未启动：请先在后续设置页填写 API Key");
-    }
-    if (action === "reconnect-icons") {
-      showToast("安全 Demo：未读取或移动真实桌面快捷方式");
-    }
-  });
+  return Boolean(listen && invoke);
 }
-
 window.addEventListener("keydown", (event) => {
   const activeTag = document.activeElement?.tagName;
   if (["INPUT", "TEXTAREA", "SELECT"].includes(activeTag)) return;
@@ -541,6 +635,7 @@ window.addEventListener("keydown", (event) => {
 });
 
 async function bootstrap() {
+  applyAutostartSnapshot();
   try {
     state = await loadState();
   } catch {
@@ -548,9 +643,22 @@ async function bootstrap() {
     document.body.dataset.posterStateStatus = "rejected";
     showToast("正式海报状态不可用；当前仅显示未持久化的安全预览");
   }
+  let nativeControlsConnected = false;
+  try {
+    nativeControlsConnected = await connectNativeControls();
+  } catch {}
   render();
   void pollPerformance();
-  connectNativeControls().catch(() => {});
+  if (nativeControlsConnected) {
+    const invoke = nativeInvoke();
+    try {
+      await invoke("mark_control_center_ready");
+    } catch {}
+  }
+}
+
+if (typeof ResizeObserver === "function") {
+  new ResizeObserver(() => applyEditorPosterProjection()).observe(stage);
 }
 
 bootstrap();

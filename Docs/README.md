@@ -14,10 +14,11 @@ Desktop-Up（暂定名）是一个面向 Windows 11 的低资源桌面海报启�
 当前路线位置：
 
 ```text
-A: DesktopUP V1 落地计划 / V1-P1 ACTIVE
+A: DesktopUP V1 落地计划 / V1-P2 ACTIVE
   -> C-PSS COMPLETE
   -> C-IBC COMPLETE
-  -> C-RLC READY TO ACTIVATE
+  -> C-RLC COMPLETE / C-LST COMPLETE (ABSORBED AND AUDITED)
+  -> C-PSI ACTIVE (C-PSI-02 AUTHORITY) / C-CIM ADVANCE PLAN READY
 ```
 
 ## 设计与计划入口

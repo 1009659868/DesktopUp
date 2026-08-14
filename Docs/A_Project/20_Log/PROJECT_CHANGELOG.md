@@ -1,6 +1,95 @@
 # Desktop-Up 项目更迭记录
 
+## 2026-08-14 — 提前建立后继计划并以吸收审计关闭 C-LST
+
+状态：`C-LST COMPLETE — C-PSI NEXT / C-CIM ADVANCE PLAN READY`
+
+根据用户要求，将“详细任务只在 C 激活前创建”调整为至少提前准备后续两个 C 的范围、非目标、依赖、任务和完成门；建立 C-LST、C-PSI、C-CIM 三个完整计划包。
+
+C-LST 没有重新开发窗口代码，而是把主屏右上大幅面、显式尺寸边界、收起顶部保持、透明/无白条、空白穿透、位置状态恢复和普通程序层级逐项映射到 C-DRP/C-PCB/C-PSS/C-RLC。Node 159/159、Rust 132/132 与既有用户 Release 人工证据支持七项 PASS；多显示器物理矩阵继续明确延期。本轮生产代码变化为 0，C-LST 以 `COMPLETE — ABSORBED AND AUDITED` 关闭，下一候选切换为已提前规划的 C-PSI。
+
+## 2026-08-14 — C-RLC-06 生命周期封板并关闭工作流
+
+状态：`C-RLC COMPLETE / C-LST NEXT — ACTIVATION PENDING`
+
+用户确认 C-RLC-05 的真实 Explorer、连续恢复、状态同步、核心层级与退出竞态人工矩阵全部通过。C-RLC-06 最终 Node/文档 159/159、Rust 132/132、production UI、Release/NSIS、安装内容/依赖、多进程与注册表探针通过；普通第二实例只打开一个控制中心，`--autostart` 第二实例不改变 UI，HKCU Run `DesktopUp` 最终 absent。
+
+`runtime-lifecycle-matrix-v1` 已封存，C-RLC-01..06 与 B-DRF 关闭。正式净机发布/自启漂移修复仍归 C-RCG，多显示器与 legacy 视觉参数回弹仍按原 owner 延期。下一候选为 B-PCR/C-LST，等待用户明确进入后激活。
+
+## 2026-08-14 — C-RLC-05 TaskbarCreated 恢复与退出顺序进入 Release 人工门
+
+状态：`C-RLC ACTIVE — C-RLC-05 IMPLEMENTED / RELEASE MANUAL PENDING`
+
+用户确认 C-RLC-04 六项 Release 人工矩阵全部通过，任务关闭。C-RLC-05 新增 `taskbar-recovery-v1`、原生 TaskbarCreated 监听、180 ms 合并、3 次有界重试、唯一托盘验证/回退重建、degraded/手动恢复，以及先 Exiting 后拆监听/恢复/表面/托盘的统一退出顺序；不恢复 TOPMOST 脉冲。
+
+Node/文档 159/159、Rust 132/132、production UI、Release/NSIS、安装内容与依赖门通过。定向 Release 连续 5 次 TaskbarCreated 后仍为一个进程、一个托盘消息窗口且句柄不变，控制中心未创建；当前等待真实 Explorer 重启与退出竞态人工矩阵。
+## 2026-08-14 — C-RLC-04 控制中心与托盘入口进入 Release 人工门
+
+状态：`C-RLC ACTIVE — C-RLC-04 IMPLEMENTED / RELEASE MANUAL PENDING`
+
+新增 `control-center-lifecycle-v1`，以显式前端 ready、有序命令队列和释放/重建状态收敛控制中心；托盘编辑直接写原生 runtime，锁定与主题通过正式 Poster State Store CAS，不再借控制中心或 localStorage 执行权威动作。
+
+Node 156/156、Rust 127/127、production UI、Release/NSIS、安装产物与依赖门通过。Release 证明冷启动控制中心 absent、重复打开始终唯一、关闭后 renderer 释放；可见峰值约 352.47 MiB 不冒充 256 MiB 通过，释放稳定后进程树约 222.87 MiB、主进程约 9.84 MiB。等待用户人工矩阵后再关闭 C-RLC-04。
+
+## 2026-08-14 — 将内容 Item 提升为独立工作流并前移
+
+状态：`PLAN REALIGNED / C-RLC-04 NEXT`
+
+根据用户对“安装、渲染、层级和拖动长期先行，而内容 Item 在计划中不可见”的反馈，新增 `C-CIM Collection Item Model and Projection`。该工作流明确拥有 `CollectionItem`/`PosterItem` 契约、SQLite 仓库、CRUD、空/失效状态和数据驱动海报投影，并要求硬编码 `GAME_CATALOG` 退出正式运行路径。
+
+冻结顺序改为：`C-RLC-04..06 → C-LST → C-PSI → C-CIM → C-ROD → C-PAA → C-LCH → C-PCRG`。C-PCRG 改为 Poster + Item 整合 Release 门，必须在正式 Item 仓库和真实启动链接入后封板。C-CIM 只使用隔离夹具，不扫描桌面、不移动用户文件；C-SVT 之前继续禁止真实快捷方式移动。
+
+## 2026-08-14 — 完成 C-RLC-03 临时测试路径真实自启门
+
+状态：`C-RLC ACTIVE — C-RLC-03 COMPLETE / C-RLC-04 NEXT`
+
+用户明确将本轮测试位置暂时调整为 `G:\A_\Tools\Test\`。默认关闭的 `autostart-test-root` feature 只让精确 `G:\A_\Tools\Test\DesktopUp.exe` 获得临时 eligibility，正式 `%LOCALAPPDATA%` 合同与默认 Release/NSIS 均未改变。
+
+真实 HKCU 门已完成 enable→matching、重复 enable→noChange、`--autostart` 冷启动、第二自启实例保持 UI、普通第二实例打开唯一控制中心、disable→absent；其他 7 个 Run 值指纹不变，最终 `DesktopUp` 值不存在。Node 152/152，Rust 默认 123/123、测试特性 125/125。C-RLC-03 关闭，下一任务为 C-RLC-04。
+
+## 2026-08-14 — 修复正式桌面几何导致控制中心空画布
+
+状态：`C-RLC ACTIVE — C-RLC-03 VALIDATION`
+
+用户截图中的真实海报为合法近全高默认尺寸，控制中心空画布的根因是正式桌面像素位置和尺寸未经投影直接用于较小编辑画布。现在控制中心使用独立、等比且可逆的编辑视口；窗口缩放只重绘预览，拖动/缩放先逆投影为桌面单位再保存，原生海报表面继续隔离该缩放。
+
+无头 Edge 已证明默认海报完整位于控制中心画布且页面零错误；全量 Rust 123/123、production UI、Release/NSIS 和依赖门通过。最新版项目 Release 已启动并呼回唯一控制中心，等待控制中心可见性、编辑往返、真实海报白条/Z-order 和 eligible 正式路径自启组合复测。
+
+
+## 2026-08-14 — 修复海报拖动白条与应用层覆盖回归
+
+状态：`C-RLC ACTIVE — C-RLC-03 VALIDATION`
+
+用户在 G 盘测试实例发现：编辑/拖动后顶部亮条重新出现，且控制中心编辑后再次拖动真实海报会覆盖普通程序。Win32 证据表明静态无标题栏样式和窗口区域未漂移，根因是 Tauri 系统窗口移动循环临时提升 ToolWindow 并触发 DWM 非客户区重绘。
+
+Windows 拖动现改为复用低级鼠标钩子的桌面层移动事务；移动中持续使用桌面相对锚点和 NOACTIVATE，松手后在窗口线程重申样式、DWM 抑制和窗口区域。Node 140/140、Rust 123/123、Release/NSIS 与依赖门通过，等待用户复测。G 盘路径属于 ineligible，不能单独关闭正式路径自启矩阵。
+
+
+## 2026-08-13 — C-RLC-03 进入正式安装版验证门
+
+状态：`C-RLC ACTIVE — C-RLC-03 VALIDATION`
+
+实现 `autostart-change-v1`、正式安装路径门、HKCU Run `DesktopUp` 精确 enable/repair/disable、串行写后读回和托盘/控制中心统一原生快照。开发/便携 Release 不具备写资格且入口禁用；失败或读回不一致不会乐观翻转 UI。
+
+隔离状态矩阵、全量自动化、production/Release/NSIS 和开发 Release 零写入通过。正式安装版启用、重启恢复、跨端同步和禁用仍待用户人工验证，因此 C-RLC-03 尚未关闭。
+
+## 2026-08-13 — 完成 C-RLC-02 启动意图与单实例分流
+
+状态：`C-RLC ACTIVE — C-RLC-02 COMPLETE / C-RLC-03 NEXT`
+
+新增 `launch-intent-v1`，首实例与第二实例共用严格参数决策表：普通第二实例只呼回唯一控制中心，精确 `--autostart` 第二实例保持 UI 不变，非法组合以 64 退出。既有性能门明确为仅首实例内部诊断意图，恢复探针继续先于 Tauri/单实例初始化。
+
+Node 135/135、Rust 117/117、production/Release 构建与真实 Release 多进程矩阵通过，正式 SQLite 哈希不变且本轮未写 HKCU。C-RLC-03 自启显式 opt-in 与状态同步成为唯一下一任务。
+
 本文件只记录项目级已发生事实。局部实现过程进入对应 C 工作流日志。
+
+## 2026-08-13 — 激活 C-RLC 并冻结生命周期矩阵
+
+状态：`C-RLC ACTIVE — C-RLC-01 COMPLETE / C-RLC-02 NEXT`
+
+用户明确要求建立 C-RLC 工作流文档并冻结生命周期矩阵。新矩阵统一普通/自启启动、第二实例、非法参数、控制中心/托盘、海报显隐/暂停、自启注册、TaskbarCreated 恢复与退出，继续限制认证范围为主屏单海报。
+
+现状审计明确普通冷启动、控制中心懒创建、托盘和退出粘滞状态已有基线；单实例仍忽略参数，自启仍为只读诊断且 TaskbarCreated 没有明确入口。本切片不改运行时代码或注册表，C-RLC-02 成为唯一下一任务。
 
 ## 2026-08-13 — 收敛个人自用包装阻断
 

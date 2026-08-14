@@ -20,4 +20,4 @@
 
 ## 下一步
 
-B-DLC 暂无活跃 C。全局下一候选是 B-DRF / C-RLC；C-UGM、C-URV 与 C-RCG 继续等待各自依赖，不得并行提前实施。
+B-DLC 暂无活跃 C。全局当前活跃链为 B-DRF / C-RLC，C-RLC-03 已实现并处于正式安装版人工验证门；C-UGM、C-URV 与 C-RCG 继续等待各自依赖，不得并行提前实施。

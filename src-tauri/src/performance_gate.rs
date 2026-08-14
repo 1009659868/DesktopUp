@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 pub const PERFORMANCE_GATE_CONTRACT: &str = "performance-gate-v3";
+pub const PERFORMANCE_GATE_ARGUMENT: &str = "--cdrp-performance-gate";
 pub const PERFORMANCE_SAMPLE_COUNT: usize = 6;
 pub const PERFORMANCE_STABILIZATION_MIN_MS: u64 = 120_000;
 pub const PERFORMANCE_WINDOW_MIN_MS: u64 = 9_500;

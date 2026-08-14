@@ -15,7 +15,11 @@ export const POSTER_STATE_MIGRATE_COMMAND = "migrate_poster_state";
 export const POSTER_STATE_CONTEXT_COMMAND = "poster_state_bootstrap_context";
 export const POSTER_STATE_UPDATED_EVENT = "poster-state-updated";
 
-const DEFAULT_POSTER_TITLE = "DESKTOP COLLECTION";
+export const DEFAULT_POSTER_TITLE = "NIGHT OPS";
+export const DEFAULT_POSTER_SUBTITLE = "TACTICAL ARCHIVE / 01";
+
+const PRIOR_FORMAL_DEFAULT_TITLE = "DESKTOP COLLECTION";
+const PRIOR_FORMAL_DEFAULT_SUBTITLE = "";
 
 export const BUILTIN_THEME_TEMPLATE_KEYS = Object.freeze({
   nocturne: DEFAULT_TEMPLATE_KEY,
@@ -33,6 +37,36 @@ export function runtimeThemeForTemplateKey(templateKey) {
 
 function cloneJson(value) {
   return JSON.parse(JSON.stringify(value));
+}
+
+function sameJsonValue(left, right) {
+  if (Object.is(left, right)) return true;
+  if (Array.isArray(left) || Array.isArray(right)) {
+    return Array.isArray(left)
+      && Array.isArray(right)
+      && left.length === right.length
+      && left.every((value, index) => sameJsonValue(value, right[index]));
+  }
+  if (!left || !right || typeof left !== "object" || typeof right !== "object") return false;
+  const leftKeys = Object.keys(left);
+  const rightKeys = Object.keys(right);
+  return leftKeys.length === rightKeys.length
+    && leftKeys.every((key) => Object.hasOwn(right, key) && sameJsonValue(left[key], right[key]));
+}
+
+export function isRecognizedPriorFormalDefault(snapshot, { primaryWorkArea } = {}) {
+  const validation = validatePosterSnapshot(snapshot);
+  if (!validation.ok) return false;
+  try {
+    const priorDefault = createDefaultPosterSnapshot({
+      title: PRIOR_FORMAL_DEFAULT_TITLE,
+      subtitle: PRIOR_FORMAL_DEFAULT_SUBTITLE,
+      primaryWorkArea
+    });
+    return sameJsonValue(validation.value, priorDefault);
+  } catch {
+    return false;
+  }
 }
 
 function clamp(value, minimum, maximum) {
@@ -182,11 +216,18 @@ function rejected(code, message, details = null) {
 }
 
 export class PosterStateClient {
-  constructor({ invoke, storage, primaryWorkArea, title = DEFAULT_POSTER_TITLE } = {}) {
+  constructor({
+    invoke,
+    storage,
+    primaryWorkArea,
+    title = DEFAULT_POSTER_TITLE,
+    subtitle = DEFAULT_POSTER_SUBTITLE
+  } = {}) {
     this.invoke = invoke;
     this.storage = storage;
     this.primaryWorkArea = primaryWorkArea ?? null;
     this.title = title;
+    this.subtitle = subtitle;
     this.snapshot = null;
     this.mutationQueue = Promise.resolve();
   }
@@ -255,18 +296,66 @@ export class PosterStateClient {
     );
   }
 
+  async recoverPriorFormalDefault(loaded) {
+    if (loaded?.status !== "ready"
+        || !isRecognizedPriorFormalDefault(loaded.snapshot, {
+          primaryWorkArea: this.primaryWorkArea
+        })) {
+      return loaded;
+    }
+
+    const replacement = createDefaultPosterSnapshot({
+      title: this.title,
+      subtitle: this.subtitle,
+      primaryWorkArea: this.primaryWorkArea
+    });
+    try {
+      const stored = await this.invoke(POSTER_STATE_REPLACE_COMMAND, {
+        expectedRevision: loaded.snapshot.revision,
+        snapshot: replacement
+      });
+      if (stored?.status === "stored" && this.acceptSnapshot(stored.snapshot)) {
+        return this.ready("formalDefaultIdentityRecovery");
+      }
+      if (stored?.status === "conflict") {
+        return this.loadLatest("formalDefaultIdentityRecoveryConflictWinner");
+      }
+      return {
+        ...loaded,
+        recovery: {
+          status: "deferred",
+          code: stored?.code ?? "formalDefaultIdentityRecoveryRejected",
+          message: stored?.message ?? "The prior formal default identity could not be recovered.",
+          details: stored ?? null
+        }
+      };
+    } catch (error) {
+      return {
+        ...loaded,
+        recovery: {
+          status: "deferred",
+          code: error?.code ?? "formalDefaultIdentityRecoveryFailed",
+          message: error?.message ?? String(error),
+          details: error ?? null
+        }
+      };
+    }
+  }
+
   async bootstrap() {
     try {
       await this.ensureContext();
       if (typeof this.invoke !== "function") {
         this.acceptSnapshot(createDefaultPosterSnapshot({
           title: this.title,
+          subtitle: this.subtitle,
           primaryWorkArea: this.primaryWorkArea
         }));
         return this.ready("browserPreviewEphemeral");
       }
 
       const loaded = await this.loadLatest();
+      if (loaded.status === "ready") return this.recoverPriorFormalDefault(loaded);
       if (loaded.status !== "noData") return loaded;
 
       const source = await inspectLegacyPosterSource(this.storage, this.invoke);
@@ -310,6 +399,7 @@ export class PosterStateClient {
 
       const snapshot = createDefaultPosterSnapshot({
         title: this.title,
+        subtitle: this.subtitle,
         primaryWorkArea: this.primaryWorkArea
       });
       return this.createEmptyState(snapshot, "formalDefault");
@@ -374,6 +464,7 @@ export class PosterStateClient {
       await this.ensureContext();
       const next = createDefaultPosterSnapshot({
         title: this.title,
+        subtitle: this.subtitle,
         primaryWorkArea: this.primaryWorkArea
       });
       if (typeof this.invoke !== "function") {

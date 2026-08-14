@@ -153,7 +153,8 @@ export function createRuntimeState(snapshot) {
     hostSurface: snapshot?.hostSurface ?? null,
     displayTopology: snapshot?.displayTopology ?? null,
     hostTopology: snapshot?.hostTopology ?? null,
-    desktopHost: snapshot?.desktopHost ?? null
+    desktopHost: snapshot?.desktopHost ?? null,
+    controlCenter: snapshot?.controlCenter ?? null
   };
 }
 
@@ -202,7 +203,8 @@ export function buildRuntimeSnapshot(state) {
     hostSurface: state.hostSurface,
     displayTopology: state.displayTopology,
     hostTopology: state.hostTopology,
-    desktopHost: state.desktopHost
+    desktopHost: state.desktopHost,
+    controlCenter: state.controlCenter
   };
 }
 
@@ -279,7 +281,9 @@ export function applyPosterAction(state, action) {
         hostSurface: raw.hostSurface ?? state.hostSurface,
         displayTopology: raw.displayTopology ?? state.displayTopology,
         hostTopology: raw.hostTopology ?? state.hostTopology,
-        desktopHost: raw.desktopHost ?? state.desktopHost
+        desktopHost: raw.desktopHost ?? state.desktopHost,
+        controlCenter: raw.controlCenter ?? state.controlCenter,
+        taskbarRecovery: raw.taskbarRecovery ?? state.taskbarRecovery
       };
     }
     case "selectPoster":

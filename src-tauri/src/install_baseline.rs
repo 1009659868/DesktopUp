@@ -64,11 +64,7 @@ impl InstallBaselineContract {
             elevation_required: false,
             install_root: INSTALL_ROOT,
             mutable_install_writes_allowed: false,
-            required_install_entries: vec![
-                "DesktopUp.exe",
-                "uninstall.exe",
-                "resources/",
-            ],
+            required_install_entries: vec!["DesktopUp.exe", "uninstall.exe", "resources/"],
             target_data_root: TARGET_DATA_ROOT,
             current_runtime_root: CURRENT_RUNTIME_ROOT,
             current_runtime_root_writable_until_migration: true,

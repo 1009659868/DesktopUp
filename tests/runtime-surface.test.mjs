@@ -11,6 +11,7 @@ import { POSTER_STATE_LOAD_COMMAND } from "../app/src/poster-state-store.js";
 const tauriConfig = JSON.parse(readFileSync("src-tauri/tauri.conf.json", "utf8"));
 const controlCenterRuntime = readFileSync("app/src/main.js", "utf8");
 const nativeRuntime = readFileSync("src-tauri/src/lib.rs", "utf8");
+const performanceGateRuntime = readFileSync("src-tauri/src/performance_gate.rs", "utf8");
 const desktopHostRuntime = readFileSync("src-tauri/src/desktop_host.rs", "utf8");
 const posterSurfaceRuntime = readFileSync("app/src/poster-surface.js", "utf8");
 const releaseExe = "src-tauri/target/release/DesktopUp.exe";
@@ -41,9 +42,9 @@ test("cold start creates only the poster WebView and defers the control center",
     /std::thread::spawn(move || run_main_window_action(app, action))/
   );
   assert.match(nativeRuntime, /struct MainWindowCoordinator/);
-  assert.match(nativeRuntime, /pending_controls: Mutex<Vec<String>>/);
+  assert.match(nativeRuntime, /lifecycle: ControlCenterLifecycle/);
   assert.match(nativeRuntime, /fn mark_main_window_ready/);
-  assert.match(nativeRuntime, /PageLoadEvent::Finished/);
+  assert.match(nativeRuntime, /fn mark_control_center_ready/);
   assert.equal(
     poster.visible,
     false,
@@ -90,6 +91,39 @@ test("native style changes cannot restore a Windows caption after cold start", (
   const desktopHost = readFileSync("src-tauri/src/desktop_host.rs", "utf8");
   assert.match(desktopHost, /WM_STYLECHANGING/);
   assert.match(desktopHost, /strip_non_client_decoration_styles\(style\.styleNew\)/);
+});
+
+test("poster drag stays on the desktop layer without entering the Windows system move loop", () => {
+  const commandPath = nativeRuntime.match(
+    /fn start_poster_drag[\s\S]*?\n}/
+  )?.[0];
+  assert.ok(commandPath, "the Tauri poster drag command must exist");
+  assert.match(commandPath, /desktop_host::start_poster_drag\(&window\)/);
+  assert.doesNotMatch(commandPath, /\.start_dragging\(/);
+
+  const nativeDragPath = desktopHostRuntime.match(
+    /pub fn start_poster_drag[\s\S]*?fn repair_tool_window_during_shell_transition/
+  )?.[0];
+  assert.ok(nativeDragPath, "the native desktop-layer drag transaction must exist");
+  assert.match(nativeDragPath, /POSTER_DRAG_STATE/);
+  assert.match(nativeDragPath, /move_active_poster_drag/);
+  assert.match(nativeDragPath, /z_order_anchor/);
+  assert.match(nativeDragPath, /SWP_NOSIZE \| SWP_NOACTIVATE \| SWP_ASYNCWINDOWPOS/);
+  assert.match(nativeDragPath, /PostMessageW\(Some\(hwnd\), WM_POSTER_DRAG_FINISHED/);
+
+  const mouseHookPath = desktopHostRuntime.match(
+    /unsafe extern "system" fn input_mouse_hook[\s\S]*?fn run_input_mouse_hook/
+  )?.[0];
+  assert.ok(mouseHookPath, "the low-level mouse hook must own native drag movement");
+  assert.match(mouseHookPath, /message == WM_MOUSEMOVE[\s\S]*?move_active_poster_drag/);
+  assert.match(mouseHookPath, /message == WM_LBUTTONUP[\s\S]*?finish_active_poster_drag/);
+
+  const dragFinishPath = desktopHostRuntime.match(
+    /if message == WM_POSTER_DRAG_FINISHED[\s\S]*?return LRESULT\(0\);/
+  )?.[0];
+  assert.ok(dragFinishPath, "drag completion must restore the poster frame on its window thread");
+  assert.match(dragFinishPath, /enforce_poster_window_frame\(hwnd\)/);
+  assert.match(desktopHostRuntime, /reapply_existing_window_region\(hwnd\)/);
 });
 
 test("collapse and expand preserve the current poster top-left after initial sync", () => {
@@ -322,14 +356,20 @@ test("runtime lifecycle uses one lock-safe event and state-first visibility path
   assert.doesNotMatch(layerSettlePath, /while\s*\(/);
 
   const quitPath = nativeRuntime.match(
-    /"quit" => \{[\s\S]*?app\.exit\(0\);/
+    /fn prepare_runtime_exit[\s\S]*?\n\}/
   )?.[0];
-  assert.ok(quitPath, "tray exit route must exist");
-  assert.ok(
-    quitPath.indexOf("begin_runtime_exit")
-      < quitPath.indexOf("app.exit(0)"),
-    "exit lifecycle must publish before the process exits"
-  );
+  assert.ok(quitPath, "unified runtime exit preparation must exist");
+  const orderedExitSteps = [
+    "begin_runtime_exit",
+    "desktop_host::begin_exit",
+    "taskbar_recovery::begin_exit",
+    "store.flush",
+    "window.destroy",
+    "remove_tray_icon"
+  ].map((step) => quitPath.indexOf(step));
+  assert.ok(orderedExitSteps.every((index) => index >= 0));
+  assert.deepEqual([...orderedExitSteps].sort((a, b) => a - b), orderedExitSteps);
+  assert.match(nativeRuntime, /"quit" => request_runtime_exit\(app, "trayExit", 0\)/);
   assert.match(nativeRuntime, /tauri::RunEvent::ExitRequested/);
   assert.match(posterSurfaceRuntime, /listen\("runtime-state-changed"/);
   assert.doesNotMatch(posterSurfaceRuntime, /listen\("runtime-pause-state"/);
@@ -352,7 +392,8 @@ test("static paused and stopped surfaces do not keep a render polling loop", () 
 });
 
 test("release performance gate only starts from an explicit diagnostic argument", () => {
-  assert.match(nativeRuntime, /--cdrp-performance-gate/);
+  assert.match(performanceGateRuntime, /PERFORMANCE_GATE_ARGUMENT: &str = "--cdrp-performance-gate"/);
+  assert.match(nativeRuntime, /argument == PERFORMANCE_GATE_ARGUMENT/);
   assert.match(nativeRuntime, /fn performance_probe_requested\(\)/);
   assert.match(nativeRuntime, /fn start_release_performance_probe/);
   assert.match(nativeRuntime, /performance-baseline-v4\.json/);
@@ -360,7 +401,10 @@ test("release performance gate only starts from an explicit diagnostic argument"
   assert.match(nativeRuntime, /private_working_set_bytes/);
   assert.match(nativeRuntime, /process_tree_private_working_set_bytes/);
   assert.match(nativeRuntime, /process_tree_measurement_complete/);
-  assert.match(nativeRuntime, /app\.exit\(if report\.passed \{ 0 \} else \{ 2 \}\)/);
+  assert.match(
+    nativeRuntime,
+    /request_runtime_exit\([\s\S]*"performanceGateExit"[\s\S]*if report\.passed \{ 0 \} else \{ 2 \}/
+  );
 });
 test("release executable uses the Windows GUI subsystem", { skip: !existsSync(releaseExe) }, () => {
   const pe = readFileSync(releaseExe);

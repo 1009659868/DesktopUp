@@ -46,7 +46,11 @@ test("autostart remains opt-in and owned by C-RLC", () => {
   assert.match(baseline, /autostart_implementation_owner: "C-RLC"/);
   assert.match(
     nativeRuntime,
-    /with_id\("autostart", "开机自启（A1 接入）"\)[\s\S]*?\.enabled\(false\)/
+    /CheckMenuItemBuilder::with_id\([\s\S]*?"autostart",[\s\S]*?autostart_tray_label/
+  );
+  assert.match(
+    nativeRuntime,
+    /\.enabled\(autostart_control_available\(&autostart_snapshot\)\)/
   );
 });
 
