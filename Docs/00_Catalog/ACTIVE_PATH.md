@@ -6,7 +6,7 @@
 | --- | --- | --- | --- |
 | A | DesktopUP V1 落地计划 / V1-P2 | `A_Project/10_Plan/DESKTOPUP_V1_IMPLEMENTATION_PLAN.md` | `ACTIVE — V1-P2` |
 | B | Poster Core Runtime | `B_Modules/PosterCoreRuntime/30_Sync/CURRENT_HANDOFF.md` | `ACTIVE — C-PSI` |
-| C | Poster State and Interaction / C-PSI | `C_Workstreams/PosterStateInteraction/30_Sync/CURRENT_HANDOFF.md` | `ACTIVE — C-PSI-02 AUTHORITY` |
+| C | Poster State and Interaction / C-PSI | `C_Workstreams/PosterStateInteraction/30_Sync/CURRENT_HANDOFF.md` | `ACTIVE — C-PSI-03 GEOMETRY` |
 
 ## 当前接手链
 
@@ -61,13 +61,13 @@ C-DRP（COMPLETE）
 → C-PSS（COMPLETE）
 → C-IBC（COMPLETE）
 → C-RLC（COMPLETE）
-→ C-LST（COMPLETE — ABSORBED AND AUDITED）→ C-PSI-01（COMPLETE）→ C-PSI-02（ACTIVE）
+→ C-LST（COMPLETE — ABSORBED AND AUDITED）→ C-PSI-01..02（COMPLETE）→ C-PSI-03（ACTIVE）
 → C-CIM（ADVANCE PLAN READY；正式 Item 契约、仓库与数据驱动投影）
 → C-ROD / C-PAA / C-LCH（Usable MVP）
 → C-PCRG（Poster + Item 整合 Release 门）
 → C-SVT / C-RCV（Safe Collection MVP）
 ```
 
-C-LST 已完成既有实现吸收审计并关闭。C-PSI-01 已冻结 PASS/GAP 矩阵且未修改生产代码，当前 C-PSI-02 只实现权限接入、pending mutation 保留和暂停原因分流。C-PSI 关闭后立即进入已提前规划的 C-CIM，让硬编码演示卡片退出正式路径。主屏单海报仍是唯一发布认证范围；不得把 C-PSI 激活解释为多显示器、真实 Item、真实导入或最终安装/卸载认证完成。
+C-LST 已完成既有实现吸收审计并关闭。C-PSI-01 已冻结 PASS/GAP 矩阵；C-PSI-02 已关闭权限接入、pending/retained mutation 保留和暂停原因分流缺口。当前 C-PSI-03 只处理移动、缩放、动态尺寸边界与非法编辑组合 fail closed。C-PSI 关闭后立即进入已提前规划的 C-CIM，让硬编码演示卡片退出正式路径。主屏单海报仍是唯一发布认证范围；不得把 C-PSI 激活解释为多显示器、真实 Item、真实导入或最终安装/卸载认证完成。
 
 2026-08-08 在 `impl/poster-redesign-V1-fix` 完成关闭后维护修复并合入 `impl/poster-redesign-V1`：统一 Dev/Release 海报快照，修正锁定与尺寸包络、托盘快捷入口、任务栏契约、桌面 Z 序和顶部亮带；这些结论作为 C-DRP 输入，不把 M1 标记为完成。

@@ -35,7 +35,7 @@
 | --- | --- | --- | --- | --- |
 | V1-P0 | 关闭桌面宿主遗留硬门 | Desktop Runtime Foundation | C-DHF-04..08 全部形成 PASS、接受回退或明确阻塞结论 | `COMPLETE` |
 | V1-P1 | 生产宿主、核心契约与数据基线 | Desktop Runtime Foundation、Poster Core Runtime、Distribution Lifecycle | 单全局宿主接口、单状态源、版本化 SQLite 仓库、运行生命周期和安装/数据目录契约通过 | `COMPLETE — C-RLC CLOSED` |
-| V1-P2 | 建立可承载 Item 的透明海报核心 | Poster Core Runtime | Transparent Default、大幅面、展开/收起、锁定、暂停和交互基线通过；整合 Release 门后移至 V1-P3 | `ACTIVE — C-PSI-02 AUTHORITY` |
+| V1-P2 | 建立可承载 Item 的透明海报核心 | Poster Core Runtime | Transparent Default、大幅面、展开/收起、锁定、暂停和交互基线通过；整合 Release 门后移至 V1-P3 | `ACTIVE — C-PSI-03 GEOMETRY` |
 | V1-P3 | 交付数据驱动 Item、“仅添加 + 真实启动”可用 MVP | Collection and Launch、Poster Core Runtime | 正式 Item 契约/仓库/投影、主动只读发现、逐项预览、仅添加、真实启动和整合 Release 门通过；不移动用户文件 | `PLANNED` |
 | V1-P4 | 交付安全收纳 MVP | Collection and Launch | 保险库、两阶段账本、安全收纳、撤销、异常恢复和卸载恢复接口通过 | `PLANNED` |
 | V1-P5 | 建立模板平台并交付首发模板 | Template Platform | Shadow DOM、安全 fallback、三模板、热切换和完整模板安装通过 | `PLANNED` |
@@ -85,7 +85,7 @@
 | C-PCB Poster Contract Baseline | 冻结状态 schema、宿主/海报边界、窗口几何所有权、默认快照和失败回退行为测试 | C-DRP | `COMPLETE` |
 | C-PSS Poster State Store | 版本化 SQLite schema、迁移、仓库接口和过渡 JSON 桥接替换 | C-PCB | `COMPLETE — USER RELEASE RECOVERY PASS` |
 | [`C-LST Large Surface and Transparency`](../../C_Workstreams/LargeSurfaceTransparency/10_Plan/WORKSTREAM_PLAN.md) | 主屏右侧大幅面透明海报、稳定透明背景与位置恢复；优先审计并吸收既有实现 | C-PSS, C-DRP | `COMPLETE — ABSORBED AND AUDITED` |
-| [`C-PSI Poster State and Interaction`](../../C_Workstreams/PosterStateInteraction/10_Plan/WORKSTREAM_PLAN.md) | EXPANDED/COLLAPSED、USING/EDITING、锁定、标题栏拖动、海报框拉伸（含最小/最大尺寸限制）、命中区域和暂停同步 | C-LST | `ACTIVE — C-PSI-02 AUTHORITY` |
+| [`C-PSI Poster State and Interaction`](../../C_Workstreams/PosterStateInteraction/10_Plan/WORKSTREAM_PLAN.md) | EXPANDED/COLLAPSED、USING/EDITING、锁定、标题栏拖动、海报框拉伸（含最小/最大尺寸限制）、命中区域和暂停同步 | C-LST | `ACTIVE — C-PSI-03 GEOMETRY` |
 | C-PCRG Poster + Item Integration Release Gate | 使用正式 Item 仓库与真实启动链执行 Debug/Release、Windows 矩阵和核心性能封板 | C-PSI, C-LCH | `PLANNED AFTER USABLE MVP` |
 
 ### B-TPL：Template Platform
@@ -157,7 +157,7 @@
 A: DESKTOPUP_V1_IMPLEMENTATION_PLAN / V1-P2
 ├─ COMPLETE: Desktop Runtime Foundation / C-RLC
 ├─ COMPLETE: Distribution Lifecycle input / C-IBC
-└─ ACTIVE: Poster Core Runtime / C-PSI-02（AUTHORITY）
+└─ ACTIVE: Poster Core Runtime / C-PSI-03（GEOMETRY）
 ```
 
 当前推进顺序：
@@ -168,7 +168,7 @@ C-DRP 单全局生产宿主
 → C-PSS 版本化状态仓库（COMPLETE）
 → C-IBC 安装/数据目录早期契约（COMPLETE）
 → C-RLC 运行生命周期（COMPLETE）
-→ C-LST 既有实现吸收审计（COMPLETE）→ C-PSI-01 审计（COMPLETE）→ C-PSI-02 状态权威（ACTIVE）
+→ C-LST 既有实现吸收审计（COMPLETE）→ C-PSI-01 审计（COMPLETE）→ C-PSI-02 状态权威（COMPLETE）→ C-PSI-03 几何边界（ACTIVE）
 → C-CIM 正式 Item 契约、仓库与数据驱动投影
 → C-ROD / C-PAA / C-LCH 可用 MVP
 → C-PCRG Poster + Item 整合 Release 门
@@ -177,7 +177,7 @@ C-DRP 单全局生产宿主
 
 C-RLC 关闭后按 `C-LST 吸收审计 → C-PSI 剩余项收敛 → C-CIM → C-ROD → C-PAA → C-LCH → C-PCRG` 推进；C-LST 不重复实现既有 PASS，C-CIM 只使用隔离夹具和应用自有 SQLite，不扫描桌面、不移动用户文件。
 
-`C-DHF-01..08`、`C-DRP-01..06`、`C-PCB-01..05`、`C-PSS-01..05`、`C-IBC-01..05`、`C-RLC-01..06`、C-LST-01..03 与 C-PSI-01 已关闭；V1-P1 完成，当前激活 V1-P2/C-PSI-02。C-CIM 的提前计划包已经建立。发布认证范围仍限制为主屏单海报，多显示器/DPI/热插拔未认证；净机安装和恢复型卸载仍不视为最终通过。控制中心 legacy 视觉参数回弹归后继 Template Platform 参数权威，不重开 C-PSS。
+`C-DHF-01..08`、`C-DRP-01..06`、`C-PCB-01..05`、`C-PSS-01..05`、`C-IBC-01..05`、`C-RLC-01..06`、C-LST-01..03 与 C-PSI-01..02 已关闭；V1-P1 完成，当前激活 V1-P2/C-PSI-03。C-CIM 的提前计划包已经建立。发布认证范围仍限制为主屏单海报，多显示器/DPI/热插拔未认证；净机安装和恢复型卸载仍不视为最终通过。控制中心 legacy 视觉参数回弹归后继 Template Platform 参数权威，不重开 C-PSS。
 
 ## 7. 性能预算与迁移门
 

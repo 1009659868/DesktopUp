@@ -2,7 +2,7 @@
 
 最后更新：2026-08-14
 
-状态：`ACTIVE — C-PSI-02 AUTHORITY`
+状态：`ACTIVE — C-PSI-03 GEOMETRY`
 
 ## 已建立
 
@@ -19,8 +19,8 @@
 
 ## 后继路线
 
-- C-IBC、C-RLC、C-LST 与 C-PSI-01 已关闭；审计矩阵已冻结 7 组 PASS 和 7 个真实 GAP，当前执行 C-PSI-02；
-- C-PSI-02..04 只补矩阵登记缺口；通过后转入 B-COL/C-CIM，让正式 Item 契约、仓库和数据驱动投影替代演示卡片，再推进 C-ROD/C-PAA/C-LCH；
+- C-IBC、C-RLC、C-LST 与 C-PSI-01..02 已关闭；权限接入、失败保留与暂停分流已经自动化通过，当前执行 C-PSI-03；
+- C-PSI-03..04 只补矩阵登记缺口；通过后转入 B-COL/C-CIM，让正式 Item 契约、仓库和数据驱动投影替代演示卡片，再推进 C-ROD/C-PAA/C-LCH；
 - C-LCH 通过后返回 C-PCRG，用正式 Item 与真实启动链封板；
 - C-PSS 已完成并同步；当前不得重新打开 Poster 状态 authority 或扩大多海报范围。
 

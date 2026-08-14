@@ -26,7 +26,7 @@ import {
   createRuntimeState,
   isRuntimeSuspended,
   runtimeMode,
-  posterInteractionMode,
+  resolveRuntimePosterPermissions,
   selectedPoster as runtimeSelectedPoster
 } from "./poster-runtime.js";
 import {
@@ -125,18 +125,34 @@ async function loadState() {
 }
 
 function saveState() {
-  void posterState.saveRuntimeState(state).then((result) => {
-    if (result?.status === "rejected") {
-      document.body.dataset.posterStateStatus = "rejected";
+  const saving = posterState.saveRuntimeState(state);
+  syncPosterStateStatus();
+  void saving.then((result) => {
+    if (!["stored", "noChange", "ephemeral"].includes(result?.status)) {
+      syncPosterStateStatus("rejected");
       showToast("海报状态保存失败，原状态已保留");
-    } else if (result?.status === "stored") {
-      document.body.dataset.posterStateStatus = "ready";
+    } else {
+      syncPosterStateStatus();
     }
   });
 }
 
 function selectedPoster() {
   return runtimeSelectedPoster(state);
+}
+
+function permissionDecisionForPoster(poster) {
+  const result = resolveRuntimePosterPermissions(state, poster, document.hidden);
+  return result.ok ? result.value : null;
+}
+
+function syncPosterStateStatus(fallback = "ready") {
+  const localStatus = posterState.localMutationStatus();
+  document.body.dataset.posterStateStatus = localStatus === "pending"
+    ? "pending"
+    : localStatus === "retained"
+      ? "rejected-retained"
+      : fallback;
 }
 
 function editorGeometryContext() {
@@ -363,15 +379,19 @@ posterLayer.addEventListener("click", (event) => {
   selectPoster(id);
 
   const action = event.target.closest("[data-action]")?.dataset.action;
+  const poster = state.posters.find((entry) => entry.id === id);
+  const decision = permissionDecisionForPoster(poster);
+  if (!poster || !decision) return;
+  const permissions = decision.permissions;
   if (action === "launch") {
-    const poster = state.posters.find((entry) => entry.id === id);
     const tile = event.target.closest('[data-action="launch"]');
     const item = poster?.items[Number(tile?.dataset.itemIndex)];
     if (!item) return;
     window.clearTimeout(launchClickTimer);
-    if (posterInteractionMode(state, poster) === "editing") {
+    if (decision.effectiveInteractionMode === "editing") {
+      if (!permissions.selectItem) return;
       if (event.detail === 1) showToast(`${item.title} 已选中，可继续排序或编辑`);
-    } else if (event.detail === 1) {
+    } else if (permissions.singleActivateItem && event.detail === 1) {
       launchClickTimer = window.setTimeout(() => {
         showToast(`Demo：准备启动 ${item.title}`);
       }, 400);
@@ -379,12 +399,12 @@ posterLayer.addEventListener("click", (event) => {
     return;
   }
   if (action === "collapse") {
-    const poster = state.posters.find((entry) => entry.id === id);
+    if (!permissions.togglePresentation) return;
     updatePoster(id, { collapsed: !poster.collapsed });
     showToast(poster.collapsed ? "海报已展开" : "海报已收起");
   }
   if (action === "lock") {
-    const poster = state.posters.find((entry) => entry.id === id);
+    if (!permissions.toggleLock) return;
     updatePoster(id, { locked: !poster.locked });
     showToast(poster.locked ? "海报位置已解锁" : "海报位置已锁定");
   }
@@ -395,6 +415,8 @@ posterLayer.addEventListener("dblclick", (event) => {
   if (!tile) return;
   window.clearTimeout(launchClickTimer);
   const poster = state.posters.find((entry) => entry.id === tile.dataset.posterId);
+  const decision = permissionDecisionForPoster(poster);
+  if (!decision?.permissions.explicitActivateItem) return;
   const item = poster?.items[Number(tile.dataset.itemIndex)];
   if (item) showToast(`Demo：准备启动 ${item.title}，并标记为最近活跃`);
 });
@@ -406,14 +428,20 @@ posterLayer.addEventListener("pointerdown", (event) => {
   if (!state.editMode) return;
 
   const poster = state.posters.find((entry) => entry.id === posterElement.dataset.posterId);
+  const decision = permissionDecisionForPoster(poster);
+  if (!decision) return;
   const isResize = Boolean(event.target.closest("[data-resize-handle]"));
   const isDrag = Boolean(event.target.closest("[data-drag-handle]"));
   if (event.target.closest("button") && !isResize) return;
   if (!isResize && !isDrag) return;
-  if (poster.locked) {
+  const allowed = isResize
+    ? decision.permissions.resizePoster
+    : decision.permissions.dragFromTitlebar;
+  if (!allowed && poster.locked && decision.runtimeInteractive) {
     showToast("该海报位置已锁定，请先点击标题栏锁按钮");
     return;
   }
+  if (!allowed) return;
 
   event.preventDefault();
   event.target.setPointerCapture?.(event.pointerId);
@@ -598,7 +626,7 @@ async function connectNativeControls() {
         value: editMode
       });
       state = applyPosterAction(state, { type: "setManualPaused", value: manuallyPaused });
-      document.body.dataset.posterStateStatus = "ready";
+      syncPosterStateStatus();
       render();
     });
     await listen("runtime-control", (event) => {

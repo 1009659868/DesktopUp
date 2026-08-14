@@ -10,6 +10,8 @@ import {
   createRuntimeState,
   isRuntimeSuspended,
   measuredInteractionRegion,
+  posterInputRuntimeMode,
+  resolveRuntimePosterPermissions,
   runtimeMode,
   posterInteractionMode,
   posterSnapshot,
@@ -47,6 +49,82 @@ test("edit mode is derived from the shared interaction contract", () => {
     patch: { locked: true }
   });
   assert.equal(posterInteractionMode(state), "using", "locked posters stay in USING");
+});
+test("poster input permissions separate effect pause from system unavailability", () => {
+  const base = createLegacyDefaultSnapshot();
+  base.posters[0].locked = false;
+  const manuallyPaused = createRuntimeState({
+    ...base,
+    editMode: true,
+    performanceMode: "auto",
+    runtimeLifecycle: {
+      contractVersion: 1,
+      generation: 1,
+      eventCount: 1,
+      phase: "running",
+      mode: "paused",
+      manuallyPaused: true,
+      automaticallyPaused: false,
+      effectivePaused: true,
+      posterVisible: true,
+      hostSurfaceReady: true,
+      pauseReasons: [],
+      lastTrigger: "manualPause"
+    }
+  });
+
+  assert.equal(runtimeMode(manuallyPaused), "paused", "rendering remains paused");
+  assert.equal(posterInputRuntimeMode(manuallyPaused), "activeStatic");
+  const manualDecision = resolveRuntimePosterPermissions(manuallyPaused);
+  assert.equal(manualDecision.ok, true);
+  assert.equal(manualDecision.value.effectiveInteractionMode, "editing");
+  assert.equal(manualDecision.value.permissions.togglePresentation, true);
+  assert.equal(manualDecision.value.permissions.toggleLock, true);
+  assert.equal(manualDecision.value.permissions.resizePoster, true);
+
+  const automaticallyPaused = createRuntimeState({
+    ...base,
+    editMode: true,
+    runtimeLifecycle: {
+      ...manuallyPaused.runtimeLifecycle,
+      generation: 2,
+      automaticallyPaused: true,
+      pauseReasons: ["fullscreenForeground"],
+      lastTrigger: "runtimeMonitor"
+    }
+  });
+  assert.equal(posterInputRuntimeMode(automaticallyPaused), "paused");
+  assert.equal(
+    Object.values(resolveRuntimePosterPermissions(automaticallyPaused).value.permissions)
+      .every((allowed) => allowed === false),
+    true
+  );
+  assert.equal(posterInputRuntimeMode(manuallyPaused, true), "paused");
+
+  const unavailable = createRuntimeState({
+    ...base,
+    runtimeLifecycle: {
+      ...manuallyPaused.runtimeLifecycle,
+      generation: 3,
+      mode: "stopped",
+      hostSurfaceReady: false,
+      manuallyPaused: false,
+      effectivePaused: false,
+      lastTrigger: "surfaceDestroyed"
+    }
+  });
+  assert.equal(posterInputRuntimeMode(unavailable), "stopped");
+
+  let lockedEditing = applyPosterAction(manuallyPaused, {
+    type: "patchPoster",
+    posterId: "night-ops",
+    patch: { locked: true }
+  });
+  const lockedDecision = resolveRuntimePosterPermissions(lockedEditing);
+  assert.equal(lockedDecision.value.effectiveInteractionMode, "using");
+  assert.equal(lockedDecision.value.permissions.dragFromTitlebar, false);
+  assert.equal(lockedDecision.value.permissions.toggleLock, true);
+  assert.equal(lockedDecision.value.permissions.singleActivateItem, true);
 });
 
 test("lock and collapse actions are shared state transitions", () => {

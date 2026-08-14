@@ -2,7 +2,7 @@
 
 日期：2026-08-14
 
-状态：`ACTIVE — C-PSI-02 AUTHORITY`
+状态：`ACTIVE — C-PSI-03 GEOMETRY`
 
 ## 1. 目的
 
@@ -34,8 +34,8 @@
 | 任务 | 可验证结果 | 状态 |
 | --- | --- | --- |
 | C-PSI-01 现状审计与矩阵冻结 | 将既有实现映射到状态/权限矩阵，只列真实缺口 | `COMPLETE` |
-| C-PSI-02 状态权威与失败保留 | USING/EDITING、锁定、收起和暂停由正式快照/运行时快照统一，CAS 失败不回弹 | `IN PROGRESS` |
-| C-PSI-03 移动、缩放与尺寸边界 | 编辑权限、原生几何、控制中心投影和显式 min/max 约束一致 | `PLANNED` |
+| C-PSI-02 状态权威与失败保留 | USING/EDITING、锁定、收起和暂停由正式快照/运行时快照统一，CAS 失败不回弹 | `COMPLETE` |
+| C-PSI-03 移动、缩放与尺寸边界 | 编辑权限、原生几何、控制中心投影和显式 min/max 约束一致 | `IN PROGRESS` |
 | C-PSI-04 命中、标题栏与运行时同步 | 空白、标题栏、控件、Item 区域以及 pause/visibility 状态无冲突 | `PLANNED` |
 | C-PSI-05 Release 交互门与 C-CIM 交接 | 自动化和主屏人工矩阵通过，形成正式 Item 投影输入 | `PLANNED` |
 

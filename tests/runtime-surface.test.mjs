@@ -178,6 +178,19 @@ test("native host preserves the visual silhouette while blank poster areas pass 
   assert.match(posterSurfaceRuntime, /event\.preventDefault\(\)/);
 });
 
+test("native input regions consume PSI permissions and close during system unavailability", () => {
+  assert.match(posterSurfaceRuntime, /resolveRuntimePosterPermissions/);
+  assert.match(posterSurfaceRuntime, /if \(!decision\?\.runtimeInteractive\) return \[\]/);
+  assert.match(posterSurfaceRuntime, /permissions\.singleActivateItem/);
+  assert.match(posterSurfaceRuntime, /permissions\.togglePresentation/);
+  assert.match(posterSurfaceRuntime, /permissions\.toggleLock/);
+  assert.match(posterSurfaceRuntime, /permissions\.dragFromTitlebar/);
+  assert.match(posterSurfaceRuntime, /permissions\.explicitActivateItem/);
+  assert.match(posterSurfaceRuntime, /function applyRuntimePauseState[\s\S]*?scheduleNativeSurfaceSync\(\)/);
+  assert.match(posterSurfaceRuntime, /posterState\.localMutationStatus\(\)/);
+  assert.match(posterSurfaceRuntime, /rejected-retained/);
+});
+
 test("desktop recovery funnels native and manual triggers through one coordinator", () => {
   const desktopHost = readFileSync("src-tauri/src/desktop_host.rs", "utf8");
   assert.match(desktopHost, /recovery_count: u64/);

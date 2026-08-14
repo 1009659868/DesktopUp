@@ -53,6 +53,69 @@ function sameJsonValue(left, right) {
   return leftKeys.length === rightKeys.length
     && leftKeys.every((key) => Object.hasOwn(right, key) && sameJsonValue(left[key], right[key]));
 }
+const RUNTIME_MUTABLE_POSTER_FIELDS = Object.freeze([
+  "title",
+  "subtitle",
+  "normalizedRect",
+  "width",
+  "height",
+  "collapsedState",
+  "autoCollapseEnabled",
+  "isLocked",
+  "layoutSpec",
+  "templateKey"
+]);
+
+function prepareRuntimeMutation(snapshot, runtime, { primaryWorkArea } = {}) {
+  const projection = projectRuntimeToPosterState(snapshot, runtime, { primaryWorkArea });
+  if (!projection.ok) return projection;
+  const currentPoster = snapshot.posters[0];
+  const nextPoster = projection.snapshot.posters[0];
+  const fields = {};
+  for (const field of RUNTIME_MUTABLE_POSTER_FIELDS) {
+    if (!sameJsonValue(currentPoster[field], nextPoster[field])) {
+      fields[field] = cloneJson(nextPoster[field]);
+    }
+  }
+  const selectedPosterId = snapshot.selectedPosterId === projection.snapshot.selectedPosterId
+    ? null
+    : projection.snapshot.selectedPosterId;
+  return {
+    ok: true,
+    errors: [],
+    overlay: {
+      posterId: nextPoster.id,
+      fields,
+      selectedPosterId
+    },
+    empty: Object.keys(fields).length === 0 && selectedPosterId == null
+  };
+}
+
+function applyRuntimeMutation(snapshot, mutation) {
+  const next = cloneJson(snapshot);
+  const poster = next.posters.find((entry) => entry.id === mutation.overlay.posterId);
+  if (!poster) {
+    return {
+      ok: false,
+      snapshot: null,
+      errors: [{
+        code: "mutation_poster_unavailable",
+        message: "The pending poster mutation no longer has a target."
+      }]
+    };
+  }
+  Object.assign(poster, cloneJson(mutation.overlay.fields));
+  if (mutation.overlay.selectedPosterId != null) {
+    next.selectedPosterId = mutation.overlay.selectedPosterId;
+  }
+  const validation = validatePosterSnapshot(next);
+  return {
+    ok: validation.ok,
+    snapshot: validation.value,
+    errors: validation.errors
+  };
+}
 
 export function isRecognizedPriorFormalDefault(snapshot, { primaryWorkArea } = {}) {
   const validation = validatePosterSnapshot(snapshot);
@@ -228,6 +291,9 @@ export class PosterStateClient {
     this.primaryWorkArea = primaryWorkArea ?? null;
     this.title = title;
     this.subtitle = subtitle;
+    this.mutationSequence = 0;
+    this.pendingMutations = new Map();
+    this.retainedMutation = null;
     this.snapshot = null;
     this.mutationQueue = Promise.resolve();
   }
@@ -249,14 +315,35 @@ export class PosterStateClient {
   acceptSnapshot(snapshot) {
     const validation = validatePosterSnapshot(snapshot);
     if (!validation.ok) return false;
+    if (this.snapshot && validation.value.revision < this.snapshot.revision) return false;
+    if (this.snapshot
+        && validation.value.revision === this.snapshot.revision
+        && !sameJsonValue(validation.value, this.snapshot)) {
+      return false;
+    }
     this.snapshot = validation.value;
     return true;
   }
 
+  latestLocalMutation() {
+    let latest = this.retainedMutation;
+    for (const mutation of this.pendingMutations.values()) {
+      if (!latest || mutation.sequence > latest.sequence) latest = mutation;
+    }
+    return latest;
+  }
+
+  localMutationStatus() {
+    if (this.pendingMutations.size > 0) return "pending";
+    return this.retainedMutation ? "retained" : "none";
+  }
+
   runtimeSnapshot() {
-    return this.snapshot
-      ? projectPosterStateToRuntime(this.snapshot, { primaryWorkArea: this.primaryWorkArea })
-      : createEphemeralPosterRuntimeSnapshot();
+    if (!this.snapshot) return createEphemeralPosterRuntimeSnapshot();
+    const mutation = this.latestLocalMutation();
+    const applied = mutation ? applyRuntimeMutation(this.snapshot, mutation) : null;
+    const snapshot = applied?.ok ? applied.snapshot : this.snapshot;
+    return projectPosterStateToRuntime(snapshot, { primaryWorkArea: this.primaryWorkArea });
   }
 
   ready(origin) {
@@ -410,34 +497,78 @@ export class PosterStateClient {
 
   saveRuntimeState(runtime) {
     const frozenRuntime = cloneJson(runtime);
+    if (!this.snapshot) {
+      return Promise.resolve(rejected("posterStateNotReady", "Poster state has not loaded."));
+    }
+    const prepared = prepareRuntimeMutation(this.snapshot, frozenRuntime, {
+      primaryWorkArea: this.primaryWorkArea
+    });
+    if (!prepared.ok) {
+      return Promise.resolve(rejected(
+        "runtimeProjectionRejected",
+        "Runtime state cannot be persisted.",
+        prepared.errors
+      ));
+    }
+    const mutation = {
+      sequence: this.mutationSequence += 1,
+      overlay: prepared.overlay,
+      empty: prepared.empty
+    };
+    this.pendingMutations.set(mutation.sequence, mutation);
     const operation = async () => {
+      let result;
       try {
-        return await this.saveRuntimeStateNow(frozenRuntime);
+        result = await this.saveRuntimeStateNow(mutation);
       } catch (error) {
-        return rejected(
+        result = rejected(
           error?.code ?? "replaceCommandError",
           error?.message ?? String(error),
           error
         );
       }
+      this.pendingMutations.delete(mutation.sequence);
+      const accepted = ["stored", "noChange", "ephemeral"].includes(result?.status);
+      if (accepted) {
+        if (this.retainedMutation?.sequence <= mutation.sequence) this.retainedMutation = null;
+      } else if (!mutation.empty
+          && (!this.retainedMutation || mutation.sequence >= this.retainedMutation.sequence)) {
+        this.retainedMutation = mutation;
+      }
+      return result;
     };
     this.mutationQueue = this.mutationQueue.then(operation, operation);
     return this.mutationQueue;
   }
 
-  async saveRuntimeStateNow(runtime) {
+  async saveRuntimeStateNow(mutation) {
     if (!this.snapshot) return rejected("posterStateNotReady", "Poster state has not loaded.");
-    if (typeof this.invoke !== "function") return { status: "ephemeral" };
     const attempt = async () => {
-      const projection = projectRuntimeToPosterState(this.snapshot, runtime, {
-        primaryWorkArea: this.primaryWorkArea
-      });
-      if (!projection.ok) {
-        return rejected("runtimeProjectionRejected", "Runtime state cannot be persisted.", projection.errors);
+      const applied = applyRuntimeMutation(this.snapshot, mutation);
+      if (!applied.ok) {
+        return rejected("runtimeProjectionRejected", "Runtime state cannot be persisted.", applied.errors);
+      }
+      if (sameJsonValue(applied.snapshot, this.snapshot)) {
+        return {
+          status: "noChange",
+          revision: this.snapshot.revision,
+          snapshot: cloneJson(this.snapshot)
+        };
+      }
+      if (typeof this.invoke !== "function") {
+        applied.snapshot.revision = this.snapshot.revision + 1;
+        if (!this.acceptSnapshot(applied.snapshot)) {
+          return rejected("ephemeralSnapshotRejected", "Ephemeral poster state was rejected.");
+        }
+        return {
+          status: "ephemeral",
+          revision: this.snapshot.revision,
+          snapshot: cloneJson(this.snapshot)
+        };
       }
       return this.invoke(POSTER_STATE_REPLACE_COMMAND, {
         expectedRevision: this.snapshot.revision,
-        snapshot: projection.snapshot
+        snapshot: applied.snapshot
       });
     };
 
@@ -469,6 +600,7 @@ export class PosterStateClient {
       });
       if (typeof this.invoke !== "function") {
         this.acceptSnapshot(next);
+        this.retainedMutation = null;
         return this.ready("browserPreviewReset");
       }
       const replace = async () => this.invoke(POSTER_STATE_REPLACE_COMMAND, {
@@ -482,6 +614,7 @@ export class PosterStateClient {
         result = await replace();
       }
       if (result?.status === "stored" && this.acceptSnapshot(result.snapshot)) {
+        this.retainedMutation = null;
         return this.ready("formalReset");
       }
       return rejected(result?.code ?? "resetRejected", result?.message ?? "Poster reset was rejected.", result);

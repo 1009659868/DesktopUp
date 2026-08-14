@@ -40,6 +40,7 @@ function memoryStorage(snapshot = null) {
 function fakeNative({ initialState = null, legacyInspection = { status: "noData" } } = {}) {
   let state = initialState == null ? null : clone(initialState);
   let conflictNextReplace = false;
+  let conflictMutation = null;
   const calls = [];
 
   async function invoke(command, args = {}) {
@@ -88,6 +89,10 @@ function fakeNative({ initialState = null, legacyInspection = { status: "noData"
       if (conflictNextReplace) {
         conflictNextReplace = false;
         state = clone(state);
+        if (typeof conflictMutation === "function") {
+          state = conflictMutation(state) ?? state;
+        }
+        conflictMutation = null;
         state.revision += 1;
         return {
           status: "conflict",
@@ -118,7 +123,10 @@ function fakeNative({ initialState = null, legacyInspection = { status: "noData"
     invoke,
     calls,
     state: () => clone(state),
-    conflictOnce: () => { conflictNextReplace = true; }
+    conflictOnce: (mutation = null) => {
+      conflictNextReplace = true;
+      conflictMutation = mutation;
+    }
   };
 }
 
@@ -288,7 +296,10 @@ test("runtime saves only formal fields and retries one expected-revision conflic
   runtime.posters[0].collapsed = true;
   runtime.posters[0].theme = "ember";
   runtime.posters[0].items.push({ id: "runtime-only", title: "RUNTIME ONLY" });
-  native.conflictOnce();
+  native.conflictOnce((external) => {
+    external.posters[0].subtitle = "EXTERNAL UPDATE";
+    return external;
+  });
   const result = await client.saveRuntimeState(runtime);
 
   assert.equal(result.status, "stored");
@@ -296,6 +307,7 @@ test("runtime saves only formal fields and retries one expected-revision conflic
   const stored = native.state();
   assert.equal(stored.posters[0].isLocked, true);
   assert.equal(stored.posters[0].collapsedState, "collapsed");
+  assert.equal(stored.posters[0].subtitle, "EXTERNAL UPDATE");
   assert.equal(Object.hasOwn(stored.posters[0], "theme"), false);
   assert.equal(Object.hasOwn(stored.posters[0], "items"), false);
   assert.equal(validatePosterSnapshot(stored).ok, true);
@@ -330,6 +342,45 @@ test("built-in style presets persist through templateKey and survive formal refr
   assert.equal(reloaded.snapshot.posters[0].templateKey, BUILTIN_THEME_TEMPLATE_KEYS.ember);
 });
 
+test("pending formal mutations remain visible until the accepted revision catches up", async () => {
+  const formal = createDefaultPosterSnapshot({
+    title: "PENDING OVERLAY",
+    primaryWorkArea: PRIMARY_WORK_AREA
+  });
+  const native = fakeNative({ initialState: formal });
+  let releaseReplace;
+  let replaceArgs;
+  const invoke = async (command, args) => {
+    if (command !== POSTER_STATE_REPLACE_COMMAND) return native.invoke(command, args);
+    replaceArgs = clone(args);
+    return new Promise((resolve) => { releaseReplace = resolve; });
+  };
+  const client = new PosterStateClient({ invoke, storage: memoryStorage() });
+  assert.equal((await client.bootstrap()).status, "ready");
+  const runtime = client.runtimeSnapshot();
+  runtime.posters[0].locked = true;
+
+  const saving = client.saveRuntimeState(runtime);
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(client.localMutationStatus(), "pending");
+  assert.equal(client.runtimeSnapshot().posters[0].locked, true);
+
+  const stored = clone(replaceArgs.snapshot);
+  stored.revision = formal.revision + 1;
+  releaseReplace({
+    status: "stored",
+    previousRevision: formal.revision,
+    revision: stored.revision,
+    snapshot: stored
+  });
+  const result = await saving;
+
+  assert.equal(result.status, "stored");
+  assert.equal(client.localMutationStatus(), "none");
+  assert.equal(client.snapshot.revision, stored.revision);
+  assert.equal(client.runtimeSnapshot().posters[0].locked, true);
+});
+
 test("native write errors reject safely without replacing the accepted snapshot", async () => {
   const formal = createDefaultPosterSnapshot({
     title: "PRESERVE ON ERROR",
@@ -357,6 +408,23 @@ test("native write errors reject safely without replacing the accepted snapshot"
   assert.equal(result.code, "write_database_failed");
   assert.equal(result.message, "injected database write failure");
   assert.deepEqual(client.snapshot, acceptedBefore);
+  assert.equal(client.localMutationStatus(), "retained");
+  assert.equal(client.runtimeSnapshot().posters[0].locked, true);
+
+  const external = clone(acceptedBefore);
+  external.revision += 1;
+  external.posters[0].collapsedState = "collapsed";
+  assert.equal(client.acceptSnapshot(external), true);
+  const merged = client.runtimeSnapshot().posters[0];
+  assert.equal(merged.locked, true, "failed local lock remains visible");
+  assert.equal(merged.collapsed, true, "new authoritative fields still merge in");
+
+  const stale = clone(acceptedBefore);
+  assert.equal(client.acceptSnapshot(stale), false, "older revisions must be ignored");
+  const conflictingSameRevision = clone(external);
+  conflictingSameRevision.posters[0].collapsedState = "expanded";
+  assert.equal(client.acceptSnapshot(conflictingSameRevision), false);
+  assert.equal(client.runtimeSnapshot().posters[0].collapsed, true);
 });
 
 test("formal/runtime projection round-trip preserves geometry, lock and collapse contract", () => {

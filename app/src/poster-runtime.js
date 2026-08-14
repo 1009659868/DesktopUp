@@ -1,4 +1,5 @@
 import { moveWithinBounds, normalizedPoster, resizeWithinBounds } from "./model.js";
+import { resolvePosterPermissions } from "./poster-permissions.js";
 import {
   HOST_CONTRACT_VERSION,
   SURFACE_REGISTRY_VERSION,
@@ -164,6 +165,42 @@ export function selectedPoster(state) {
 
 export function posterInteractionMode(state, poster = selectedPoster(state)) {
   return state.editMode && poster && !poster.locked ? "editing" : "using";
+}
+
+export function posterInputRuntimeMode(state, documentHidden = false) {
+  const lifecycle = state?.runtimeLifecycle ?? {};
+  const phase = lifecycle.phase ?? (state?.hostSurfaceReady ? "running" : "starting");
+  const posterVisible = Boolean(lifecycle.posterVisible ?? state?.posterVisible ?? true);
+  const hostSurfaceReady = Boolean(
+    lifecycle.hostSurfaceReady ?? state?.hostSurfaceReady ?? false
+  );
+  const automaticallyPaused = Boolean(
+    lifecycle.automaticallyPaused ?? state?.automaticallyPaused ?? false
+  );
+
+  if (phase === "exiting"
+      || !posterVisible
+      || !hostSurfaceReady
+      || state?.performanceMode === "stopped") {
+    return "stopped";
+  }
+  if (documentHidden || automaticallyPaused) return "paused";
+  return lifecycle.mode === "activeAnimated" || state?.performanceMode === "activeAnimated"
+    ? "activeAnimated"
+    : "activeStatic";
+}
+
+export function resolveRuntimePosterPermissions(
+  state,
+  poster = selectedPoster(state),
+  documentHidden = false
+) {
+  return resolvePosterPermissions({
+    presentationMode: poster?.collapsed ? "collapsed" : "expanded",
+    interactionMode: state?.editMode ? "editing" : "using",
+    runtimeMode: posterInputRuntimeMode(state, documentHidden),
+    isLocked: poster?.locked
+  });
 }
 
 export function isRuntimeSuspended(state, documentHidden = false) {

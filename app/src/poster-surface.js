@@ -13,7 +13,7 @@ import {
   isRuntimeSuspended,
   measuredInteractionRegion,
   runtimeMode,
-  posterInteractionMode,
+  resolveRuntimePosterPermissions,
   selectedPoster
 } from "./poster-runtime.js";
 import { isReportingFps } from "./performance-monitor.js";
@@ -59,18 +59,34 @@ function currentPoster() {
   return selectedPoster(runtime);
 }
 
+function permissionDecisionForPoster(poster = currentPoster()) {
+  const result = resolveRuntimePosterPermissions(runtime, poster, document.hidden);
+  return result.ok ? result.value : null;
+}
+
+function syncPosterStateStatus(fallback = "ready") {
+  const localStatus = posterState.localMutationStatus();
+  document.body.dataset.posterStateStatus = localStatus === "pending"
+    ? "pending"
+    : localStatus === "retained"
+      ? "rejected-retained"
+      : fallback;
+}
+
 function persistPoster(patch) {
   runtime = applyPosterAction(runtime, {
     type: "patchPoster",
     posterId: currentPoster().id,
     patch
   });
-  void posterState.saveRuntimeState(runtime).then((result) => {
-    if (result?.status === "rejected") {
-      document.body.dataset.posterStateStatus = "rejected";
+  const saving = posterState.saveRuntimeState(runtime);
+  syncPosterStateStatus();
+  void saving.then((result) => {
+    if (!["stored", "noChange", "ephemeral"].includes(result?.status)) {
+      syncPosterStateStatus("rejected");
       showToast("海报状态保存失败，原状态已保留");
-    } else if (result?.status === "stored") {
-      document.body.dataset.posterStateStatus = "ready";
+    } else {
+      syncPosterStateStatus();
     }
   });
   render();
@@ -101,6 +117,9 @@ function logicalRegionForElement(element, posterElement, visualRect, regionId, c
 }
 
 function collectSinglePosterInteractionRegions(posterElement, posterId, visualRect) {
+  const decision = permissionDecisionForPoster();
+  if (!decision?.runtimeInteractive) return [];
+  const permissions = decision.permissions;
   const regions = [];
   const header = posterElement.querySelector("[data-native-drag]");
   if (header) {
@@ -113,16 +132,22 @@ function collectSinglePosterInteractionRegions(posterElement, posterId, visualRe
     );
     if (headerRegion) regions.push(headerRegion);
   }
-  posterElement.querySelectorAll('[data-action="launch"]').forEach((tile, index) => {
-    const tileRegion = logicalRegionForElement(
-      tile,
-      posterElement,
-      visualRect,
-      `poster-${posterId}-item-${index}`,
-      6
-    );
-    if (tileRegion) regions.push(tileRegion);
-  });
+  const itemsInteractive = permissions.singleActivateItem
+    || permissions.selectItem
+    || permissions.explicitActivateItem
+    || permissions.openItemMenu;
+  if (itemsInteractive) {
+    posterElement.querySelectorAll('[data-action="launch"]').forEach((tile, index) => {
+      const tileRegion = logicalRegionForElement(
+        tile,
+        posterElement,
+        visualRect,
+        `poster-${posterId}-item-${index}`,
+        6
+      );
+      if (tileRegion) regions.push(tileRegion);
+    });
+  }
   return regions;
 }
 
@@ -221,6 +246,7 @@ function applyRuntimePauseState(snapshot = {}) {
   runtime = applyPosterAction(runtime, { type: "applyRuntimeSnapshot", snapshot });
   applyHostPresentation(runtime.hostSurface);
   applyRuntimePresentation();
+  scheduleNativeSurfaceSync();
 }
 
 function reportPosterFps(fps) {
@@ -289,13 +315,18 @@ function syncFpsSampling() {
 surface.addEventListener("click", (event) => {
   const action = event.target.closest("[data-action]")?.dataset.action;
   const poster = currentPoster();
+  const decision = permissionDecisionForPoster(poster);
+  if (!decision) return;
+  const permissions = decision.permissions;
   if (action === "lock") {
+    if (!permissions.toggleLock) return;
     const nextLocked = !poster.locked;
     persistPoster({ locked: nextLocked });
     showToast(nextLocked ? "海报位置已锁定" : "海报位置已解锁，可拖动标题栏");
     return;
   }
   if (action === "collapse") {
+    if (!permissions.togglePresentation) return;
     persistPoster({ collapsed: !poster.collapsed });
     return;
   }
@@ -304,9 +335,10 @@ surface.addEventListener("click", (event) => {
     const item = poster.items[Number(tile?.dataset.itemIndex)];
     if (!item) return;
     window.clearTimeout(launchClickTimer);
-    if (posterInteractionMode(runtime, poster) === "editing") {
+    if (decision.effectiveInteractionMode === "editing") {
+      if (!permissions.selectItem) return;
       if (event.detail === 1) showToast(`${item.title} 已选中，可继续排序或编辑`);
-    } else if (event.detail === 1) {
+    } else if (permissions.singleActivateItem && event.detail === 1) {
       launchClickTimer = window.setTimeout(() => {
         showToast(`Demo：准备启动 ${item.title}`);
       }, 400);
@@ -321,7 +353,9 @@ surface.addEventListener("contextmenu", (event) => {
 surface.addEventListener("pointerdown", (event) => {
   if (!event.target.closest("[data-native-drag]") || event.target.closest("button")) return;
   const poster = currentPoster();
-  if (poster.locked) {
+  const decision = permissionDecisionForPoster(poster);
+  if (!decision?.permissions.dragFromTitlebar) {
+    if (!poster.locked || !decision?.runtimeInteractive) return;
     showToast("位置已锁定，点击右上角锁按钮后再拖动");
     return;
   }
@@ -333,6 +367,8 @@ surface.addEventListener("dblclick", (event) => {
   const tile = event.target.closest('[data-action="launch"]');
   if (!tile) return;
   window.clearTimeout(launchClickTimer);
+  const decision = permissionDecisionForPoster();
+  if (!decision?.permissions.explicitActivateItem) return;
   const item = currentPoster().items[Number(tile.dataset.itemIndex)];
   if (item) showToast(`Demo：准备启动 ${item.title}，并标记为最近活跃`);
 });
@@ -341,6 +377,7 @@ window.addEventListener("resize", scheduleNativeSurfaceSync);
 
 document.addEventListener("visibilitychange", () => {
   applyRuntimePresentation();
+  scheduleNativeSurfaceSync();
 });
 
 async function connectNativeControls() {
@@ -355,7 +392,7 @@ async function connectNativeControls() {
     if (!posterState.acceptSnapshot(event.payload)) return;
     const next = runtimeFromPosterState();
     runtime = applyPosterAction(next, { type: "applyRuntimeSnapshot", snapshot: runtime });
-    document.body.dataset.posterStateStatus = "ready";
+    syncPosterStateStatus();
     render();
     syncNativeSurface();
   });

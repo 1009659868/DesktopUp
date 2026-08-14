@@ -26,3 +26,15 @@ test("control-center preview scale cannot leak into the native poster surface", 
     /\.poster-surface \.poster\s*\{[\s\S]*?transform:\s*none;/
   );
 });
+
+test("control-center actions consume shared PSI permissions and retain failed local state", () => {
+  assert.match(main, /resolveRuntimePosterPermissions/);
+  assert.match(main, /permissions\.selectItem/);
+  assert.match(main, /permissions\.explicitActivateItem/);
+  assert.match(main, /permissions\.togglePresentation/);
+  assert.match(main, /permissions\.toggleLock/);
+  assert.match(main, /permissions\.dragFromTitlebar/);
+  assert.match(main, /permissions\.resizePoster/);
+  assert.match(main, /posterState\.localMutationStatus\(\)/);
+  assert.match(main, /rejected-retained/);
+});

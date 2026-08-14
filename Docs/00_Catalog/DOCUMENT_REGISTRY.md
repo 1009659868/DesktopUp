@@ -42,10 +42,10 @@
 | `B_Modules/DesktopRuntimeFoundation/20_Log/MODULE_LOG.md` | B/Log | 桌面运行时里程碑记录 | `COMPLETE — C-RLC CLOSED` |
 | `B_Modules/DesktopRuntimeFoundation/30_Sync/COLD_START.md` | B/Sync | B 层接手阅读入口 | `COMPLETE — C-RLC CLOSED` |
 | `B_Modules/DesktopRuntimeFoundation/30_Sync/CURRENT_HANDOFF.md` | B/Sync | 桌面运行时当前交接 | `COMPLETE — C-RLC CLOSED` |
-| `B_Modules/PosterCoreRuntime/00_Catalog/C_WORKSTREAM_INDEX.md` | B/Catalog | 海报核心工作流索引 | `ACTIVE — C-PSI-02` |
-| `B_Modules/PosterCoreRuntime/10_Plan/MODULE_PLAN.md` | B/Plan | 海报核心运行时模块计划 | `ACTIVE — C-PSI-02` |
-| `B_Modules/PosterCoreRuntime/30_Sync/COLD_START.md` | B/Sync | 海报核心追溯入口 | `ACTIVE — C-PSI-02` |
-| `B_Modules/PosterCoreRuntime/30_Sync/CURRENT_HANDOFF.md` | B/Sync | 海报核心阶段交接 | `ACTIVE — C-PSI-02` |
+| `B_Modules/PosterCoreRuntime/00_Catalog/C_WORKSTREAM_INDEX.md` | B/Catalog | 海报核心工作流索引 | `ACTIVE — C-PSI-03` |
+| `B_Modules/PosterCoreRuntime/10_Plan/MODULE_PLAN.md` | B/Plan | 海报核心运行时模块计划 | `ACTIVE — C-PSI-03` |
+| `B_Modules/PosterCoreRuntime/30_Sync/COLD_START.md` | B/Sync | 海报核心追溯入口 | `ACTIVE — C-PSI-03` |
+| `B_Modules/PosterCoreRuntime/30_Sync/CURRENT_HANDOFF.md` | B/Sync | 海报核心阶段交接 | `ACTIVE — C-PSI-03` |
 | `B_Modules/TemplatePlatform/00_Catalog/C_WORKSTREAM_INDEX.md` | B/Catalog | 模板平台工作流索引 | `PLANNED` |
 | `B_Modules/TemplatePlatform/10_Plan/MODULE_PLAN.md` | B/Plan | Shadow DOM 与模板生命周期计划 | `PLANNED` |
 | `B_Modules/CollectionAndLaunch/00_Catalog/C_WORKSTREAM_INDEX.md` | B/Catalog | Item 模型、只读发现、仅添加、启动、收纳与恢复工作流索引 | `C-CIM ADVANCE PLAN READY` |
@@ -159,13 +159,14 @@
 | `C_Workstreams/LargeSurfaceTransparency/20_Log/2026-08/2026-08-14_clst_absorption_audit.md` | C/Log | C-LST PASS/GAP/DEFERRED 证据矩阵与关闭结论 | `COMPLETE` |
 | `C_Workstreams/LargeSurfaceTransparency/30_Sync/COLD_START.md` | C/Sync | 已关闭 C-LST 追溯入口 | `COMPLETE` |
 | `C_Workstreams/LargeSurfaceTransparency/30_Sync/CURRENT_HANDOFF.md` | C/Sync | C-LST 关闭与 C-PSI 交接 | `COMPLETE` |
-| `C_Workstreams/PosterStateInteraction/00_Catalog/TASK_INDEX.md` | C/Catalog | C-PSI 任务索引 | `ACTIVE — C-PSI-02` |
+| `C_Workstreams/PosterStateInteraction/00_Catalog/TASK_INDEX.md` | C/Catalog | C-PSI 任务索引 | `ACTIVE — C-PSI-03` |
 | `C_Workstreams/PosterStateInteraction/00_Catalog/CODE_ANCHORS.md` | C/Catalog | C-PSI 代码与验证锚点 | `ACTIVE` |
-| `C_Workstreams/PosterStateInteraction/10_Plan/WORKSTREAM_PLAN.md` | C/Plan | 状态、权限、编辑与命中收敛计划 | `ACTIVE — C-PSI-02` |
+| `C_Workstreams/PosterStateInteraction/10_Plan/WORKSTREAM_PLAN.md` | C/Plan | 状态、权限、编辑与命中收敛计划 | `ACTIVE — C-PSI-03` |
 | `C_Workstreams/PosterStateInteraction/10_Plan/C_PSI_AUDIT_MATRIX_V1.md` | C/Plan | C-PSI PASS/GAP、暂停分流、尺寸和下游边界冻结矩阵 | `FROZEN — C-PSI-01` |
 | `C_Workstreams/PosterStateInteraction/20_Log/2026-08/2026-08-14_cpsi01_activation_and_audit.md` | C/Log | C-PSI 激活、现状审计和缺口裁决 | `COMPLETE — C-PSI-02 ACTIVE` |
+| `C_Workstreams/PosterStateInteraction/20_Log/2026-08/2026-08-14_cpsi02_state_authority_failure_retention.md` | C/Log | 权限接入、暂停分流及 pending/retained 正式字段保留 | `COMPLETE — C-PSI-03 ACTIVE` |
 | `C_Workstreams/PosterStateInteraction/30_Sync/COLD_START.md` | C/Sync | C-PSI 阅读入口 | `ACTIVE` |
-| `C_Workstreams/PosterStateInteraction/30_Sync/CURRENT_HANDOFF.md` | C/Sync | C-PSI 当前交接 | `ACTIVE — C-PSI-02` |
+| `C_Workstreams/PosterStateInteraction/30_Sync/CURRENT_HANDOFF.md` | C/Sync | C-PSI 当前交接 | `ACTIVE — C-PSI-03` |
 | `C_Workstreams/CollectionItemModelProjection/00_Catalog/TASK_INDEX.md` | C/Catalog | C-CIM 预定任务索引 | `PLANNED` |
 | `C_Workstreams/CollectionItemModelProjection/00_Catalog/CODE_ANCHORS.md` | C/Catalog | C-CIM 设计与预备代码锚点 | `PLANNED` |
 | `C_Workstreams/CollectionItemModelProjection/10_Plan/WORKSTREAM_PLAN.md` | C/Plan | 正式 Item 契约、仓库与投影提前计划 | `ADVANCE PLAN READY` |

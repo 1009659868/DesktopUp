@@ -19,7 +19,7 @@
 | Poster Contract Baseline (`C-PCB`) | 状态 schema、几何所有权、默认快照、标题栏和失败回退契约测试 | C-DRP | `COMPLETE` |
 | Poster State Store (`C-PSS`) | 版本化 SQLite schema、仓库接口、迁移和过渡 JSON 桥接替换 | C-PCB | `COMPLETE — USER RELEASE RECOVERY PASS` |
 | [`Large Surface and Transparency`](../../../C_Workstreams/LargeSurfaceTransparency/10_Plan/WORKSTREAM_PLAN.md) (`C-LST`) | 主屏右侧大幅面透明海报与位置恢复 | C-PSS, C-DRP | `COMPLETE — ABSORBED AND AUDITED` |
-| [`Poster State and Interaction`](../../../C_Workstreams/PosterStateInteraction/10_Plan/WORKSTREAM_PLAN.md) (`C-PSI`) | 状态机、锁定、标题栏拖动、海报框拉伸与最小/最大尺寸限制、命中和暂停同步 | C-LST | `ACTIVE — C-PSI-02 AUTHORITY` |
+| [`Poster State and Interaction`](../../../C_Workstreams/PosterStateInteraction/10_Plan/WORKSTREAM_PLAN.md) (`C-PSI`) | 状态机、锁定、标题栏拖动、海报框拉伸与最小/最大尺寸限制、命中和暂停同步 | C-LST | `ACTIVE — C-PSI-03 GEOMETRY` |
 | Poster + Item Integration Release Gate (`C-PCRG`) | 使用正式 Item 仓库和真实启动链执行 Debug/Release、Windows 矩阵和核心性能封板 | C-PSI, C-LCH | `PLANNED AFTER USABLE MVP` |
 
 ## 3. 模块完成信号
@@ -31,4 +31,4 @@
 - C-LST 已通过吸收审计；C-PSI 先审计并收敛可承载 Item 的稳定交互表面，随后由 C-CIM/C-ROD/C-PAA/C-LCH 接入正式数据与启动；
 - 最终以正式 Item 仓库而非硬编码 `GAME_CATALOG` 通过透明、命中、暂停、启动和 Release 实机矩阵。
 
-C-PSS、C-LST 与 C-PSI-01 已关闭；控制中心 legacy 视觉参数回弹归后继 Template Platform 参数权威，不重新打开 C-PSS。当前执行 C-PSI-02，只实现审计确认的状态权威真实缺口。
+C-PSS、C-LST 与 C-PSI-01..02 已关闭；控制中心 legacy 视觉参数回弹归后继 Template Platform 参数权威，不重新打开 C-PSS。当前执行 C-PSI-03，只实现审计确认的移动、缩放与尺寸边界真实缺口。
