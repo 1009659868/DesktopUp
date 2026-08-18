@@ -63,11 +63,13 @@
 | --- | --- | --- |
 | Rust 1.97.1 / cargo | ✓ | 系统 PATH |
 | VS 18 Community（cl / vcvars） | ✓ | `C:\Program Files\Microsoft Visual Studio\18\Community` |
-| CMake | ✓（安装中，winget 版） | VS 自带备用：`...\CMake\CMake\bin\cmake.exe` |
+| CMake | ✓（winget 版） | 系统 PATH；VS 自带备用 |
 | Ninja | ✓ | VS 自带：`...\CMake\Ninja\ninja.exe` |
-| Qt 6.8.3 (msvc2022_64) | 安装中（aqt） | `G:\A_\Tools\Qt\6.8.3\msvc2022_64` |
-| Python 3.12（aqt 载体） | 安装中（winget） | `%LOCALAPPDATA%\Programs\Python\Python312` |
-| 磁盘 | ✓ | G: 706GB 空闲 |
+| Qt 6.8.3 (msvc2022_64) | ✓ 已安装（aqt），按用户要求迁移至 F 盘 | `F:\Qt\6.8.3\msvc2022_64` |
+| Python 3.12（aqt 载体） | ✓ 已安装（winget，系统托管路径） | `%LOCALAPPDATA%\Programs\Python\Python312` |
+| 磁盘 | ✓ | F: 1208GB 空闲 |
+
+**路径策略（用户要求，2026-08-18）**：所有下载的软件环境统一放入 `F:\`；Qt 已迁移至 `F:\Qt`；后续安装的工具链、签名证书、运行时依赖包与构建缓存一律放到 F 盘，不得写入 G:\A_\Tools 之外的杂散位置。
 
 ## 7. 完成定义
 
