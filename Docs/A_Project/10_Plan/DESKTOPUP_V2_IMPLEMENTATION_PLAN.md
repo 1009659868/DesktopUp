@@ -43,7 +43,7 @@
 | --- | --- | --- |
 | B-RND Renderer Selection | C-QTP（ACTIVE）、C-D2D（PLANNED）、C-WCC（PLANNED） | `ACTIVE — C-QTP` |
 | B-FND Product Foundations | 随 V2-P1 建立（状态/命令/修订/生命周期/诊断契约） | `PENDING` |
-| B-SRF Runtime Surfaces | 随 V2-P1/V2-P2 建立 | `PENDING` |
+| B-SRF Runtime Surfaces | 随 V2-P1/V2-P2 建立(C-V2P2 计划已提前准备) | `PLANNING` |
 | B-ITM Content Item Model | 随 V2-P3 建立 | `PENDING` |
 | B-LAY Activity and Layout | 随 V2-P6 建立 | `PENDING` |
 | B-VIS Poster Visual System | 随 V2-P1/P5 建立 | `PENDING` |
