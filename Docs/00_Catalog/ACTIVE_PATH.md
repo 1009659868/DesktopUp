@@ -4,7 +4,7 @@
 
 | 层级 | 当前节点 | 权威入口 | 状态 |
 | --- | --- | --- | --- |
-| A | Desktop-Up V2 / 技术选型与原型验证 | `A_Project/10_Plan/TECH_SELECTION_CANDIDATES_V1.md` | `ACTIVE — TECH SELECTION` |
+| A | Desktop-Up V2 / 长程落地推进 | `A_Project/10_Plan/DESKTOPUP_V2_IMPLEMENTATION_PLAN.md` | `ACTIVE — V2-P0` |
 | B | B-RND Renderer Selection | `B_Modules/RendererSelection/30_Sync/CURRENT_HANDOFF.md` | `ACTIVE — C-QTP` |
 | C | C-QTP Qt Quick Prototype | `C_Workstreams/QtQuickPrototype/30_Sync/CURRENT_HANDOFF.md` | `ACTIVE` |
 

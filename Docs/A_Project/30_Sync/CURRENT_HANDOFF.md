@@ -2,7 +2,7 @@
 
 最后更新：2026-08-18
 
-状态：`REQUIREMENTS FROZEN / TECH SELECTION DECIDED — V2-P0 PROTOTYPE (C-QTP) ACTIVE`
+状态：`LONG-RUN ACTIVE — V2-P0 (C-QTP) / 环境配置与计划落地中`
 
 ## 本轮完成
 
@@ -39,3 +39,4 @@
 ## 下一动作
 
 用户三项裁决已落档（路线甲：Qt 6 Quick 优先、原生 D2D 保底；内存预算原型实测后放宽；C++ 渲染侧车进程 + IPC）。B-RND 模块与 C-QTP 原型工作流已建立（五任务 + 8 项证据矩阵），见 `B_Modules/RendererSelection` 与 `C_Workstreams/QtQuickPrototype`。下一动作：用户批准后开始 C-QTP-01（两进程骨架与 IPC）；通过矩阵 → 选定决策；未通过 → C-D2D 保底。
+执行模式：用户已选定“长任务自主推进、设闸口验证”；落地推进计划见 `A_Project/10_Plan/DESKTOPUP_V2_IMPLEMENTATION_PLAN.md`（九阶段、七闸口）；当前正在环境配置（Python 3.12 + CMake + Qt 6.8.3 msvc2022_64 安装）与计划文档落地。

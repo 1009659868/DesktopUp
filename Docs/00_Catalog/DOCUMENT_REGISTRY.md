@@ -18,6 +18,7 @@
 | `Docs/A_Project/10_Plan/THEME_PLATFORM_AND_AI_V1.md` | A/Plan | 主题包、定制、隔离、导入导出与 AI 接入设计 | `ACTIVE DESIGN CONTRACT` |
 | `Docs/A_Project/10_Plan/REQUIREMENTS_MIGRATION_TRACEABILITY_V1.md` | A/Plan | V1 → V2 需求迁移映射、冲突归一和遗漏检查 | `ACTIVE TRACEABILITY` |
 | `Docs/A_Project/10_Plan/TECH_SELECTION_CANDIDATES_V1.md` | A/Plan | 技术选型候选、评估维度、参考项目调研、双路线原型建议与证据矩阵 | `ACTIVE TECH SELECTION` |
+| `Docs/A_Project/10_Plan/DESKTOPUP_V2_IMPLEMENTATION_PLAN.md` | A/Plan | V2 唯一活跃实施路线：九阶段、七闸口、B/C 映射、交付节奏与环境基线 | `ACTIVE` |
 | `Docs/B_Modules/RendererSelection/10_Plan/MODULE_PLAN.md` | B/Plan | 渲染选定模块计划与用户裁决 | `ACTIVE` |
 | `Docs/B_Modules/RendererSelection/00_Catalog/C_WORKSTREAM_INDEX.md` | B/Catalog | B-RND 工作流索引 | `ACTIVE` |
 | `Docs/B_Modules/RendererSelection/30_Sync/COLD_START.md` | B/Sync | B-RND 接手入口 | `ACTIVE` |

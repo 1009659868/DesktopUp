@@ -5,6 +5,7 @@
 - 需求确认轮（第二轮）：产品定位补入“壁纸引擎/桌面收纳工具引擎”表述；裁决三处待定——锁定只冻结外部几何与人工重排、不影响内部自动逻辑；启动统计门列入画像 RP-TBD-10；全手动退出默认保持（未选择不自动退出）。本轮仍不启动技术选型。
 - 技术选型启动：用户授权调研成熟参考项目（Wallpaper Engine、Lively Wallpaper、OBS obs-browser、Rainmeter、zebar、TranslucentTB、Seelen UI、WebView2 Composition Controller 官方资料），建立 `TECH_SELECTION_CANDIDATES_V1.md`：8 维评估标准、6 候选初评矩阵、双路线原型建议与固定证据矩阵；等待用户裁决原型路线、内存预算与 Qt 集成形态。
 - 技术选型裁决：路线甲（Qt 6 Quick 优先、原生 D2D 保底）、内存预算原型实测后放宽、C++ 渲染侧车进程 + IPC；激活 B-RND 模块与 C-QTP 原型工作流（五任务 + 8 项证据矩阵），等待用户批准开始原型代码实现。
+- 执行模式裁决：长任务自主推进、设闸口验证；建立 `DESKTOPUP_V2_IMPLEMENTATION_PLAN.md`（九阶段、七闸口、B/C 映射、交付/回退节奏）；开始环境配置（Python 3.12 + CMake + Qt 6.8.3 msvc2022_64）。
 
 - 用户决定为 Desktop-Up 建立 V2 重构仓库，V1 实现仅作为历史证据；
 - 建立 `G:\A_\Tools\DesktopUp_V2` 仓库与本地分支 `impl/Refactor`；
