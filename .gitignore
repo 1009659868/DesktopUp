@@ -14,6 +14,10 @@
 /prototype/**/*.log
 /prototype/**/capture.png
 
+# Production source build artifacts and runtime diagnostics
+/src/**/target/
+/logs/
+
 # Local runtime data and diagnostics
 /.desktop-up/
 *.log
