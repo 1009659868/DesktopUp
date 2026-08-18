@@ -7,8 +7,8 @@
 | ID | 候选能力模块 | 未来责任 | 当前依赖状态 | 状态 |
 | --- | --- | --- | --- | --- |
 | B-RND | Renderer Selection | 渲染宿主选定：候选原型、证据矩阵、淘汰与选定决策 | 用户裁决路线甲 | `ACTIVE — C-QTP` |
-| B-FND | Product Foundations | 统一状态、命令、修订、生命周期、诊断、安全和发布公共契约 | 需求已迁移，模块未设计 | `PENDING` |
-| B-SRF | Runtime Surfaces | 桌面海报、控制中心、托盘、设置和后台核心的运行关系 | 技术选型未开始 | `PENDING` |
+| B-FND | Product Foundations | 统一状态、命令、修订、生命周期、诊断、安全和发布公共契约 | 需求已迁移，模块计划已建立 | `PLANNING — 随 V2-P1` |
+| B-SRF | Runtime Surfaces | 桌面海报、控制中心、托盘、设置和后台核心的运行关系 | 模块计划已建立 | `PLANNING — 随 V2-P1/P2` |
 | B-ITM | Content Item Model | 内容发现、身份、启动、安全收纳、统计和失效处理 | Item 需求已迁移 | `PENDING` |
 | B-LAY | Activity and Layout | 活跃度、排序、缩放、固定、分栏、弹性流和爆发排版 | 精确衰减公式待定 | `PENDING` |
 | B-VIS | Poster Visual System | Night Ops、Neon HUD、Cinema Lightbox、响应式构图和交互命中 | 默认正式主题待定 | `PENDING` |
