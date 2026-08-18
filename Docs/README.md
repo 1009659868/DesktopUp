@@ -1,46 +1,51 @@
 # Desktop-Up V2 文档入口
 
-Desktop-Up V2 是对 V1 的重构:保留产品目标与已验证资产,推倒 V1 的桌面海报渲染宿主架构(透明 WebView2 窗口模式,白条根因无法在架构内根治),以渲染宿主选定实验先行。
+本目录维护 Desktop-Up V2 的需求、设计、决策、计划、验证和交接信息。当前阶段只冻结“软件应当做什么、如何表现、如何验收”，不把任何具体 UI 框架、渲染器、窗口宿主或编程语言写成既定方案。
 
-本目录沿用 V1 的 A/B/C 三层索引与更迭结构。
-
-## 当前阅读路径
-
-1. 阅读 [文档结构](DOCUMENT_STRUCTURE.md)
-2. 阅读 [当前活跃路径](00_Catalog/ACTIVE_PATH.md)
-3. 阅读 [A 层冷启动](A_Project/30_Sync/COLD_START.md)
-
-当前路线位置:
+## 当前状态
 
 ```text
-A: DesktopUP V2 重构 / V2-P0 ACTIVE — 渲染宿主选定实验先行
+A：需求与设计迁移基线已建立
+B：能力模块计划尚未激活
+C：实现工作流尚未激活
+技术选型：尚未开始，等待后续单独立项
+代码迁移：尚未开始
 ```
 
-## 核心文档
+## 建议阅读顺序
 
-- [DesktopUP V2 项目需求画像 V1](A_Project/10_Plan/DESKTOPUP_V2_REQUIREMENTS_PROFILE_V1.md)(V2 权威需求聚合:V1 结论、继承/不继承资产、架构级需求、渲染候选矩阵、分期)
-- [A 层当前交接](A_Project/30_Sync/CURRENT_HANDOFF.md)
-- [继承风险台账](A_Project/30_Sync/KNOWN_ISSUES.md)
+1. [文档结构与阅读规则](DOCUMENT_STRUCTURE.md)
+2. [当前活跃路径](00_Catalog/ACTIVE_PATH.md)
+3. [V2 完整需求画像](A_Project/10_Plan/DESKTOPUP_V2_REQUIREMENTS_PROFILE_V1.md)
+4. [海报画面与交互规范](A_Project/10_Plan/POSTER_VISUAL_AND_INTERACTION_V1.md)
+5. [控制中心、托盘与海报运行关系](A_Project/10_Plan/RUNTIME_SURFACES_AND_TRAY_V1.md)
+6. [内容 Item 活跃度与动态排版](A_Project/10_Plan/CONTENT_ITEM_ACTIVITY_LAYOUT_V1.md)
+7. [自定义主题平台与 AI 接入](A_Project/10_Plan/THEME_PLATFORM_AND_AI_V1.md)
+8. [需求迁移追踪表](A_Project/10_Plan/REQUIREMENTS_MIGRATION_TRACEABILITY_V1.md)
+9. [当前交接](A_Project/30_Sync/CURRENT_HANDOFF.md)
+10. [问题、风险与待定项](A_Project/30_Sync/KNOWN_ISSUES.md)
 
-## V1 证据(只读,不复制进本仓库)
+## 当前权威需求集
 
-- V1 需求画像与问题台账:`G:\A_\Tools\DesktopUp\Docs\A_Project\...`
+| 文档 | 回答的问题 | 状态 |
+| --- | --- | --- |
+| [完整需求画像](A_Project/10_Plan/DESKTOPUP_V2_REQUIREMENTS_PROFILE_V1.md) | 产品是谁、为谁服务、全局不变量、范围、状态、数据和验收是什么 | `ACTIVE` |
+| [海报画面与交互规范](A_Project/10_Plan/POSTER_VISUAL_AND_INTERACTION_V1.md) | Night Ops 海报应如何构图、响应、穿透、折叠、拖动和呈现 | `ACTIVE` |
+| [运行表面与托盘](A_Project/10_Plan/RUNTIME_SURFACES_AND_TRAY_V1.md) | 控制中心、托盘、海报、设置和后台核心如何分工与同步 | `ACTIVE` |
+| [Item 活跃度与动态排版](A_Project/10_Plan/CONTENT_ITEM_ACTIVITY_LAYOUT_V1.md) | 内容如何发现、统计、排序、缩放、布局、固定和恢复 | `ACTIVE` |
+| [主题平台与 AI](A_Project/10_Plan/THEME_PLATFORM_AND_AI_V1.md) | 主题如何定制、导入、隔离、回滚，以及 AI 如何安全地产生修改 | `ACTIVE` |
+| [迁移追踪表](A_Project/10_Plan/REQUIREMENTS_MIGRATION_TRACEABILITY_V1.md) | V1 设计结论迁到了哪里、哪些冲突已归一、哪些仍待定 | `ACTIVE` |
 
-## 目录职责
+## 历史证据与权威顺序
 
-| 路径 | 职责 |
-| --- | --- |
-| `00_Catalog/` | 当前路径、模块索引、文档登记 |
-| `A_Project/` | 产品目标、项目阶段、顶层设计、里程碑与交接 |
-| `B_Modules/` | 能力模块边界、依赖、模块里程碑与交接 |
-| `C_Workstreams/` | 当前可执行任务、验收标准、实施日志与精确交接 |
-| `Rules/` | 文档治理、版本和更迭规则 |
-| `Reference/` | 外部项目、调研与非权威参考资料 |
+`Reference/V1_Design_Source/` 保存迁移时引用的 V1 设计原文快照，状态统一为 `HISTORICAL / READ-ONLY`。它们用于回答“结论从哪里来”，不能覆盖 V2 当前需求。
 
-## 权威顺序
+发生冲突时，按以下顺序判断：
 
-1. 已运行代码与可重复验证结果;
-2. 当前 C 计划与 C 交接;
-3. 当前 B 计划与 B 交接;
-4. A 项目主线与 A 交接;
-5. 已登记的设计、日志和参考资料(含 V1 只读证据)。
+1. 用户最新明确决策；
+2. V2 当前活跃需求与已冻结验收标准；
+3. V2 当前交接和已记录决策；
+4. V2 问题/待定项台账；
+5. V1 只读历史证据。
+
+后续实现代码只有在完成验证后才能反向成为事实证据；在当前“仅文档”阶段，不存在以代码覆盖需求的情况。
