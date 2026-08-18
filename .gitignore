@@ -24,3 +24,8 @@
 /.vscode/
 .DS_Store
 Thumbs.db
+
+# Prototype runtime artifacts (more)
+/prototype/**/*.err
+/prototype/**/screen-check.png
+
