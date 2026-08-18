@@ -1,15 +1,16 @@
 // DesktopUp V2 核心真身(C-V2P1-02 骨架)
 // 单实例 + 状态权威 + 结构化诊断 + 渲染侧车生命周期 + 穿透钩子(原型机制移植)
+// 控制通道:命名管道(apply 命令带 base_rev,防回弹)
 mod diag;
+mod pipe;
 mod proto;
 mod singleton;
 mod state;
 
-use std::io::Read;
 use std::path::PathBuf;
 use std::process::{Child, Command as ProcCommand, Stdio};
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
-use std::sync::{Mutex, OnceLock};
+use std::sync::{Arc, Mutex, OnceLock};
 use std::time::Duration;
 
 use serde_json::json;
@@ -23,7 +24,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 
 use diag::Diag;
 use singleton::SingleInstance;
-use state::SurfaceState;
+use state::{Command, SurfaceState};
 
 static DIAG: OnceLock<Diag> = OnceLock::new();
 
@@ -128,7 +129,7 @@ fn run_hook_thread() {
     }
 }
 
-fn register_surface(value: &serde_json::Value, state: &mut SurfaceState) {
+fn register_surface(value: &serde_json::Value, state: &Mutex<SurfaceState>) {
     let Some(hwnd) = value.get("hwnd").and_then(|v| v.as_f64()).map(|f| f as u64) else {
         log("error", "hello.missing_hwnd", json!({}));
         return;
@@ -151,8 +152,12 @@ fn register_surface(value: &serde_json::Value, state: &mut SurfaceState) {
         }
     }
     // 渲染端声明即状态:hello 视为修订 1 的初始投影(状态权威在核心)
-    state.geometry = (x, y, w, h);
-    state.revision = state.revision.max(1);
+    let revision = {
+        let mut s = state.lock().expect("state lock");
+        s.geometry = (x, y, w, h);
+        s.revision = s.revision.max(1);
+        s.revision
+    };
     let region_count = regions.len();
     if let Ok(mut guard) = SURFACE.get_or_init(|| Mutex::new(None)).lock() {
         *guard = Some(Surface {
@@ -167,7 +172,7 @@ fn register_surface(value: &serde_json::Value, state: &mut SurfaceState) {
     log(
         "info",
         "surface.registered",
-        json!({ "hwnd": hwnd, "rect": [x, y, w, h], "regions": region_count, "revision": state.revision }),
+        json!({ "hwnd": hwnd, "rect": [x, y, w, h], "regions": region_count, "revision": revision }),
     );
     HOOK_STARTED.get_or_init(|| {
         std::thread::spawn(run_hook_thread);
@@ -180,11 +185,6 @@ fn spawn_renderer(exe: &str) -> Option<Child> {
         .stdout(Stdio::piped())
         .spawn()
         .ok()
-}
-
-struct Session {
-    stdin: std::process::ChildStdin,
-    stdout: std::process::ChildStdout,
 }
 
 fn main() {
@@ -221,15 +221,78 @@ fn main() {
     };
     log("info", "lifecycle.started", json!({ "renderer": renderer, "log_dir": log_dir.to_string_lossy() }));
 
-    let mut state = SurfaceState::default();
+    let state = Arc::new(Mutex::new(SurfaceState::default()));
+    // 当前会话的渲染端 stdin 槽(每次重建会话更新;管道命令经此转发)
+    let current_stdin: Arc<Mutex<Option<Arc<Mutex<std::process::ChildStdin>>>>> =
+        Arc::new(Mutex::new(None));
+
+    // 控制通道:命名管道服务器(命令带 base_rev,状态权威在核心)
+    {
+        let state = state.clone();
+        let cs = current_stdin.clone();
+        pipe::start(
+            r"\\.\pipe\desktopup-core-v1",
+            Arc::new(move |req| {
+                let base_rev = req
+                    .get("base_rev")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(u64::MAX);
+                let cmd: Command = match serde_json::from_value(req.clone()) {
+                    Ok(c) => c,
+                    Err(e) => {
+                        log("warn", "pipe.bad_command", json!({ "error": e.to_string() }));
+                        return json!({ "ok": false, "error": "bad_frame" });
+                    }
+                };
+                let mut s = state.lock().expect("state lock");
+                match s.apply(&cmd, base_rev) {
+                    Ok(()) => {
+                        let rev = s.revision;
+                        drop(s);
+                        let fwd = match &cmd {
+                            Command::SetGeometry { x, y, w, h } => json!({
+                                "cmd": "set_geometry", "id": 0, "x": x, "y": y, "w": w, "h": h
+                            }),
+                            Command::SetVisible { visible } => json!({
+                                "cmd": "set_visible", "id": 0, "visible": visible
+                            }),
+                            Command::SetParams { accent, opacity } => json!({
+                                "cmd": "set_params", "id": 0, "accent": accent, "opacity": opacity
+                            }),
+                        };
+                        if let Some(w) = cs.lock().expect("stdin slot").as_ref() {
+                            let mut w = w.lock().expect("stdin lock");
+                            let _ = proto::send_frame(&mut *w, &fwd);
+                        }
+                        log(
+                            "info",
+                            "state.applied",
+                            json!({ "cmd": serde_json::to_value(&cmd).unwrap_or(json!(null)), "revision": rev }),
+                        );
+                        json!({ "ok": true, "revision": rev })
+                    }
+                    Err(c) => {
+                        log(
+                            "warn",
+                            "state.rev_conflict",
+                            json!({ "base_rev": base_rev, "current": c.current }),
+                        );
+                        json!({ "ok": false, "error": "rev_conflict", "current": c.current })
+                    }
+                }
+            }),
+        );
+    }
+
     let mut restarts = 0u32;
     loop {
         let Some(mut child) = spawn_renderer(&renderer) else {
             log("error", "renderer.spawn_failed", json!({ "path": renderer }));
             return;
         };
-        let stdin = child.stdin.take().expect("stdin");
+        let stdin = Arc::new(Mutex::new(child.stdin.take().expect("stdin")));
         let stdout = child.stdout.take().expect("stdout");
+        *current_stdin.lock().expect("stdin slot") = Some(stdin.clone());
         log("info", "session.started", json!({ "pid": child.id() }));
 
         // 上行读线程(帧解析)
@@ -247,7 +310,6 @@ fn main() {
             }
         });
 
-        let mut stdin = stdin;
         let mut next_id: u64 = 1;
         let mut ticks: u64 = 0;
         let mut exited = false;
@@ -257,17 +319,24 @@ fn main() {
             if ticks % 100 == 0 {
                 let id = next_id;
                 next_id += 1;
-                let _ = proto::send_frame(&mut stdin, &json!({"cmd": "get_health", "id": id}));
+                if let Ok(mut w) = stdin.lock() {
+                    let _ = proto::send_frame(&mut *w, &json!({"cmd": "get_health", "id": id}));
+                }
             }
             if ticks % 300 == 150 {
                 let id = next_id;
                 next_id += 1;
-                let _ = proto::send_frame(&mut stdin, &json!({"cmd": "capture", "id": id}));
+                if let Ok(mut w) = stdin.lock() {
+                    let _ = proto::send_frame(&mut *w, &json!({"cmd": "capture", "id": id}));
+                }
             }
             loop {
                 match rx.try_recv() {
                     Ok(Some(value)) => {
                         if let Some(id) = value.get("id").and_then(|v| v.as_u64()) {
+                            if id == 0 {
+                                continue; // 管道转发命令的回执,静默
+                            }
                             if value.get("frames").is_some() {
                                 log(
                                     "info",
@@ -285,13 +354,14 @@ fn main() {
                             continue;
                         }
                         match value.get("cmd").and_then(|v| v.as_str()) {
-                            Some("hello") => register_surface(&value, &mut state),
+                            Some("hello") => register_surface(&value, &state),
                             Some("bye") => exited = true,
                             other => log("warn", "frame.unhandled", json!({ "cmd": other })),
                         }
                     }
                     Ok(None) | Err(std::sync::mpsc::TryRecvError::Disconnected) => {
                         exited = true;
+                        break; // 必须跳出内层接收循环,否则 Disconnected 反复命中导致 100% CPU 空转
                     }
                     Err(std::sync::mpsc::TryRecvError::Empty) => break,
                 }

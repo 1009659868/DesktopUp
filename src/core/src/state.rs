@@ -34,7 +34,7 @@ pub struct RevConflict {
     pub current: u64,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(tag = "cmd", rename_all = "snake_case")]
 pub enum Command {
     SetGeometry { x: i32, y: i32, w: i32, h: i32 },
