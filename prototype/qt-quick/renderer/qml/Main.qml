@@ -22,45 +22,65 @@ Window {
         border.color: Qt.rgba(accentColor.r, accentColor.g, accentColor.b, 0.25)
         border.width: 1
 
-        // 自制标题栏(参考构图:集合标识 + 锁定/收起按钮)
-        Column {
+        // 自制标题栏(参考构图:集合标识 + 锁定/收起按钮)+ 原生拖动
+        Item {
+            id: titlebar
             anchors.left: parent.left
             anchors.right: parent.right
             anchors.top: parent.top
             anchors.margins: 16
-            spacing: 6
+            height: 58
 
-            Row {
-                width: parent.width
-                Text {
-                    text: "DESKTOP COLLECTION — 01"
-                    color: Qt.rgba(1, 1, 1, 0.55)
-                    font.pixelSize: 11
-                    font.letterSpacing: 2
+            MouseArea {
+                anchors.fill: parent
+                property real pressX: 0
+                property real pressY: 0
+                property bool dragging: false
+                onPressed: { pressX = mouse.x; pressY = mouse.y; dragging = false }
+                onPositionChanged: {
+                    if (!dragging && (Math.abs(mouse.x - pressX) > 5 || Math.abs(mouse.y - pressY) > 5)) {
+                        dragging = true
+                        posterWindow.startSystemMove()
+                        dragging = false
+                    }
                 }
-                Item { width: 10; height: 1 }
-                Rectangle { width: 26; height: 26; radius: 6; color: Qt.rgba(1, 1, 1, 0.06)
-                    Text { anchors.centerIn: parent; text: "锁"; color: "white"; font.pixelSize: 12 } }
-                Rectangle { width: 26; height: 26; radius: 6; color: Qt.rgba(1, 1, 1, 0.06)
-                    Text { anchors.centerIn: parent; text: "收"; color: "white"; font.pixelSize: 12 } }
             }
 
-            Text {
-                text: "TACTICAL ARCHIVE / 01"
-                color: accentColor
-                font.pixelSize: 11
-                font.letterSpacing: 3
-            }
-            Text {
-                text: "NIGHT OPS"
-                color: "white"
-                font.pixelSize: 28
-                font.weight: Font.Bold
-            }
-            Text {
-                text: "06 TITLES · READY"
-                color: Qt.rgba(1, 1, 1, 0.45)
-                font.pixelSize: 11
+            Column {
+                anchors.fill: parent
+                spacing: 6
+                Row {
+                    width: parent.width
+                    Text {
+                        text: "DESKTOP COLLECTION — 01"
+                        color: Qt.rgba(1, 1, 1, 0.55)
+                        font.pixelSize: 11
+                        font.letterSpacing: 2
+                    }
+                    Item { width: 10; height: 1 }
+                    Rectangle { width: 26; height: 26; radius: 6; color: Qt.rgba(1, 1, 1, 0.06)
+                        Text { anchors.centerIn: parent; text: "锁"; color: "white"; font.pixelSize: 12 } }
+                    Rectangle { width: 26; height: 26; radius: 6; color: Qt.rgba(1, 1, 1, 0.06)
+                        Text { anchors.centerIn: parent; text: "收"; color: "white"; font.pixelSize: 12 } }
+                }
+
+                Text {
+                    text: "TACTICAL ARCHIVE / 01"
+                    color: accentColor
+                    font.pixelSize: 11
+                    font.letterSpacing: 3
+                }
+                Text {
+                    text: "NIGHT OPS"
+                    color: "white"
+                    font.pixelSize: 28
+                    font.weight: Font.Bold
+                }
+                Text {
+                    text: "06 TITLES · READY"
+                    color: Qt.rgba(1, 1, 1, 0.45)
+                    font.pixelSize: 11
+                }
             }
         }
 

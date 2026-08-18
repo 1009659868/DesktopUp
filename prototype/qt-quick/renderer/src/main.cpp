@@ -9,6 +9,7 @@
 #include <QThread>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QJsonArray>
 #include <QImage>
 #include <cstdio>
 
@@ -165,6 +166,32 @@ int main(int argc, char *argv[]) {
 
     QJsonObject hello;
     hello["cmd"] = "hello";
+    hello["hwnd"] = static_cast<double>(window->winId());
+    QJsonObject rect;
+    rect["x"] = window->x();
+    rect["y"] = window->y();
+    rect["w"] = window->width();
+    rect["h"] = window->height();
+    hello["rect"] = rect;
+    // 命中区域(窗口坐标):标题栏 + 3×2 卡片
+    QJsonArray regions;
+    QJsonObject titlebar;
+    titlebar["x"] = 16.0; titlebar["y"] = 16.0;
+    titlebar["w"] = static_cast<double>(window->width() - 32); titlebar["h"] = 58.0;
+    regions.append(titlebar);
+    const int cols = 3, rows = 2, spacing = 12, cardH = 96, top = 168;
+    const int cardW = (window->width() - 32 - spacing * (cols - 1)) / cols;
+    for (int j = 0; j < rows; ++j) {
+        for (int i = 0; i < cols; ++i) {
+            QJsonObject card;
+            card["x"] = static_cast<double>(16 + i * (cardW + spacing));
+            card["y"] = static_cast<double>(top + j * (cardH + spacing));
+            card["w"] = static_cast<double>(cardW);
+            card["h"] = static_cast<double>(cardH);
+            regions.append(card);
+        }
+    }
+    hello["regions"] = regions;
     sendFrame(hello);
 
     QThread *reader = QThread::create([]() { readerLoop(); });

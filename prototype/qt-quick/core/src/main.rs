@@ -4,11 +4,35 @@
 use std::collections::HashMap;
 use std::io::{Read, Write};
 use std::process::{Child, ChildStdin, Command, Stdio};
+use std::sync::atomic::{AtomicBool, AtomicIsize, Ordering};
 use std::sync::mpsc::{channel, Receiver, Sender};
+use std::sync::{Mutex, OnceLock};
 use std::thread;
 use std::time::Duration;
 
+use windows::core::w;
+use windows::Win32::Foundation::{HANDLE, HWND, LPARAM, LRESULT, WPARAM};
+use windows::Win32::UI::WindowsAndMessaging::{
+    CallNextHookEx, DispatchMessageW, GetMessageW, GetWindowLongPtrW, SetWindowLongPtrW,
+    SetWindowsHookExW, TranslateMessage, UnhookWindowsHookEx, GWL_EXSTYLE, HHOOK, MSG,
+    MSLLHOOKSTRUCT, WH_MOUSE_LL, WM_MOUSEMOVE, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW,
+    WS_EX_TRANSPARENT,
+};
+
 const MAX_RESTARTS: u32 = 3;
+
+// 渲染器表面信息(由 hello 帧填充,钩子线程共享)
+struct Surface {
+    hwnd: isize,
+    x: i32,
+    y: i32,
+    w: i32,
+    h: i32,
+    regions: Vec<(i32, i32, i32, i32)>, // (x,y,w,h) 窗口坐标
+}
+static SURFACE: OnceLock<Mutex<Option<Surface>>> = OnceLock::new();
+static PASSTHROUGH_ON: AtomicBool = AtomicBool::new(true);
+static HOOK_STARTED: OnceLock<()> = OnceLock::new();
 
 fn clog(line: &str) {
     use std::io::Write as _;
@@ -18,6 +42,77 @@ fn clog(line: &str) {
         .open(r"G:\A_\Tools\DesktopUp_V2\prototype\qt-quick\core.log")
     {
         let _ = writeln!(f, "{line}");
+    }
+}
+
+fn hit_any_region(s: &Surface, px: i32, py: i32) -> bool {
+    let lx = px - s.x;
+    let ly = py - s.y;
+    s.regions
+        .iter()
+        .any(|(rx, ry, rw, rh)| lx >= *rx && lx < rx + rw && ly >= *ry && ly < ry + rh)
+}
+
+fn apply_passthrough(hwnd: isize, passthrough: bool) {
+    if PASSTHROUGH_ON.swap(passthrough, Ordering::SeqCst) == passthrough {
+        return;
+    }
+    static TOGGLES: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
+    let n = TOGGLES.fetch_add(1, Ordering::Relaxed) + 1;
+    if n % 20 == 1 {
+        clog(&format!("passthrough -> {passthrough} (toggle #{n})"));
+    }
+    unsafe {
+        let hwnd = HWND(hwnd as *mut core::ffi::c_void);
+        let style = GetWindowLongPtrW(hwnd, GWL_EXSTYLE);
+        let next = if passthrough {
+            style | WS_EX_TRANSPARENT.0 as isize
+        } else {
+            style & !(WS_EX_TRANSPARENT.0 as isize)
+        };
+        // 首帧:固定 ToolWindow + NoActivate(不叠 layered,不叠 blur)
+        let next = next | WS_EX_TOOLWINDOW.0 as isize | WS_EX_NOACTIVATE.0 as isize;
+        let _ = SetWindowLongPtrW(hwnd, GWL_EXSTYLE, next);
+    }
+}
+
+unsafe extern "system" fn mouse_hook(code: i32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
+    if code >= 0 && wparam.0 as u32 == WM_MOUSEMOVE {
+        if let Some(details) = (lparam.0 as *const MSLLHOOKSTRUCT).as_ref() {
+            let point = details.pt;
+            let guard = SURFACE.get_or_init(|| Mutex::new(None)).lock().ok();
+            if let Some(guard) = guard {
+                if let Some(s) = guard.as_ref() {
+                    let inside = point.x >= s.x
+                        && point.x < s.x + s.w
+                        && point.y >= s.y
+                        && point.y < s.y + s.h;
+                    if inside {
+                        apply_passthrough(s.hwnd, !hit_any_region(s, point.x, point.y));
+                    } else {
+                        apply_passthrough(s.hwnd, true);
+                    }
+                }
+            }
+        }
+    }
+    CallNextHookEx(None, code, wparam, lparam)
+}
+
+fn run_hook_thread() {
+    unsafe {
+        let hook = SetWindowsHookExW(WH_MOUSE_LL, Some(mouse_hook), None, 0);
+        let Ok(hook) = hook else {
+            clog("failed to install mouse hook");
+            return;
+        };
+        let _ = HOOK_STARTED.set(());
+        let mut message = MSG::default();
+        while GetMessageW(&mut message, None, 0, 0).as_bool() {
+            let _ = TranslateMessage(&message);
+            DispatchMessageW(&message);
+        }
+        let _ = UnhookWindowsHookEx(hook);
     }
 }
 
@@ -158,7 +253,8 @@ fn run_session(child: &mut Child) -> Result<SessionOutcome, String> {
                     match value.get("cmd").and_then(|v| v.as_str()) {
                         Some("hello") => {
                             hellos += 1;
-                            clog(&format!("hello #{hellos} from renderer"));
+                            clog(&format!("hello #{hellos} from renderer: {value}"));
+                            register_surface(&value);
                         }
                         Some("bye") => return Ok(SessionOutcome::RendererExited),
                         _ => clog(&format!("frame: {value}")),
@@ -173,6 +269,48 @@ fn run_session(child: &mut Child) -> Result<SessionOutcome, String> {
 
         thread::sleep(Duration::from_millis(30));
     }
+}
+
+fn register_surface(value: &serde_json::Value) {
+    let Some(hwnd) = value
+        .get("hwnd")
+        .and_then(|v| v.as_f64())
+        .map(|f| f as u64)
+    else {
+        clog("hello missing hwnd");
+        return;
+    };
+    let num = |obj: &serde_json::Value, key: &str| -> i32 {
+        obj.get(key)
+            .and_then(|v| v.as_f64())
+            .map(|f| f as i32)
+            .unwrap_or(0)
+    };
+    let rect = value.get("rect");
+    let x = rect.map(|r| num(r, "x")).unwrap_or(0);
+    let y = rect.map(|r| num(r, "y")).unwrap_or(0);
+    let w = rect.map(|r| num(r, "w")).unwrap_or(0);
+    let h = rect.map(|r| num(r, "h")).unwrap_or(0);
+    let mut regions = Vec::new();
+    if let Some(list) = value.get("regions").and_then(|v| v.as_array()) {
+        for r in list {
+            regions.push((num(r, "x"), num(r, "y"), num(r, "w"), num(r, "h")));
+        }
+    }
+    clog(&format!("parsed {} regions", regions.len()));
+    let parsed_len = regions.len();
+    if let Ok(mut guard) = SURFACE.get_or_init(|| Mutex::new(None)).lock() {
+        *guard = Some(Surface { hwnd: hwnd as isize, x, y, w, h, regions });
+        let stored_len = guard.as_ref().map(|s| s.regions.len()).unwrap_or(0);
+        clog(&format!("store inside lock: parsed={parsed_len} stored={stored_len}"));
+    }
+    HOOK_STARTED.get_or_init(|| {
+        thread::spawn(run_hook_thread);
+    });
+    clog(&format!("surface registered hwnd=0x{hwnd:X} rect={x},{y},{w},{h} regions={}", {
+        let guard = SURFACE.get_or_init(|| Mutex::new(None)).lock().ok();
+        guard.as_ref().map(|g| g.as_ref().map(|s| s.regions.len()).unwrap_or(0)).unwrap_or(0)
+    }));
 }
 
 fn send_frame(stdin: &mut ChildStdin, value: &serde_json::Value) -> Result<(), String> {
