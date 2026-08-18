@@ -6,6 +6,7 @@ mod pipe;
 mod proto;
 mod singleton;
 mod state;
+mod tray;
 
 use std::path::PathBuf;
 use std::process::{Child, Command as ProcCommand, Stdio};
@@ -120,8 +121,16 @@ fn run_hook_thread() {
         };
         log("info", "hook.installed", json!({ "kind": "WH_MOUSE_LL" }));
         let _ = HOOK_STARTED.set(());
+        // 托盘:由本线程消息泵驱动(消息队列归安装线程)
+        match tray::init() {
+            Ok(()) => log("info", "tray.added", json!({})),
+            Err(e) => log("error", "tray.add_failed", json!({ "error": e })),
+        }
         let mut message = MSG::default();
         while GetMessageW(&mut message, None, 0, 0).as_bool() {
+            if tray::pump(&message) {
+                continue;
+            }
             let _ = TranslateMessage(&message);
             DispatchMessageW(&message);
         }
@@ -316,6 +325,20 @@ fn main() {
         while !exited {
             ticks += 1;
             std::thread::sleep(Duration::from_millis(30));
+            // 托盘动作:重启海报 = 发 shutdown,看门狗随后重建;退出由外层循环处理
+            if tray::RESTART_REQUESTED.swap(false, Ordering::SeqCst) {
+                log("info", "tray.restart_requested", json!({}));
+                if let Ok(mut w) = stdin.lock() {
+                    let _ = proto::send_frame(&mut *w, &json!({"cmd": "shutdown", "id": 0}));
+                }
+            }
+            if tray::EXIT_REQUESTED.load(Ordering::SeqCst) {
+                log("info", "tray.exit_requested", json!({}));
+                if let Ok(mut w) = stdin.lock() {
+                    let _ = proto::send_frame(&mut *w, &json!({"cmd": "shutdown", "id": 0}));
+                }
+                exited = true;
+            }
             if ticks % 100 == 0 {
                 let id = next_id;
                 next_id += 1;
@@ -370,6 +393,10 @@ fn main() {
 
         let code = child.try_wait().ok().flatten();
         log("info", "renderer.exited", json!({ "code": code.map(|c| c.to_string()), "restarts": restarts }));
+        if tray::EXIT_REQUESTED.load(Ordering::SeqCst) {
+            log("info", "lifecycle.exit", json!({}));
+            return;
+        }
         if restarts >= 3 {
             log("error", "lifecycle.restart_limit", json!({ "max": 3 }));
             return;
