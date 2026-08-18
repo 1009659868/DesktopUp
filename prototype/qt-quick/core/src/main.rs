@@ -4,7 +4,7 @@
 use std::collections::HashMap;
 use std::io::{Read, Write};
 use std::process::{Child, ChildStdin, Command, Stdio};
-use std::sync::atomic::{AtomicBool, AtomicIsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicIsize, AtomicU32, Ordering};
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::{Mutex, OnceLock};
 use std::thread;
@@ -38,6 +38,8 @@ struct Surface {
 static SURFACE: OnceLock<Mutex<Option<Surface>>> = OnceLock::new();
 // 渲染端窗口初始无 WS_EX_TRANSPARENT,故初始 false,与实际样式位一致
 static PASSTHROUGH_ON: AtomicBool = AtomicBool::new(false);
+// LL 钩子收到的事件总数(真实输入证据:任何鼠标移动都会累计)
+static HOOK_EVENTS: AtomicU32 = AtomicU32::new(0);
 static HOOK_STARTED: OnceLock<()> = OnceLock::new();
 static PROBE_MOUSE: AtomicBool = AtomicBool::new(false);
 static PROBE_STARTED: OnceLock<()> = OnceLock::new();
@@ -86,8 +88,7 @@ fn apply_passthrough(hwnd: isize, passthrough: bool) {
 }
 
 unsafe extern "system" fn mouse_hook(code: i32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
-    static EVENTS: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
-    let n = EVENTS.fetch_add(1, Ordering::Relaxed) + 1;
+    let n = HOOK_EVENTS.fetch_add(1, Ordering::Relaxed) + 1;
     if n <= 8 {
         let pt = (lparam.0 as *const MSLLHOOKSTRUCT)
             .as_ref()
@@ -497,7 +498,16 @@ fn run_session(child: &mut Child) -> Result<SessionOutcome, String> {
                 Ok(Wire::Frame(value)) => {
                     if let Some(id) = value.get("id").and_then(|v| v.as_u64()) {
                         if let Some(t0) = pending.remove(&id) {
-                            clog(&format!("reply: {value} ({}ms)", t0.elapsed().as_millis()));
+                            // 健康回复附钩子事件计数:真实输入证据(任何鼠标移动都会累计)
+                            let hook_n = HOOK_EVENTS.load(Ordering::Relaxed);
+                            if value.get("frames").is_some() {
+                                clog(&format!(
+                                    "reply: {value} ({}ms) hook_events={hook_n}",
+                                    t0.elapsed().as_millis()
+                                ));
+                            } else {
+                                clog(&format!("reply: {value} ({}ms)", t0.elapsed().as_millis()));
+                            }
                             // 呈现自检裁决:capture 回复带品红标记计数
                             if let Some(m) = value.get("magenta").and_then(|v| v.as_f64()) {
                                 if m > 0.0 {
