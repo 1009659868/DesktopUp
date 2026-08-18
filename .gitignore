@@ -1,0 +1,20 @@
+# Frontend dependencies and generated output
+/node_modules/
+/.pnpm-store/
+/dist/
+/artifacts/
+
+# Rust / Tauri generated output
+/src-tauri/target/
+/src-tauri/gen/
+
+# Local runtime data and diagnostics
+/.desktop-up/
+*.log
+.probe/
+
+# IDE and OS metadata
+/.idea/
+/.vscode/
+.DS_Store
+Thumbs.db
