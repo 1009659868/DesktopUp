@@ -11,6 +11,7 @@
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QImage>
+#include <QTimer>
 #include <atomic>
 #include <cstdio>
 
@@ -61,14 +62,19 @@ static void handleCommand(const QJsonObject &cmd) {
         const int h = cmd.value("h").toInt();
         QMetaObject::invokeMethod(gWindow, [=]() {
             gWindow->setGeometry(x, y, w, h);
-        }, Qt::QueuedConnection);
+        }, Qt::BlockingQueuedConnection);
         reply["ok"] = true;
+        reply["geometry"] = gWindow ? QString("%1,%2,%3,%4")
+                                          .arg(gWindow->x()).arg(gWindow->y())
+                                          .arg(gWindow->width()).arg(gWindow->height())
+                                    : QString();
     } else if (name == "set_visible") {
         const bool visible = cmd.value("visible").toBool();
         QMetaObject::invokeMethod(gWindow, [=]() {
             if (visible) gWindow->show(); else gWindow->hide();
-        }, Qt::QueuedConnection);
+        }, Qt::BlockingQueuedConnection);
         reply["ok"] = true;
+        reply["visible"] = gWindow ? gWindow->isVisible() : false;
     } else if (name == "set_params") {
         const QString accent = cmd.value("accent").toString();
         const double opacity = cmd.value("opacity").toDouble(0.8);
@@ -78,7 +84,7 @@ static void handleCommand(const QJsonObject &cmd) {
                 root->setProperty("accentColor", accent);
                 root->setProperty("posterOpacity", opacity);
             }
-        }, Qt::QueuedConnection);
+        }, Qt::BlockingQueuedConnection);
         reply["ok"] = true;
     } else if (name == "get_health") {
         reply["ok"] = true;
@@ -90,7 +96,9 @@ static void handleCommand(const QJsonObject &cmd) {
                                            .arg(gWindow->width()).arg(gWindow->height())
                                     : QString();
     } else if (name == "capture") {
-        // 呈现自检必须验证真实渲染通路:先 requestUpdate 强制产帧,换帧后再抓(防陈旧缓冲误报)
+        // 呈现自检:requestUpdate 强制产帧后,延迟到事件循环干净上下文抓取。
+        // 教训:绝不在 frameSwapped 信号处理器内调 grabWindow(渲染线程敏感态,
+        // 与显隐/几何搅动叠加会死锁/崩溃:0xC0000374/0xC0000005 已复现)。
         QMetaObject::invokeMethod(gWindow, [id = cmd.value("id")]() {
             QQuickWindow *win = gWindow;
             if (!win) {
@@ -101,33 +109,42 @@ static void handleCommand(const QJsonObject &cmd) {
                 sendFrame(r);
                 return;
             }
-            auto *conn = new QMetaObject::Connection;
             win->requestUpdate();
-            *conn = QObject::connect(win, &QQuickWindow::frameSwapped, win,
-                [win, id, conn]() {
-                    QObject::disconnect(*conn);
-                    delete conn;
-                    QImage img = win->grabWindow();
-                    const QString path = "G:\\A_\\Tools\\DesktopUp_V2\\prototype\\qt-quick\\capture.png";
-                    const bool saved = img.save(path);
-                    // 呈现自检:全帧扫描品红健康标记(#ff00ff),计数作为帧内证据
-                    quint64 magenta = 0;
-                    for (int y = 0; y < img.height(); ++y) {
-                        const QRgb *line = reinterpret_cast<const QRgb *>(img.constScanLine(y));
-                        for (int x = 0; x < img.width(); ++x) {
-                            if (qRed(line[x]) == 255 && qGreen(line[x]) == 0
-                                && qBlue(line[x]) == 255) {
-                                ++magenta;
-                            }
-                        }
-                    }
+            auto replied = std::make_shared<bool>(false);
+            QTimer::singleShot(30, win, [win, id, replied]() {
+                if (*replied) return;
+                *replied = true;
+                // 未呈现 = 自检失败:隐藏/未曝光时 grabWindow 会返回陈旧缓冲,不能当作呈现证据
+                if (!win->isVisible()) {
                     QJsonObject r;
                     r["id"] = id;
-                    r["ok"] = saved;
-                    r["size"] = QString("%1x%2").arg(img.width()).arg(img.height());
-                    r["magenta"] = static_cast<double>(magenta);
+                    r["ok"] = true;
+                    r["size"] = "hidden";
+                    r["magenta"] = 0.0;
                     sendFrame(r);
-                }, Qt::QueuedConnection);
+                    return;
+                }
+                QImage img = win->grabWindow();
+                const QString path = "G:\\A_\\Tools\\DesktopUp_V2\\prototype\\qt-quick\\capture.png";
+                const bool saved = img.save(path);
+                // 呈现自检:全帧扫描品红健康标记(#ff00ff),计数作为帧内证据
+                quint64 magenta = 0;
+                for (int y = 0; y < img.height(); ++y) {
+                    const QRgb *line = reinterpret_cast<const QRgb *>(img.constScanLine(y));
+                    for (int x = 0; x < img.width(); ++x) {
+                        if (qRed(line[x]) == 255 && qGreen(line[x]) == 0
+                            && qBlue(line[x]) == 255) {
+                            ++magenta;
+                        }
+                    }
+                }
+                QJsonObject r;
+                r["id"] = id;
+                r["ok"] = saved;
+                r["size"] = QString("%1x%2").arg(img.width()).arg(img.height());
+                r["magenta"] = static_cast<double>(magenta);
+                sendFrame(r);
+            });
         }, Qt::QueuedConnection);
         return;
     } else if (name == "shutdown") {

@@ -33,10 +33,13 @@
 | OnceLock 从未初始化 | `SURFACE.get()` 恒为 None → 区域恒 0、钩子永不启动 | 三处调用改 `get_or_init(|| Mutex::new(None))` |
 | QJsonValue 类型歧义 | C++ 端 int/qulonglong 赋值编译失败 | 统一 `static_cast<double>`;核心端 `as_f64` 解析 |
 
-## 验证证据(smoke)
+## 验证证据(已更新)
 
-- `core.log`:`hello #1`(完整 JSON)、`parsed 7 regions`、`store inside lock: parsed=7 stored=7`、`surface registered hwnd=0x125C0A58 rect=1700,200,450,703 regions=7`、健康轮询持续;
-- 待人工验证:`passthrough -> true/false` 节流行(空白区 vs 标题栏/卡片)、标题栏拖动、5px 阈值。
+- `core.log`:`mouse hook installed (WH_MOUSE_LL)`、`surface registered hwnd=0x… rect=1700,200,450,703 regions=7`;
+- 穿透机制证明(程序化,绕开沙箱 UIPI 对 SendInput 的阻断):核心桩直接对真实 HWND 施加/清除 `WS_EX_TRANSPARENT`,读回 exstyle 验证:`probe direct-apply on -> bit=true` / `off -> bit=false`;
+- 几何往返:set_geometry → 1710,210 → 健康轮询确认 → 还原 1700,200,全程无异常;
+- 沙箱边界记录:SendInput 返回 0(last_error=5,ERROR_ACCESS_DENIED),输入注入被 UIPI 阻断——真实用户鼠标事件不受影响;
+- 待人工验证:真实鼠标扫过空白/标题栏(core.log 将出现 `hook event #N` 或 `passthrough -> true/false`)、标题栏 5px 阈值拖动、桌面图标穿透实感。
 
 ## 结论(暂定)
 

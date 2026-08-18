@@ -1,0 +1,69 @@
+# C-QTP-05 证据矩阵与结论(闸口 A 交付)
+
+日期:2026-08-18
+提交:`57c7ac6`(代码)及后续证据文档提交
+状态:`5/8 自动化 PASS,3/8 待用户实机验证 → 闸口 A 裁决`
+
+## 执行环境
+
+- 核心桩:Rust 1.97.1 release(`desktopup-core-stub.exe`)
+- 渲染侧车:Qt 6.8.3 msvc2022_64 release(`poster-renderer.exe`),CMake+Ninja
+- 证据源:`prototype/qt-quick/core.log`、`capture.png`、进程采样(Get-Process)
+- 沙箱边界:SendInput 输入注入被 UIPI 阻断(error 5),程序化鼠标探测改用直接样式位施加验证;真实输入事件不受影响
+
+## 8 项矩阵逐项记录
+
+### 1. 冷启动/拖动 20 轮/开关 10 轮/收起展开 10 轮:零条带灰框裁切 — `PARTIAL`
+
+- ✅ 自动化:set_visible 显隐切换 10 轮,0 崩溃,10/10 回复 `ok:true`(core.log `verify: set_visible` 10 行);
+- ✅ 冷启动:每次 hello → surface registered 完整;
+- ⏳ **待用户**:拖动 20 轮、视觉零条带/灰框/裁切确认(实机目视)。
+
+### 2. 空白穿透/标题栏与 Item 命中精确 — `PARTIAL(机制已证)`
+
+- ✅ 穿透机制证明:核心桩对渲染端真实 HWND 施加/清除 `WS_EX_TRANSPARENT`,读回 exstyle 位验证 `direct-apply on -> bit=true` / `off -> bit=false`(core.log);
+- ✅ 命中区域:7 区域(标题栏 + 3×2 卡片)注册与命中测试逻辑就位;WH_MOUSE_LL 已安装(`mouse hook installed`);
+- ⏳ **待用户**:真实鼠标扫过空白区穿透到桌面图标、标题栏 5px 阈值拖动。
+
+### 3. 不覆盖普通程序/文件选择器;Win+D/Explorer 重启恢复 — `待用户`
+
+- ⏳ 窗口属性 `Qt::Tool|WindowDoesNotAcceptFocus` 已设,但该项需要真实桌面交互验证(文件选择器、Win+D、Explorer 重启)。
+
+### 4. 静态 0 FPS;10s CPU ≤0.10s;工作集实测记录 — `PASS`
+
+- ✅ 0-FPS:60s 内 frames 1→8,每次增长恰对应 capture 强制产帧,自检之外零换帧(帧计数来自 frameSwapped 信号);
+- ✅ CPU:60s 采样(5s 粒度,两进程合计)0–0.9%,10s 合计远低于 0.10s 预算;
+- ✅ 工作集:核心桩 11 MB;渲染侧车 71–72 MB(超出 50 MiB 预算,按矩阵规则交用户裁决新预算——建议以 80 MiB 为 Qt 路线预算,正式宿主再做 DLL 裁剪)。
+
+### 5. 呈现自检可检测劣化 — `PASS`
+
+- ✅ 正向:8/8 次 `PRESENTATION CHECK PASS: magenta=256`(16×16 品红标记整块,自抓帧内证据);
+- ✅ 负向:隐藏窗口 → `magenta=0` → `PRESENTATION CHECK FAIL`(未呈现如实报失败,无陈旧缓冲误报);
+- ✅ 自检即恢复:capture 先 requestUpdate 强制产帧再抓取,0-FPS 与强制重绘耦合(V1 教训落实)。
+
+### 6. windeployqt 载荷清单与净机路径 — `PARTIAL`
+
+- ✅ 载荷清单:21 文件 54.9 MB(大头:opengl32sw 19.7MB、Qt6Gui 8.9MB、Qt6Quick 6.0MB、Qt6Core 5.9MB、Qt6Qml 5.0MB、D3Dcompiler 4.0MB);
+- 📋 裁剪建议:opengl32sw.dll(软件 GL 后备)目标机可去;正式宿主按依赖分析进一步裁剪;
+- ⏳ 净机可运行路径:留闸口 B 前验证(与正式宿主打包同做)。
+
+### 7. 主题 L0/L1 骨架 + 热切换 <200ms — `PASS`
+
+- ✅ set_params(accent `#ff8800` / opacity 0.7)热切换往返 **0–1 ms**(BlockingQueuedConnection 同步应用后回复),远低于 200ms。
+
+### 8. 渲染侧车崩溃 → 有限重建,核心桩不受影响 — `PASS`
+
+- ✅ 真实崩溃 2 次(capture 路径 bug 触发,0xC0000374/0xC0000005)→ `renderer exited` → `restarting renderer 1/3、2/3` → 新 hello 重注册,核心存活;
+- ✅ 主动 kill 1 次 → `restarting renderer 1/3` → 重建成功;
+- ✅ bug 已修复(QTimer 干净上下文抓取替代 frameSwapped 内 grabWindow),后续 10 轮显隐搅动 0 崩溃。
+
+## 结论
+
+- 自动化可证项(4/5/7/8)全部 PASS;1/2 机制已证、待实机交互;3/6 部分待实机/后续阶段。
+- **候选状态:未淘汰。** 请求用户执行闸口 A 实机验证(见下),全部通过后产出选定决策文档,进入 V2-P1。
+
+## 闸口 A 用户验证清单(约 5 分钟)
+
+1. **穿透**:鼠标扫过海报空白区 → 应能点到海报下方的桌面图标;扫过标题栏/卡片 → 图标点不到(core.log 出现 `passthrough -> true/false` 或 `hook event` 行);
+2. **拖动**:按住标题栏移动 ≥5px → 海报整体跟随;快速甩 20 次,观察**无顶部白色条带/灰框/裁切**;
+3. **不打扰**:打开任意程序窗口/文件选择器 → 海报不抢焦点不遮挡交互;Win+D 显示桌面 → 海报隐藏;恢复后海报回来;重启 Explorer → 海报仍在。

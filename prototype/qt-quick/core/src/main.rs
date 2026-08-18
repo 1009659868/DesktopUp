@@ -41,6 +41,7 @@ static PASSTHROUGH_ON: AtomicBool = AtomicBool::new(false);
 static HOOK_STARTED: OnceLock<()> = OnceLock::new();
 static PROBE_MOUSE: AtomicBool = AtomicBool::new(false);
 static PROBE_STARTED: OnceLock<()> = OnceLock::new();
+static VERIFY: AtomicBool = AtomicBool::new(false);
 
 fn clog(line: &str) {
     use std::io::Write as _;
@@ -275,6 +276,7 @@ fn main() {
         args.iter().any(|a| a == "--probe-mouse"),
         Ordering::Relaxed,
     );
+    VERIFY.store(args.iter().any(|a| a == "--verify"), Ordering::Relaxed);
 
     clog(&format!("starting renderer: {renderer}"));
     let mut child = spawn_renderer(&renderer);
@@ -372,7 +374,7 @@ fn run_session(child: &mut Child) -> Result<SessionOutcome, String> {
 
     clog("session started; waiting for renderer hello");
     let mut next_id: u64 = 1;
-    let mut pending: HashMap<u64, serde_json::Value> = HashMap::new();
+    let mut pending: HashMap<u64, std::time::Instant> = HashMap::new();
     let mut ticks: u64 = 0;
     let mut hellos = 0u32;
 
@@ -382,7 +384,7 @@ fn run_session(child: &mut Child) -> Result<SessionOutcome, String> {
             let id = next_id;
             next_id += 1;
             send_frame(&mut stdin, &serde_json::json!({"cmd": "get_health", "id": id}))?;
-            pending.insert(id, serde_json::Value::Null);
+            pending.insert(id, std::time::Instant::now());
             clog(&format!("sent get_health id={id}"));
         }
         if ticks % 300 == 150 {
@@ -390,7 +392,7 @@ fn run_session(child: &mut Child) -> Result<SessionOutcome, String> {
             let id = next_id;
             next_id += 1;
             send_frame(&mut stdin, &serde_json::json!({"cmd": "capture", "id": id}))?;
-            pending.insert(id, serde_json::Value::Null);
+            pending.insert(id, std::time::Instant::now());
             clog(&format!("sent capture id={id}"));
         }
         // 几何往返探针:移动 → 健康轮询验证 → 还原
@@ -401,7 +403,7 @@ fn run_session(child: &mut Child) -> Result<SessionOutcome, String> {
                 &mut stdin,
                 &serde_json::json!({"cmd":"set_geometry","id":id,"x":1710,"y":210,"w":450,"h":703}),
             )?;
-            pending.insert(id, serde_json::Value::Null);
+            pending.insert(id, std::time::Instant::now());
             clog("probe: set_geometry -> 1710,210");
         }
         if ticks == 600 {
@@ -411,8 +413,82 @@ fn run_session(child: &mut Child) -> Result<SessionOutcome, String> {
                 &mut stdin,
                 &serde_json::json!({"cmd":"set_geometry","id":id,"x":1700,"y":200,"w":450,"h":703}),
             )?;
-            pending.insert(id, serde_json::Value::Null);
+            pending.insert(id, std::time::Instant::now());
             clog("probe: set_geometry -> restore 1700,200");
+        }
+        // --verify 验证序列:显隐 10 轮 / 主题热切换计时 / 隐藏态负向自检
+        if VERIFY.load(Ordering::Relaxed) {
+            for round in 0..10u64 {
+                if ticks == 400 + round * 60 {
+                    let vis = round % 2 == 0;
+                    let id = next_id;
+                    next_id += 1;
+                    send_frame(
+                        &mut stdin,
+                        &serde_json::json!({"cmd":"set_visible","id":id,"visible":vis}),
+                    )?;
+                    pending.insert(id, std::time::Instant::now());
+                    clog(&format!("verify: set_visible -> {vis} (round {})", round + 1));
+                }
+            }
+            if ticks == 1100 {
+                let id = next_id;
+                next_id += 1;
+                send_frame(
+                    &mut stdin,
+                    &serde_json::json!({"cmd":"set_params","id":id,"accent":"#ff8800","opacity":0.7}),
+                )?;
+                pending.insert(id, std::time::Instant::now());
+                clog("verify: set_params hot-swap -> #ff8800/0.7");
+            }
+            if ticks == 1130 {
+                let id = next_id;
+                next_id += 1;
+                send_frame(
+                    &mut stdin,
+                    &serde_json::json!({"cmd":"set_params","id":id,"accent":"#72e4ff","opacity":0.82}),
+                )?;
+                pending.insert(id, std::time::Instant::now());
+                clog("verify: set_params restore");
+            }
+            if ticks == 1200 {
+                let id = next_id;
+                next_id += 1;
+                send_frame(
+                    &mut stdin,
+                    &serde_json::json!({"cmd":"set_visible","id":id,"visible":false}),
+                )?;
+                pending.insert(id, std::time::Instant::now());
+                clog("verify: hide window (negative self-check setup)");
+            }
+            if ticks == 1260 {
+                let id = next_id;
+                next_id += 1;
+                send_frame(&mut stdin, &serde_json::json!({"cmd": "capture", "id": id}))?;
+                pending.insert(id, std::time::Instant::now());
+                clog("verify: capture while hidden (expect FAIL/timeout)");
+            }
+            if ticks == 1350 {
+                let id = next_id;
+                next_id += 1;
+                send_frame(
+                    &mut stdin,
+                    &serde_json::json!({"cmd":"set_visible","id":id,"visible":true}),
+                )?;
+                pending.insert(id, std::time::Instant::now());
+                clog("verify: restore visible");
+            }
+        }
+        // 超时清理:5s 未回复的挂起命令视为超时(负向自检证据之一)
+        let now = std::time::Instant::now();
+        let timed_out: Vec<u64> = pending
+            .iter()
+            .filter(|(_, t)| now.duration_since(**t) > Duration::from_secs(5))
+            .map(|(id, _)| *id)
+            .collect();
+        for id in timed_out {
+            pending.remove(&id);
+            clog(&format!("pending id={id} TIMED OUT (no reply)"));
         }
 
         loop {
@@ -420,8 +496,8 @@ fn run_session(child: &mut Child) -> Result<SessionOutcome, String> {
                 Ok(Wire::Eof) => return Ok(SessionOutcome::RendererExited),
                 Ok(Wire::Frame(value)) => {
                     if let Some(id) = value.get("id").and_then(|v| v.as_u64()) {
-                        if pending.remove(&id).is_some() {
-                            clog(&format!("reply: {value}"));
+                        if let Some(t0) = pending.remove(&id) {
+                            clog(&format!("reply: {value} ({}ms)", t0.elapsed().as_millis()));
                             // 呈现自检裁决:capture 回复带品红标记计数
                             if let Some(m) = value.get("magenta").and_then(|v| v.as_f64()) {
                                 if m > 0.0 {
