@@ -11,10 +11,12 @@
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QImage>
+#include <atomic>
 #include <cstdio>
 
 static QQuickWindow *gWindow = nullptr;
 static QQmlApplicationEngine *gEngine = nullptr;
+static std::atomic<quint64> gFrames{0};
 
 static void rlog(const char *fmt, ...) {
     static FILE *file = nullptr;
@@ -82,21 +84,50 @@ static void handleCommand(const QJsonObject &cmd) {
         reply["ok"] = true;
         reply["exposed"] = gWindow ? gWindow->isExposed() : false;
         reply["visible"] = gWindow ? gWindow->isVisible() : false;
+        reply["frames"] = static_cast<double>(gFrames.load());
         reply["geometry"] = gWindow ? QString("%1,%2,%3,%4")
                                            .arg(gWindow->x()).arg(gWindow->y())
                                            .arg(gWindow->width()).arg(gWindow->height())
                                     : QString();
     } else if (name == "capture") {
-        // 异步:在 GUI 线程抓取窗口自绘帧并保存 PNG(呈现自检素材)
+        // 呈现自检必须验证真实渲染通路:先 requestUpdate 强制产帧,换帧后再抓(防陈旧缓冲误报)
         QMetaObject::invokeMethod(gWindow, [id = cmd.value("id")]() {
-            QImage img = gWindow->grabWindow();
-            const QString path = "G:\\A_\\Tools\\DesktopUp_V2\\prototype\\qt-quick\\capture.png";
-            const bool saved = img.save(path);
-            QJsonObject r;
-            r["id"] = id;
-            r["ok"] = saved;
-            r["size"] = QString("%1x%2").arg(img.width()).arg(img.height());
-            sendFrame(r);
+            QQuickWindow *win = gWindow;
+            if (!win) {
+                QJsonObject r;
+                r["id"] = id;
+                r["ok"] = false;
+                r["error"] = "no window";
+                sendFrame(r);
+                return;
+            }
+            auto *conn = new QMetaObject::Connection;
+            win->requestUpdate();
+            *conn = QObject::connect(win, &QQuickWindow::frameSwapped, win,
+                [win, id, conn]() {
+                    QObject::disconnect(*conn);
+                    delete conn;
+                    QImage img = win->grabWindow();
+                    const QString path = "G:\\A_\\Tools\\DesktopUp_V2\\prototype\\qt-quick\\capture.png";
+                    const bool saved = img.save(path);
+                    // 呈现自检:全帧扫描品红健康标记(#ff00ff),计数作为帧内证据
+                    quint64 magenta = 0;
+                    for (int y = 0; y < img.height(); ++y) {
+                        const QRgb *line = reinterpret_cast<const QRgb *>(img.constScanLine(y));
+                        for (int x = 0; x < img.width(); ++x) {
+                            if (qRed(line[x]) == 255 && qGreen(line[x]) == 0
+                                && qBlue(line[x]) == 255) {
+                                ++magenta;
+                            }
+                        }
+                    }
+                    QJsonObject r;
+                    r["id"] = id;
+                    r["ok"] = saved;
+                    r["size"] = QString("%1x%2").arg(img.width()).arg(img.height());
+                    r["magenta"] = static_cast<double>(magenta);
+                    sendFrame(r);
+                }, Qt::QueuedConnection);
         }, Qt::QueuedConnection);
         return;
     } else if (name == "shutdown") {
@@ -163,6 +194,11 @@ int main(int argc, char *argv[]) {
     window->setDefaultAlphaBuffer(true);
     window->setGeometry(1700, 200, 450, 703);
     window->show();
+
+    // 0-FPS 证据:统计实际换帧次数(静态构图应趋近于零)
+    QObject::connect(window, &QQuickWindow::frameSwapped, window, []() {
+        gFrames.fetch_add(1, std::memory_order_relaxed);
+    });
 
     QJsonObject hello;
     hello["cmd"] = "hello";

@@ -11,12 +11,17 @@ use std::thread;
 use std::time::Duration;
 
 use windows::core::w;
-use windows::Win32::Foundation::{HANDLE, HWND, LPARAM, LRESULT, WPARAM};
+use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, POINT, WPARAM};
+use windows::Win32::UI::Input::KeyboardAndMouse::{
+    SendInput, INPUT, INPUT_0, INPUT_MOUSE, MOUSEINPUT, MOUSEEVENTF_ABSOLUTE, MOUSEEVENTF_MOVE,
+    MOUSEEVENTF_VIRTUALDESK,
+};
 use windows::Win32::UI::WindowsAndMessaging::{
-    CallNextHookEx, DispatchMessageW, GetMessageW, GetWindowLongPtrW, SetWindowLongPtrW,
-    SetWindowsHookExW, TranslateMessage, UnhookWindowsHookEx, GWL_EXSTYLE, HHOOK, MSG,
-    MSLLHOOKSTRUCT, WH_MOUSE_LL, WM_MOUSEMOVE, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW,
-    WS_EX_TRANSPARENT,
+    CallNextHookEx, DispatchMessageW, GetCursorPos, GetMessageW, GetSystemMetrics,
+    GetWindowLongPtrW, SetWindowLongPtrW, SetWindowsHookExW, TranslateMessage,
+    UnhookWindowsHookEx, GWL_EXSTYLE, HHOOK, MSG, MSLLHOOKSTRUCT, SM_CXVIRTUALSCREEN,
+    SM_CYVIRTUALSCREEN, SM_XVIRTUALSCREEN, SM_YVIRTUALSCREEN, WH_MOUSE_LL, WM_MOUSEMOVE,
+    WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TRANSPARENT,
 };
 
 const MAX_RESTARTS: u32 = 3;
@@ -31,8 +36,11 @@ struct Surface {
     regions: Vec<(i32, i32, i32, i32)>, // (x,y,w,h) 窗口坐标
 }
 static SURFACE: OnceLock<Mutex<Option<Surface>>> = OnceLock::new();
-static PASSTHROUGH_ON: AtomicBool = AtomicBool::new(true);
+// 渲染端窗口初始无 WS_EX_TRANSPARENT,故初始 false,与实际样式位一致
+static PASSTHROUGH_ON: AtomicBool = AtomicBool::new(false);
 static HOOK_STARTED: OnceLock<()> = OnceLock::new();
+static PROBE_MOUSE: AtomicBool = AtomicBool::new(false);
+static PROBE_STARTED: OnceLock<()> = OnceLock::new();
 
 fn clog(line: &str) {
     use std::io::Write as _;
@@ -77,6 +85,18 @@ fn apply_passthrough(hwnd: isize, passthrough: bool) {
 }
 
 unsafe extern "system" fn mouse_hook(code: i32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
+    static EVENTS: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
+    let n = EVENTS.fetch_add(1, Ordering::Relaxed) + 1;
+    if n <= 8 {
+        let pt = (lparam.0 as *const MSLLHOOKSTRUCT)
+            .as_ref()
+            .map(|d| (d.pt.x, d.pt.y))
+            .unwrap_or((-1, -1));
+        clog(&format!(
+            "hook event #{n} code={code} wparam=0x{:X} pt=({},{})",
+            wparam.0, pt.0, pt.1
+        ));
+    }
     if code >= 0 && wparam.0 as u32 == WM_MOUSEMOVE {
         if let Some(details) = (lparam.0 as *const MSLLHOOKSTRUCT).as_ref() {
             let point = details.pt;
@@ -106,6 +126,7 @@ fn run_hook_thread() {
             clog("failed to install mouse hook");
             return;
         };
+        clog("mouse hook installed (WH_MOUSE_LL)");
         let _ = HOOK_STARTED.set(());
         let mut message = MSG::default();
         while GetMessageW(&mut message, None, 0, 0).as_bool() {
@@ -116,11 +137,144 @@ fn run_hook_thread() {
     }
 }
 
-fn main() {
-    let renderer = std::env::args().nth(1).unwrap_or_else(|| {
-        r"G:\A_\Tools\DesktopUp_V2\prototype\qt-quick\renderer\build\poster-renderer.exe"
-            .to_string()
+// SendInput 注入绝对移动(WH_MOUSE_LL 可观察注入事件;SetCursorPos 直接改光标不进输入流)
+unsafe fn inject_move(x: i32, y: i32, vsx: i32, vsy: i32, vsw: i32, vsh: i32) {
+    let dx = ((x - vsx) as i64 * 65535 / (vsw - 1) as i64) as i32;
+    let dy = ((y - vsy) as i64 * 65535 / (vsh - 1) as i64) as i32;
+    let mut input = INPUT {
+        r#type: INPUT_MOUSE,
+        Anonymous: INPUT_0 {
+            mi: MOUSEINPUT {
+                dx,
+                dy,
+                mouseData: 0,
+                dwFlags: MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_VIRTUALDESK,
+                time: 0,
+                dwExtraInfo: 0,
+            },
+        },
+    };
+    let sent = SendInput(
+        std::slice::from_ref(&input),
+        std::mem::size_of::<INPUT>() as i32,
+    );
+    clog(&format!(
+        "inject: SendInput -> {sent} (last_error={})",
+        windows::Win32::Foundation::GetLastError().0
+    ));
+}
+
+// --probe-mouse:程序化光标探测,验证钩子切换与穿透位真实生效(不等人工)
+fn run_mouse_probe() {
+    // 空白点/命中点(窗口局部坐标,来自 QML 构图):标题栏 y∈[16,74];卡片行0 y∈[168,264]
+    let steps: [(&str, i32, i32); 5] = [
+        ("blank", 225, 120),
+        ("titlebar", 225, 45),
+        ("blank", 225, 120),
+        ("card", 225, 210),
+        ("blank", 225, 120),
+    ];
+    thread::spawn(move || {
+        let (hwnd, ox, oy) = {
+            let mut got = None;
+            for _ in 0..100 {
+                if let Ok(guard) = SURFACE.get_or_init(|| Mutex::new(None)).lock() {
+                    if let Some(s) = guard.as_ref() {
+                        got = Some((s.hwnd, s.x, s.y));
+                        break;
+                    }
+                }
+                thread::sleep(Duration::from_millis(50));
+            }
+            match got {
+                Some(v) => v,
+                None => {
+                    clog("probe: surface never registered");
+                    return;
+                }
+            }
+        };
+        // 等钩子装好再注入,否则事件白白穿过
+        for _ in 0..100 {
+            if HOOK_STARTED.get().is_some() {
+                break;
+            }
+            thread::sleep(Duration::from_millis(50));
+        }
+        if HOOK_STARTED.get().is_none() {
+            clog("probe: hook never installed; aborting");
+            return;
+        }
+        let start = unsafe {
+            let mut p = POINT::default();
+            if GetCursorPos(&mut p).is_ok() {
+                Some((p.x, p.y))
+            } else {
+                None
+            }
+        };
+        let (vsx, vsy, vsw, vsh) = unsafe {
+            (
+                GetSystemMetrics(SM_XVIRTUALSCREEN),
+                GetSystemMetrics(SM_YVIRTUALSCREEN),
+                GetSystemMetrics(SM_CXVIRTUALSCREEN),
+                GetSystemMetrics(SM_CYVIRTUALSCREEN),
+            )
+        };
+        clog(&format!(
+            "probe: begin origin=({ox},{oy}) virtual=({vsx},{vsy},{vsw},{vsh})"
+        ));
+        for (kind, lx, ly) in steps {
+            let sx = ox + lx;
+            let sy = oy + ly;
+            unsafe {
+                inject_move(sx, sy, vsx, vsy, vsw, vsh);
+            }
+            thread::sleep(Duration::from_millis(300));
+            let bit = unsafe {
+                let style = GetWindowLongPtrW(HWND(hwnd as *mut core::ffi::c_void), GWL_EXSTYLE);
+                style & WS_EX_TRANSPARENT.0 as isize != 0
+            };
+            clog(&format!(
+                "probe step kind={kind} local=({lx},{ly}) transparent_bit={bit}"
+            ));
+        }
+        if let Some((sx, sy)) = start {
+            unsafe {
+                inject_move(sx, sy, vsx, vsy, vsw, vsh);
+            }
+            clog(&format!("probe: cursor restored to ({sx},{sy})"));
+        }
+        // 阶段 B:直接施加验证(SendInput 被沙箱 UIPI 阻断时,样式切换机制仍可证明)
+        let read_bit = |h: isize| unsafe {
+            GetWindowLongPtrW(HWND(h as *mut core::ffi::c_void), GWL_EXSTYLE)
+                & WS_EX_TRANSPARENT.0 as isize
+                != 0
+        };
+        apply_passthrough(hwnd, true);
+        thread::sleep(Duration::from_millis(200));
+        clog(&format!("probe direct-apply on  -> bit={}", read_bit(hwnd)));
+        apply_passthrough(hwnd, false);
+        thread::sleep(Duration::from_millis(200));
+        clog(&format!("probe direct-apply off -> bit={}", read_bit(hwnd)));
     });
+}
+
+fn main() {
+    let args: Vec<String> = std::env::args().collect();
+    let renderer = args
+        .iter()
+        .skip(1)
+        .find(|a| !a.starts_with("--"))
+        .cloned()
+        .unwrap_or_else(|| {
+            r"G:\A_\Tools\DesktopUp_V2\prototype\qt-quick\renderer\build\poster-renderer.exe"
+                .to_string()
+        });
+    PROBE_MOUSE.store(
+        args.iter().any(|a| a == "--probe-mouse"),
+        Ordering::Relaxed,
+    );
 
     clog(&format!("starting renderer: {renderer}"));
     let mut child = spawn_renderer(&renderer);
@@ -239,6 +393,27 @@ fn run_session(child: &mut Child) -> Result<SessionOutcome, String> {
             pending.insert(id, serde_json::Value::Null);
             clog(&format!("sent capture id={id}"));
         }
+        // 几何往返探针:移动 → 健康轮询验证 → 还原
+        if ticks == 400 {
+            let id = next_id;
+            next_id += 1;
+            send_frame(
+                &mut stdin,
+                &serde_json::json!({"cmd":"set_geometry","id":id,"x":1710,"y":210,"w":450,"h":703}),
+            )?;
+            pending.insert(id, serde_json::Value::Null);
+            clog("probe: set_geometry -> 1710,210");
+        }
+        if ticks == 600 {
+            let id = next_id;
+            next_id += 1;
+            send_frame(
+                &mut stdin,
+                &serde_json::json!({"cmd":"set_geometry","id":id,"x":1700,"y":200,"w":450,"h":703}),
+            )?;
+            pending.insert(id, serde_json::Value::Null);
+            clog("probe: set_geometry -> restore 1700,200");
+        }
 
         loop {
             match rx.try_recv() {
@@ -247,6 +422,31 @@ fn run_session(child: &mut Child) -> Result<SessionOutcome, String> {
                     if let Some(id) = value.get("id").and_then(|v| v.as_u64()) {
                         if pending.remove(&id).is_some() {
                             clog(&format!("reply: {value}"));
+                            // 呈现自检裁决:capture 回复带品红标记计数
+                            if let Some(m) = value.get("magenta").and_then(|v| v.as_f64()) {
+                                if m > 0.0 {
+                                    clog(&format!("PRESENTATION CHECK PASS: magenta={m}"));
+                                } else {
+                                    clog("PRESENTATION CHECK FAIL: magenta=0");
+                                }
+                            }
+                            // 几何以渲染端回复为准(拖动/命令后刷新命中坐标系)
+                            if let Some(geo) = value.get("geometry").and_then(|v| v.as_str()) {
+                                let parts: Vec<i32> =
+                                    geo.split(',').filter_map(|s| s.parse().ok()).collect();
+                                if parts.len() == 4 {
+                                    if let Ok(mut guard) =
+                                        SURFACE.get_or_init(|| Mutex::new(None)).lock()
+                                    {
+                                        if let Some(s) = guard.as_mut() {
+                                            s.x = parts[0];
+                                            s.y = parts[1];
+                                            s.w = parts[2];
+                                            s.h = parts[3];
+                                        }
+                                    }
+                                }
+                            }
                             continue;
                         }
                     }
@@ -307,6 +507,9 @@ fn register_surface(value: &serde_json::Value) {
     HOOK_STARTED.get_or_init(|| {
         thread::spawn(run_hook_thread);
     });
+    if PROBE_MOUSE.load(Ordering::Relaxed) {
+        PROBE_STARTED.get_or_init(run_mouse_probe);
+    }
     clog(&format!("surface registered hwnd=0x{hwnd:X} rect={x},{y},{w},{h} regions={}", {
         let guard = SURFACE.get_or_init(|| Mutex::new(None)).lock().ok();
         guard.as_ref().map(|g| g.as_ref().map(|s| s.regions.len()).unwrap_or(0)).unwrap_or(0)
