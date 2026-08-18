@@ -29,15 +29,15 @@ V1 的 P0 缺陷 DU-BUG-001（透明海报顶部白条）经过 2026-08-17/18 �
 - 已否定的候选：屏幕贴边、壁纸、原生 caption、子窗口偏移、copy-bits、同尺寸 bounds 重同步、HRGN、整屏固定宿主、owner/坐标混淆、revision-only 幂等同步、**常驻 WS_EX_LAYERED**、**tao 遗留 blur-behind + WM_ERASEBKGND 整幅填充（Accent Policy 替换实验）**、**禁用 GPU（--disable-gpu）**、强制重绘；
 - 已确认的诱因类别：**“Tauri 透明窗口（tao）+ 窗口模式 WebView2（wry）+ DirectComposition 视觉树 + 动态样式切换”在 Windows 11 上的组合本身不稳定**，问题可被触发但无法在该架构内根治。
 
-用户决定：桌面海报宿主架构推倒重做，其余已验证资产尽量复用。V2 的首要任务是**渲染宿主选定**，而不是继续叠加窗口补丁。
+用户决定：桌面海报宿主架构推倒重做，**V2 代码全重写，V1 代码与测试仅作为参考文档；渲染候选优先原生 Direct2D/DirectComposition**。V2 的首要任务是**渲染宿主选定**，而不是继续叠加窗口补丁。
 
-### 2.2 继承资产（保留）
+### 2.2 继承资产（作为需求与参考，不复制代码）
 
 | 资产 | 处置 |
 | --- | --- |
-| Rust 应用核心（状态机、生命周期、托盘、单实例、自启、Shell 恢复、退出顺序） | 复用/迁移 |
-| SQLite 唯一状态权威 + revision/CAS + 版本化迁移 + 失败保留 | 复用/迁移 |
-| Poster 契约、几何、权限矩阵、编辑投影等纯逻辑 | 复用/迁移 |
+| Rust 应用核心（状态机、生命周期、托盘、单实例、自启、Shell 恢复、退出顺序） | 保留为行为需求与参考实现；V2 全重写 |
+| SQLite 唯一状态权威 + revision/CAS + 版本化迁移 + 失败保留 | 保留为数据契约与迁移规则；V2 重写 |
+| Poster 契约、几何、权限矩阵、编辑投影等纯逻辑 | 保留为契约与测试参考；V2 重写 |
 | A/B/C 文档治理、问题台账纪律、可证伪实验方法 | 继承 |
 | 安装/自启/卸载/恢复的契约与发布规则 | 继承 |
 
@@ -83,12 +83,12 @@ V1 的 P0 缺陷 DU-BUG-001（透明海报顶部白条）经过 2026-08-17/18 �
 
 ### RP-ARC-02 候选与最小验证矩阵（`P0/FROZEN`）
 
-候选（按现有证据排序，不承诺顺序即优先级）：
+候选（**优先实施顺序已定：先做原生 Direct2D/DirectComposition**；其余为回退候选）：
 
-1. Qt Quick/QML 透明原生海报；
-2. WebView2 Composition Controller + DirectComposition；
-3. Rust/C++ Direct2D/DirectComposition 原生渲染；
-4. 原生 layered window + 离屏位图渲染。
+1. Rust/C++ Direct2D/DirectComposition 原生渲染（**优先**）；
+2. 原生 layered window + 离屏位图渲染；
+3. Qt Quick/QML 透明原生海报；
+4. WebView2 Composition Controller + DirectComposition。
 
 每个候选必须同时通过（否则淘汰）：
 
@@ -231,7 +231,7 @@ V2-P0 的完成定义 = 至少一个候选通过 §7.2 全矩阵 + 选定决策�
 
 | ID | 问题 | 影响 |
 | --- | --- | --- |
-| RP-TBD-01 | 桌面海报宿主渲染技术最终选择 | V2-P0 的输出；决定打包、性能预算与模板运行时 |
+| RP-TBD-01 | 桌面海报宿主渲染技术最终选择 | V2-P0 的输出；**已定向原生 Direct2D/DirectComposition 优先**，未最终选定；决定打包、性能预算与模板运行时 |
 | RP-TBD-02 | `DesktopUP` 品牌名与图标 | 安装器、签名、托盘 |
 | RP-TBD-03 | `transparent-default` 正式名称与视觉规格 | 模板平台 |
 | RP-TBD-04 | AI R0/R1/R2 免确认范围 | AI 风险策略 |
@@ -258,4 +258,5 @@ V2-P0 的完成定义 = 至少一个候选通过 §7.2 全矩阵 + 选定决策�
 
 | 日期 | 版本 | 内容 |
 | --- | --- | --- |
+| 2026-08-18 | V1.1 | 用户决策：渲染候选优先原生 Direct2D/DirectComposition；V2 代码全重写、V1 仅作参考；继承资产表、候选顺序与 RP-TBD-01 同步更新 |
 | 2026-08-18 | V1 | 建立 V2 需求画像：记录 V1 白条排查结论与否定清单、继承/不继承资产、新增 RP-INV-11/12 与 RP-ARC-01..08、V2 分期与完成定义 |
