@@ -22,6 +22,10 @@ $cmd = "call `"$vcvars`" >nul && `"$cmake`" -S `"$rendererDir`" -B `"$buildDir`"
 cmd /c $cmd
 if ($LASTEXITCODE -ne 0) { throw "renderer build failed" }
 
+# 2) deploy Qt runtime DLLs next to the renderer
+& "$qtRoot\bin\windeployqt.exe" --release --no-translations --qmldir "$rendererDir\qml" "$buildDir\poster-renderer.exe" | Out-Null
+if ($LASTEXITCODE -ne 0) { throw "windeployqt failed" }
+
 # 2) core stub
 Set-Location (Join-Path $root "core")
 cargo build --release

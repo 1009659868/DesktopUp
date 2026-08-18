@@ -1,46 +1,50 @@
 // DesktopUp V2 — C-QTP 渲染侧车(C++/Qt Quick)
-// 职责:透明圆角海报窗口、IPC 客户端、几何/参数命令、呈现健康上报。
+// 职责:透明圆角海报窗口、stdio IPC(stdin 下行命令 / stdout 上行回复)、几何/参数命令、呈现健康上报。
+// 传输:4 字节 LE 长度前缀 + UTF-8 JSON。
+#include <windows.h>
+
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
-#include <QQmlContext>
 #include <QQuickWindow>
-#include <QTimer>
 #include <QThread>
 #include <QJsonDocument>
 #include <QJsonObject>
-#include <windows.h>
+#include <QImage>
+#include <cstdio>
 
 static QQuickWindow *gWindow = nullptr;
 static QQmlApplicationEngine *gEngine = nullptr;
 
-// ---- named pipe client ----
-struct PipeClient {
-    HANDLE handle = INVALID_HANDLE_VALUE;
+static void rlog(const char *fmt, ...) {
+    static FILE *file = nullptr;
+    if (!file) file = fopen("G:\\A_\\Tools\\DesktopUp_V2\\prototype\\qt-quick\\renderer.log", "a");
+    if (!file) return;
+    va_list args;
+    va_start(args, fmt);
+    vfprintf(file, fmt, args);
+    va_end(args);
+    fprintf(file, "\n");
+    fflush(file);
+}
 
-    bool connect(const QString &name) {
-        handle = CreateFileW(reinterpret_cast<LPCWSTR>(name.utf16()), GENERIC_READ | GENERIC_WRITE,
-                             0, nullptr, OPEN_EXISTING, 0, nullptr);
-        return handle != INVALID_HANDLE_VALUE;
-    }
+// ---- stdio 帧传输 ----
+static HANDLE gStdin = INVALID_HANDLE_VALUE;
+static HANDLE gStdout = INVALID_HANDLE_VALUE;
 
-    bool send(const QJsonObject &obj) {
-        if (handle == INVALID_HANDLE_VALUE) return false;
-        QByteArray data = QJsonDocument(obj).toJson(QJsonDocument::Compact);
-        quint32 len = static_cast<quint32>(data.size());
-        QByteArray frame;
-        frame.append(reinterpret_cast<const char *>(&len), 4);
-        frame.append(data);
-        DWORD written = 0;
-        return WriteFile(handle, frame.constData(), static_cast<DWORD>(frame.size()), &written, nullptr)
-               && written == static_cast<DWORD>(frame.size());
-    }
+static bool sendFrame(const QJsonObject &obj) {
+    if (gStdout == INVALID_HANDLE_VALUE) return false;
+    QByteArray data = QJsonDocument(obj).toJson(QJsonDocument::Compact);
+    quint32 len = static_cast<quint32>(data.size());
+    QByteArray frame;
+    frame.append(reinterpret_cast<const char *>(&len), 4);
+    frame.append(data);
+    DWORD written = 0;
+    BOOL ok = WriteFile(gStdout, frame.constData(), static_cast<DWORD>(frame.size()), &written, nullptr);
+    rlog("sendFrame ok=%d written=%lu", int(ok), written);
+    return ok && written == static_cast<DWORD>(frame.size());
+}
 
-    void closePipe() {
-        if (handle != INVALID_HANDLE_VALUE) { CloseHandle(handle); handle = INVALID_HANDLE_VALUE; }
-    }
-};
-
-static void handleCommand(PipeClient &pipe, const QJsonObject &cmd) {
+static void handleCommand(const QJsonObject &cmd) {
     const QString name = cmd.value("cmd").toString();
     QJsonObject reply;
     reply["id"] = cmd.value("id");
@@ -81,26 +85,40 @@ static void handleCommand(PipeClient &pipe, const QJsonObject &cmd) {
                                            .arg(gWindow->x()).arg(gWindow->y())
                                            .arg(gWindow->width()).arg(gWindow->height())
                                     : QString();
+    } else if (name == "capture") {
+        // 异步:在 GUI 线程抓取窗口自绘帧并保存 PNG(呈现自检素材)
+        QMetaObject::invokeMethod(gWindow, [id = cmd.value("id")]() {
+            QImage img = gWindow->grabWindow();
+            const QString path = "G:\\A_\\Tools\\DesktopUp_V2\\prototype\\qt-quick\\capture.png";
+            const bool saved = img.save(path);
+            QJsonObject r;
+            r["id"] = id;
+            r["ok"] = saved;
+            r["size"] = QString("%1x%2").arg(img.width()).arg(img.height());
+            sendFrame(r);
+        }, Qt::QueuedConnection);
+        return;
     } else if (name == "shutdown") {
         reply["ok"] = true;
-        pipe.send(reply);
+        sendFrame(reply);
         QMetaObject::invokeMethod(qApp, "quit", Qt::QueuedConnection);
         return;
     } else {
         reply["ok"] = false;
         reply["error"] = QString("unknown cmd: %1").arg(name);
     }
-    pipe.send(reply);
+    sendFrame(reply);
 }
 
-static void readerLoop(PipeClient &pipe) {
+static void readerLoop() {
     QByteArray buffer;
-    while (pipe.handle != INVALID_HANDLE_VALUE) {
+    rlog("readerLoop started on stdin");
+    while (gStdin != INVALID_HANDLE_VALUE) {
         char chunk[8192];
         DWORD read = 0;
-        if (!ReadFile(pipe.handle, chunk, sizeof(chunk), &read, nullptr) || read == 0) {
-            if (GetLastError() == ERROR_BROKEN_PIPE) { pipe.closePipe(); break; }
-            continue;
+        if (!ReadFile(gStdin, chunk, sizeof(chunk), &read, nullptr) || read == 0) {
+            rlog("stdin closed, err=%lu", GetLastError());
+            break;
         }
         buffer.append(chunk, static_cast<int>(read));
         while (buffer.size() >= 4) {
@@ -109,22 +127,25 @@ static void readerLoop(PipeClient &pipe) {
             if (buffer.size() < static_cast<int>(4 + len)) break;
             const QByteArray payload = buffer.mid(4, static_cast<int>(len));
             buffer.remove(0, static_cast<int>(4 + len));
-            QJsonParseError err{};
-            const QJsonDocument doc = QJsonDocument::fromJson(payload, &err);
-            if (err.error == QJsonParseError::NoError && doc.isObject()) {
-                handleCommand(pipe, doc.object());
+            QJsonParseError parseErr{};
+            const QJsonDocument doc = QJsonDocument::fromJson(payload, &parseErr);
+            if (parseErr.error == QJsonParseError::NoError && doc.isObject()) {
+                rlog("cmd: %s", qPrintable(doc.object().value("cmd").toString()));
+                handleCommand(doc.object());
+            } else {
+                rlog("bad frame, parse err=%d", int(parseErr.error));
             }
         }
     }
+    rlog("readerLoop ended; quitting");
+    QMetaObject::invokeMethod(qApp, "quit", Qt::QueuedConnection);
 }
 
 int main(int argc, char *argv[]) {
     QGuiApplication app(argc, argv);
-    const QString pipeName = argc > 1 ? QString::fromLocal8Bit(argv[1])
-                                      : QStringLiteral("\\\\.\\pipe\\desktopup-qtp");
 
-    qputenv("QT_QUICK_BACKEND", "software"); // deterministic for the prototype; revisit later
-    qputenv("QSG_RENDER_LOOP", "basic");
+    gStdin = GetStdHandle(STD_INPUT_HANDLE);
+    gStdout = GetStdHandle(STD_OUTPUT_HANDLE);
 
     QQmlApplicationEngine engine;
     gEngine = &engine;
@@ -138,23 +159,16 @@ int main(int argc, char *argv[]) {
 
     window->setFlags(Qt::FramelessWindowHint | Qt::Tool | Qt::WindowDoesNotAcceptFocus);
     window->setColor(QColor(Qt::transparent));
-    window->setOpacity(1.0);
     window->setDefaultAlphaBuffer(true);
     window->setGeometry(1700, 200, 450, 703);
     window->show();
 
-    PipeClient pipe;
-    if (!pipe.connect(pipeName)) {
-        // fallback: still show the window so visuals can be verified without the core
-        qWarning("renderer: could not connect pipe %s; running standalone", qPrintable(pipeName));
-    } else {
-        QThread *reader = QThread::create([&pipe]() { readerLoop(pipe); });
-        reader->start();
-        QObject::connect(&app, &QCoreApplication::aboutToQuit, [&pipe, reader]() {
-            pipe.closePipe();
-            if (reader->isRunning()) { reader->quit(); reader->wait(2000); }
-        });
-    }
+    QJsonObject hello;
+    hello["cmd"] = "hello";
+    sendFrame(hello);
+
+    QThread *reader = QThread::create([]() { readerLoop(); });
+    reader->start();
 
     return app.exec();
 }

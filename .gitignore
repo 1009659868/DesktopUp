@@ -8,6 +8,12 @@
 /src-tauri/target/
 /src-tauri/gen/
 
+# Prototype build artifacts and runtime diagnostics
+/prototype/**/target/
+/prototype/**/build/
+/prototype/**/*.log
+/prototype/**/capture.png
+
 # Local runtime data and diagnostics
 /.desktop-up/
 *.log

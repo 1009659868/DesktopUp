@@ -1,51 +1,63 @@
 // DesktopUp V2 — C-QTP 核心桩(Rust)
-// 职责:启动/重启渲染侧车进程、命名管道 IPC、看门狗、呈现自检。
+// 职责:启动/重启渲染侧车进程、stdio IPC(子进程 stdin 下行命令 / stdout 上行回复)、看门狗。
+// 传输:4 字节 LE 长度前缀 + UTF-8 JSON。
+use std::collections::HashMap;
 use std::io::{Read, Write};
-use std::process::{Child, Command};
-use std::sync::mpsc::{channel, Sender};
+use std::process::{Child, ChildStdin, Command, Stdio};
+use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
-use windows::core::{s, w, PCWSTR};
-use windows::Win32::Foundation::{CloseHandle, HANDLE, INVALID_HANDLE_VALUE};
-use windows::Win32::Storage::FileSystem::{ReadFile, WriteFile};
-use windows::Win32::System::Pipes::{ConnectNamedPipe, CreateNamedPipe, DisconnectNamedPipe};
-use windows::Win32::System::Threading::{CreateEventW, SetEvent, WaitForSingleObject, WAIT_OBJECT_0};
-
-const PIPE_NAME: &str = r"\\.\pipe\desktopup-qtp";
 const MAX_RESTARTS: u32 = 3;
 
-fn main() {
-    let renderer = std::env::args()
-        .nth(1)
-        .unwrap_or_else(|| r"G:\A_\Tools\DesktopUp_V2\prototype\qt-quick\renderer\build\poster-renderer.exe".to_string());
+fn clog(line: &str) {
+    use std::io::Write as _;
+    if let Ok(mut f) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(r"G:\A_\Tools\DesktopUp_V2\prototype\qt-quick\core.log")
+    {
+        let _ = writeln!(f, "{line}");
+    }
+}
 
-    println!("[core] starting renderer: {renderer}");
+fn main() {
+    let renderer = std::env::args().nth(1).unwrap_or_else(|| {
+        r"G:\A_\Tools\DesktopUp_V2\prototype\qt-quick\renderer\build\poster-renderer.exe"
+            .to_string()
+    });
+
+    clog(&format!("starting renderer: {renderer}"));
     let mut child = spawn_renderer(&renderer);
     let mut restarts = 0u32;
 
     loop {
-        match run_server_session() {
-            Ok(SessionOutcome::RendererExited) => {
-                if let Some(exit) = child.as_mut().and_then(|c| c.try_wait().ok().flatten()) {
-                    println!("[core] renderer exited: {exit:?}");
-                }
+        match child.as_mut().map(run_session) {
+            None => {
+                clog("failed to spawn renderer");
+                return;
+            }
+            Some(Ok(SessionOutcome::RendererExited)) => {
+                let code = child.as_mut().and_then(|c| c.try_wait().ok().flatten());
+                clog(&format!("renderer exited {code:?}"));
                 if restarts >= MAX_RESTARTS {
-                    println!("[core] renderer restart limit reached; giving up");
+                    clog("restart limit reached; giving up");
                     return;
                 }
                 restarts += 1;
-                println!("[core] restarting renderer ({restarts}/{MAX_RESTARTS})");
+                clog(&format!("restarting renderer {restarts}/{MAX_RESTARTS}"));
                 child = spawn_renderer(&renderer);
             }
-            Ok(SessionOutcome::Shutdown) => {
-                println!("[core] shutdown requested");
-                let _ = child.as_mut().map(|c| c.kill());
-                let _ = child.as_mut().map(|c| c.wait());
+            Some(Ok(SessionOutcome::Shutdown)) => {
+                clog("shutdown requested; terminating renderer");
+                if let Some(mut c) = child {
+                    let _ = c.kill();
+                    let _ = c.wait();
+                }
                 return;
             }
-            Err(message) => {
-                eprintln!("[core] pipe session failed: {message}");
+            Some(Err(message)) => {
+                clog(&format!("session failed: {message}"));
                 return;
             }
         }
@@ -57,154 +69,118 @@ enum SessionOutcome {
     Shutdown,
 }
 
-fn spawn_renderer(exe: &str) -> Option<Child> {
-    Command::new(exe).arg(PIPE_NAME).spawn().ok()
+enum Wire {
+    Frame(serde_json::Value),
+    Eof,
 }
 
-// ---- named pipe session ----
+fn spawn_renderer(exe: &str) -> Option<Child> {
+    Command::new(exe)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .spawn()
+        .ok()
+}
 
-fn run_server_session() -> Result<SessionOutcome, String> {
-    let pipe = unsafe {
-        CreateNamedPipeW(
-            w!(PIPE_NAME),
-            windows::Win32::System::Pipes::PIPE_ACCESS_DUPLEX,
-            windows::Win32::System::Pipes::PIPE_TYPE_MESSAGE
-                | windows::Win32::System::Pipes::PIPE_READMODE_MESSAGE
-                | windows::Win32::System::Pipes::PIPE_WAIT,
-            1,
-            64 * 1024,
-            64 * 1024,
-            0,
-            None,
-        )
-    }
-    .map_err(|e| format!("CreateNamedPipe failed: {e}"))?;
+fn run_session(child: &mut Child) -> Result<SessionOutcome, String> {
+    let mut stdin = child.stdin.take().ok_or("no child stdin")?;
+    let stdout = child.stdout.take().ok_or("no child stdout")?;
 
-    let quit = unsafe { CreateEventW(None, true, false, None) }
-        .map_err(|e| format!("CreateEvent failed: {e}"))?;
-
-    let pipe2 = pipe;
-    let quit2 = quit;
-    thread::spawn(move || unsafe {
-        let wait = ConnectNamedPipe(pipe2, None);
-        if !wait.as_bool() {
-            SetEvent(quit2).unwrap_or(());
-        }
-    });
-
-    println!("[core] waiting for renderer to connect...");
-    let deadline = Instant::now() + Duration::from_secs(15);
-    loop {
-        let wait = unsafe { WaitForSingleObject(quit, 50) };
-        if wait == WAIT_OBJECT_0 {
-            break;
-        }
-        if Instant::now() > deadline {
-            return Err("renderer did not connect within 15s".into());
-        }
-    }
-
-    println!("[core] renderer connected");
-    let mut next_id: u64 = 1;
-    let (tx, rx) = channel::<String>();
-    start_reader(pipe, tx);
-
-    let mut iter = 0u64;
-    loop {
-        // periodic health check driven by the core
-        iter += 1;
-        if iter % 40 == 0 {
-            let health = health_probe(pipe)?;
-            println!("[core] health: {health}");
-        }
-
-        if let Ok(cmd) = rx.try_recv() {
-            let request: serde_json::Value =
-                serde_json::from_str(&cmd).unwrap_or(serde_json::Value::Null);
-            match request.get("cmd").and_then(|v| v.as_str()) {
-                Some("shutdown") | Some("bye") => {
-                    let _ = send_json(pipe, &serde_json::json!({"ok": true, "id": request.get("id")}));
-                    return Ok(SessionOutcome::Shutdown);
+    // 上行:stdout 读线程,解析长度前缀帧
+    let (tx, rx): (Sender<Wire>, Receiver<Wire>) = channel();
+    thread::spawn(move || {
+        let mut reader = stdout;
+        let mut carry: Vec<u8> = Vec::new();
+        let mut buf = [0u8; 64 * 1024];
+        loop {
+            let read = match reader.read(&mut buf) {
+                Ok(0) | Err(_) => {
+                    let _ = tx.send(Wire::Eof);
+                    return;
                 }
-                Some("get_health") => {
-                    let health = health_probe(pipe)?;
-                    let _ = send_json(
-                        pipe,
-                        &serde_json::json!({"ok": true, "health": health, "id": request.get("id")}),
-                    );
+                Ok(n) => n,
+            };
+            carry.extend_from_slice(&buf[..read]);
+            loop {
+                if carry.len() < 4 {
+                    break;
                 }
-                _ => {
-                    let id = next_id;
-                    next_id += 1;
-                    if send_json(pipe, &serde_json::json!({"cmd": "ping", "id": id})).is_err() {
-                        return Ok(SessionOutcome::RendererExited);
+                let len =
+                    u32::from_le_bytes([carry[0], carry[1], carry[2], carry[3]]) as usize;
+                if carry.len() < 4 + len {
+                    break;
+                }
+                let payload = carry[4..4 + len].to_vec();
+                carry.drain(..4 + len);
+                if let Ok(value) = serde_json::from_slice::<serde_json::Value>(&payload) {
+                    if tx.send(Wire::Frame(value)).is_err() {
+                        return;
                     }
                 }
             }
         }
+    });
 
-        let wait = unsafe { WaitForSingleObject(quit, 30) };
-        if wait == WAIT_OBJECT_0 {
-            // pipe connected; check for broken pipe by testing a write
+    clog("session started; waiting for renderer hello");
+    let mut next_id: u64 = 1;
+    let mut pending: HashMap<u64, serde_json::Value> = HashMap::new();
+    let mut ticks: u64 = 0;
+    let mut hellos = 0u32;
+
+    loop {
+        ticks += 1;
+        if ticks % 100 == 0 {
+            let id = next_id;
+            next_id += 1;
+            send_frame(&mut stdin, &serde_json::json!({"cmd": "get_health", "id": id}))?;
+            pending.insert(id, serde_json::Value::Null);
+            clog(&format!("sent get_health id={id}"));
         }
+        if ticks % 300 == 150 {
+            // 定期让渲染器自抓窗口帧(呈现自检素材)
+            let id = next_id;
+            next_id += 1;
+            send_frame(&mut stdin, &serde_json::json!({"cmd": "capture", "id": id}))?;
+            pending.insert(id, serde_json::Value::Null);
+            clog(&format!("sent capture id={id}"));
+        }
+
+        loop {
+            match rx.try_recv() {
+                Ok(Wire::Eof) => return Ok(SessionOutcome::RendererExited),
+                Ok(Wire::Frame(value)) => {
+                    if let Some(id) = value.get("id").and_then(|v| v.as_u64()) {
+                        if pending.remove(&id).is_some() {
+                            clog(&format!("reply: {value}"));
+                            continue;
+                        }
+                    }
+                    match value.get("cmd").and_then(|v| v.as_str()) {
+                        Some("hello") => {
+                            hellos += 1;
+                            clog(&format!("hello #{hellos} from renderer"));
+                        }
+                        Some("bye") => return Ok(SessionOutcome::RendererExited),
+                        _ => clog(&format!("frame: {value}")),
+                    }
+                }
+                Err(std::sync::mpsc::TryRecvError::Empty) => break,
+                Err(std::sync::mpsc::TryRecvError::Disconnected) => {
+                    return Ok(SessionOutcome::RendererExited)
+                }
+            }
+        }
+
         thread::sleep(Duration::from_millis(30));
     }
 }
 
-fn start_reader(pipe: HANDLE, tx: Sender<String>) {
-    thread::spawn(move || {
-        let mut buf = vec![0u8; 64 * 1024];
-        loop {
-            let mut read = 0u32;
-            let ok = unsafe {
-                ReadFile(
-                    pipe,
-                    Some(buf.as_mut_slice()),
-                    Some(&mut read),
-                    None,
-                )
-            };
-            if ok.is_err() || read == 0 {
-                break;
-            }
-            if let Ok(text) = String::from_utf8(buf[..read as usize].to_vec()) {
-                let _ = tx.send(text);
-            }
-        }
-    });
-}
-
-fn send_json(pipe: HANDLE, value: &serde_json::Value) -> Result<(), String> {
-    let mut bytes = serde_json::to_vec(value).map_err(|e| e.to_string())?;
-    let len = (bytes.len() as u32).to_le_bytes();
-    bytes.splice(0..0, len.iter().copied());
-    let mut written = 0u32;
-    unsafe { WriteFile(pipe, Some(&bytes), Some(&mut written), None) }
-        .map_err(|e| format!("WriteFile failed: {e}"))?;
+fn send_frame(stdin: &mut ChildStdin, value: &serde_json::Value) -> Result<(), String> {
+    let body = serde_json::to_vec(value).map_err(|e| e.to_string())?;
+    let mut frame = Vec::with_capacity(4 + body.len());
+    frame.extend_from_slice(&(body.len() as u32).to_le_bytes());
+    frame.extend_from_slice(&body);
+    stdin.write_all(&frame).map_err(|e| format!("write failed: {e}"))?;
+    stdin.flush().map_err(|e| format!("flush failed: {e}"))?;
     Ok(())
-}
-
-// ---- presentation health: sample the on-screen health marker ----
-
-fn health_probe(pipe: HANDLE) -> Result<serde_json::Value, String> {
-    // 1) ask the renderer for its window rect and marker position
-    send_json(
-        pipe,
-        &serde_json::json!({"cmd": "get_geometry"}),
-    )?;
-    // response is async; for the skeleton we use a fixed known geometry below.
-    // 2) screen-capture the marker region and compare with the expected color.
-    let expected = "HEALTH MARKER SAMPLE";
-    let _ = expected;
-    Ok(serde_json::json!({"renderer": "alive", "screen_match": null}))
-}
-
-// keep unused imports quiet in the skeleton
-#[allow(unused)]
-fn unused_guards() {
-    let _ = s!("unused");
-    let _ = PCWSTR::null();
-    let _ = INVALID_HANDLE_VALUE;
-    let _ = DisconnectNamedPipe;
-    let _ = CloseHandle;
 }

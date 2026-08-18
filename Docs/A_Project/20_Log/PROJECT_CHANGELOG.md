@@ -6,6 +6,7 @@
 - 技术选型启动：用户授权调研成熟参考项目（Wallpaper Engine、Lively Wallpaper、OBS obs-browser、Rainmeter、zebar、TranslucentTB、Seelen UI、WebView2 Composition Controller 官方资料），建立 `TECH_SELECTION_CANDIDATES_V1.md`：8 维评估标准、6 候选初评矩阵、双路线原型建议与固定证据矩阵；等待用户裁决原型路线、内存预算与 Qt 集成形态。
 - 技术选型裁决：路线甲（Qt 6 Quick 优先、原生 D2D 保底）、内存预算原型实测后放宽、C++ 渲染侧车进程 + IPC；激活 B-RND 模块与 C-QTP 原型工作流（五任务 + 8 项证据矩阵），等待用户批准开始原型代码实现。
 - 执行模式裁决：长任务自主推进、设闸口验证；建立 `DESKTOPUP_V2_IMPLEMENTATION_PLAN.md`（九阶段、七闸口、B/C 映射、交付/回退节奏）；开始环境配置（Python 3.12 + CMake + Qt 6.8.3 msvc2022_64）。
+- C-QTP 原型启动：工具链就绪（Qt 6.8.3 迁至 F:\Qt）；双进程骨架完成——命名管道方案因 PIPE_NOWAIT 断管死锁弃用，改用父子进程 stdio IPC；C-QTP-01 与 C-QTP-02（参考构图帧级验证：健康标记 + 深色玻璃像素检出）完成；渲染器自抓帧能力（capture 命令）就绪。
 
 - 用户决定为 Desktop-Up 建立 V2 重构仓库，V1 实现仅作为历史证据；
 - 建立 `G:\A_\Tools\DesktopUp_V2` 仓库与本地分支 `impl/Refactor`；

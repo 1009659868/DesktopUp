@@ -1,0 +1,2 @@
+[core] session failed: CreateNamedPipeW failed
+renderer: could not connect pipe \\.\pipe\desktopup-qtp; running standalone
