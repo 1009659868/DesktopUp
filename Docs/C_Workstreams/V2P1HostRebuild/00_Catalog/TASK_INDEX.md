@@ -2,7 +2,7 @@
 
 | 任务 | 可验证结果 | 状态 |
 | --- | --- | --- |
-| C-V2P1-01 协议与传输 v1 | 命令/回复/事件/错误 schema 定稿;修订号;stdio 生产化;命名管道服务器 smoke | `PENDING — 待闸口 A` |
+| C-V2P1-01 协议与传输 v1 | 命令/回复/事件/错误 schema 定稿;修订号;stdio 生产化;命名管道服务器 smoke | `IN PROGRESS — schema 定稿(IPC_PROTOCOL_V1)+ 管道 smoke PASS;stdio 生产化随核心真身` |
 | C-V2P1-02 核心真身 | 单实例;状态机;命令执行器;结构化诊断;有限重建回归 | `PENDING — 待闸口 A` |
 | C-V2P1-03 渲染器生产化 | 命中 schema;配置注入;自检契约 | `PENDING — 待闸口 A` |
 | C-V2P1-04 几何与层级 | 几何状态机;穿透读回验证;层级行为 | `PENDING — 待闸口 A` |
