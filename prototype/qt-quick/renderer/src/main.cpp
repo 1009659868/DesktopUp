@@ -26,75 +26,61 @@ static std::atomic<quint64> gFrames{0};
 
 static void rlog(const char *fmt, ...); // 前置声明(定义在下方)
 
-// ---- 桌面层挂载(壁纸引擎级:海报寄生 WorkerW,Win+D 时保持可见)----
-// 用户裁决(2026-08-19):目标行为 A——真正桌面内容层。
-// 坐标约定:对外(核心/健康/事件)一律屏幕逻辑坐标;对内转为父相对逻辑坐标。
-static HWND gWorkerW = nullptr;
-static QPoint gParentLogical(0, 0);
+// ---- 桌面层级(V1 验证路径:顶层 ToolWindow + 相对 Progman 重锚)----
+// V1 结论:本机 Progman 可见且含 SHELLDLL_DefView,WorkerW 全部不可见——
+// WorkerW 挂载不可行;最终稳定方案 = 非激活 ToolWindow 锚定在 Progman 正上方,
+// Win+D 时 Shell 会两次重排 z 序(第二次 10-45ms 无事件),用 WinEvent 监听 +
+// 有界重锚突发覆盖。禁 HWND_TOPMOST(V1 回归教训)。
+static int gAnchorGeneration = 0;
 
-static HWND findDesktopHost(int targetLogX, int targetLogY, qreal dpr) {
-    // Win11 新壳:无可见 WorkerW,壁纸由 Progman 本体承载 → 直接挂 Progman
+static void anchorToProgman() {
+    if (!gWindow || !gWindow->isVisible())
+        return;
     HWND progman = FindWindowW(L"Progman", nullptr);
-    if (progman && IsWindowVisible(progman)) {
-        rlog("desktop mount: Progman as desktop host");
-        return progman;
+    if (!progman)
+        return;
+    SetWindowPos(reinterpret_cast<HWND>(gWindow->winId()), progman, 0, 0, 0, 0,
+                 SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+}
+
+static void triggerAnchorBurst() {
+    const int gen = ++gAnchorGeneration;
+    // V1 常量:4..48ms 每 4ms,64/96ms 收尾,140ms 完成;新事件通过 generation 废弃旧突发
+    const int delays[] = {0, 4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 64, 96, 140};
+    for (int d : delays) {
+        QTimer::singleShot(d, gWindow, [gen]() {
+            if (gen != gAnchorGeneration)
+                return;
+            anchorToProgman();
+        });
     }
-    // 旧版结构回退:可见且非空的 WorkerW(优先包含目标位置的)
-    if (progman)
-        SendMessageTimeoutW(progman, 0x052C, 0, 0, SMTO_NORMAL, 1000, nullptr);
-    std::vector<std::pair<HWND, RECT>> workers;
-    EnumWindows(
-        [](HWND h, LPARAM lp) -> BOOL {
-            wchar_t cls[64] = {};
-            GetClassNameW(h, cls, 64);
-            if (wcscmp(cls, L"WorkerW") == 0 && IsWindowVisible(h)) {
-                RECT r{};
-                GetWindowRect(h, &r);
-                if (r.right > r.left && r.bottom > r.top)
-                    reinterpret_cast<std::vector<std::pair<HWND, RECT>> *>(lp)->push_back({h, r});
-            }
-            return TRUE;
-        },
-        reinterpret_cast<LPARAM>(&workers));
-    rlog("desktop mount: visible WorkerW=%zu", workers.size());
-    if (workers.empty())
-        return nullptr;
-    const long tx = qRound(targetLogX * dpr);
-    const long ty = qRound(targetLogY * dpr);
-    for (const auto &[h, r] : workers) {
-        if (tx >= r.left && tx < r.right && ty >= r.top && ty < r.bottom) {
-            rlog("desktop mount: WorkerW covering target");
-            return h;
+}
+
+static void CALLBACK shellWinEventProc(HWINEVENTHOOK, DWORD event, HWND hwnd, LONG, LONG, DWORD, DWORD) {
+    if (event == EVENT_SYSTEM_FOREGROUND) {
+        wchar_t cls[64] = {};
+        GetClassNameW(hwnd, cls, 64);
+        if (wcscmp(cls, L"Progman") == 0) {
+            // 桌面成为前台(Win+D)→ 排队触发重锚(回调在 WinEvent 线程,切回 GUI 线程)
+            QMetaObject::invokeMethod(gWindow, []() { triggerAnchorBurst(); }, Qt::QueuedConnection);
+        }
+    } else if (event == EVENT_OBJECT_SHOW || event == EVENT_OBJECT_CREATE) {
+        wchar_t cls[64] = {};
+        GetClassNameW(hwnd, cls, 64);
+        if (wcscmp(cls, L"Progman") == 0 || wcscmp(cls, L"SHELLDLL_DefView") == 0) {
+            // 桌面重建(Explorer 重启)→ 同样重锚
+            QMetaObject::invokeMethod(gWindow, []() { triggerAnchorBurst(); }, Qt::QueuedConnection);
         }
     }
-    rlog("desktop mount: bottom-most WorkerW fallback");
-    return workers.back().first;
 }
 
-static bool mountToDesktop(QQuickWindow *window, QPoint targetLogical) {
-    if (gWorkerW) {
-        if (IsWindow(gWorkerW))
-            return true; // 已挂载且父仍在
-        gWorkerW = nullptr;
-    }
-    HWND host = findDesktopHost(targetLogical.x(), targetLogical.y(), window->devicePixelRatio());
-    if (!host)
-        return false;
-    QWindow *pw = QWindow::fromWinId(reinterpret_cast<WId>(host));
-    window->setParent(pw);
-    // 压到宿主子窗口 z 序底部:海报在图标层(DefView)之下、壁纸之上
-    SetWindowPos(reinterpret_cast<HWND>(window->winId()), HWND_BOTTOM, 0, 0, 0, 0,
-                 SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
-    RECT pr{};
-    GetWindowRect(host, &pr);
-    const qreal dpr = window->devicePixelRatio();
-    gParentLogical = QPoint(qRound(pr.left / dpr), qRound(pr.top / dpr));
-    gWorkerW = host;
-    return true;
-}
-
-static QPoint screenLogicalPos(QQuickWindow *w) {
-    return w->position() + gParentLogical;
+static void installShellEventHook() {
+    SetWinEventHook(EVENT_SYSTEM_FOREGROUND, EVENT_SYSTEM_FOREGROUND, nullptr,
+                    shellWinEventProc, 0, 0, WINEVENT_OUTOFCONTEXT);
+    SetWinEventHook(EVENT_OBJECT_SHOW, EVENT_OBJECT_SHOW, nullptr,
+                    shellWinEventProc, 0, 0, WINEVENT_OUTOFCONTEXT);
+    SetWinEventHook(EVENT_OBJECT_CREATE, EVENT_OBJECT_CREATE, nullptr,
+                    shellWinEventProc, 0, 0, WINEVENT_OUTOFCONTEXT);
 }
 
 static void rlog(const char *fmt, ...) {
@@ -149,15 +135,11 @@ static void handleCommand(const QJsonObject &cmd) {
                 root->setProperty("accentColor", accent);
                 root->setProperty("posterOpacity", opacity);
             }
-            // 桌面层挂载(目标坐标已知时挂;失败降级普通 Tool 窗口)
-            if (mountToDesktop(gWindow, QPoint(x, y)))
-                rlog("mounted to WorkerW 0x%llX, parent logical=(%d,%d)",
-                     static_cast<unsigned long long>(reinterpret_cast<quintptr>(gWorkerW)),
-                     gParentLogical.x(), gParentLogical.y());
-            else
-                rlog("WorkerW mount FAILED — degraded to plain tool window");
-            gWindow->setGeometry(x - gParentLogical.x(), y - gParentLogical.y(), w, h);
+            gWindow->setGeometry(x, y, w, h);
             gWindow->show();
+            // V1 显示入口:SW_SHOWNOACTIVATE 语义 + 立即锚定 + 突发补锚
+            anchorToProgman();
+            triggerAnchorBurst();
         }, Qt::BlockingQueuedConnection);
         reply["ok"] = true;
     } else if (name == "set_geometry") {
@@ -166,12 +148,11 @@ static void handleCommand(const QJsonObject &cmd) {
         const int w = cmd.value("w").toInt();
         const int h = cmd.value("h").toInt();
         QMetaObject::invokeMethod(gWindow, [=]() {
-            gWindow->setGeometry(x - gParentLogical.x(), y - gParentLogical.y(), w, h);
+            gWindow->setGeometry(x, y, w, h);
         }, Qt::BlockingQueuedConnection);
         reply["ok"] = true;
-        const QPoint sp = gWindow ? screenLogicalPos(gWindow) : QPoint();
         reply["geometry"] = gWindow ? QString("%1,%2,%3,%4")
-                                          .arg(sp.x()).arg(sp.y())
+                                          .arg(gWindow->x()).arg(gWindow->y())
                                           .arg(gWindow->width()).arg(gWindow->height())
                                     : QString();
     } else if (name == "set_visible") {
@@ -200,23 +181,14 @@ static void handleCommand(const QJsonObject &cmd) {
             reply["ok"] = true;
         }
     } else if (name == "get_health") {
-        // Explorer 重启后 WorkerW 重建:自愈重挂载
-        if (gWorkerW && !IsWindow(gWorkerW)) {
-            gWorkerW = nullptr;
-            QMetaObject::invokeMethod(gWindow, [window = gWindow]() {
-                mountToDesktop(window, screenLogicalPos(window));
-            }, Qt::BlockingQueuedConnection);
-        }
-        const QPoint sp = gWindow ? screenLogicalPos(gWindow) : QPoint();
         reply["ok"] = true;
         reply["exposed"] = gWindow ? gWindow->isExposed() : false;
         reply["visible"] = gWindow ? gWindow->isVisible() : false;
         reply["frames"] = static_cast<double>(gFrames.load());
-        reply["mounted"] = gWorkerW != nullptr;
         reply["geometry"] = gWindow ? QString("%1,%2,%3,%4")
-                                           .arg(sp.x()).arg(sp.y())
+                                           .arg(gWindow->x()).arg(gWindow->y())
                                            .arg(gWindow->width()).arg(gWindow->height())
-                                    : QString();
+                                     : QString();
     } else if (name == "capture") {
         // 呈现自检:requestUpdate 强制产帧后,延迟到事件循环干净上下文抓取。
         // 教训:绝不在 frameSwapped 信号处理器内调 grabWindow(渲染线程敏感态,
@@ -281,17 +253,16 @@ static void handleCommand(const QJsonObject &cmd) {
     sendFrame(reply);
 }
 
-// 用户拖动结束 → geometry_changed 事件(状态权威在核心,渲染端只上报;屏幕逻辑坐标)
+// 用户拖动结束 → geometry_changed 事件(状态权威在核心,渲染端只上报)
 void DragEventSink::onDragEnded() {
     QQuickWindow *window = gWindow;
     if (!window)
         return;
-    const QPoint sp = screenLogicalPos(window);
     QJsonObject ev;
     ev["cmd"] = "geometry_changed";
     QJsonObject rect;
-    rect["x"] = sp.x();
-    rect["y"] = sp.y();
+    rect["x"] = window->x();
+    rect["y"] = window->y();
     rect["w"] = window->width();
     rect["h"] = window->height();
     ev["rect"] = rect;
@@ -348,7 +319,8 @@ int main(int argc, char *argv[]) {
     window->setFlags(Qt::FramelessWindowHint | Qt::Tool | Qt::WindowDoesNotAcceptFocus);
     window->setColor(QColor(Qt::transparent));
     window->setDefaultAlphaBuffer(true);
-    // 配置注入:几何与显示由 hello_ack 决定,此处不 setGeometry 不 show(挂载亦推迟到 ack 时,坐标已知)
+    // 配置注入:几何与显示由 hello_ack 决定;桌面层级 = ToolWindow 相对 Progman 锚定(V1 验证路径)
+    installShellEventHook();
 
     // 0-FPS 证据:统计实际换帧次数(静态构图应趋近于零)
     QObject::connect(window, &QQuickWindow::frameSwapped, window, []() {
@@ -362,11 +334,9 @@ int main(int argc, char *argv[]) {
     QJsonObject hello;
     hello["cmd"] = "hello";
     hello["hwnd"] = static_cast<double>(window->winId());
-    hello["mounted"] = gWorkerW != nullptr;
     QJsonObject rect;
-    const QPoint sp0 = screenLogicalPos(window);
-    rect["x"] = sp0.x();
-    rect["y"] = sp0.y();
+    rect["x"] = window->x();
+    rect["y"] = window->y();
     rect["w"] = window->width();
     rect["h"] = window->height();
     hello["rect"] = rect;
