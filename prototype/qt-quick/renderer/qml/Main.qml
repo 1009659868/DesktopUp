@@ -41,9 +41,14 @@ Window {
                 property bool moved: false
                 onPressed: { pressX = mouse.x; pressY = mouse.y; moved = false }
                 onPositionChanged: {
-                    if (!moved && (Math.abs(mouse.x - pressX) > 5 || Math.abs(mouse.y - pressY) > 5)) {
+                    if (!moved && (Math.abs(mouse.x - pressX) > 5 || Math.abs(mouse.y - pressY) > 5))
                         moved = true
-                        posterWindow.startSystemMove()
+                    if (moved) {
+                        // 手动拖动:海报是桌面层(WorkerW)子窗口,系统原生拖动循环不适用
+                        posterWindow.x += mouse.x - pressX
+                        posterWindow.y += mouse.y - pressY
+                        pressX = mouse.x
+                        pressY = mouse.y
                     }
                 }
                 onReleased: { if (moved) posterWindow.dragEnded() }

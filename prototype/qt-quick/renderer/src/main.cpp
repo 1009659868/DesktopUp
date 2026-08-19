@@ -16,12 +16,79 @@
 #include <QStringList>
 #include <atomic>
 #include <cstdio>
+#include <vector>
 
 #include "drageventsink.h"
 
 static QQuickWindow *gWindow = nullptr;
 static QQmlApplicationEngine *gEngine = nullptr;
 static std::atomic<quint64> gFrames{0};
+
+static void rlog(const char *fmt, ...); // 前置声明(定义在下方)
+
+// ---- 桌面层挂载(壁纸引擎级:海报寄生 WorkerW,Win+D 时保持可见)----
+// 用户裁决(2026-08-19):目标行为 A——真正桌面内容层。
+// 坐标约定:对外(核心/健康/事件)一律屏幕逻辑坐标;对内转为父相对逻辑坐标。
+static HWND gWorkerW = nullptr;
+static QPoint gParentLogical(0, 0);
+
+static HWND findWallpaperWorkerW() {
+    // 经典技巧:向 Progman 发 0x052C 让 Shell 生成壁纸层 WorkerW
+    HWND progman = FindWindowW(L"Progman", nullptr);
+    rlog("desktop mount: Progman=0x%llX", static_cast<unsigned long long>(reinterpret_cast<quintptr>(progman)));
+    if (progman) {
+        LRESULT r = SendMessageTimeoutW(progman, 0x052C, 0, 0, SMTO_NORMAL, 1000, nullptr);
+        rlog("desktop mount: 0x052C result=%lld last_error=%lu", static_cast<long long>(r), GetLastError());
+    }
+    std::vector<HWND> workers;
+    EnumWindows(
+        [](HWND h, LPARAM lp) -> BOOL {
+            wchar_t cls[64] = {};
+            if (GetClassNameW(h, cls, 64) > 0 && wcscmp(cls, L"WorkerW") == 0)
+                reinterpret_cast<std::vector<HWND> *>(lp)->push_back(h);
+            return TRUE;
+        },
+        reinterpret_cast<LPARAM>(&workers));
+    rlog("desktop mount: WorkerW count=%zu", workers.size());
+    // 含 SHELLDLL_DefView 的是图标层;其下方相邻的 WorkerW 是壁纸层(经典结构)
+    for (size_t i = 0; i < workers.size(); ++i) {
+        const bool hasDefView = FindWindowExW(workers[i], nullptr, L"SHELLDLL_DefView", nullptr) != nullptr;
+        if (hasDefView) {
+            rlog("desktop mount: WorkerW[%zu] hasDefView; pick next as wallpaper layer", i);
+            if (i + 1 < workers.size())
+                return workers[i + 1];
+        }
+    }
+    // 变体结构(Win11):DefView 在 Progman 直系,WorkerW 全部是壁纸层 → 取首个
+    if (!workers.empty()) {
+        rlog("desktop mount: no DefView WorkerW (DefView direct under Progman); pick WorkerW[0]");
+        return workers[0];
+    }
+    return nullptr;
+}
+
+static bool mountToDesktop(QQuickWindow *window) {
+    if (gWorkerW) {
+        if (IsWindow(gWorkerW))
+            return true; // 已挂载且父仍在
+        gWorkerW = nullptr;
+    }
+    HWND worker = findWallpaperWorkerW();
+    if (!worker)
+        return false;
+    QWindow *pw = QWindow::fromWinId(reinterpret_cast<WId>(worker));
+    window->setParent(pw);
+    RECT pr{};
+    GetWindowRect(worker, &pr);
+    const qreal dpr = window->devicePixelRatio();
+    gParentLogical = QPoint(qRound(pr.left / dpr), qRound(pr.top / dpr));
+    gWorkerW = worker;
+    return true;
+}
+
+static QPoint screenLogicalPos(QQuickWindow *w) {
+    return w->position() + gParentLogical;
+}
 
 static void rlog(const char *fmt, ...) {
     static FILE *file = nullptr;
@@ -60,7 +127,7 @@ static void handleCommand(const QJsonObject &cmd) {
     if (name == "ping") {
         reply["ok"] = true;
     } else if (name == "hello_ack") {
-        // 配置注入:未收 ack 前窗口不显示;几何/参数以核心下发为准
+        // 配置注入:未收 ack 前窗口不显示;几何/参数以核心下发为准(几何为屏幕逻辑坐标)
         const QJsonObject geo = cmd.value("geometry").toObject();
         const int x = geo.value("x").toInt();
         const int y = geo.value("y").toInt();
@@ -75,7 +142,7 @@ static void handleCommand(const QJsonObject &cmd) {
                 root->setProperty("accentColor", accent);
                 root->setProperty("posterOpacity", opacity);
             }
-            gWindow->setGeometry(x, y, w, h);
+            gWindow->setGeometry(x - gParentLogical.x(), y - gParentLogical.y(), w, h);
             gWindow->show();
         }, Qt::BlockingQueuedConnection);
         reply["ok"] = true;
@@ -85,11 +152,12 @@ static void handleCommand(const QJsonObject &cmd) {
         const int w = cmd.value("w").toInt();
         const int h = cmd.value("h").toInt();
         QMetaObject::invokeMethod(gWindow, [=]() {
-            gWindow->setGeometry(x, y, w, h);
+            gWindow->setGeometry(x - gParentLogical.x(), y - gParentLogical.y(), w, h);
         }, Qt::BlockingQueuedConnection);
         reply["ok"] = true;
+        const QPoint sp = gWindow ? screenLogicalPos(gWindow) : QPoint();
         reply["geometry"] = gWindow ? QString("%1,%2,%3,%4")
-                                          .arg(gWindow->x()).arg(gWindow->y())
+                                          .arg(sp.x()).arg(sp.y())
                                           .arg(gWindow->width()).arg(gWindow->height())
                                     : QString();
     } else if (name == "set_visible") {
@@ -118,12 +186,21 @@ static void handleCommand(const QJsonObject &cmd) {
             reply["ok"] = true;
         }
     } else if (name == "get_health") {
+        // Explorer 重启后 WorkerW 重建:自愈重挂载
+        if (gWorkerW && !IsWindow(gWorkerW)) {
+            gWorkerW = nullptr;
+            QMetaObject::invokeMethod(gWindow, [window = gWindow]() {
+                mountToDesktop(window);
+            }, Qt::BlockingQueuedConnection);
+        }
+        const QPoint sp = gWindow ? screenLogicalPos(gWindow) : QPoint();
         reply["ok"] = true;
         reply["exposed"] = gWindow ? gWindow->isExposed() : false;
         reply["visible"] = gWindow ? gWindow->isVisible() : false;
         reply["frames"] = static_cast<double>(gFrames.load());
+        reply["mounted"] = gWorkerW != nullptr;
         reply["geometry"] = gWindow ? QString("%1,%2,%3,%4")
-                                           .arg(gWindow->x()).arg(gWindow->y())
+                                           .arg(sp.x()).arg(sp.y())
                                            .arg(gWindow->width()).arg(gWindow->height())
                                     : QString();
     } else if (name == "capture") {
@@ -190,16 +267,17 @@ static void handleCommand(const QJsonObject &cmd) {
     sendFrame(reply);
 }
 
-// 用户拖动结束 → geometry_changed 事件(状态权威在核心,渲染端只上报)
+// 用户拖动结束 → geometry_changed 事件(状态权威在核心,渲染端只上报;屏幕逻辑坐标)
 void DragEventSink::onDragEnded() {
     QQuickWindow *window = gWindow;
     if (!window)
         return;
+    const QPoint sp = screenLogicalPos(window);
     QJsonObject ev;
     ev["cmd"] = "geometry_changed";
     QJsonObject rect;
-    rect["x"] = window->x();
-    rect["y"] = window->y();
+    rect["x"] = sp.x();
+    rect["y"] = sp.y();
     rect["w"] = window->width();
     rect["h"] = window->height();
     ev["rect"] = rect;
@@ -257,6 +335,13 @@ int main(int argc, char *argv[]) {
     window->setColor(QColor(Qt::transparent));
     window->setDefaultAlphaBuffer(true);
     // 配置注入:几何与显示由 hello_ack 决定,此处不 setGeometry 不 show
+    // 桌面层挂载(用户裁决 A:Win+D 保持可见);失败则降级为普通 Tool 窗口
+    if (mountToDesktop(window))
+        rlog("mounted to WorkerW 0x%llX, parent logical=(%d,%d)",
+             static_cast<unsigned long long>(reinterpret_cast<quintptr>(gWorkerW)),
+             gParentLogical.x(), gParentLogical.y());
+    else
+        rlog("WorkerW mount FAILED — degraded to plain tool window");
 
     // 0-FPS 证据:统计实际换帧次数(静态构图应趋近于零)
     QObject::connect(window, &QQuickWindow::frameSwapped, window, []() {
@@ -270,9 +355,11 @@ int main(int argc, char *argv[]) {
     QJsonObject hello;
     hello["cmd"] = "hello";
     hello["hwnd"] = static_cast<double>(window->winId());
+    hello["mounted"] = gWorkerW != nullptr;
     QJsonObject rect;
-    rect["x"] = window->x();
-    rect["y"] = window->y();
+    const QPoint sp0 = screenLogicalPos(window);
+    rect["x"] = sp0.x();
+    rect["y"] = sp0.y();
     rect["w"] = window->width();
     rect["h"] = window->height();
     hello["rect"] = rect;
