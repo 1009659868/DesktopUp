@@ -32,57 +32,64 @@ static void rlog(const char *fmt, ...); // 前置声明(定义在下方)
 static HWND gWorkerW = nullptr;
 static QPoint gParentLogical(0, 0);
 
-static HWND findWallpaperWorkerW() {
-    // 经典技巧:向 Progman 发 0x052C 让 Shell 生成壁纸层 WorkerW
+static HWND findDesktopHost(int targetLogX, int targetLogY, qreal dpr) {
+    // Win11 新壳:无可见 WorkerW,壁纸由 Progman 本体承载 → 直接挂 Progman
     HWND progman = FindWindowW(L"Progman", nullptr);
-    rlog("desktop mount: Progman=0x%llX", static_cast<unsigned long long>(reinterpret_cast<quintptr>(progman)));
-    if (progman) {
-        LRESULT r = SendMessageTimeoutW(progman, 0x052C, 0, 0, SMTO_NORMAL, 1000, nullptr);
-        rlog("desktop mount: 0x052C result=%lld last_error=%lu", static_cast<long long>(r), GetLastError());
+    if (progman && IsWindowVisible(progman)) {
+        rlog("desktop mount: Progman as desktop host");
+        return progman;
     }
-    std::vector<HWND> workers;
+    // 旧版结构回退:可见且非空的 WorkerW(优先包含目标位置的)
+    if (progman)
+        SendMessageTimeoutW(progman, 0x052C, 0, 0, SMTO_NORMAL, 1000, nullptr);
+    std::vector<std::pair<HWND, RECT>> workers;
     EnumWindows(
         [](HWND h, LPARAM lp) -> BOOL {
             wchar_t cls[64] = {};
-            if (GetClassNameW(h, cls, 64) > 0 && wcscmp(cls, L"WorkerW") == 0)
-                reinterpret_cast<std::vector<HWND> *>(lp)->push_back(h);
+            GetClassNameW(h, cls, 64);
+            if (wcscmp(cls, L"WorkerW") == 0 && IsWindowVisible(h)) {
+                RECT r{};
+                GetWindowRect(h, &r);
+                if (r.right > r.left && r.bottom > r.top)
+                    reinterpret_cast<std::vector<std::pair<HWND, RECT>> *>(lp)->push_back({h, r});
+            }
             return TRUE;
         },
         reinterpret_cast<LPARAM>(&workers));
-    rlog("desktop mount: WorkerW count=%zu", workers.size());
-    // 含 SHELLDLL_DefView 的是图标层;其下方相邻的 WorkerW 是壁纸层(经典结构)
-    for (size_t i = 0; i < workers.size(); ++i) {
-        const bool hasDefView = FindWindowExW(workers[i], nullptr, L"SHELLDLL_DefView", nullptr) != nullptr;
-        if (hasDefView) {
-            rlog("desktop mount: WorkerW[%zu] hasDefView; pick next as wallpaper layer", i);
-            if (i + 1 < workers.size())
-                return workers[i + 1];
+    rlog("desktop mount: visible WorkerW=%zu", workers.size());
+    if (workers.empty())
+        return nullptr;
+    const long tx = qRound(targetLogX * dpr);
+    const long ty = qRound(targetLogY * dpr);
+    for (const auto &[h, r] : workers) {
+        if (tx >= r.left && tx < r.right && ty >= r.top && ty < r.bottom) {
+            rlog("desktop mount: WorkerW covering target");
+            return h;
         }
     }
-    // 变体结构(Win11):DefView 在 Progman 直系,WorkerW 全部是壁纸层 → 取首个
-    if (!workers.empty()) {
-        rlog("desktop mount: no DefView WorkerW (DefView direct under Progman); pick WorkerW[0]");
-        return workers[0];
-    }
-    return nullptr;
+    rlog("desktop mount: bottom-most WorkerW fallback");
+    return workers.back().first;
 }
 
-static bool mountToDesktop(QQuickWindow *window) {
+static bool mountToDesktop(QQuickWindow *window, QPoint targetLogical) {
     if (gWorkerW) {
         if (IsWindow(gWorkerW))
             return true; // 已挂载且父仍在
         gWorkerW = nullptr;
     }
-    HWND worker = findWallpaperWorkerW();
-    if (!worker)
+    HWND host = findDesktopHost(targetLogical.x(), targetLogical.y(), window->devicePixelRatio());
+    if (!host)
         return false;
-    QWindow *pw = QWindow::fromWinId(reinterpret_cast<WId>(worker));
+    QWindow *pw = QWindow::fromWinId(reinterpret_cast<WId>(host));
     window->setParent(pw);
+    // 压到宿主子窗口 z 序底部:海报在图标层(DefView)之下、壁纸之上
+    SetWindowPos(reinterpret_cast<HWND>(window->winId()), HWND_BOTTOM, 0, 0, 0, 0,
+                 SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
     RECT pr{};
-    GetWindowRect(worker, &pr);
+    GetWindowRect(host, &pr);
     const qreal dpr = window->devicePixelRatio();
     gParentLogical = QPoint(qRound(pr.left / dpr), qRound(pr.top / dpr));
-    gWorkerW = worker;
+    gWorkerW = host;
     return true;
 }
 
@@ -142,6 +149,13 @@ static void handleCommand(const QJsonObject &cmd) {
                 root->setProperty("accentColor", accent);
                 root->setProperty("posterOpacity", opacity);
             }
+            // 桌面层挂载(目标坐标已知时挂;失败降级普通 Tool 窗口)
+            if (mountToDesktop(gWindow, QPoint(x, y)))
+                rlog("mounted to WorkerW 0x%llX, parent logical=(%d,%d)",
+                     static_cast<unsigned long long>(reinterpret_cast<quintptr>(gWorkerW)),
+                     gParentLogical.x(), gParentLogical.y());
+            else
+                rlog("WorkerW mount FAILED — degraded to plain tool window");
             gWindow->setGeometry(x - gParentLogical.x(), y - gParentLogical.y(), w, h);
             gWindow->show();
         }, Qt::BlockingQueuedConnection);
@@ -190,7 +204,7 @@ static void handleCommand(const QJsonObject &cmd) {
         if (gWorkerW && !IsWindow(gWorkerW)) {
             gWorkerW = nullptr;
             QMetaObject::invokeMethod(gWindow, [window = gWindow]() {
-                mountToDesktop(window);
+                mountToDesktop(window, screenLogicalPos(window));
             }, Qt::BlockingQueuedConnection);
         }
         const QPoint sp = gWindow ? screenLogicalPos(gWindow) : QPoint();
@@ -334,14 +348,7 @@ int main(int argc, char *argv[]) {
     window->setFlags(Qt::FramelessWindowHint | Qt::Tool | Qt::WindowDoesNotAcceptFocus);
     window->setColor(QColor(Qt::transparent));
     window->setDefaultAlphaBuffer(true);
-    // 配置注入:几何与显示由 hello_ack 决定,此处不 setGeometry 不 show
-    // 桌面层挂载(用户裁决 A:Win+D 保持可见);失败则降级为普通 Tool 窗口
-    if (mountToDesktop(window))
-        rlog("mounted to WorkerW 0x%llX, parent logical=(%d,%d)",
-             static_cast<unsigned long long>(reinterpret_cast<quintptr>(gWorkerW)),
-             gParentLogical.x(), gParentLogical.y());
-    else
-        rlog("WorkerW mount FAILED — degraded to plain tool window");
+    // 配置注入:几何与显示由 hello_ack 决定,此处不 setGeometry 不 show(挂载亦推迟到 ack 时,坐标已知)
 
     // 0-FPS 证据:统计实际换帧次数(静态构图应趋近于零)
     QObject::connect(window, &QQuickWindow::frameSwapped, window, []() {
