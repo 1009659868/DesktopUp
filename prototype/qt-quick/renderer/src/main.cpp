@@ -12,8 +12,12 @@
 #include <QJsonArray>
 #include <QImage>
 #include <QTimer>
+#include <QRegularExpression>
+#include <QStringList>
 #include <atomic>
 #include <cstdio>
+
+#include "drageventsink.h"
 
 static QQuickWindow *gWindow = nullptr;
 static QQmlApplicationEngine *gEngine = nullptr;
@@ -55,6 +59,26 @@ static void handleCommand(const QJsonObject &cmd) {
 
     if (name == "ping") {
         reply["ok"] = true;
+    } else if (name == "hello_ack") {
+        // 配置注入:未收 ack 前窗口不显示;几何/参数以核心下发为准
+        const QJsonObject geo = cmd.value("geometry").toObject();
+        const int x = geo.value("x").toInt();
+        const int y = geo.value("y").toInt();
+        const int w = geo.value("w").toInt();
+        const int h = geo.value("h").toInt();
+        const QJsonObject params = cmd.value("params").toObject();
+        const QString accent = params.value("accent").toString(QStringLiteral("#72e4ff"));
+        const double opacity = params.value("opacity").toDouble(0.82);
+        QMetaObject::invokeMethod(gWindow, [=]() {
+            QObject *root = gEngine->rootObjects().value(0);
+            if (root) {
+                root->setProperty("accentColor", accent);
+                root->setProperty("posterOpacity", opacity);
+            }
+            gWindow->setGeometry(x, y, w, h);
+            gWindow->show();
+        }, Qt::BlockingQueuedConnection);
+        reply["ok"] = true;
     } else if (name == "set_geometry") {
         const int x = cmd.value("x").toInt();
         const int y = cmd.value("y").toInt();
@@ -77,15 +101,22 @@ static void handleCommand(const QJsonObject &cmd) {
         reply["visible"] = gWindow ? gWindow->isVisible() : false;
     } else if (name == "set_params") {
         const QString accent = cmd.value("accent").toString();
-        const double opacity = cmd.value("opacity").toDouble(0.8);
-        QMetaObject::invokeMethod(gWindow, [=]() {
-            QObject *root = gEngine->rootObjects().value(0);
-            if (root) {
-                root->setProperty("accentColor", accent);
-                root->setProperty("posterOpacity", opacity);
-            }
-        }, Qt::BlockingQueuedConnection);
-        reply["ok"] = true;
+        const double opacity = cmd.value("opacity").toDouble(-1.0);
+        // 参数校验:颜色 #RRGGBB;透明度 [0.2, 1.0];非法值拒绝
+        const QRegularExpression colorRe(QStringLiteral("^#[0-9a-fA-F]{6}$"));
+        if (!colorRe.match(accent).hasMatch() || opacity < 0.2 || opacity > 1.0) {
+            reply["ok"] = false;
+            reply["error"] = "invalid_params";
+        } else {
+            QMetaObject::invokeMethod(gWindow, [=]() {
+                QObject *root = gEngine->rootObjects().value(0);
+                if (root) {
+                    root->setProperty("accentColor", accent);
+                    root->setProperty("posterOpacity", opacity);
+                }
+            }, Qt::BlockingQueuedConnection);
+            reply["ok"] = true;
+        }
     } else if (name == "get_health") {
         reply["ok"] = true;
         reply["exposed"] = gWindow ? gWindow->isExposed() : false;
@@ -159,6 +190,22 @@ static void handleCommand(const QJsonObject &cmd) {
     sendFrame(reply);
 }
 
+// 用户拖动结束 → geometry_changed 事件(状态权威在核心,渲染端只上报)
+void DragEventSink::onDragEnded() {
+    QQuickWindow *window = gWindow;
+    if (!window)
+        return;
+    QJsonObject ev;
+    ev["cmd"] = "geometry_changed";
+    QJsonObject rect;
+    rect["x"] = window->x();
+    rect["y"] = window->y();
+    rect["w"] = window->width();
+    rect["h"] = window->height();
+    ev["rect"] = rect;
+    sendFrame(ev);
+}
+
 static void readerLoop() {
     QByteArray buffer;
     rlog("readerLoop started on stdin");
@@ -209,13 +256,16 @@ int main(int argc, char *argv[]) {
     window->setFlags(Qt::FramelessWindowHint | Qt::Tool | Qt::WindowDoesNotAcceptFocus);
     window->setColor(QColor(Qt::transparent));
     window->setDefaultAlphaBuffer(true);
-    window->setGeometry(1700, 200, 450, 703);
-    window->show();
+    // 配置注入:几何与显示由 hello_ack 决定,此处不 setGeometry 不 show
 
     // 0-FPS 证据:统计实际换帧次数(静态构图应趋近于零)
     QObject::connect(window, &QQuickWindow::frameSwapped, window, []() {
         gFrames.fetch_add(1, std::memory_order_relaxed);
     });
+
+    // 用户拖动结束 → 几何变化事件(QML 信号经槽桥接)
+    static DragEventSink sink;
+    QObject::connect(window, SIGNAL(dragEnded()), &sink, SLOT(onDragEnded()));
 
     QJsonObject hello;
     hello["cmd"] = "hello";
@@ -226,22 +276,31 @@ int main(int argc, char *argv[]) {
     rect["w"] = window->width();
     rect["h"] = window->height();
     hello["rect"] = rect;
-    // 命中区域(窗口坐标):标题栏 + 3×2 卡片
+    // 命中区域(窗口坐标,语义化:id + actions 能力声明)
     QJsonArray regions;
-    QJsonObject titlebar;
-    titlebar["x"] = 16.0; titlebar["y"] = 16.0;
-    titlebar["w"] = static_cast<double>(window->width() - 32); titlebar["h"] = 58.0;
-    regions.append(titlebar);
+    auto addRegion = [&regions](const QString &id, const QStringList &actions,
+                                int x, int y, int w, int h) {
+        QJsonArray arr;
+        for (const QString &a : actions)
+            arr.append(a);
+        QJsonObject r;
+        r["id"] = id;
+        r["x"] = static_cast<double>(x);
+        r["y"] = static_cast<double>(y);
+        r["w"] = static_cast<double>(w);
+        r["h"] = static_cast<double>(h);
+        r["actions"] = arr;
+        regions.append(r);
+    };
+    addRegion(QStringLiteral("titlebar"), {QStringLiteral("drag")}, 16, 16,
+              window->width() - 32, 58);
     const int cols = 3, rows = 2, spacing = 12, cardH = 96, top = 168;
     const int cardW = (window->width() - 32 - spacing * (cols - 1)) / cols;
     for (int j = 0; j < rows; ++j) {
         for (int i = 0; i < cols; ++i) {
-            QJsonObject card;
-            card["x"] = static_cast<double>(16 + i * (cardW + spacing));
-            card["y"] = static_cast<double>(top + j * (cardH + spacing));
-            card["w"] = static_cast<double>(cardW);
-            card["h"] = static_cast<double>(cardH);
-            regions.append(card);
+            addRegion(QStringLiteral("card:%1").arg(j * cols + i),
+                      {QStringLiteral("launch")}, 16 + i * (cardW + spacing),
+                      top + j * (cardH + spacing), cardW, cardH);
         }
     }
     hello["regions"] = regions;

@@ -40,6 +40,13 @@ fn log(level: &str, event: &str, fields: serde_json::Value) {
 // ---- 渲染表面(命中区域来自渲染端声明)----
 // 坐标约定:hello/health 中的 rect 与 regions 是 Qt 逻辑坐标;
 // WH_MOUSE_LL 的 pt 是物理屏幕像素。scale = GetDpiForWindow/96 用于换算。
+struct Region {
+    id: String,
+    x: i32,
+    y: i32,
+    w: i32,
+    h: i32,
+}
 struct Surface {
     hwnd: isize,
     scale: f64,
@@ -47,7 +54,7 @@ struct Surface {
     y: i32,
     w: i32,
     h: i32,
-    regions: Vec<(i32, i32, i32, i32)>, // 逻辑窗口坐标
+    regions: Vec<Region>, // 逻辑窗口坐标
 }
 static SURFACE: OnceLock<Mutex<Option<Surface>>> = OnceLock::new();
 static PASSTHROUGH_ON: AtomicBool = AtomicBool::new(false);
@@ -113,33 +120,33 @@ unsafe extern "system" fn mouse_hook(code: i32, wparam: WPARAM, lparam: LPARAM) 
                         );
                     }
                     if inside {
-                        // 区域级命中诊断:region = 命中区域索引,-1 = 空白
+                        // 区域级命中:命中返回区域 id;空白 → None
                         let sx = (point.x as f64 / s.scale).round() as i32;
                         let sy = (point.y as f64 / s.scale).round() as i32;
                         let lx = sx - s.x;
                         let ly = sy - s.y;
-                        let region = s
-                            .regions
-                            .iter()
-                            .position(|(rx, ry, rw, rh)| {
-                                lx >= *rx && lx < rx + rw && ly >= *ry && ly < ry + rh
-                            })
-                            .map(|i| i as i32)
-                            .unwrap_or(-1);
-                        static HIT_STATE: AtomicI32 = AtomicI32::new(-2);
+                        let hit = s.regions.iter().find(|r| {
+                            lx >= r.x && lx < r.x + r.w && ly >= r.y && ly < r.y + r.h
+                        });
+                        let region_id = hit.map(|r| r.id.clone());
+                        static LAST_HIT: OnceLock<Mutex<Option<String>>> = OnceLock::new();
                         static HIT_LOGS: AtomicU32 = AtomicU32::new(0);
-                        let prev = HIT_STATE.swap(region, Ordering::Relaxed);
-                        if prev != region {
+                        let prev = LAST_HIT
+                            .get_or_init(|| Mutex::new(None))
+                            .lock()
+                            .map(|mut g| std::mem::replace(&mut *g, region_id.clone()))
+                            .unwrap_or(None);
+                        if prev != region_id {
                             let n = HIT_LOGS.fetch_add(1, Ordering::Relaxed) + 1;
                             if n <= 3 || n % 20 == 1 {
                                 log(
                                     "info",
                                     "hover.region_hit",
-                                    json!({ "region": region, "pt": [point.x, point.y], "n": n }),
+                                    json!({ "region": region_id, "pt": [point.x, point.y], "n": n }),
                                 );
                             }
                         }
-                        apply_passthrough(s.hwnd, region < 0);
+                        apply_passthrough(s.hwnd, hit.is_none());
                     } else {
                         apply_passthrough(s.hwnd, true);
                     }
@@ -195,23 +202,26 @@ fn register_surface(value: &serde_json::Value, state: &Mutex<SurfaceState>) {
             .map(|f| f as i32)
             .unwrap_or(0)
     };
-    let rect = value.get("rect");
-    let x = rect.map(|r| num(r, "x")).unwrap_or(0);
-    let y = rect.map(|r| num(r, "y")).unwrap_or(0);
-    let w = rect.map(|r| num(r, "w")).unwrap_or(0);
-    let h = rect.map(|r| num(r, "h")).unwrap_or(0);
     let mut regions = Vec::new();
     if let Some(list) = value.get("regions").and_then(|v| v.as_array()) {
-        for r in list {
-            regions.push((num(r, "x"), num(r, "y"), num(r, "w"), num(r, "h")));
+        for (i, r) in list.iter().enumerate() {
+            regions.push(Region {
+                id: r.get("id")
+                    .and_then(|v| v.as_str())
+                    .map(String::from)
+                    .unwrap_or_else(|| format!("region:{i}")),
+                x: num(r, "x"),
+                y: num(r, "y"),
+                w: num(r, "w"),
+                h: num(r, "h"),
+            });
         }
     }
-    // 渲染端声明即状态:hello 视为修订 1 的初始投影(状态权威在核心)
-    let revision = {
+    // 状态权威在核心:hello 只作句柄/能力声明;几何以核心状态为准(hello_ack 下发)
+    let (revision, geometry) = {
         let mut s = state.lock().expect("state lock");
-        s.geometry = (x, y, w, h);
         s.revision = s.revision.max(1);
-        s.revision
+        (s.revision, s.geometry)
     };
     let region_count = regions.len();
     // DPI:窗口所在显示器的真实缩放(物理光标坐标与 Qt 逻辑坐标的换算因子)
@@ -221,17 +231,17 @@ fn register_surface(value: &serde_json::Value, state: &Mutex<SurfaceState>) {
         *guard = Some(Surface {
             hwnd: hwnd as isize,
             scale,
-            x,
-            y,
-            w,
-            h,
+            x: geometry.0,
+            y: geometry.1,
+            w: geometry.2,
+            h: geometry.3,
             regions,
         });
     }
     log(
         "info",
         "surface.registered",
-        json!({ "hwnd": hwnd, "rect": [x, y, w, h], "regions": region_count, "revision": revision, "dpi": dpi, "scale": scale }),
+        json!({ "hwnd": hwnd, "geometry": geometry, "regions": region_count, "revision": revision, "dpi": dpi, "scale": scale }),
     );
     HOOK_STARTED.get_or_init(|| {
         std::thread::spawn(run_hook_thread);
@@ -463,7 +473,40 @@ fn main() {
                             continue;
                         }
                         match value.get("cmd").and_then(|v| v.as_str()) {
-                            Some("hello") => register_surface(&value, &state),
+                            Some("hello") => {
+                                register_surface(&value, &state);
+                                // 配置注入:渲染端未收 ack 前不显示;几何/参数以核心状态为准
+                                let (geometry, params) = {
+                                    let s = state.lock().expect("state lock");
+                                    (s.geometry, s.params.clone())
+                                };
+                                let ack = json!({
+                                    "cmd": "hello_ack",
+                                    "id": 0,
+                                    "geometry": { "x": geometry.0, "y": geometry.1, "w": geometry.2, "h": geometry.3 },
+                                    "params": { "accent": params.accent, "opacity": params.opacity },
+                                });
+                                if let Ok(mut w) = stdin.lock() {
+                                    let _ = proto::send_frame(&mut *w, &ack);
+                                }
+                                log("info", "renderer.acked", json!({ "geometry": geometry }));
+                            }
+                            Some("geometry_changed") => {
+                                // 用户拖动结束:事件入状态权威,修订递增
+                                let num = |o: &serde_json::Value, k: &str| -> i32 {
+                                    o.get(k)
+                                        .and_then(|v| v.as_f64())
+                                        .map(|f| f as i32)
+                                        .unwrap_or(0)
+                                };
+                                if let Some(rect) = value.get("rect") {
+                                    let g = (num(rect, "x"), num(rect, "y"), num(rect, "w"), num(rect, "h"));
+                                    let mut s = state.lock().expect("state lock");
+                                    s.geometry = g;
+                                    s.revision += 1;
+                                    log("info", "state.geometry_changed", json!({ "geometry": g, "revision": s.revision }));
+                                }
+                            }
                             Some("bye") => exited = true,
                             other => log("warn", "frame.unhandled", json!({ "cmd": other })),
                         }

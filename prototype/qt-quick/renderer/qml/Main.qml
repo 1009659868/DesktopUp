@@ -7,6 +7,9 @@ Window {
     height: 703
     visible: true
 
+    // 用户拖动结束信号(C++ 侧监听 → geometry_changed 事件上报核心)
+    signal dragEnded()
+
     // L0/L1 参数演示(由 IPC set_params 驱动;预设即修改这两个值)
     property color accentColor: "#72e4ff"
     property real posterOpacity: 0.82
@@ -35,15 +38,15 @@ Window {
                 anchors.fill: parent
                 property real pressX: 0
                 property real pressY: 0
-                property bool dragging: false
-                onPressed: { pressX = mouse.x; pressY = mouse.y; dragging = false }
+                property bool moved: false
+                onPressed: { pressX = mouse.x; pressY = mouse.y; moved = false }
                 onPositionChanged: {
-                    if (!dragging && (Math.abs(mouse.x - pressX) > 5 || Math.abs(mouse.y - pressY) > 5)) {
-                        dragging = true
+                    if (!moved && (Math.abs(mouse.x - pressX) > 5 || Math.abs(mouse.y - pressY) > 5)) {
+                        moved = true
                         posterWindow.startSystemMove()
-                        dragging = false
                     }
                 }
+                onReleased: { if (moved) posterWindow.dragEnded() }
             }
 
             Column {
