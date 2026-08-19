@@ -14,6 +14,7 @@
 #include <QTimer>
 #include <QRegularExpression>
 #include <QStringList>
+#include <QAbstractNativeEventFilter>
 #include <atomic>
 #include <cstdio>
 #include <vector>
@@ -32,6 +33,26 @@ static void rlog(const char *fmt, ...); // 前置声明(定义在下方)
 // Win+D 时 Shell 会两次重排 z 序(第二次 10-45ms 无事件),用 WinEvent 监听 +
 // 有界重锚突发覆盖。禁 HWND_TOPMOST(V1 回归教训)。
 static int gAnchorGeneration = 0;
+static void anchorToProgman(); // 前置声明(定义在下方)
+
+// 海报自身 z 序变化监听(根源修复):Show Desktop 无论经键盘/任务栏按钮/触控板手势,
+// 都会直接对海报窗口做 z 序重排 → 海报自身必收到 WM_WINDOWPOSCHANGING。
+// 不依赖 Shell 前台边沿事件(桌面点击会提前消耗该边沿,导致 Win+D 无事件可监)。
+class PosterZFilter : public QAbstractNativeEventFilter {
+public:
+    bool nativeEventFilter(const QByteArray &eventType, void *message, qintptr *) override {
+        if ((eventType == "windows_generic_MSG" || eventType == "windows_dispatcher_MSG")
+            && gWindow) {
+            MSG *msg = static_cast<MSG *>(message);
+            if (msg->message == WM_WINDOWPOSCHANGING
+                && msg->hwnd == reinterpret_cast<HWND>(gWindow->winId())) {
+                // Shell 正在整理 z 序:不能在调用栈内反调,推迟到下一轮事件循环救援
+                QTimer::singleShot(0, gWindow, []() { anchorToProgman(); });
+            }
+        }
+        return false;
+    }
+};
 
 // 海报是否已在 Progman 上方(z 序从 Progman 向上走,遇到海报即 True)
 static bool posterAboveProgman(HWND poster, HWND progman) {
@@ -53,7 +74,7 @@ static void anchorToProgman() {
         return;
     // 救援式重锚:只在海报被压到 Progman 之后才提升。
     // 若已在 Progman 上方(正常状态,上方还有普通窗口),绝不移动 z 序——
-    // 无条件提锚会让海报跳过所有窗口闪到顶(桌面点击后 Win+D 稳定复现的闪烁根因)。
+    // 无条件提锚会让海报跳过所有窗口闪到顶。
     if (posterAboveProgman(poster, progman))
         return;
     // V1 正确插入点:hWndInsertAfter 语义是"该窗口在前"——
@@ -350,6 +371,10 @@ int main(int argc, char *argv[]) {
 
     gStdin = GetStdHandle(STD_INPUT_HANDLE);
     gStdout = GetStdHandle(STD_OUTPUT_HANDLE);
+
+    // 海报自身 z 序监听(Show Desktop 全路径覆盖;不依赖 Shell 前台边沿)
+    PosterZFilter zFilter;
+    app.installNativeEventFilter(&zFilter);
 
     QQmlApplicationEngine engine;
     gEngine = &engine;
