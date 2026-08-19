@@ -26,6 +26,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 use diag::Diag;
 use singleton::SingleInstance;
 use state::{Command, SurfaceState};
+use windows::Win32::UI::HiDpi::GetDpiForWindow;
 
 static DIAG: OnceLock<Diag> = OnceLock::new();
 
@@ -36,22 +37,32 @@ fn log(level: &str, event: &str, fields: serde_json::Value) {
 }
 
 // ---- 渲染表面(命中区域来自渲染端声明)----
+// 坐标约定:hello/health 中的 rect 与 regions 是 Qt 逻辑坐标;
+// WH_MOUSE_LL 的 pt 是物理屏幕像素。scale = GetDpiForWindow/96 用于换算。
 struct Surface {
     hwnd: isize,
+    scale: f64,
     x: i32,
     y: i32,
     w: i32,
     h: i32,
-    regions: Vec<(i32, i32, i32, i32)>,
+    regions: Vec<(i32, i32, i32, i32)>, // 逻辑窗口坐标
 }
 static SURFACE: OnceLock<Mutex<Option<Surface>>> = OnceLock::new();
 static PASSTHROUGH_ON: AtomicBool = AtomicBool::new(false);
 static HOOK_STARTED: OnceLock<()> = OnceLock::new();
 static HOOK_EVENTS: AtomicU32 = AtomicU32::new(0);
 
+fn phys(s: &Surface, v: i32) -> i32 {
+    (v as f64 * s.scale).round() as i32
+}
+
 fn hit_any_region(s: &Surface, px: i32, py: i32) -> bool {
-    let lx = px - s.x;
-    let ly = py - s.y;
+    // 物理 pt → 逻辑窗口坐标
+    let sx = (px as f64 / s.scale).round() as i32;
+    let sy = (py as f64 / s.scale).round() as i32;
+    let lx = sx - s.x;
+    let ly = sy - s.y;
     s.regions
         .iter()
         .any(|(rx, ry, rw, rh)| lx >= *rx && lx < rx + rw && ly >= *ry && ly < ry + rh)
@@ -97,10 +108,19 @@ unsafe extern "system" fn mouse_hook(code: i32, wparam: WPARAM, lparam: LPARAM) 
             let point = details.pt;
             if let Ok(guard) = SURFACE.get_or_init(|| Mutex::new(None)).lock() {
                 if let Some(s) = guard.as_ref() {
-                    let inside = point.x >= s.x
-                        && point.x < s.x + s.w
-                        && point.y >= s.y
-                        && point.y < s.y + s.h;
+                    // 物理 pt 与物理窗口矩形比较(scale 换算)
+                    let inside = point.x >= phys(s, s.x)
+                        && point.x < phys(s, s.x + s.w)
+                        && point.y >= phys(s, s.y)
+                        && point.y < phys(s, s.y + s.h);
+                    static LAST_INSIDE: AtomicBool = AtomicBool::new(false);
+                    if LAST_INSIDE.swap(inside, Ordering::Relaxed) != inside {
+                        log(
+                            "info",
+                            "hover.inside_changed",
+                            json!({ "inside": inside, "pt": [point.x, point.y], "surface_logical": [s.x, s.y, s.w, s.h], "scale": s.scale }),
+                        );
+                    }
                     if inside {
                         apply_passthrough(s.hwnd, !hit_any_region(s, point.x, point.y));
                     } else {
@@ -168,9 +188,13 @@ fn register_surface(value: &serde_json::Value, state: &Mutex<SurfaceState>) {
         s.revision
     };
     let region_count = regions.len();
+    // DPI:窗口所在显示器的真实缩放(物理光标坐标与 Qt 逻辑坐标的换算因子)
+    let dpi = unsafe { GetDpiForWindow(HWND(hwnd as *mut core::ffi::c_void)) };
+    let scale = dpi as f64 / 96.0;
     if let Ok(mut guard) = SURFACE.get_or_init(|| Mutex::new(None)).lock() {
         *guard = Some(Surface {
             hwnd: hwnd as isize,
+            scale,
             x,
             y,
             w,
@@ -181,7 +205,7 @@ fn register_surface(value: &serde_json::Value, state: &Mutex<SurfaceState>) {
     log(
         "info",
         "surface.registered",
-        json!({ "hwnd": hwnd, "rect": [x, y, w, h], "regions": region_count, "revision": revision }),
+        json!({ "hwnd": hwnd, "rect": [x, y, w, h], "regions": region_count, "revision": revision, "dpi": dpi, "scale": scale }),
     );
     HOOK_STARTED.get_or_init(|| {
         std::thread::spawn(run_hook_thread);
@@ -361,6 +385,31 @@ fn main() {
                                 continue; // 管道转发命令的回执,静默
                             }
                             if value.get("frames").is_some() {
+                                // 几何同步:用户拖动后以渲染端报告为准(逻辑坐标),并重查 DPI
+                                if let Some(geo) = value.get("geometry").and_then(|v| v.as_str()) {
+                                    let parts: Vec<i32> = geo
+                                        .split(',')
+                                        .filter_map(|p| p.parse().ok())
+                                        .collect();
+                                    if parts.len() == 4 {
+                                        if let Ok(mut guard) =
+                                            SURFACE.get_or_init(|| Mutex::new(None)).lock()
+                                        {
+                                            if let Some(s) = guard.as_mut() {
+                                                s.x = parts[0];
+                                                s.y = parts[1];
+                                                s.w = parts[2];
+                                                s.h = parts[3];
+                                                let dpi = unsafe {
+                                                    GetDpiForWindow(HWND(
+                                                        s.hwnd as *mut core::ffi::c_void,
+                                                    ))
+                                                };
+                                                s.scale = dpi as f64 / 96.0;
+                                            }
+                                        }
+                                    }
+                                }
                                 log(
                                     "info",
                                     "health",
