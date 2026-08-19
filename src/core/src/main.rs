@@ -10,7 +10,7 @@ mod tray;
 
 use std::path::PathBuf;
 use std::process::{Child, Command as ProcCommand, Stdio};
-use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicI32, AtomicU32, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::time::Duration;
 
@@ -57,24 +57,14 @@ fn phys(s: &Surface, v: i32) -> i32 {
     (v as f64 * s.scale).round() as i32
 }
 
-fn hit_any_region(s: &Surface, px: i32, py: i32) -> bool {
-    // 物理 pt → 逻辑窗口坐标
-    let sx = (px as f64 / s.scale).round() as i32;
-    let sy = (py as f64 / s.scale).round() as i32;
-    let lx = sx - s.x;
-    let ly = sy - s.y;
-    s.regions
-        .iter()
-        .any(|(rx, ry, rw, rh)| lx >= *rx && lx < rx + rw && ly >= *ry && ly < ry + rh)
-}
-
 fn apply_passthrough(hwnd: isize, passthrough: bool) {
     if PASSTHROUGH_ON.swap(passthrough, Ordering::SeqCst) == passthrough {
         return;
     }
     static TOGGLES: AtomicU32 = AtomicU32::new(0);
     let n = TOGGLES.fetch_add(1, Ordering::Relaxed) + 1;
-    if n % 20 == 1 {
+    // 前 6 次全记 + 之后每 10 次记一次(两个方向都要有证据;n%20==1 会数学上漏掉交替方向)
+    if n <= 6 || n % 10 == 0 {
         log("info", "passthrough.toggled", json!({ "passthrough": passthrough, "toggle": n }));
     }
     unsafe {
@@ -122,7 +112,33 @@ unsafe extern "system" fn mouse_hook(code: i32, wparam: WPARAM, lparam: LPARAM) 
                         );
                     }
                     if inside {
-                        apply_passthrough(s.hwnd, !hit_any_region(s, point.x, point.y));
+                        // 区域级命中诊断:region = 命中区域索引,-1 = 空白
+                        let sx = (point.x as f64 / s.scale).round() as i32;
+                        let sy = (point.y as f64 / s.scale).round() as i32;
+                        let lx = sx - s.x;
+                        let ly = sy - s.y;
+                        let region = s
+                            .regions
+                            .iter()
+                            .position(|(rx, ry, rw, rh)| {
+                                lx >= *rx && lx < rx + rw && ly >= *ry && ly < ry + rh
+                            })
+                            .map(|i| i as i32)
+                            .unwrap_or(-1);
+                        static HIT_STATE: AtomicI32 = AtomicI32::new(-2);
+                        static HIT_LOGS: AtomicU32 = AtomicU32::new(0);
+                        let prev = HIT_STATE.swap(region, Ordering::Relaxed);
+                        if prev != region {
+                            let n = HIT_LOGS.fetch_add(1, Ordering::Relaxed) + 1;
+                            if n <= 3 || n % 20 == 1 {
+                                log(
+                                    "info",
+                                    "hover.region_hit",
+                                    json!({ "region": region, "pt": [point.x, point.y], "n": n }),
+                                );
+                            }
+                        }
+                        apply_passthrough(s.hwnd, region < 0);
                     } else {
                         apply_passthrough(s.hwnd, true);
                     }
