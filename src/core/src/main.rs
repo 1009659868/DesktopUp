@@ -282,6 +282,17 @@ fn main() {
         pipe::start(
             r"\\.\pipe\desktopup-core-v1",
             Arc::new(move |req| {
+                // 只读状态查询(控制中心订阅用,协议 get_state)
+                if req.get("cmd").and_then(|v| v.as_str()) == Some("get_state") {
+                    let s = state.lock().expect("state lock");
+                    return json!({
+                        "ok": true,
+                        "revision": s.revision,
+                        "geometry": s.geometry,
+                        "visible": s.visible,
+                        "params": s.params,
+                    });
+                }
                 let base_rev = req
                     .get("base_rev")
                     .and_then(|v| v.as_u64())
