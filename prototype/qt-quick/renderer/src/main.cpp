@@ -33,18 +33,34 @@ static void rlog(const char *fmt, ...); // 前置声明(定义在下方)
 // 有界重锚突发覆盖。禁 HWND_TOPMOST(V1 回归教训)。
 static int gAnchorGeneration = 0;
 
+// 海报是否已在 Progman 上方(z 序从 Progman 向上走,遇到海报即 True)
+static bool posterAboveProgman(HWND poster, HWND progman) {
+    HWND w = GetWindow(progman, GW_HWNDPREV);
+    while (w) {
+        if (w == poster)
+            return true;
+        w = GetWindow(w, GW_HWNDPREV);
+    }
+    return false;
+}
+
 static void anchorToProgman() {
     if (!gWindow || !gWindow->isVisible())
         return;
+    HWND poster = reinterpret_cast<HWND>(gWindow->winId());
     HWND progman = FindWindowW(L"Progman", nullptr);
-    if (!progman)
+    if (!progman || poster == progman)
         return;
-    // V1 正确插入点:hWndInsertAfter 的语义是"该窗口在前"——
-    // 取 Progman 正上方窗口(GW_HWNDPREV),插到它后面 = 海报在 Progman 前面、普通程序后面。
-    // 禁止直接传 progman(那会把海报压到 Progman 后方)。
+    // 救援式重锚:只在海报被压到 Progman 之后才提升。
+    // 若已在 Progman 上方(正常状态,上方还有普通窗口),绝不移动 z 序——
+    // 无条件提锚会让海报跳过所有窗口闪到顶(桌面点击后 Win+D 稳定复现的闪烁根因)。
+    if (posterAboveProgman(poster, progman))
+        return;
+    // V1 正确插入点:hWndInsertAfter 语义是"该窗口在前"——
+    // 取 Progman 正上方窗口(GW_HWNDPREV),插到它后面 = 海报在 Progman 前、普通程序后。
     HWND anchor = GetWindow(progman, GW_HWNDPREV);
     HWND insertAfter = anchor ? anchor : HWND_TOP;
-    SetWindowPos(reinterpret_cast<HWND>(gWindow->winId()), insertAfter, 0, 0, 0, 0,
+    SetWindowPos(poster, insertAfter, 0, 0, 0, 0,
                  SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
 }
 
