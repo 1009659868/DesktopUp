@@ -22,13 +22,13 @@
 
 ## 当前决策门
 
-- 需求画像与四份设计合同已冻结；技术选型已启动并完成用户裁决；
-- 用户裁决：路线甲（Qt 6 Quick 优先、原生 D2D 保底）、内存预算原型实测后放宽、C++ 渲染侧车进程 + IPC；
-- C-QTP 原型自动化证据 5/8 PASS(矩阵 4/5/7/8),矩阵 1/2/3 待用户闸口 A 实机;选定决策草稿已建(`B_Modules/RendererSelection/30_Sync/SELECTION_DECISION_DRAFT.md`);
-- V2-P1 宿主重建计划已提前准备(`C_Workstreams/V2P1HostRebuild/10_Plan/WORKSTREAM_PLAN.md`),待闸口 A 解锁;
+- 需求画像与四份设计合同已冻结；技术选型已完成：**Qt 6 Quick 路线甲选定成立(闸口 A 8/8 PASS)**;
+- 渲染选定决策已定稿(`B_Modules/RendererSelection/30_Sync/SELECTION_DECISION_DRAFT.md`);
+- 当前推进:V2-P1 宿主重建(核心真身已完成路线中立部分;渲染器生产化 C-V2P1-03 已解锁) → 闸口 B;
 - V1 白条/层级/编辑失效保持为防回归门，任何候选必须逐项证明不复现。
 
-## 当前阶段完成条件(闸口 A)
+## 当前阶段完成条件(闸口 B)
 
-- 用户实机验证三项:穿透(空白点图标/标题栏命中)、拖动 20 轮零白条、不打扰(Win+D/Explorer);
-- 全过 → 选定决策定稿 → 激活 C-V2P1;任一失败 → 淘汰记录 → 激活 C-D2D 保底。
+- 主屏单海报八项:C-V2P1-06 证据矩阵(冷启动/20 轮拖动/穿透/层级/Win+D/Explorer/托盘/资源复测);
+- 渲染器生产化(hello_ack 配置注入、命中语义化、参数校验)随 V2-P1-03 落地;
+- 用户闸口 B 实机验收。

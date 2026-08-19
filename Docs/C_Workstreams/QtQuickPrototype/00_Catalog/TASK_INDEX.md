@@ -6,4 +6,4 @@
 | C-QTP-02 透明表面与参考构图 | 无原生标题栏、透明圆角、标题栏 + 六卡片按 NIGHT OPS 参考构图渲染(帧级验证) | `COMPLETE — FRAME VERIFIED` |
 | C-QTP-03 桌面层、穿透与命中 | 空白穿透、标题栏/卡片命中、拖动/缩放/收起/锁定、5px 阈值 | `COMPLETE — 机制验证,实机交互待闸口 A` |
 | C-QTP-04 呈现自检与 0 FPS | 静态无持续绘制;呈现健康可自检;CPU/工作集采样 | `COMPLETE` |
-| C-QTP-05 证据矩阵与结论 | 8 项矩阵逐项 PASS/FAIL;选定输入或淘汰记录 | `COMPLETE — 5/8 自动化 PASS,3/8 待用户实机` |
+| C-QTP-05 证据矩阵与结论 | 8 项矩阵逐项 PASS/FAIL;选定输入或淘汰记录 | `COMPLETE — 闸口 A 8/8 PASS,Qt 路线选定成立` |
