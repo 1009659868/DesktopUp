@@ -11,7 +11,7 @@
 ## 2. 关键决策记录
 
 - **拓扑**(用户裁决 SEL-TBD-03):Rust 核心 + C++ 渲染侧车进程,崩溃隔离;
-- **桌面层方案**:主屏单海报用 `Qt::Tool + WindowDoesNotAcceptFocus` + 空白 `WS_EX_TRANSPARENT`(C-QTP 已证);Progman/WorkerW 注入不在路线内(记录为决策,避免 V1 式多机制);
+- **桌面层方案**(V1 验证路径,2026-08-19 校正):非激活 ToolWindow(WS_POPUP+TOOLWINDOW+NOACTIVATE)顶层窗口,经 z 序锚定插到 Progman 正上方——插入点 = `GetWindow(Progman, GW_HWNDPREV)`(直接传 Progman 会把海报压到其后,已修复);Win+D/Explorer 重建时 WinEvent 触发有界重锚突发(0-48ms/64/96/140ms);**禁止** HWND_TOPMOST、SetParent 寄生与任何注入;
 - **层级**:海报在桌面图标之上、普通窗口之下、永不抢焦点;
 - **穿透**:单机制 WS_EX_TRANSPARENT,禁止 layered/blur 叠加;切换读回验证。
 

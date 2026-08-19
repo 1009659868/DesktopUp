@@ -39,13 +39,18 @@ static void anchorToProgman() {
     HWND progman = FindWindowW(L"Progman", nullptr);
     if (!progman)
         return;
-    SetWindowPos(reinterpret_cast<HWND>(gWindow->winId()), progman, 0, 0, 0, 0,
+    // V1 正确插入点:hWndInsertAfter 的语义是"该窗口在前"——
+    // 取 Progman 正上方窗口(GW_HWNDPREV),插到它后面 = 海报在 Progman 前面、普通程序后面。
+    // 禁止直接传 progman(那会把海报压到 Progman 后方)。
+    HWND anchor = GetWindow(progman, GW_HWNDPREV);
+    HWND insertAfter = anchor ? anchor : HWND_TOP;
+    SetWindowPos(reinterpret_cast<HWND>(gWindow->winId()), insertAfter, 0, 0, 0, 0,
                  SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
 }
 
 static void triggerAnchorBurst() {
     const int gen = ++gAnchorGeneration;
-    // V1 常量:4..48ms 每 4ms,64/96ms 收尾,140ms 完成;新事件通过 generation 废弃旧突发
+    // V1 常量:0..48ms 每 4ms,64/96ms 收尾,140ms 完成;新事件通过 generation 废弃旧突发
     const int delays[] = {0, 4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 64, 96, 140};
     for (int d : delays) {
         QTimer::singleShot(d, gWindow, [gen]() {
@@ -56,31 +61,54 @@ static void triggerAnchorBurst() {
     }
 }
 
+// 统一显隐入口:SW_SHOWNOACTIVATE + 立即锚定 + 有界补锚(hello_ack 与 set_visible(true) 共用)
+static void showWithoutActivateAndAnchor() {
+    if (!gWindow)
+        return;
+    ShowWindow(reinterpret_cast<HWND>(gWindow->winId()), SW_SHOWNOACTIVATE);
+    anchorToProgman();
+    triggerAnchorBurst();
+}
+
+// 桌面 Shell 窗口验证:Progman,或拥有 SHELLDLL_DefView 的真实桌面视图宿主(WorkerW 等)
+static bool isDesktopShellWindow(HWND hwnd) {
+    wchar_t cls[64] = {};
+    GetClassNameW(hwnd, cls, 64);
+    if (wcscmp(cls, L"Progman") == 0)
+        return true;
+    return FindWindowExW(hwnd, nullptr, L"SHELLDLL_DefView", nullptr) != nullptr;
+}
+
+static HWINEVENTHOOK gHookForeground = nullptr;
+static HWINEVENTHOOK gHookShow = nullptr;
+static HWINEVENTHOOK gHookCreate = nullptr;
+
 static void CALLBACK shellWinEventProc(HWINEVENTHOOK, DWORD event, HWND hwnd, LONG, LONG, DWORD, DWORD) {
-    if (event == EVENT_SYSTEM_FOREGROUND) {
-        wchar_t cls[64] = {};
-        GetClassNameW(hwnd, cls, 64);
-        if (wcscmp(cls, L"Progman") == 0) {
-            // 桌面成为前台(Win+D)→ 排队触发重锚(回调在 WinEvent 线程,切回 GUI 线程)
-            QMetaObject::invokeMethod(gWindow, []() { triggerAnchorBurst(); }, Qt::QueuedConnection);
-        }
-    } else if (event == EVENT_OBJECT_SHOW || event == EVENT_OBJECT_CREATE) {
-        wchar_t cls[64] = {};
-        GetClassNameW(hwnd, cls, 64);
-        if (wcscmp(cls, L"Progman") == 0 || wcscmp(cls, L"SHELLDLL_DefView") == 0) {
-            // 桌面重建(Explorer 重启)→ 同样重锚
-            QMetaObject::invokeMethod(gWindow, []() { triggerAnchorBurst(); }, Qt::QueuedConnection);
-        }
+    if (event == EVENT_SYSTEM_FOREGROUND || event == EVENT_OBJECT_SHOW || event == EVENT_OBJECT_CREATE) {
+        if (!isDesktopShellWindow(hwnd))
+            return;
+        // WinEvent 回调线程 → 切回 GUI 线程触发重锚
+        QMetaObject::invokeMethod(gWindow, []() { triggerAnchorBurst(); }, Qt::QueuedConnection);
     }
 }
 
 static void installShellEventHook() {
-    SetWinEventHook(EVENT_SYSTEM_FOREGROUND, EVENT_SYSTEM_FOREGROUND, nullptr,
-                    shellWinEventProc, 0, 0, WINEVENT_OUTOFCONTEXT);
-    SetWinEventHook(EVENT_OBJECT_SHOW, EVENT_OBJECT_SHOW, nullptr,
-                    shellWinEventProc, 0, 0, WINEVENT_OUTOFCONTEXT);
-    SetWinEventHook(EVENT_OBJECT_CREATE, EVENT_OBJECT_CREATE, nullptr,
-                    shellWinEventProc, 0, 0, WINEVENT_OUTOFCONTEXT);
+    gHookForeground = SetWinEventHook(EVENT_SYSTEM_FOREGROUND, EVENT_SYSTEM_FOREGROUND, nullptr,
+                                      shellWinEventProc, 0, 0, WINEVENT_OUTOFCONTEXT);
+    gHookShow = SetWinEventHook(EVENT_OBJECT_SHOW, EVENT_OBJECT_SHOW, nullptr,
+                                shellWinEventProc, 0, 0, WINEVENT_OUTOFCONTEXT);
+    gHookCreate = SetWinEventHook(EVENT_OBJECT_CREATE, EVENT_OBJECT_CREATE, nullptr,
+                                  shellWinEventProc, 0, 0, WINEVENT_OUTOFCONTEXT);
+    if (!gHookForeground || !gHookShow || !gHookCreate)
+        rlog("shell event hook install partial/failed: fg=%p show=%p create=%p",
+             gHookForeground, gHookShow, gHookCreate);
+}
+
+static void uninstallShellEventHook() {
+    if (gHookForeground) UnhookWinEvent(gHookForeground);
+    if (gHookShow) UnhookWinEvent(gHookShow);
+    if (gHookCreate) UnhookWinEvent(gHookCreate);
+    gHookForeground = gHookShow = gHookCreate = nullptr;
 }
 
 static void rlog(const char *fmt, ...) {
@@ -136,10 +164,8 @@ static void handleCommand(const QJsonObject &cmd) {
                 root->setProperty("posterOpacity", opacity);
             }
             gWindow->setGeometry(x, y, w, h);
-            gWindow->show();
-            // V1 显示入口:SW_SHOWNOACTIVATE 语义 + 立即锚定 + 突发补锚
-            anchorToProgman();
-            triggerAnchorBurst();
+            // 统一显隐入口:SW_SHOWNOACTIVATE + 锚定 + 补锚
+            showWithoutActivateAndAnchor();
         }, Qt::BlockingQueuedConnection);
         reply["ok"] = true;
     } else if (name == "set_geometry") {
@@ -158,7 +184,10 @@ static void handleCommand(const QJsonObject &cmd) {
     } else if (name == "set_visible") {
         const bool visible = cmd.value("visible").toBool();
         QMetaObject::invokeMethod(gWindow, [=]() {
-            if (visible) gWindow->show(); else gWindow->hide();
+            if (visible)
+                showWithoutActivateAndAnchor(); // 恢复显示必须重锚(不能裸 show)
+            else
+                gWindow->hide();
         }, Qt::BlockingQueuedConnection);
         reply["ok"] = true;
         reply["visible"] = gWindow ? gWindow->isVisible() : false;
@@ -373,5 +402,7 @@ int main(int argc, char *argv[]) {
     QThread *reader = QThread::create([]() { readerLoop(); });
     reader->start();
 
-    return app.exec();
+    const int rc = app.exec();
+    uninstallShellEventHook();
+    return rc;
 }
