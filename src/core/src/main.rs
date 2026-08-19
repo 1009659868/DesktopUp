@@ -15,11 +15,12 @@ use std::sync::{Arc, Mutex, OnceLock};
 use std::time::Duration;
 
 use serde_json::json;
+use windows::core::w;
 use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, WPARAM};
 use windows::Win32::UI::WindowsAndMessaging::{
-    CallNextHookEx, DispatchMessageW, GetMessageW, GetWindowLongPtrW, SetWindowLongPtrW,
-    SetWindowsHookExW, TranslateMessage, UnhookWindowsHookEx, GWL_EXSTYLE, MSG,
-    MSLLHOOKSTRUCT, WH_MOUSE_LL, WM_MOUSEMOVE, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW,
+    CallNextHookEx, DispatchMessageW, GetMessageW, GetWindowLongPtrW, RegisterWindowMessageW,
+    SetWindowLongPtrW, SetWindowsHookExW, TranslateMessage, UnhookWindowsHookEx, GWL_EXSTYLE,
+    MSG, MSLLHOOKSTRUCT, WH_MOUSE_LL, WM_MOUSEMOVE, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW,
     WS_EX_TRANSPARENT,
 };
 
@@ -162,9 +163,18 @@ fn run_hook_thread() {
             Ok(()) => log("info", "tray.added", json!({})),
             Err(e) => log("error", "tray.add_failed", json!({ "error": e })),
         }
+        // Explorer 重启广播:托盘图标需自行重注册
+        let taskbar_created = unsafe { RegisterWindowMessageW(w!("TaskbarCreated")) };
         let mut message = MSG::default();
         while GetMessageW(&mut message, None, 0, 0).as_bool() {
             if tray::pump(&message) {
+                continue;
+            }
+            if message.message == taskbar_created {
+                match tray::reinit() {
+                    Ok(()) => log("info", "tray.re_added", json!({})),
+                    Err(e) => log("error", "tray.re_add_failed", json!({ "error": e })),
+                }
                 continue;
             }
             let _ = TranslateMessage(&message);

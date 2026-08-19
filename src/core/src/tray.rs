@@ -10,9 +10,9 @@ use windows::Win32::UI::Shell::{
 };
 use windows::Win32::UI::WindowsAndMessaging::{
     AppendMenuW, CreatePopupMenu, CreateWindowExW, DestroyMenu, GetCursorPos, LoadImageW, MSG,
-    SetForegroundWindow, TrackPopupMenu, HICON, HWND_MESSAGE, IMAGE_ICON, LR_LOADFROMFILE,
-    MF_STRING, TPM_BOTTOMALIGN, TPM_LEFTALIGN, TPM_RIGHTBUTTON, WM_COMMAND, WM_RBUTTONUP,
-    WINDOW_EX_STYLE, WINDOW_STYLE,
+    SetForegroundWindow, TrackPopupMenu, HICON, IMAGE_ICON, LR_LOADFROMFILE, MF_STRING,
+    TPM_BOTTOMALIGN, TPM_LEFTALIGN, TPM_RIGHTBUTTON, WM_COMMAND, WM_RBUTTONUP,
+    WS_EX_TOOLWINDOW, WS_POPUP,
 };
 
 pub static RESTART_REQUESTED: AtomicBool = AtomicBool::new(false);
@@ -24,19 +24,21 @@ const CMD_EXIT: usize = 2;
 
 static TRAY_HWND: OnceLock<isize> = OnceLock::new();
 
-/// 创建消息窗口 + 添加托盘图标;返回 (hwnd, 是否成功)
+/// 创建隐藏顶层窗口 + 添加托盘图标;返回是否成功
+/// 注意:用隐藏顶层窗口(WS_EX_TOOLWINDOW + WS_POPUP,不 ShowWindow)而非消息窗口,
+/// 以便接收 Explorer 重启后的 TaskbarCreated 广播(消息窗口收不到)。
 pub fn init() -> Result<(), String> {
     let hwnd = unsafe {
         CreateWindowExW(
-            WINDOW_EX_STYLE(0),
+            WS_EX_TOOLWINDOW,
             w!("STATIC"),
             w!("DesktopUpTray"),
-            WINDOW_STYLE(0),
+            WS_POPUP,
             0,
             0,
             0,
             0,
-            Some(HWND_MESSAGE),
+            None,
             None,
             None,
             None,
@@ -44,7 +46,18 @@ pub fn init() -> Result<(), String> {
     }
     .map_err(|e| format!("CreateWindowExW: {e}"))?;
     let _ = TRAY_HWND.set(hwnd.0 as isize);
+    add_icon(hwnd)
+}
 
+/// Explorer 重启(TaskbarCreated)后重新注册图标
+pub fn reinit() -> Result<(), String> {
+    let Some(raw) = TRAY_HWND.get() else {
+        return Err("tray hwnd not initialized".into());
+    };
+    add_icon(HWND(*raw as *mut core::ffi::c_void))
+}
+
+fn add_icon(hwnd: HWND) -> Result<(), String> {
     // 图标:exe 旁 assets/tray.ico
     let icon_path = std::env::current_exe()
         .ok()
