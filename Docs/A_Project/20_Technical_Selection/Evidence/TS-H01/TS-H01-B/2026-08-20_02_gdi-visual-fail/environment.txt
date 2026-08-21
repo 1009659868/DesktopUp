@@ -1,0 +1,11 @@
+Evidence ID: TS-H01-B-20260820-02
+Date: 2026-08-20 Asia/Shanghai
+OS: Windows 11 x64, build 26100
+Explorer PID/generation: 17652 / 17652:0xA20186
+Topology: RAISED_PROGMAN
+Progman HWND/ex-style: 0x3221344 / 0x200080
+DefView HWND: 0x263B0AA0
+Primary display: DISPLAY2, 2560x1440, work area 2560x1392, origin 0,0
+Secondary display: DISPLAY1, 1920x1200, work area 1920x1152, origin 2560,243
+Probe configuration: x64 Release, ordinary non-layered GDI child
+Probe SHA-256: 6DBCD3209547DEEADEC6EE02E882778E1FE5B158A309D34CC0B49761701D8941

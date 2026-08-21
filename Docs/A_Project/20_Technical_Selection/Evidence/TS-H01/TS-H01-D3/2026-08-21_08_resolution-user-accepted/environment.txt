@@ -1,0 +1,7 @@
+OS: Windows 11 x64
+Primary display final monitor rect: 0,0,2560,1440
+Primary display final work-area rect: 0,0,2560,1392
+Effective DPI: 96
+Scale baseline: 100 percent
+Probe binary SHA-256: 4039C93329014023F64FB72FFD84F1A83C8BB1AABE19059B37505337148008AD
+Probe scenario: display-change

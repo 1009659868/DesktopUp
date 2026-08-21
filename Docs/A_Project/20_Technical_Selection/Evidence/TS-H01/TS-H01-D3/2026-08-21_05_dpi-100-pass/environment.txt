@@ -1,0 +1,10 @@
+Evidence ID: TS-H01-D3-20260821-05
+Date: 2026-08-21 Asia/Shanghai
+OS: Windows 11 x64, build 26100
+Topology: RAISED_PROGMAN
+Scale / expected DPI: 100% / 96
+Architecture/configuration: x64 Release
+Selected cold starts: 5
+Telemetry result: 5/5 PASS
+Manual visual result: 5/5 PASS
+Probe SHA-256: 2266C14E2D8D813B0194F2F2985BBFAC58E99BB771FBA2DBEED5674CF8247B91

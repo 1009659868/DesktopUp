@@ -33,3 +33,5 @@ Thumbs.db
 /prototype/**/*.err
 /prototype/**/screen-check.png
 
+# Privacy-sensitive raw window inventory; the evidence record retains size/hash.
+/Docs/A_Project/20_Technical_Selection/Evidence/TS-H01/TS-H01-A/2026-08-20_01_initial-diagnostics/snapshot.jsonl

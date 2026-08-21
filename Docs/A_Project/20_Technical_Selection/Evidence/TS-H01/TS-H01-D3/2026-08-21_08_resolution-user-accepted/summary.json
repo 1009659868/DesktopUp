@@ -1,0 +1,30 @@
+{
+  "schema": "desktopup.ts-h01-d3.resolution-evidence.v1",
+  "recorded_at": "2026-08-21",
+  "status": "user_accepted_pass_with_telemetry_exception",
+  "baseline_scale_percent": 100,
+  "baseline_dpi": 96,
+  "binary_sha256": "4039C93329014023F64FB72FFD84F1A83C8BB1AABE19059B37505337148008AD",
+  "manual_visual_result": "user_confirmed_pass",
+  "telemetry": {
+    "automatic_gate_pass": false,
+    "exit_code": -1,
+    "telemetry_result": "invalid_final_json",
+    "valid_json_lines": 35003,
+    "invalid_json_lines": 1,
+    "samples_passed": 34987,
+    "samples_total": 34987,
+    "display_changes_detected": 8,
+    "display_changes_expected_minimum": 10,
+    "final_drag_count": 2,
+    "final_resize_count": 2,
+    "final_collapse_cycle_count": 1
+  },
+  "artifacts": {
+    "raw_log": "resolution-change.jsonl",
+    "raw_log_sha256": "259D3C368FBDCBDDFA391F6730E56B4EEDD5BA67BCCE5520ABEAED742E6AE9B9",
+    "runner_summary": "runner-summary.json",
+    "runner_summary_sha256": "43EE9BCF7D79485D1232D88FD397F7D0FE61F967C54ADD8D058B600A98A9F432"
+  },
+  "workflow_effect": "activate_d3_3_without_relabeling_automatic_result"
+}

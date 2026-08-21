@@ -1,0 +1,17 @@
+{
+  "schema": "desktopup.ts-h01-d2.acceptance-decision.v1",
+  "recorded_at": "2026-08-21",
+  "status": "user_accepted_pass_with_telemetry_exception",
+  "user_decision": "accept_d2_and_formally_execute_d3_1",
+  "automatic_gate": {
+    "expected_recoveries": 10,
+    "observed_recoveries": 1,
+    "result": "recovery_contract_fail",
+    "evidence_id": "TS-H01-D2-20260821-03"
+  },
+  "workflow_effect": {
+    "d2": "USER_ACCEPTED_PASS",
+    "d3": "ACTIVE",
+    "residual_risk_retained": true
+  }
+}

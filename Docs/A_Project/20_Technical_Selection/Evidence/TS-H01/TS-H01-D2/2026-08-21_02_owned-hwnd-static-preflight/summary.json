@@ -1,0 +1,43 @@
+{
+  "schema": "desktopup.ts-h01-d2.evidence-summary.v1",
+  "recorded_at": "2026-08-21",
+  "status": "static_preflight_pass_manual_recovery_pending",
+  "build_id": "TS-H01-D2-20260821-01-RECOVERY",
+  "binary_sha256": "BCC5A1031B5227D1B8F1ACC59AB49B93EC016CB153D30EBB6B40E3529F5810A6",
+  "change": "owned_hwnd_class_and_process_validation",
+  "topology": "RAISED_PROGMAN",
+  "sampling": {
+    "timer": "CREATE_WAITABLE_TIMER_HIGH_RESOLUTION",
+    "target_interval_ms": 8,
+    "samples": 604,
+    "passed": 604,
+    "failed": 0,
+    "minimum_gap_ms": 4.595,
+    "average_gap_ms": 8.260,
+    "p95_gap_ms": 9.565,
+    "p99_gap_ms": 10.548,
+    "maximum_gap_ms": 11.667
+  },
+  "lifecycle_counts": {
+    "attach": 1,
+    "generation_loss_cleanup": 0,
+    "recreate": 0,
+    "recovery": 0,
+    "degraded_entries": 0
+  },
+  "surface_contract": {
+    "attached_self_windows": 4,
+    "attached_top_level_windows": 0,
+    "post_cleanup_self_windows": 0,
+    "post_cleanup_top_level_windows": 0
+  },
+  "static_log": {
+    "local_ignored_path": "prototype/desktop-host-win32/ts-h01-d2/out/d2-static-preflight-owned-hwnd.jsonl",
+    "bytes": 2154365,
+    "sha256": "2FA23325B479A5F84EA8FBA02D5FA25C74C98BB7DA52F2A1C6528974EC9B3E0E"
+  },
+  "manual_gate": {
+    "explorer_restart_complete_cycles": "PENDING_10",
+    "result": "PENDING"
+  }
+}

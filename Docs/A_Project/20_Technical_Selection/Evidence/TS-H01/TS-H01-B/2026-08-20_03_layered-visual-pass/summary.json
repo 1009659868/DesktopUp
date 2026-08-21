@@ -1,0 +1,36 @@
+{
+  "schema": "desktopup.ts-h01-b.evidence-summary.v1",
+  "recorded_at": "2026-08-20",
+  "status": "pass",
+  "scope": "RAISED_PROGMAN layered visual path",
+  "build_id": "TS-H01-B-20260820-02-LAYERED",
+  "binary_sha256": "76465627D6A80A2757380F65DA369FAAD109F4CBF66955708972B598FB7909A4",
+  "topology": "RAISED_PROGMAN",
+  "surface_mode": "layered_gdi_child",
+  "host_ex_style": "0x8080080",
+  "automated_structure_gate": {
+    "samples": 80,
+    "passed": 80,
+    "host_child_index": 0,
+    "defview_child_index": 1,
+    "topmost_used": false,
+    "clean_shutdown": true
+  },
+  "manual_visual_gate": {
+    "confirmed_by_user": true,
+    "cyan_card_visible": true,
+    "ordinary_window_covers_card": true,
+    "moving_window_reveals_card": true,
+    "automatic_cleanup": true
+  },
+  "host_samples": {
+    "path": "host-samples.jsonl",
+    "bytes": 56500,
+    "sha256": "F6CCF5A54E585D05D47757D7F5F33BA0853792060625D6700258BD10C542152A"
+  },
+  "limitations": [
+    "This PASS applies only to the RAISED_PROGMAN layered visual path.",
+    "The traditional WorkerW route remains UNKNOWN_NOT_PRESENT on this environment.",
+    "Input passthrough, interaction islands, Win+D, WorkerW rebuild and lifecycle recovery are outside this evidence set."
+  ]
+}

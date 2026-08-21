@@ -1,0 +1,21 @@
+{
+  "schema": "desktopup.desktop-host.conformance-manifest.v1",
+  "status": "FROZEN_FIXTURE_NO_CANDIDATE_RESULTS",
+  "event_schema": "desktopup.desktop-host.event.v1",
+  "candidate_order": ["TS-C01", "TS-C02", "TS-C03", "TS-C04", "TS-C05", "TS-C06", "TS-C07"],
+  "scenarios": [
+    {"id":"E5-ATTACH-01","name":"visible hidden stopped attach and first frame","matrix_ids":["HG-RND-01","HG-STATE-01","HG-STATE-02"],"minimum_iterations":1,"manual_evidence":true},
+    {"id":"E5-HIT-01","name":"zero one multiple overlapping hit regions","matrix_ids":["HG-IN-01","HG-IN-02","HG-IN-03","HG-IN-04","HG-IN-05","HG-IN-06"],"minimum_iterations":1,"manual_evidence":true},
+    {"id":"E5-GEO-01","name":"drag resize collapse expand lock","matrix_ids":["HG-GEO-01","HG-GEO-02","HG-GEO-03","HG-GEO-04"],"minimum_iterations":20,"manual_evidence":true},
+    {"id":"E5-WIND-01","name":"keyboard show desktop","matrix_ids":["HG-Z-03"],"minimum_iterations":10,"manual_evidence":true},
+    {"id":"E5-WIND-02","name":"taskbar show desktop","matrix_ids":["HG-Z-04"],"minimum_iterations":10,"manual_evidence":true},
+    {"id":"E5-WIND-03","name":"gesture show desktop when hardware exists","matrix_ids":["HG-Z-05"],"minimum_iterations":10,"manual_evidence":true,"unavailable_disposition":"UNKNOWN"},
+    {"id":"E5-SHELL-01","name":"Explorer generation loss and bounded recovery","matrix_ids":["HG-Z-07"],"minimum_iterations":10,"manual_evidence":true},
+    {"id":"E5-LIFE-01","name":"device transport loss duplicate reconnect detach exit late events","matrix_ids":["HG-RND-06","HG-STATE-01","HG-STATE-02"],"minimum_iterations":1,"manual_evidence":false},
+    {"id":"E5-DISPLAY-01","name":"declared DPI resolution and work-area scope","matrix_ids":["HG-RND-02","HG-RND-03","HG-RND-04","HG-GEO-04"],"minimum_iterations":1,"manual_evidence":true},
+    {"id":"E5-Z-01","name":"ordinary system and full-screen windows remain above poster","matrix_ids":["HG-Z-01","HG-Z-02","HG-Z-06","HG-Z-08"],"minimum_iterations":1,"manual_evidence":true},
+    {"id":"E5-VISUAL-01","name":"Night Ops alpha bounds performance and cleanup","matrix_ids":["HG-BLD-01","HG-BLD-02","HG-BLD-03","HG-RND-01","HG-RND-05","HG-PERF-01","HG-PERF-02","HG-PERF-03"],"minimum_iterations":1,"manual_evidence":true}
+  ],
+  "forbidden_promotions": ["UNKNOWN_TO_PASS", "NOT_RUN_TO_PASS", "DEFERRED_TO_PASS", "USER_ACCEPTED_WITH_EXCEPTION_TO_PASS"],
+  "fixture_self_test_is_not_candidate_pass": true
+}

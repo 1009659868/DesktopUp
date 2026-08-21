@@ -1,0 +1,24 @@
+{
+  "schema": "desktopup.ts-h01-d3.evidence-summary.v1",
+  "recorded_at": "2026-08-21",
+  "status": "static_preflight_fail_initial_z_order",
+  "binary_sha256": "5B4ECEBEB9CBD37F7707400886485573485631373A36C0409558E710A1C5C105",
+  "expected_dpi": 96,
+  "sampling": { "samples": 605, "passed": 0, "failed": 605 },
+  "last_sample": {
+    "visual_index": 1,
+    "def_view_index": 0,
+    "bounds_contract": true,
+    "style_contract": true,
+    "island_contract": true,
+    "z_contract": false,
+    "dpi_contract": true,
+    "revision_contract": true
+  },
+  "final_result": "boundary_contract_fail",
+  "static_log": {
+    "local_ignored_path": "prototype/desktop-host-win32/ts-h01-d3/out/d3-static-preflight.jsonl",
+    "bytes": 819806,
+    "sha256": "10105203D771A7BC61006E57E7608C64DD51E0BFEDCE86B0643A016D64D0F4D8"
+  }
+}

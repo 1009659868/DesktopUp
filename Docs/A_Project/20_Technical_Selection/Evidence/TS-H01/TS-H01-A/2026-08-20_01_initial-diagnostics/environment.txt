@@ -1,0 +1,17 @@
+Evidence ID: TS-H01-A-20260820-01
+Date: 2026-08-20 Asia/Shanghai
+OS: Windows 11 x64, build 26100
+Primary display: DISPLAY2, 2560x1440, work area 2560x1392, origin 0,0
+Secondary display: DISPLAY1, 1920x1200, work area 1920x1152, origin 2560,243
+Desktop union observed by DefView: 4480x1443
+DefView DPI during run: 96
+GPU 1: Intel(R) UHD Graphics 770, driver 32.0.101.5972
+GPU 2: NVIDIA GeForce RTX 5060, driver 32.0.15.7652
+CMake: 4.4.2
+Generator: Visual Studio 18 2026
+MSVC compiler: 19.50.35725.0
+MSVC toolset path version: 14.50.35717
+Windows SDK: 10.0.26100.0
+Architecture/configuration: x64 Release
+Probe SHA-256: 66B8C26965CF09144A1319F5C419A71FA539B108E54BC8D94DCBC7C7FFBCDAE7
+Remote desktop/virtualization: not active in this run

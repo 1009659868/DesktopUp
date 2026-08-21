@@ -1,0 +1,35 @@
+{
+  "schema": "desktopup.ts-h01-d3.evidence-summary.v1",
+  "recorded_at": "2026-08-21",
+  "status": "d3_0_static_pass_formal_activation_blocked_by_d2",
+  "build_id": "TS-H01-D3-20260821-01-BOUNDARY",
+  "binary_sha256": "CFE00C743700C6E1691D22862A659D67A73A5AD4F4C156213FDD9C56312E7404",
+  "expected_dpi": 96,
+  "sampling": {
+    "samples": 604,
+    "passed": 604,
+    "failed": 0,
+    "minimum_gap_ms": 7.804,
+    "average_gap_ms": 8.268,
+    "p95_gap_ms": 8.562,
+    "p99_gap_ms": 8.719,
+    "maximum_gap_ms": 9.010
+  },
+  "contracts": {
+    "bounds": true,
+    "render_target": true,
+    "style": true,
+    "islands": true,
+    "z_order": true,
+    "dpi": true,
+    "revisions": true,
+    "topology": true
+  },
+  "final_result": "boundary_telemetry_pass_manual_visual_pending",
+  "static_log": {
+    "local_ignored_path": "prototype/desktop-host-win32/ts-h01-d3/out/d3-static-preflight-v2.jsonl",
+    "bytes": 817268,
+    "sha256": "D089016D232613E7795A5BA8E4ACB600A7A6815F4C983DC9E533A33FF0898C9E"
+  },
+  "formal_activation": "BLOCKED_BY_D2_1_OF_10"
+}

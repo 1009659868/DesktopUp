@@ -1,7 +1,7 @@
 # 00_Catalog 总目录入口
 
-本目录只做导航:当前活跃路径、B 模块索引、文档登记。
+本目录当前导航已经冻结的需求基线和新激活的技术选型阶段；架构、制作计划、实施模块与工作流仍未建立。
 
-- [当前活跃路径](ACTIVE_PATH.md)
-- [B 模块索引](B_MODULE_INDEX.md)
+- [需求索引](REQUIREMENTS_INDEX.md)
+- [当前阶段](ACTIVE_PATH.md)
 - [文档登记](DOCUMENT_REGISTRY.md)

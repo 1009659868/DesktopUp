@@ -1,0 +1,58 @@
+{
+  "schema": "desktopup.ts-h01-d1.evidence-summary.v1",
+  "recorded_at": "2026-08-21",
+  "status": "pass",
+  "build_id": "TS-H01-D1-20260820-01-CONTINUITY",
+  "binary_sha256": "61ABAAC58534A4BAF49B2F30F37A2B4C904EF956BEA1C2E62E51299FF73928CF",
+  "topology": "RAISED_PROGMAN",
+  "manual_gates": {
+    "win_d_complete_cycles": 10,
+    "win_d_result": "PASS",
+    "taskbar_show_desktop_complete_cycles": 10,
+    "taskbar_show_desktop_result": "PASS",
+    "touchpad_show_desktop": "UNKNOWN_DEVICE_AVAILABILITY"
+  },
+  "runs": [
+    {
+      "scenario": "win-d",
+      "local_ignored_log": "prototype/desktop-host-win32/ts-h01-d1/out/d1-win-d-manual.jsonl",
+      "bytes": 59866055,
+      "sha256": "AD857CEE45AD71E239AF39FEA5F6699B6D5E61433B4D509FEE0C785E43A08885",
+      "samples": 18198,
+      "passed": 18198,
+      "failed": 0,
+      "target_interval_ms": 8,
+      "average_gap_ms": 8.243,
+      "p95_gap_ms": 8.548,
+      "p99_gap_ms": 8.792,
+      "maximum_gap_ms": 28.692
+    },
+    {
+      "scenario": "taskbar-show-desktop",
+      "local_ignored_log": "prototype/desktop-host-win32/ts-h01-d1/out/d1-taskbar-manual.jsonl",
+      "bytes": 59801876,
+      "sha256": "A4E9635F80F66F218D80C159BFFD7F2C5734818C37031C6F391B4224809E6EFC",
+      "samples": 18184,
+      "passed": 18184,
+      "failed": 0,
+      "target_interval_ms": 8,
+      "average_gap_ms": 8.250,
+      "p95_gap_ms": 8.537,
+      "p99_gap_ms": 8.766,
+      "maximum_gap_ms": 145.049
+    }
+  ],
+  "lifecycle_counts_per_run": {
+    "attach": 1,
+    "detach": 0,
+    "recreate": 0,
+    "hide": 0,
+    "show": 0
+  },
+  "manual_observation": {
+    "continuous_card_visibility": "PASS",
+    "ordinary_app_restored_above_card": "PASS",
+    "no_transient_topmost_or_raise": "PASS",
+    "timed_cleanup": "PASS"
+  }
+}

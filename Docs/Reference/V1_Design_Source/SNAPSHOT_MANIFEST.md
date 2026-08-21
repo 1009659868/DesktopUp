@@ -23,4 +23,4 @@
 | `POSTER_ERROR_AND_EMPTY_STATE_V0.1.md` | 空状态、错误隔离与回退 |
 | `AI_ASSISTANT_DESIGN_V0.1.md` | AI 设置、计划、权限和工具设计 |
 
-清单中的文件保持原文，不在快照内修正冲突。V2 的归一结果见 `Docs/A_Project/10_Plan/REQUIREMENTS_MIGRATION_TRACEABILITY_V1.md`。
+清单中的文件保持原文，不在快照内修正冲突。V2 的归一结果见 `Docs/A_Project/10_Requirements/REQUIREMENTS_MIGRATION_TRACEABILITY_V1.md`。

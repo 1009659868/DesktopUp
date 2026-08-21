@@ -1,0 +1,36 @@
+{
+  "schema": "desktopup.ts-h01-d3.dpi-gate-evidence.v1",
+  "recorded_at": "2026-08-21",
+  "status": "pass",
+  "scale_percent": 125,
+  "expected_dpi": 120,
+  "binary_sha256": "688AC544047BAD65AF2A028F33A48387CBBF9827FD84E4FC71ED6CB6E37F636C",
+  "cold_starts": 5,
+  "telemetry_passed": 5,
+  "manual_visual_passed": 5,
+  "runs": [
+    { "source": "d3-1-dpi-125-20260821-123817/run-01.jsonl", "sha256": "436A5E220576C381A44A2C4E859E06AD25330E41D45995DF4987F2D80495FF96" },
+    { "source": "d3-1-dpi-125-20260821-123817/run-02.jsonl", "sha256": "0B59B2B6D5CA26DCA5F86FC2C78BDB3AB45AEE5F4498607DF3717A44F9A8AB2D" },
+    { "source": "d3-1-dpi-125-20260821-123817/run-03.jsonl", "sha256": "59E0A96A07AC82E240143625A8CF74057BE1446BE187C23446BABBC828CF1B7C" },
+    { "source": "d3-1-dpi-125-20260821-123817/run-04.jsonl", "sha256": "4C3DED649D0E0A788DA71FD239D7C3D22CA52652C02967C64DE06D4F91D47E30" },
+    { "source": "d3-1-dpi-125-20260821-123817/run-05.jsonl", "sha256": "D9514C4068DA1CBF398D224503076D9D56B5C3F14D4D2E3C9AA6EB1FC4714CCE" }
+  ],
+  "source_summary": {
+    "path": "d3-1-dpi-125-20260821-123817/summary.json",
+    "sha256": "EFD1CCF24FF2E6A7C5ACA6677DE39AD08A75371E81CCC51024AD226A5790EE0D"
+  },
+  "dpi_authority": {
+    "projection": "pmv2_primary_system_dpi",
+    "effective_dpi": 120,
+    "embedded_window_dpi": 96,
+    "shell_parent_dpi": 96,
+    "embedded_and_shell_dpi_are_diagnostic_only": true
+  },
+  "preflights": [
+    { "result": "fail_expected_dpi_mismatch_shell_parent_source", "sha256": "5B38D926475D3A33DE623F9298AE6072C15573119CD704F830C14248BA34A9C5" },
+    { "result": "fail_child_hwnd_overrode_primary_dpi", "sha256": "5C773DA4045E207FD4CD8E6D201C94495DD615BB7E357E8793E37D121FA26A6B" },
+    { "result": "pass_primary_dpi_authority_605_samples", "sha256": "CFF9A1DBE52F463D0AF949372196136F5E83FCF378C85974F392AA7E63B62ECF" }
+  ],
+  "manual_result": "user_confirmed_pass",
+  "current_binary_requires_100_percent_retest": true
+}

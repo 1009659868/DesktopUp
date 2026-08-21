@@ -1,0 +1,34 @@
+{
+  "schema": "desktopup.ts-h01-d3.work-area-evidence.v1",
+  "recorded_at": "2026-08-21",
+  "status": "pass",
+  "baseline_scale_percent": 100,
+  "baseline_dpi": 96,
+  "binary_sha256": "4039C93329014023F64FB72FFD84F1A83C8BB1AABE19059B37505337148008AD",
+  "manual_visual_result": "user_confirmed_pass",
+  "telemetry": {
+    "automatic_gate_pass": true,
+    "exit_code": 0,
+    "telemetry_result": "boundary_telemetry_pass_manual_visual_pending",
+    "valid_json_lines": 3818,
+    "invalid_json_lines": 0,
+    "samples_passed": 3802,
+    "samples_total": 3802,
+    "work_area_changes_detected": 11,
+    "work_area_changes_expected_minimum": 10,
+    "final_drag_count": 0,
+    "final_resize_count": 0,
+    "final_collapse_cycle_count": 0,
+    "observed_work_areas": ["0,0,2560,1392", "0,0,2560,1440"]
+  },
+  "artifacts": {
+    "raw_log": "work-area-change.jsonl",
+    "raw_log_sha256": "C90DE301CACCC730C3830602268E064648C0B9F46D290FCDDB598269A247538C",
+    "runner_summary": "runner-summary.json",
+    "runner_summary_sha256": "ADAACF10D633088930EA9ACA22889E61B2AC1FFFAE09AEC5B34230A817040348",
+    "preceding_failed_runner_summary": "preceding-failed-runner-summary.json",
+    "preceding_failed_raw_log_sha256": "97CD0B41C2A1C274ED03B36D3A4895353C4C44C22F4D30B5BE48A38EC42FE357",
+    "preceding_failed_raw_log_bytes": 102750109
+  },
+  "workflow_effect": "close_d3_3_and_activate_ts_h01_e"
+}
