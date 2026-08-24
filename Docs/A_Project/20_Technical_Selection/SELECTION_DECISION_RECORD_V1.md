@@ -1,12 +1,12 @@
 # Desktop-Up V2 技术选型决策记录 V1
 
-状态：`NOT READY — NO WINNER / DO NOT IMPLEMENT`
+状态：`NOT READY — NO RENDERER-UI WINNER / AXIOM CORE BLUEPRINT FROZEN INPUT`
 
 建立日期：2026-08-20
 
 ## 1. 使用规则
 
-本文件是最终技术选择的预留记录，不是当前结论。完成 TS-01 至 TS-04 前禁止填写 `SELECTED`，禁止把候选登记顺序或历史原型写成推荐。
+本文件仍未形成最终技术组合。TS-01 至 TS-04 完成前禁止把 renderer/UI 候选填写为 `SELECTED`；用户明确批准的正交部分决策可以单独记录，但不能冒充完整组合或跳过候选证据。
 
 ## 2. 决策信息
 
@@ -19,6 +19,15 @@
 | Selected combination | `NONE` |
 | Controlled fallback | `NONE` |
 | User approval | `PENDING` |
+
+### 2.1 已批准的部分架构输入
+
+- 决策：仅采用 Axiom Core 0.3.0 作为 DesktopUp V2 架构方法与技术研究层的系统描述方法；
+- 固定版本：本轮审计 commit `890cc75680e150d98cbbe4133976dfcf35e8e871`；
+- 范围：PortCell、类型化组合、Blueprint、Static、Slot/Conforms 及框架中立状态权威图；
+- 排除项：axiom-runtime 处于 unstable 状态，不采用、不推荐、不依赖，也不作为验证证据；renderer、UI、StateStore、IPC、进程或安装技术仍未选择；
+- 用户批准：2026-08-24，并进一步明确“只用 Axiom Core；不推荐使用 unstable runtime”；
+- 冻结入口：[AXIOM_BLUEPRINT_INDEX](../30_Architecture/AXIOM_BLUEPRINT_INDEX.md)；最终审计：[AX_BP_06_CONSISTENCY_AUDIT_AND_HANDOFF_V1](../30_Architecture/AX_BP_06_CONSISTENCY_AUDIT_AND_HANDOFF_V1.md)。
 
 ## 3. 硬门结果
 
@@ -75,7 +84,7 @@ Residual reusable findings:
 - 安装、自启、升级和卸载；
 - 测试与诊断工具链。
 
-当前全部为 `UNDECIDED`。
+以上生产技术项仍全部为 `UNDECIDED`。唯一已决定的是“Axiom Core 作为系统描述方法”；它不等同于“核心运行时”已经选定。
 
 ## 7. 架构阶段输入模板
 

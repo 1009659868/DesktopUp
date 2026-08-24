@@ -1,0 +1,9 @@
+[package]
+name = "desktopup-axiom-blueprint"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+publish = false
+
+[dependencies]
+axiom = { git = "https://github.com/ghwinter/axiom.git", rev = "890cc75680e150d98cbbe4133976dfcf35e8e871", version = "0.3.0" }

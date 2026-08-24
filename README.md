@@ -2,7 +2,7 @@
 
 Desktop-Up V2 是面向 Windows 11 的桌面海报、内容入口与个性化主题平台重构项目。
 
-七份完整需求已于 2026-08-20 冻结，仓库当前处于全新的技术选型阶段。TS-01、TS-H01-A 以及当前 `RAISED_PROGMAN` 路径的 TS-H01-B/C/D1 已通过；ordinary GDI FAIL 和 traditional WorkerW UNKNOWN 证据继续保留。当前执行 TS-H01-D2 Explorer 重建安全退化/恢复人工门；没有框架赢家。
+七份完整需求已于 2026-08-20 冻结。DesktopHost TS-H01-E 已完成；仅使用 Axiom Core 的 AX-BP-01～06 系统蓝图已经完成并冻结，Axiom 已退出执行主线。renderer、控制中心 UI、存储、生产 runtime 和安装技术仍没有赢家。
 
 文档入口：[Docs/README.md](Docs/README.md)
 
@@ -11,17 +11,19 @@ Desktop-Up V2 是面向 Windows 11 的桌面海报、内容入口与个性化主
 ## 当前权威边界
 
 - 已保留：完整需求画像、海报视觉与交互、控制中心/托盘/海报关系、内容 Item 活跃度动态排版、主题与 AI、安全与发布底线、历史风险和来源追溯。
-- 尚未选定：UI 框架、渲染器、桌面宿主方式、编程语言、进程拓扑、IPC、状态存储和安装技术。
+- 已冻结：[AX-BP 蓝图索引](Docs/A_Project/30_Architecture/AXIOM_BLUEPRINT_INDEX.md)及 [Axiom Core 程序蓝图](Docs/A_Project/30_Architecture/AXIOM_CORE_PROGRAM_BLUEPRINT_V1.md)，用于描述模块端口、调用、组合和物理执行边界；只使用 Core，明确排除 unstable axiom-runtime。
+- 已验证：[Axiom 蓝图类型夹具](prototype/axiom-desktopup-blueprint/README.md)锁定无伪造默认状态、CAS 权威闭环和同 revision 投影。
+- 尚未选定：UI 框架、renderer、DesktopHost 正式 adapter、进程拓扑、IPC、状态存储、生产 runtime 和安装技术。
 - 已建立但未得出结论：技术候选登记、统一 P0 硬门、加权评分和决策记录；当前没有赢家。
+- 当前执行：TS-C01 Qt Quick 的 R2 人工门与 R3 自动预检已 PASS，下一步为 R4 人工 P0；P0 仍未运行完成，不能据此选择 renderer。
 - `Docs/Reference/V1_Design_Source/` 是只读历史来源；V2 当前需求以 `Docs/A_Project/10_Requirements/` 为准。
 
 ## 后续阶段顺序
 
 ```text
-技术候选事实审查（已完成）
-→ 公共 Desktop Overlay Host 原生探针
-→ 渲染候选同构 P0 可证伪原型与统一证据矩阵
-→ 架构设计与公共契约
+DesktopHost 原生探针与接口冻结（已完成）
+→ Axiom Core 系统蓝图 AX-BP-01～06（已完成并冻结；不实现 runtime）
+→ 渲染候选 P0 与其他技术选型 → 获选 adapter 的完整架构集成
 → 总体制作计划与阶段门
 → 模块/工作流计划
 → 代码落地与验证

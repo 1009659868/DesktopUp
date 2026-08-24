@@ -1,6 +1,6 @@
 # Desktop-Up V2 技术候选登记表 V1
 
-状态：`ACTIVE REGISTER — TS-H01-E COMPLETE / CANDIDATE P0 NOT RUN / NO WINNER`
+状态：`ACTIVE REGISTER — TS-C01 R0 + R1 + R2 PASS / R3 AUTO PASS / R4-A USER-ACCEPTED 1/20 / R4-B MANUAL SMOKE AWAITING USER CONFIRMATION / P0 NOT RUN / NO WINNER`
 
 日期：2026-08-20
 
@@ -14,7 +14,7 @@
 
 | ID | 候选家族 | 统一评估边界 | 当前状态 |
 | --- | --- | --- | --- |
-| TS-C01 | Qt 6 / Qt Quick + Windows 原生宿主适配 | Qt 负责海报绘制/布局；有界原生层负责窗口、桌面层、命中和 Shell 事件 | `FACT CHECKED / P0 NOT RUN` |
+| TS-C01 | Qt 6.8.3 / Qt Quick + Windows 原生宿主适配 | Qt 负责海报绘制/布局；有界原生层负责窗口、桌面层、命中和 Shell 事件 | `R0 + R1 + R2 PASS / R3 AUTO PASS / R4-A USER-ACCEPTED 1/20 / R4-B MANUAL SMOKE AWAITING USER CONFIRMATION / P0 NOT RUN` |
 | TS-C02 | 原生 Win32 + Direct2D/DirectComposition | 原生窗口、绘制、合成、命中和桌面适配作为一个候选栈 | `FACT CHECKED / COMMON HOST USER-ACCEPTED COMPLETE WITH RECORDED EXCEPTIONS / P0 NOT RUN / NOT A WINNER` |
 | TS-C03 | WinUI 3 / Windows App SDK + Windows Composition/原生适配 | WinUI/Composition 负责视觉；有界原生层补充特殊桌面窗口能力 | `FACT CHECKED / P0 NOT RUN` |
 | TS-C04 | WPF + Windows 原生宿主适配 | WPF 负责海报 UI；有界 Win32 层负责桌面宿主和窗口语义 | `FACT CHECKED / P0 NOT RUN` |

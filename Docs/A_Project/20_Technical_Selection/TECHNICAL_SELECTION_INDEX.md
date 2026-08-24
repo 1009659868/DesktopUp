@@ -1,6 +1,6 @@
 # Desktop-Up V2 技术选型阶段索引
 
-状态：`ACTIVE — TS-01 COMPLETE / TS-02 IN PROGRESS / NO WINNER`
+状态：`ACTIVE — TS-02 / TS-C01 R0～R3 PASS / R4-A USER-ACCEPTED 1/20 / R4-B MANUAL SMOKE AWAITING USER CONFIRMATION / P0 NOT RUN / NO WINNER`
 
 建立日期：2026-08-20
 
@@ -9,6 +9,10 @@
 本阶段从已经冻结的七份产品需求反推技术候选，通过同一套可复现、可证伪的证据矩阵，选择能够承载 Desktop-Up V2 的技术组合。
 
 本阶段不把任何历史原型、个人熟悉度、框架流行度或单张截图当作选型结论。Qt、原生 Win32、WinUI、WPF、Avalonia、WebView2、Slint 及后续新增候选均从未评估状态开始。
+
+### 1.1 正交的系统描述输入
+
+用户于 2026-08-24 明确将 Axiom Core 放在架构方法与技术研究层，用于描述整体拓扑、模块端口、关系和物理执行边界。[AX-BP-01～06](../30_Architecture/AXIOM_BLUEPRINT_INDEX.md) 已完成并冻结；该输入不选择 renderer/UI、StateStore、生产 runtime、进程或安装技术，也不改变 TS-C01 至 TS-C07 的 P0 未运行状态。
 
 ## 2. 冻结输入
 
@@ -21,6 +25,8 @@
 7. [需求风险与统一待定项](../10_Requirements/REQUIREMENTS_RISKS_AND_OPEN_QUESTIONS.md)
 8. [迁移追踪证据](../10_Requirements/REQUIREMENTS_MIGRATION_TRACEABILITY_V1.md)
 9. [一致性审计证据](../10_Requirements/REQUIREMENTS_CONSISTENCY_AUDIT_2026-08-20.md)
+10. [AX-BP 蓝图索引](../30_Architecture/AXIOM_BLUEPRINT_INDEX.md)
+11. [AX-BP-06 一致性审计与交接](../30_Architecture/AX_BP_06_CONSISTENCY_AUDIT_AND_HANDOFF_V1.md)
 
 需求在本阶段是输入，不因某个候选难以实现而被静默修改。若发现需求本身必须变更，先暂停选型，形成需求变更决策并重新评估所有候选。
 
@@ -43,8 +49,11 @@
 | 13 | [TS-H01-E6 候选交接](TS_H01_E6_CANDIDATE_HANDOFF_2026-08-21.md) | adapter 进入门、证据隔离、fail-fast 与退出规则 | `COMPLETE / FROZEN` |
 | 14 | [DesktopHost 原型接口](DESKTOP_HOST_PROTOTYPE_INTERFACE_V1.md) | 实现中立能力、生命周期、几何、命中、诊断和错误语义 | `TS-H01-E COMPLETE / FROZEN` |
 | 15 | [TS-H01-E 完成审计](TS_H01_E_COMPLETION_AUDIT_2026-08-21.md) | E1-E6 产出、例外、夹具自测与退出门核对 | `COMPLETE` |
-| 16 | [选型决策记录](SELECTION_DECISION_RECORD_V1.md) | 最终比较、敏感性分析、淘汰理由和架构输入 | `NOT READY / NO WINNER` |
-| 17 | [证据目录规则](Evidence/README.md) | 原始数据、视频、截图、日志和复现材料的组织方式 | `ACTIVE / TS-H01 + E5 FIXTURE PRESENT / NO CANDIDATE RUNS` |
+| 16 | [TS-02 renderer adapter/P0 执行计划](TS_02_RENDERER_ADAPTER_P0_EXECUTION_PLAN_V1.md) | 候选顺序、R0～R6、公共不变量、证据与裁决 | `ACTIVE / TS-C01 R4-A USER-ACCEPTED 1/20 / R4-B MANUAL SMOKE AWAITING USER CONFIRMATION` |
+| 17 | [TS-C01 Qt Quick 进入门审计](TS_C01_QT_QUICK_ENTRY_AUDIT_2026-08-24.md) | Qt 版本、工具链、surface/ownership 和进入缺口 | `R0 + R1 + R2 PASS / R3 AUTO PASS / R4-A USER-ACCEPTED 1/20 / R4-B MANUAL SMOKE AWAITING USER CONFIRMATION / 6.8.3` |
+| 18 | [TS-C01 R4 人工 P0 手册](TS_C01_R4_MANUAL_P0_RUNBOOK_V1.md) | R4-A～D 完整矩阵、受控会话、真实夹具缺口和 fail-fast | `ACTIVE / R4-A ENTRY READY / P0 NOT RUN` |
+| 19 | [选型决策记录](SELECTION_DECISION_RECORD_V1.md) | 最终比较、敏感性分析、淘汰理由和架构输入 | `NOT READY / NO WINNER` |
+| 20 | [证据目录规则](Evidence/README.md) | 原始数据、视频、截图、日志和复现材料的组织方式 | `ACTIVE / TS-H01 + E5 FIXTURE PRESENT / NO CANDIDATE RUNS` |
 
 ## 4. 阶段任务
 
@@ -52,14 +61,14 @@
 | --- | --- | --- | --- |
 | TS-00 | 冻结需求并激活技术选型 | 冻结状态、章程、候选表、统一矩阵 | `COMPLETE` |
 | TS-01 | 候选事实审查 | 官方支持范围、版本、许可证、构建与部署事实卡 | `COMPLETE` |
-| TS-02 | 公共 Desktop Overlay Host 探针，再接入海报渲染候选 | 先证明精确层级、Win+D、Explorer 重建和输入；再做同构渲染适配器 | `IN PROGRESS — TS-H01-E COMPLETE / CANDIDATE ADAPTERS NEXT` |
+| TS-02 | 公共 Desktop Overlay Host 探针，再接入海报渲染候选 | 先证明精确层级、Win+D、Explorer 重建和输入；再做同构渲染适配器 | `IN PROGRESS — TS-C01 R4 MANUAL P0 GATE` |
 | TS-03 | 控制中心、核心、状态、IPC、主题和安装支撑域审查 | 各域短名单与兼容约束 | `PENDING` |
 | TS-04 | 统一矩阵复测 | 同设备、同夹具、同脚本的完整证据包 | `PENDING` |
 | TS-05 | 选择与交接 | 决策记录、被淘汰理由、残余风险、架构输入清单 | `PENDING` |
 
 ## 5. 当前下一动作
 
-TS-H01-E1 至 E6 已完成：DesktopHost 的数据、生命周期、原子投影、诊断夹具和候选交接均已冻结。D2/D3 历史例外、未测 DPI、多屏、traditional WorkerW 与 renderer adapter 仍保持原状态。下一动作按稳定 ID 建立 TS-C01 至 TS-C07 的真实 adapter/P0 证据；当前仍无 UI 框架赢家。
+TS-C01 的 Qt 6.8.3 R0、R1 已通过；R2 修订版六项真实 Explorer 人工门已由用户确认 PASS；R3 自动预检完成双清洁可复现构建、依赖枚举、51/52 条正常/故障 E5 事件、stale/late frame 拒绝、故障注入、静态性能采样和最终零资源并 PASS。下一动作是 R4 人工 P0 门；未创建候选 Evidence run，状态仍 P0 NOT RUN。
 
 ## 6. 阶段退出门
 

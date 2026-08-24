@@ -85,7 +85,7 @@ Lively 当前公开源码会识别 raised desktop，发送未公开的 `0x052C` 
 
 | 字段 | 冻结事实 |
 | --- | --- |
-| 被审查版本 | Qt `6.11.1`，2026-05-13；进入原型前重新确认是否有同系列维护版 |
+| 被审查版本 | Qt `6.8.3`，2025-03-27；6.11.2 安装失败后于 2026-08-24 受控修订，实际 SDK 为 MSVC 2022 x64 |
 | 平台/工具链 | 官方支持 Windows 11 x64 与 MSVC 2022；本机未安装 Qt |
 | 运行/部署 | 需要 Qt DLL、平台插件及使用模块；官方提供 `windeployqt`，仍需生成依赖与许可证清单 |
 | 许可证 | 商业、LGPLv3、GPLv3 并存；部分模块可能仅 GPL。自用不取消依赖归属与再分发审查 |
@@ -94,7 +94,7 @@ Lively 当前公开源码会识别 raised desktop，发送未公开的 `0x052C` 
 | 已知限制 | Qt 自身不提供 WorkerW/Progman 稳定契约；foreign window 行为不应作为跨版本保证 |
 | TS-01 状态 | `FACT CHECKED / STATIC SCREEN PASS / P0 PROBE REQUIRED` |
 
-来源：[Qt 6.11.1 release](https://www.qt.io/blog/qt-6.11.1-released)、[Supported platforms](https://doc.qt.io/qt-6/supported-platforms.html)、[Licensing](https://doc.qt.io/qt-6/licensing.html)、[Windows deployment](https://doc.qt.io/qt-6/windows-deployment.html)、[QWindow](https://doc.qt.io/qt-6/qwindow.html)。
+来源：[Qt 6.8.3 release](https://www.qt.io/blog/qt-6.8.3-released)、[Qt 6.8 supported platforms](https://doc.qt.io/qt-6.8/supported-platforms.html)、[6.8.3 MSVC 2022 x64 package](https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_683/qt6_683/qt.qt6.683.win64_msvc2022_64/)、[Licensing](https://doc.qt.io/qt-6/licensing.html)、[Windows deployment](https://doc.qt.io/qt-6/windows-deployment.html)、[QWindow](https://doc.qt.io/qt-6/qwindow.html)。
 
 ### TS-C02 — Win32 + Direct2D/DirectComposition
 
@@ -211,7 +211,7 @@ Wallpaper Engine 和商业“小智桌面”公开材料可以作为内容平台
 
 | Candidate | Fact card | Static screen | TS-02 入口 |
 | --- | --- | --- | --- |
-| TS-C01 | COMPLETE | PASS | 等待公共宿主通过后接入 |
+| TS-C01 | COMPLETE / 6.8.3 CONTROLLED REVISION | PASS | R0 PASS：Release build/deploy/QML self-check；P0 NOT RUN |
 | TS-C02 | COMPLETE | PASS | 先承担无框架公共宿主探针 |
 | TS-C03 | COMPLETE | PASS | 等待公共宿主通过后接入 |
 | TS-C04 | COMPLETE | PASS | 等待公共宿主通过后接入 |
