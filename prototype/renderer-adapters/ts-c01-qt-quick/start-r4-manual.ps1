@@ -4,7 +4,10 @@ param(
     [int]$DurationMs = 60000,
 
     [ValidatePattern('^[A-Za-z0-9_-]*$')]
-    [string]$SessionLabel = ''
+    [string]$SessionLabel = '',
+
+    [ValidateSet('R4A_R4B', 'R4C', 'R4D', 'R4D2', 'R4D3')]
+    [string]$Phase = 'R4A_R4B'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -41,15 +44,28 @@ New-Item -ItemType Directory -Path $sessionRoot | Out-Null
 $eventLog = Join-Path $sessionRoot 'events.jsonl'
 $readyMarker = Join-Path $sessionRoot 'matrix-ready.txt'
 $manifestPath = Join-Path $sessionRoot 'session.json'
+$manualMode = switch ($Phase) {
+    'R4C' { '--run-r4c-manual' }
+    'R4D' { '--run-r4d-manual' }
+    'R4D2' { '--run-r4d2-manual' }
+    'R4D3' { '--run-r4d3-manual' }
+    default { '--run-r4-manual' }
+}
 $arguments = @(
-    '--run-r4-manual',
+    $manualMode,
     '--r3-diagnostics',
     '--duration-ms', [string]$DurationMs,
     '--log', $eventLog,
     '--r3-ready-marker', $readyMarker
 )
 
-$process = Start-Process -FilePath $executable -ArgumentList $arguments -WorkingDirectory (Split-Path -Parent $executable) -WindowStyle Hidden -PassThru
+if ($Phase -in @('R4D2', 'R4D3')) {
+    # R4-D2/D3 own visible native manual-control panels. A hidden STARTUPINFO
+    # would also suppress that first top-level window.
+    $process = Start-Process -FilePath $executable -ArgumentList $arguments -WorkingDirectory (Split-Path -Parent $executable) -PassThru
+} else {
+    $process = Start-Process -FilePath $executable -ArgumentList $arguments -WorkingDirectory (Split-Path -Parent $executable) -WindowStyle Hidden -PassThru
+}
 $deadline = [DateTime]::UtcNow.AddSeconds(15)
 while (-not (Test-Path -LiteralPath $readyMarker -PathType Leaf)) {
     if ($process.HasExited) {
@@ -67,6 +83,7 @@ $manifest = [ordered]@{
     candidateId = 'TS-C01'
     sessionId = $sessionId
     scope = 'R4_MANUAL_P0_IN_PROGRESS_NO_CANDIDATE_EVIDENCE'
+    manualPhase = $Phase
     startedAt = (Get-Date).ToString('o')
     durationMs = $DurationMs
     processId = $process.Id
@@ -82,6 +99,7 @@ $manifest = [ordered]@{
 $manifest | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $manifestPath -Encoding utf8
 
 Write-Output "R4_SESSION_READY=$sessionId"
+Write-Output "MANUAL_PHASE=$Phase"
 Write-Output "PID=$($process.Id)"
 Write-Output "EXE_SHA256=$actualHash"
 Write-Output "EVENT_LOG=$eventLog"

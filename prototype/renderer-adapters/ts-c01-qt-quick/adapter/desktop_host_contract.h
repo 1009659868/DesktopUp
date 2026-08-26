@@ -29,7 +29,7 @@ inline constexpr char kBuildId[] = DESKTOPUP_TS_C01_BUILD_ID;
 enum class SurfaceFixtureKind { R1Boundary, R2NightOps };
 enum class SurfaceTransportKind { AdapterOwnedNativeChild, OffscreenFrameSource };
 enum class SurfaceOwnership { Adapter, Host };
-enum class HostState { Detached, Attaching, AttachedSafe, Faulted, Detaching, Exiting };
+enum class HostState { Detached, Attaching, AttachedSafe, DegradedNoDesktopHost, Faulted, Detaching, Exiting };
 enum class SurfaceState { Unbound, Binding, ReadyNoFrame, Presented, Lost, Releasing, Released };
 
 struct SurfaceOffer {
@@ -84,6 +84,8 @@ private:
     QFile file_;
     bool stdoutOnly_ = true;
     QElapsedTimer clock_;
+    qint64 lastFlushMs_ = 0;
+    quint64 bufferedLineCount_ = 0;
     quint64 sequence_ = 0;
     QString hostSessionId_;
 };
@@ -108,6 +110,8 @@ public:
     QString graphicsApiName() const;
 
 private:
+    bool captureOffscreenFrame(int timeoutMs, QString* error);
+
     SurfaceFixtureKind fixtureKind_ = SurfaceFixtureKind::R1Boundary;
     std::unique_ptr<QQmlApplicationEngine> engine_;
     std::unique_ptr<QWindow> foreignParent_;
@@ -137,9 +141,18 @@ public:
     bool notifyFramePresented(QString* error);
     bool notifyProjectionFramePresented(QString* error);
     bool notifyProjectionFramePresentedAtRevision(quint64 observedRevision, QString* error);
+    bool notifyProjectionFramePresentedAtFence(
+        quint64 observedSurfaceEpoch,
+        quint64 observedRevision,
+        QString* error);
     bool notifySurfaceFault(const QString& reason, bool recoverable);
+    bool recoverSurfaceAfterFault(QString* error);
     QJsonObject observeHostState() const;
     bool requestReconnect(quint64 observedShellGeneration, const QString& requestId, QString* error);
+    bool shellAttachmentStillValid() const;
+    QString discoverSafeShellSignature() const;
+    bool enterShellDegraded(const QString& reason, QString* error);
+    bool recoverShellAttachment(QString* error);
     bool detach(const QString& requestId, QString* error);
     bool beginExit(const QString& requestId, QString* error);
 
@@ -150,6 +163,8 @@ public:
     HWND explorerIconView() const;
     QRect screenPixelRect() const;
     quint64 hostProjectionRevision() const;
+    bool advanceDisplayEnvironmentRevision(
+        const QJsonObject& fields, QString* error);
     int exitCode() const;
 
 private:
@@ -175,6 +190,9 @@ private:
     bool detached_ = true;
     bool exiting_ = false;
     bool failed_ = false;
+    bool recoveryPending_ = false;
+    bool surfaceRecoveryPending_ = false;
+    QString lastShellSignature_;
 };
 
 }  // namespace desktopup::tsc01

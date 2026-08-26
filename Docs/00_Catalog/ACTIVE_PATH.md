@@ -1,11 +1,11 @@
 # 当前活跃文档路径
 
-最后检查：2026-08-24
+最后检查：2026-08-25
 
 | 层级 | 当前节点 | 权威入口 | 状态 |
 | --- | --- | --- | --- |
 | A | Desktop-Up V2 完整需求基线 | `REQUIREMENTS_INDEX.md` | `FROZEN — 2026-08-20` |
-| A | Desktop-Up V2 技术选型 | `../A_Project/20_Technical_Selection/TECHNICAL_SELECTION_INDEX.md` | `ACTIVE — TS-C01 R4-A USER-ACCEPTED 1/20 / R4-B MANUAL SMOKE AWAITING USER CONFIRMATION / P0 NOT RUN / NO WINNER` |
+| A | Desktop-Up V2 技术选型 | `../A_Project/20_Technical_Selection/TECHNICAL_SELECTION_INDEX.md` | `ACTIVE — TS-C01 R5-01～05 COMPLETE / 2 PASS + 1 FAIL + 34 UNKNOWN + 4 NOT RUN / FAIL RECOMMENDED / R6 USER DECISION PENDING / NO WINNER` |
 | A | Axiom Core 系统描述蓝图 | `../A_Project/30_Architecture/AXIOM_BLUEPRINT_INDEX.md` | `FROZEN — AX-BP-01～06 COMPLETE / AXIOM EXITED` |
 | B | 无 | 无 | `NOT STARTED` |
 | C | 无 | 无 | `NOT STARTED` |
@@ -31,16 +31,23 @@
 17. `../A_Project/20_Technical_Selection/UNIFIED_CANDIDATE_EVIDENCE_MATRIX_V1.md`；
 18. `../A_Project/20_Technical_Selection/TS_02_RENDERER_ADAPTER_P0_EXECUTION_PLAN_V1.md`；
 19. `../A_Project/20_Technical_Selection/TS_C01_QT_QUICK_ENTRY_AUDIT_2026-08-24.md`；
-20. `../A_Project/20_Technical_Selection/SELECTION_DECISION_RECORD_V1.md`；
-21. `../A_Project/30_Architecture/AXIOM_BLUEPRINT_INDEX.md`；
-22. `../A_Project/30_Architecture/AXIOM_CORE_PROGRAM_BLUEPRINT_V1.md`；
-23. `../A_Project/30_Architecture/AX_BP_01_AXIOM_CORE_SEMANTIC_MAPPING_V1.md`；
-24. `../A_Project/30_Architecture/AX_BP_02_PROGRAM_TOPOLOGY_V1.md`；
-25. `../A_Project/30_Architecture/AX_BP_03_MODULE_PORT_FREEZE_V1.md`；
-26. `../A_Project/30_Architecture/AX_BP_04_FLOW_COMPOSITION_FREEZE_V1.md`；
-27. `../A_Project/30_Architecture/AX_BP_05_PHYSICAL_EXECUTION_BOUNDARIES_V1.md`；
-28. `../A_Project/30_Architecture/AX_BP_06_CONSISTENCY_AUDIT_AND_HANDOFF_V1.md`；
-29. `../../prototype/axiom-desktopup-blueprint/README.md`。
+20. `../A_Project/20_Technical_Selection/TS_C01_R4_D4_CURRENT_USER_LIFECYCLE_PLAN_V1.md`；
+21. `../A_Project/20_Technical_Selection/TS_C01_R5_EVIDENCE_CONVERGENCE_AND_DECISION_PREP_PLAN_V1.md`；
+22. `../A_Project/20_Technical_Selection/TS_C01_R5_01_EVIDENCE_INVENTORY_2026-08-26.md`；
+23. `../A_Project/20_Technical_Selection/TS_C01_R5_02_UNIFIED_MATRIX_MAPPING_V1.md`；
+24. `../A_Project/20_Technical_Selection/Evidence/TS-C01/README.md`；
+25. `../A_Project/20_Technical_Selection/TS_C01_R5_04_CANDIDATE_DISPOSITION_AUDIT_V1.md`；
+26. `../A_Project/20_Technical_Selection/TS_C01_R5_05_R6_HANDOFF_INPUT_V1.md`；
+27. `../A_Project/20_Technical_Selection/SELECTION_DECISION_RECORD_V1.md`；
+28. `../A_Project/30_Architecture/AXIOM_BLUEPRINT_INDEX.md`；
+29. `../A_Project/30_Architecture/AXIOM_CORE_PROGRAM_BLUEPRINT_V1.md`；
+30. `../A_Project/30_Architecture/AX_BP_01_AXIOM_CORE_SEMANTIC_MAPPING_V1.md`；
+31. `../A_Project/30_Architecture/AX_BP_02_PROGRAM_TOPOLOGY_V1.md`；
+32. `../A_Project/30_Architecture/AX_BP_03_MODULE_PORT_FREEZE_V1.md`；
+33. `../A_Project/30_Architecture/AX_BP_04_FLOW_COMPOSITION_FREEZE_V1.md`；
+34. `../A_Project/30_Architecture/AX_BP_05_PHYSICAL_EXECUTION_BOUNDARIES_V1.md`；
+35. `../A_Project/30_Architecture/AX_BP_06_CONSISTENCY_AUDIT_AND_HANDOFF_V1.md`；
+36. `../../prototype/axiom-desktopup-blueprint/README.md`。
 
 ## 当前冻结边界
 
@@ -54,4 +61,4 @@
 
 ## 下一动作
 
-TS-C01 已受控修订为 Qt 6.8.3 / Qt Quick / MSVC 2022 x64。R0、R1 已通过；R2 的修订版 OFFSCREEN_FRAME_SOURCE / HOST 路线已由用户完成六项真实 Explorer 人工门并确认 PASS；R3 自动预检已完成双清洁可复现构建、部署、E5 正反例、stale/late frame、故障注入、性能与零资源清理并 PASS。当前进入 R4 人工 P0 门；候选状态仍 P0 NOT RUN，不创建或借用 P0 Evidence。
+R5-01～05 已完成并形成正式 TS-C01 Candidate Evidence。统一矩阵结果为 2 PASS、1 FAIL、34 UNKNOWN、4 NOT RUN；`HG-PERF-02` 工作集 136.332MiB 超过 50MiB，R5 按 E6 建议 FAIL，且不允许加权评分。当前进入 R6 用户处置决定：接受 FAIL 并按顺序进入 TS-C02，或先建立适用于所有候选的资源预算需求变更并全量重跑。TS-C01 尚未被用户最终标为 REJECTED，当前仍无 renderer/UI winner。

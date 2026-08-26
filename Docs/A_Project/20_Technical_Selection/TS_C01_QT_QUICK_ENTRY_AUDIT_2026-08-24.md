@@ -1,6 +1,6 @@
 # TS-C01 Qt 6 / Qt Quick 进入门审计
 
-状态：R0 + R1 + R2 PASS / R3 AUTOMATED PREFLIGHT PASS / R4-A USER-ACCEPTED 1/20 / R4-B MANUAL SMOKE AWAITING USER CONFIRMATION / P0 NOT RUN
+状态：R5-01～05 COMPLETE / 2 PASS + 1 FAIL + 34 UNKNOWN + 4 NOT RUN / FAIL RECOMMENDED / R6 USER DECISION PENDING / NO WINNER
 
 日期：2026-08-24
 
@@ -24,7 +24,7 @@
 | Build system | CMake |
 | Prototype configuration | Release |
 | Desktop host | frozen native DesktopHost contract |
-| Current disposition | R0 + R1 + R2 PASS / R3 AUTO PASS / R4-A USER-ACCEPTED 1/20 / R4-B MANUAL SMOKE AWAITING USER CONFIRMATION / P0 NOT RUN |
+| Current disposition | R5-01～05 COMPLETE / 2 PASS + 1 FAIL + 34 UNKNOWN + 4 NOT RUN / FAIL RECOMMENDED / R6 USER DECISION PENDING |
 
 Qt 6.11.2 在线安装失败后，用户提供了本机 Qt 6.8.3。该版本作为 TS-C01 的受控版本修订：Candidate ID、框架类别和 P0 状态不变，但从本次修订起所有构建与证据必须精确标注 6.8.3，禁止借用先前 6.11.2 的进入事实。
 
@@ -272,23 +272,28 @@ R3 为候选增加并验证：
 
 | 字段 | 结果 |
 | --- | --- |
-| Timestamp | 2026-08-24T17:43:53.1415382+08:00 |
-| Build ID | `ts-c01-qt-6.8.3-r3-20260824-01` |
-| Reproducibility | PASS；2 clean builds；SHA-256 `FA36CD18B46A466F413A08A3DB21F5412610F028080F7FFF203333EFF7548965` |
+| Timestamp | 2026-08-25T16:04:53.5367056+08:00 |
+| Build ID | `ts-c01-qt-6.8.3-r4d2-20260825-02` |
+| Reproducibility | PASS；2 clean builds；SHA-256 `8FF9F292B31A92CFDCDB44D81F10B647AD3D3DC6750D6F003F35A7F44E87D86D` |
 | Deploy | PASS；51 files / 39 runtime binaries；部署未改变 EXE |
-| Normal / fault JSONL | 51 / 52 events；E5 PASS / PASS |
+| Normal / fault / R4-C / R4-D1 / R4-D2 static JSONL | 61 / 62 / 66 / 64 / 111 events；E5 全部 PASS |
+| R4-C static lifecycle | monitor/probe ready；0 false Shell loss；0 recovery/degraded；角色探针不冒充产品控制中心；最终零资源 |
+| R4-D1 static display environment | PRIMARY_DISPLAY_ONLY；observer ready；0 false change；0 reprojection failure；multi-display DEFERRED；最终零资源 |
+| R4-D2 static theme/fallback/isolation | 3 normal themes；5 atomic projections；4 rejected faults；3 LKG retains；1 fallback；2 superseded requests；1 geometry key；structured enum isolation；最终零资源 |
+| R4-D3 fault/stale/performance | FUNCTIONAL PASS / HG-PERF-02 FAIL；surface-only same-attachment recovery；旧 revision/surface frame 与重复当前 Shell 事件拒绝；200 Item ×64 轮 0.180ms；6 次主题最大 27.106ms；CPU 62ms/10.223s、静态帧 0 PASS；工作集峰值 136.332MiB > 50MiB；最终零资源 |
 | Stale / late rejection | PASS / PASS |
 | Injected fault lifecycle | PASS |
 | Cleanup | visual=0 / island=0 / host=0 / adapter=0 / quarantine=0 |
-| Performance | 3194.157 ms；0.501% single-core CPU；133.254～133.590 MiB working set |
+| Interaction latency | PASS：10 samples / 100ms budget；max total 42.919ms |
+| Performance | 3152.792ms；0.0% single-core CPU；131.406～131.422MiB working set |
 | Frame behavior | 静态 hold 期间 0 新 frame；事件驱动静态夹具的预期结果 |
 | License material | 本机 Qt 二进制安装未带顶层 license payload；分发前审查待办 |
 | Candidate Evidence | 未创建；P0 NOT RUN |
 
-机器摘要：`out/r3-preflight.json`。原始 run：`out/r3-run-20260824-174241/`。自动预检 PASS 不等于 P0 PASS。
+机器摘要：out/r3-preflight.json。当前原始 run：out/r3-run-20260825-170513/；Release SHA-256 4F1D76FCEC9C5271C1199D2CBAE48C748CA4EC0D8CA8C4D0AE50D325095CA673。D1、D2 已由用户确认；D3 自动功能门 PASS，但工作集硬门 FAIL，不等于候选 P0 PASS。
 
 ## 16. 当前下一动作
 
-进入 R4 人工 P0 门，完整执行 20 次冷启动、20 次交互循环、Explorer/窗口/Win+D/控制中心/重建与 degraded、声明显示环境、故障、性能清理、安装和重启矩阵。任何白条、灰框、瞬时 TopMost、隐藏再恢复、整窗输入接管、旧 frame/hit 或资源残留立即 fail-fast。在 R4 用户确认和证据包形成前，TS-C01 保持 `P0 NOT RUN / NO WINNER`。
+R5-01～05 已完成并形成正式 Candidate Evidence。矩阵结果为 2 PASS、1 FAIL、34 UNKNOWN、4 NOT RUN；HG-PERF-02 明确失败，R5 按 E6 建议 FAIL。当前等待 R6 用户处置决定，仍无 winner。
 
-详细入口与 A～D 分段见 [TS-C01 R4 人工 P0 手册](TS_C01_R4_MANUAL_P0_RUNBOOK_V1.md)。R4-A 已由用户接受并保留 1/20 例外；R4-B 真实交互实现和 R3 回归已经完成，本轮自动事件与清理校验通过，等待用户人工观察确认。
+详细执行历史见 [TS-C01 R4 人工 P0 手册](TS_C01_R4_MANUAL_P0_RUNBOOK_V1.md) 与 [R4-D4 生命周期计划](TS_C01_R4_D4_CURRENT_USER_LIFECYCLE_PLAN_V1.md)。R5 结论见 [统一矩阵映射](TS_C01_R5_02_UNIFIED_MATRIX_MAPPING_V1.md)、[Candidate Evidence](Evidence/TS-C01/README.md) 和 [R6 交接输入](TS_C01_R5_05_R6_HANDOFF_INPUT_V1.md)。

@@ -55,6 +55,48 @@ $manifest | Add-Member -NotePropertyName e5Validation -NotePropertyValue 'PASS' 
 $manifest | Add-Member -NotePropertyName cleanupZero -NotePropertyValue $true -Force
 $manifest | Add-Member -NotePropertyName userObservation -NotePropertyValue $UserObservation -Force
 $manifest | Add-Member -NotePropertyName observationNote -NotePropertyValue $Note -Force
+$manualFinished = @($events | Where-Object event -eq 'r4_manual_session_finished' | Select-Object -Last 1)
+if ($manualFinished.Count -eq 1 -and [string]$manualFinished[0].manual_phase -eq 'R4C') {
+    $r4cMetrics = [ordered]@{
+        shellRecoveryCount = [int]$manualFinished[0].shell_recovery_count
+        shellDegradedCount = [int]$manualFinished[0].shell_degraded_count
+        shellDegradedAtFinish = [bool]$manualFinished[0].shell_degraded_at_finish
+        controlCenterProbeOpenCount = [int]$manualFinished[0].control_center_probe_open_count
+        controlCenterProbeCloseCount = [int]$manualFinished[0].control_center_probe_close_count
+    }
+    $manifest | Add-Member -NotePropertyName r4cMetrics -NotePropertyValue $r4cMetrics -Force
+}
+if ($manualFinished.Count -eq 1 -and [string]$manualFinished[0].manual_phase -eq 'R4D') {
+    $r4dMetrics = [ordered]@{
+        displayEnvironmentChangeCount = [int]$manualFinished[0].display_environment_change_count
+        displayEnvironmentFailed = [bool]$manualFinished[0].display_environment_failed
+    }
+    $manifest | Add-Member -NotePropertyName r4dMetrics -NotePropertyValue $r4dMetrics -Force
+}
+if ($manualFinished.Count -eq 1 -and [string]$manualFinished[0].manual_phase -eq 'R4D2') {
+    $r4d2Metrics = [ordered]@{
+        themeSwitchCommittedCount = [int]$manualFinished[0].theme_switch_committed_count
+        themeSwitchRejectedCount = [int]$manualFinished[0].theme_switch_rejected_count
+        themeFallbackCount = [int]$manualFinished[0].theme_fallback_count
+        themeSupersededRequestCount = [int]$manualFinished[0].theme_superseded_request_count
+        themeSelfTestCompleted = [bool]$manualFinished[0].theme_self_test_completed
+        selectedThemeId = [string]$manualFinished[0].selected_theme_id
+        effectiveThemeId = [string]$manualFinished[0].effective_theme_id
+        themeFallbackActive = [bool]$manualFinished[0].theme_fallback_active
+        themeRevision = [long]$manualFinished[0].theme_revision
+    }
+    $manifest | Add-Member -NotePropertyName r4d2Metrics -NotePropertyValue $r4d2Metrics -Force
+}if ($manualFinished.Count -eq 1 -and [string]$manualFinished[0].manual_phase -eq 'R4D3') {
+    $r4d3Metrics = [ordered]@{
+        recoveryCount = [int]$manualFinished[0].r4d3_recovery_count
+        staleRejectCount = [int]$manualFinished[0].r4d3_stale_reject_count
+        duplicateShellRejectCount = [int]$manualFinished[0].r4d3_duplicate_shell_reject_count
+        stressCount = [int]$manualFinished[0].r4d3_stress_count
+        maxThemeSwitchMs = [double]$manualFinished[0].r4d3_max_theme_switch_ms
+        selfTestCompleted = [bool]$manualFinished[0].r4d3_self_test_completed
+    }
+    $manifest | Add-Member -NotePropertyName r4d3Metrics -NotePropertyValue $r4d3Metrics -Force
+}
 $status = if ($UserObservation -eq 'PASS') {
     'SESSION_PASS_NOT_OVERALL_P0'
 } elseif ($UserObservation -eq 'FAIL') {
@@ -72,4 +114,29 @@ Write-Output "STATUS=$status"
 Write-Output "EVENT_COUNT=$($events.Count)"
 Write-Output 'E5_VALIDATION=PASS'
 Write-Output 'CLEANUP_ZERO=true'
+if ($null -ne $manifest.PSObject.Properties['r4cMetrics']) {
+    Write-Output "R4C_SHELL_RECOVERY_COUNT=$($manifest.r4cMetrics.shellRecoveryCount)"
+    Write-Output "R4C_SHELL_DEGRADED_COUNT=$($manifest.r4cMetrics.shellDegradedCount)"
+    Write-Output "R4C_CONTROL_CENTER_OPEN_COUNT=$($manifest.r4cMetrics.controlCenterProbeOpenCount)"
+    Write-Output "R4C_CONTROL_CENTER_CLOSE_COUNT=$($manifest.r4cMetrics.controlCenterProbeCloseCount)"
+}
+if ($null -ne $manifest.PSObject.Properties['r4dMetrics']) {
+    Write-Output "R4D_DISPLAY_ENVIRONMENT_CHANGE_COUNT=$($manifest.r4dMetrics.displayEnvironmentChangeCount)"
+    Write-Output "R4D_DISPLAY_ENVIRONMENT_FAILED=$($manifest.r4dMetrics.displayEnvironmentFailed)"
+}
+if ($null -ne $manifest.PSObject.Properties['r4d2Metrics']) {
+    Write-Output "R4D2_THEME_SWITCH_COMMITTED_COUNT=$($manifest.r4d2Metrics.themeSwitchCommittedCount)"
+    Write-Output "R4D2_THEME_SWITCH_REJECTED_COUNT=$($manifest.r4d2Metrics.themeSwitchRejectedCount)"
+    Write-Output "R4D2_THEME_FALLBACK_COUNT=$($manifest.r4d2Metrics.themeFallbackCount)"
+    Write-Output "R4D2_THEME_SUPERSEDED_REQUEST_COUNT=$($manifest.r4d2Metrics.themeSupersededRequestCount)"
+    Write-Output "R4D2_THEME_SELF_TEST_COMPLETED=$($manifest.r4d2Metrics.themeSelfTestCompleted)"
+    Write-Output "R4D2_EFFECTIVE_THEME_ID=$($manifest.r4d2Metrics.effectiveThemeId)"
+}if ($null -ne $manifest.PSObject.Properties['r4d3Metrics']) {
+    Write-Output "R4D3_RECOVERY_COUNT=$($manifest.r4d3Metrics.recoveryCount)"
+    Write-Output "R4D3_STALE_REJECT_COUNT=$($manifest.r4d3Metrics.staleRejectCount)"
+    Write-Output "R4D3_DUPLICATE_SHELL_REJECT_COUNT=$($manifest.r4d3Metrics.duplicateShellRejectCount)"
+    Write-Output "R4D3_STRESS_COUNT=$($manifest.r4d3Metrics.stressCount)"
+    Write-Output "R4D3_MAX_THEME_SWITCH_MS=$($manifest.r4d3Metrics.maxThemeSwitchMs)"
+    Write-Output "R4D3_SELF_TEST_COMPLETED=$($manifest.r4d3Metrics.selfTestCompleted)"
+}
 Write-Output 'P0_RESULT=NOT_RUN'

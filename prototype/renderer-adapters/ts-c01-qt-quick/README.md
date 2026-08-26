@@ -1,6 +1,6 @@
 # TS-C01 Qt Quick Renderer Adapter
 
-状态：R0 + R1 + R2 PASS / R3 AUTO PASS / R4-A USER-ACCEPTED 1/20 / R4-B MANUAL SMOKE AWAITING USER CONFIRMATION / P0 NOT RUN
+状态：R0 + R1 + R2 PASS / R3 AUTO PASS / R4-A USER-ACCEPTED 1/20 / R4-B USER-ACCEPTED WITH COUNT EXCEPTION / R4-C USER-ACCEPTED WITH COUNT EXCEPTIONS C2 7/6 + C3 1/10 / R4-D D1 USER-ACCEPTED / D2 USER-ACCEPTED / D3 USER-ACCEPTED WITH WORKING-SET EXCEPTION (136.332 MiB; 50 MiB TARGET RETAINED) / D4 AUTO PACKAGE PASS / FORMAL LIFECYCLE ACTIVE / P0 NOT RUN
 
 本目录是 TS-C01（Qt 6.8.3 / Qt Quick）的独立 renderer candidate 工作区。R0 固定并验证入口工具链；R1 已把 Qt Quick surface 接入冻结的 DesktopHost 生命周期合同；R2 已完成 Night Ops 同构夹具并由用户通过六项真实 Explorer 人工门；R3 自动预检已通过。当前进入 R4 人工 P0；候选仍是 P0 NOT RUN，也没有创建 Candidate Evidence run。
 
@@ -106,14 +106,14 @@ R2 已切换为冻结接口允许的 OFFSCREEN_FRAME_SOURCE / HOST ownership：
 运行命令：
 
 ~~~powershell
-& '.\preflight-r3.ps1' -QtInstallerRoot '<QtInstallerRoot>' -StaticSampleDurationMs 3000
+& '.\preflight-r3.ps1' -QtInstallerRoot '<QtInstallerRoot>' -StaticSampleDurationMs 10000
 ~~~
 
-R3 覆盖双清洁 Release 可复现构建、windeployqt 与依赖枚举、E5 validator 自测、正常/故障 JSONL、attach/first-frame、stale/late frame、故障/detach/exit、零资源和静态性能。Qt rcc 通过 `SOURCE_DATE_EPOCH=1704067200` 固定自动资源时间戳；两次构建与部署后 EXE SHA-256 均为 `FA36CD18B46A466F413A08A3DB21F5412610F028080F7FFF203333EFF7548965`。
+当前自动预检覆盖双 Clean Release、部署、E5、R3 生命周期、R4-C、R4-D1、R4-D2 与 R4-D3。D3 Build ID 为 ts-c01-qt-6.8.3-r4d3-20260825-01，两次构建与部署后 EXE SHA-256 均为 4F1D76FCEC9C5271C1199D2CBAE48C748CA4EC0D8CA8C4D0AE50D325095CA673。
 
-2026-08-24T17:43:53.1415382+08:00 本机结果：PASS。正常/故障事件为 51/52 条且均通过 E5；stale/late frame 各拒绝一次；注入 renderer fault、detach、exit 和 cleanup 通过；最终所有资源为 0。静态样本 3179.125 ms，single-core CPU 0.503%，working set 133.375～133.773 MiB；事件驱动静态 hold 期间无新 frame。
+2026-08-25T17:05 本机结果：D3 FUNCTIONAL PASS / HG-PERF-02 FAIL。正常/故障/R4-C/R4-D1/R4-D2/R4-D3 静态事件为 61/62/66/64/111/111 条并全部 E5 PASS；D3 surface-only 恢复、旧事件拒绝、200 Item ×64 轮 0.180ms、6 次主题切换最大 27.106ms 和零资源均通过。10.223 秒采样 CPU 62ms、静态帧 0 PASS；工作集 135.648～136.332MiB，超过 50MiB 目标。
 
-机器摘要位于 `out/r3-preflight.json`，原始运行位于 `out/r3-run-20260824-174241/`。Qt 二进制安装树未发现顶层 license payload，分发前仍需许可证材料审查；这不改变当前本地 R3 PASS，也不构成 P0 PASS。
+机器摘要位于 out/r3-preflight.json，原始运行位于 out/r3-run-20260825-170513/。摘要 result=FAIL、P0=NOT_RUN；该失败是工作集硬门的预期 fail-fast，不得改写为候选 P0 PASS。
 
 ## 当前下一动作：R4 人工 P0 门
 
@@ -123,7 +123,33 @@ R3 覆盖双清洁 Release 可复现构建、windeployqt 与依赖枚举、E5 va
 & '.\start-r4-manual.ps1' -DurationMs 60000 -SessionLabel 'r4a-01'
 ~~~
 
-启动器核对 R3 PASS、P0 NOT_RUN 和完整 EXE SHA-256 后才启动，并为每轮创建独立本地 session/log。当前程序已经提供 R4-A 冷启动、边界、Explorer 空白/图标和基础层级，以及 R4-B 的真实拖动、连续缩放、收起/展开、锁定、USING↔EDITING 和 Item 命中入口。
+启动器核对当前自动摘要 PASS、P0 NOT_RUN 和完整 EXE SHA-256 后才启动，并为每轮创建独立本地 session/log。当前 D3 摘要因工作集硬门为 FAIL，因此启动器会有意拒绝新人工会话，避免绕过 HG-PERF-02。
+
+R4-C 启动命令：
+
+~~~powershell
+& '.\start-r4-manual.ps1' -Phase R4C -DurationMs 900000 -SessionLabel 'r4c-01'
+~~~
+
+海报显示后按 `Ctrl+Shift+C` 打开/关闭控制中心角色探针。该窗口明确记录 `product_control_center_implemented=false`，只验证层级和焦点；Explorer 重建则由 250ms 有界监控在旧代清理/degraded 后恢复新 attachment，30 秒预算耗尽时 fail-fast，绝不创建顶层海报 fallback。
+
+R4-D1 启动命令：
+
+~~~powershell
+& '.\start-r4-manual.ps1' -Phase R4D -DurationMs 900000 -SessionLabel 'r4d-d1-01'
+~~~
+
+D1 只验证当前主屏：触发一次分辨率或工作区变化后，海报应按逻辑 DIP 尺寸和 normalized anchor 重投影并留在可见工作区；不得出现白条、旧帧、层级或命中回退。多显示器仍为 `DEFERRED`。
+
+R4-D2 启动命令：
+
+~~~powershell
+& '.\start-r4-manual.ps1' -Phase R4D2 -DurationMs 900000 -SessionLabel 'r4d2-01'
+~~~
+
+D2 人工入口会显示普通、非 TopMost 的 `R4-D2 THEME / FALLBACK MANUAL PROBE` 原生按钮面板。依次点击三个主题按钮、三个 LKG 故障按钮和独立 fallback 按钮，每次间隔至少 0.5 秒；最后点击 `1 Transparent Default` 恢复。`Ctrl+Shift+1/2/3/F/R/P/0` 仅保留为可选辅助入口，不再作为唯一人工入口。
+
+R4-D3 自动功能夹具已完成；用户已接受 136.332MiB 对 50MiB 原目标的永久工作集例外。Phase R4D3 入口保留用于复现，当前主线已进入 D4 正式生命周期门。
 
 会话退出后运行 `finish-r4-manual.ps1 -SessionId '<本轮 ID>'`；它验证 E5 与零资源清理。人工结果未报告时保持 `AUTOMATED_LOG_PASS_AWAITING_USER_OBSERVATION`。
 
@@ -140,4 +166,15 @@ R4 按冻结统一矩阵执行：
 9. 主题/renderer 故障；
 10. 性能、清理、安装和重启复测。
 
-任何白条、灰框、瞬时 TopMost、隐藏再恢复、整窗输入接管、旧 frame/hit 或资源残留都立即 fail-fast。R4-A 已由用户接受并永久保留 1/20 例外；R4-B 本轮自动事件与清理校验通过，等待用户人工观察确认。R4-C、R4-D 尚未执行，因此不得建立最终 Candidate Evidence、不得填写 P0 PASS，也没有 renderer 赢家。
+任何白条、灰框、瞬时 TopMost、隐藏再恢复、整窗输入接管、旧 frame/hit 或资源残留都立即 fail-fast。R4-A～C 已接受并保留既有计数例外；R4-D1、D2 已通过；D3 以用户接受的 136.332MiB 对 50MiB 原目标例外关闭。D4 自动包门 PASS，正式生命周期 ACTIVE；不得建立 Candidate Evidence、填写 P0 PASS 或宣布 renderer 赢家。
+
+
+## R4-D4 current-user package
+
+构建与隔离预检：
+
+~~~powershell
+& '.\build-r4d4-installer.ps1' -QtPrefix '<QtPrefix>'
+~~~
+
+稳定产物：`out/r4d4-package/DesktopUpSetup.exe`。Build ID `ts-c01-qt-6.8.3-r4d4-20260826-02`；自动包门 PASS，安装器提供目录选择页，默认 `%LOCALAPPDATA%\Programs\DesktopUp`；无部署路径冲突的既有非空目录允许安装并已通过用户哨兵保留探针。正式运行资格由相邻所有者标记与 HKCU `InstallLocation` 共同判定，因此默认目录和用户所选目录均受支持，解压/复制运行仍被拒绝；卸载按构建期精确清单删除部署文件，不递归删除整个所选目录。自定义目录正式生命周期、设备重启和正式卸载仍未完成，候选数据隔离到 `%LOCALAPPDATA%\DesktopUp\Candidate\TS-C01`。

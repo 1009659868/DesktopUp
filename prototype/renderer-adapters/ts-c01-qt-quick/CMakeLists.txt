@@ -61,6 +61,8 @@ set_target_properties(ts-c01-qt-r1 PROPERTIES WIN32_EXECUTABLE FALSE)
 
 qt_add_executable(ts-c01-qt-r2
     src/r2_main.cpp
+    src/r4d3_controller.inc
+    src/r4d4_lifecycle.inc
     src/r2.rc
     adapter/desktop_host_contract.cpp
     adapter/desktop_host_contract.h
@@ -80,7 +82,7 @@ target_compile_definitions(ts-c01-qt-r2 PRIVATE
     _UNICODE
     WIN32_LEAN_AND_MEAN
     NOMINMAX
-    DESKTOPUP_TS_C01_BUILD_ID=\"ts-c01-qt-6.8.3-r4h-20260824-01\"
+    DESKTOPUP_TS_C01_BUILD_ID=\"ts-c01-qt-6.8.3-r4d4-20260826-02\"
 )
 
 if(MSVC)
@@ -95,5 +97,5 @@ if(MSVC)
 endif()
 
 target_link_options(ts-c01-qt-r2 PRIVATE /MANIFEST:NO /Brepro)
-target_link_libraries(ts-c01-qt-r2 PRIVATE Qt6::Quick Qt6::Qml dwmapi)
+target_link_libraries(ts-c01-qt-r2 PRIVATE Qt6::Quick Qt6::Qml dwmapi shell32 advapi32)
 set_target_properties(ts-c01-qt-r2 PROPERTIES WIN32_EXECUTABLE FALSE)

@@ -6,7 +6,7 @@
 
 ```text
 需求基线：FROZEN — 2026-08-20
-技术选型：ACTIVE — TS-C01 R2 PASS / R3 AUTO PASS / R4-A USER-ACCEPTED 1/20 / R4-B MANUAL SMOKE AWAITING USER CONFIRMATION / P0 NOT RUN / NO WINNER
+技术选型：ACTIVE — TS-C01 R5-01～05 COMPLETE / 2 PASS + 1 FAIL + 34 UNKNOWN + 4 NOT RUN / FAIL RECOMMENDED / R6 USER DECISION PENDING / NO WINNER
 系统描述蓝图：FROZEN — AXIOM CORE / AX-BP-01～06 COMPLETE
 完整生产架构：NOT FROZEN — PHYSICAL ADAPTERS UNSELECTED
 制作计划与 B/C 工作流：NOT STARTED
@@ -42,16 +42,23 @@
 25. [TS-H01-E 完成审计](A_Project/20_Technical_Selection/TS_H01_E_COMPLETION_AUDIT_2026-08-21.md)
 26. [TS-02 renderer adapter/P0 执行计划](A_Project/20_Technical_Selection/TS_02_RENDERER_ADAPTER_P0_EXECUTION_PLAN_V1.md)
 27. [TS-C01 Qt Quick 进入门审计](A_Project/20_Technical_Selection/TS_C01_QT_QUICK_ENTRY_AUDIT_2026-08-24.md)
-28. [选型决策记录](A_Project/20_Technical_Selection/SELECTION_DECISION_RECORD_V1.md)
-29. [AX-BP 蓝图索引](A_Project/30_Architecture/AXIOM_BLUEPRINT_INDEX.md)
-30. [Axiom Core 程序蓝图](A_Project/30_Architecture/AXIOM_CORE_PROGRAM_BLUEPRINT_V1.md)
-31. [AX-BP-01 Core 语义映射](A_Project/30_Architecture/AX_BP_01_AXIOM_CORE_SEMANTIC_MAPPING_V1.md)
-32. [AX-BP-02 整体程序拓扑](A_Project/30_Architecture/AX_BP_02_PROGRAM_TOPOLOGY_V1.md)
-33. [AX-BP-03 模块与端口冻结](A_Project/30_Architecture/AX_BP_03_MODULE_PORT_FREEZE_V1.md)
-34. [AX-BP-04 调用、数据与组合关系冻结](A_Project/30_Architecture/AX_BP_04_FLOW_COMPOSITION_FREEZE_V1.md)
-35. [AX-BP-05 物理执行边界冻结](A_Project/30_Architecture/AX_BP_05_PHYSICAL_EXECUTION_BOUNDARIES_V1.md)
-36. [AX-BP-06 一致性审计与交接](A_Project/30_Architecture/AX_BP_06_CONSISTENCY_AUDIT_AND_HANDOFF_V1.md)
-37. [Axiom 蓝图类型夹具](../prototype/axiom-desktopup-blueprint/README.md)
+28. [TS-C01 R4-D4 当前用户生命周期计划](A_Project/20_Technical_Selection/TS_C01_R4_D4_CURRENT_USER_LIFECYCLE_PLAN_V1.md)
+29. [TS-C01 R5 证据收敛与裁决准备计划](A_Project/20_Technical_Selection/TS_C01_R5_EVIDENCE_CONVERGENCE_AND_DECISION_PREP_PLAN_V1.md)
+30. [TS-C01 R5-01 原始证据盘点](A_Project/20_Technical_Selection/TS_C01_R5_01_EVIDENCE_INVENTORY_2026-08-26.md)
+31. [TS-C01 R5-02 统一矩阵映射](A_Project/20_Technical_Selection/TS_C01_R5_02_UNIFIED_MATRIX_MAPPING_V1.md)
+32. [TS-C01 Candidate Evidence](A_Project/20_Technical_Selection/Evidence/TS-C01/README.md)
+33. [TS-C01 R5-04 候选处置审计](A_Project/20_Technical_Selection/TS_C01_R5_04_CANDIDATE_DISPOSITION_AUDIT_V1.md)
+34. [TS-C01 R5-05 R6 交接输入](A_Project/20_Technical_Selection/TS_C01_R5_05_R6_HANDOFF_INPUT_V1.md)
+35. [选型决策记录](A_Project/20_Technical_Selection/SELECTION_DECISION_RECORD_V1.md)
+36. [AX-BP 蓝图索引](A_Project/30_Architecture/AXIOM_BLUEPRINT_INDEX.md)
+37. [Axiom Core 程序蓝图](A_Project/30_Architecture/AXIOM_CORE_PROGRAM_BLUEPRINT_V1.md)
+38. [AX-BP-01 Core 语义映射](A_Project/30_Architecture/AX_BP_01_AXIOM_CORE_SEMANTIC_MAPPING_V1.md)
+39. [AX-BP-02 整体程序拓扑](A_Project/30_Architecture/AX_BP_02_PROGRAM_TOPOLOGY_V1.md)
+40. [AX-BP-03 模块与端口冻结](A_Project/30_Architecture/AX_BP_03_MODULE_PORT_FREEZE_V1.md)
+41. [AX-BP-04 调用、数据与组合关系冻结](A_Project/30_Architecture/AX_BP_04_FLOW_COMPOSITION_FREEZE_V1.md)
+42. [AX-BP-05 物理执行边界冻结](A_Project/30_Architecture/AX_BP_05_PHYSICAL_EXECUTION_BOUNDARIES_V1.md)
+43. [AX-BP-06 一致性审计与交接](A_Project/30_Architecture/AX_BP_06_CONSISTENCY_AUDIT_AND_HANDOFF_V1.md)
+44. [Axiom 蓝图类型夹具](../prototype/axiom-desktopup-blueprint/README.md)
 
 ## 权威顺序
 
@@ -67,4 +74,4 @@
 
 ## 下一阶段的建立条件
 
-需求和 AX-BP 系统描述蓝图已经冻结；Axiom Core 只作为架构方法与追溯输入保留，axiom-runtime 明确排除。TS-C01 的 Qt 6.8.3 R2 真实 Explorer 六项人工门已由用户确认 PASS，R3 自动预检也已 PASS；当前进入 R4 人工 P0 门，候选仍 P0 NOT RUN，未创建 Candidate Evidence。renderer/UI、StateStore、生产 runtime、进程与安装架构仍须通过统一候选证据和用户批准后才能冻结。
+需求和 AX-BP 系统描述蓝图已经冻结；Axiom Core 只作为架构方法与追溯输入保留，axiom-runtime 明确排除。TS-C01 R5-01～05 已完成并形成正式 Candidate Evidence：2 PASS、1 FAIL、34 UNKNOWN、4 NOT RUN；HG-PERF-02 明确失败，R5 建议 FAIL。当前进入 R6 用户处置决定，TS-C01 尚未最终 REJECTED，且没有 renderer/UI winner。StateStore、生产 runtime、进程与安装架构仍未冻结。

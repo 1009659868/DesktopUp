@@ -7,6 +7,8 @@
 #include <QImage>
 #include <QJsonArray>
 #include <QJsonDocument>
+#include <QQuickItem>
+#include <QQuickItemGrabResult>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QQuickWindow>
@@ -43,6 +45,42 @@ BOOL CALLBACK collectVisibleDefViews(HWND topLevel, LPARAM parameter)
         targets->push_back(defView);
     }
     return TRUE;
+}
+
+bool isSafeShellTarget(const ShellTarget& target)
+{
+    return target.topology == QStringLiteral("RAISED_PROGMAN") &&
+           target.progman != nullptr &&
+           target.iconHost == target.progman &&
+           target.defView != nullptr &&
+           target.iconView != nullptr &&
+           target.explorerPid != 0 &&
+           target.visibleDefViewCount == 1 &&
+           IsWindow(target.iconHost) &&
+           IsWindow(target.defView) &&
+           IsWindow(target.iconView) &&
+           GetParent(target.defView) == target.iconHost;
+}
+
+QString shellTargetSignature(const ShellTarget& target)
+{
+    if (!isSafeShellTarget(target)) return {};
+    return QStringLiteral("%1:%2:%3:%4")
+        .arg(target.explorerPid)
+        .arg(reinterpret_cast<quintptr>(target.iconHost), 0, 16)
+        .arg(reinterpret_cast<quintptr>(target.defView), 0, 16)
+        .arg(reinterpret_cast<quintptr>(target.iconView), 0, 16);
+}
+
+bool sameShellTarget(const ShellTarget& left, const ShellTarget& right)
+{
+    return isSafeShellTarget(left) &&
+           isSafeShellTarget(right) &&
+           left.progman == right.progman &&
+           left.iconHost == right.iconHost &&
+           left.defView == right.defView &&
+           left.iconView == right.iconView &&
+           left.explorerPid == right.explorerPid;
 }
 
 QJsonArray rectArray(const RECT& rect)
@@ -84,6 +122,7 @@ QString hostStateName(HostState state)
     case HostState::Detached: return QStringLiteral("DETACHED");
     case HostState::Attaching: return QStringLiteral("ATTACHING");
     case HostState::AttachedSafe: return QStringLiteral("ATTACHED_SAFE");
+    case HostState::DegradedNoDesktopHost: return QStringLiteral("DEGRADED_NO_DESKTOP_HOST");
     case HostState::Faulted: return QStringLiteral("FAULTED");
     case HostState::Detaching: return QStringLiteral("DETACHING");
     case HostState::Exiting: return QStringLiteral("EXITING");
@@ -168,7 +207,17 @@ void EventSink::write(const QString& event, const QJsonObject& fields)
     line.append('\n');
     if (file_.isOpen()) {
         file_.write(line);
-        file_.flush();
+        ++bufferedLineCount_;
+        const qint64 nowMs = clock_.elapsed();
+        const bool terminalEvent =
+            event == QStringLiteral("cleanup_completed") ||
+            event == QStringLiteral("host_session_ended") ||
+            event == QStringLiteral("r4_manual_interaction_failed");
+        if (terminalEvent || bufferedLineCount_ >= 128 || nowMs - lastFlushMs_ >= 250) {
+            file_.flush();
+            lastFlushMs_ = nowMs;
+            bufferedLineCount_ = 0;
+        }
     } else if (stdoutOnly_) {
         std::fwrite(line.constData(), 1, static_cast<std::size_t>(line.size()), stdout);
         std::fflush(stdout);
@@ -264,6 +313,45 @@ bool QtQuickSurfaceAdapter::presentAndWaitForFrame(int timeoutMs, QString* error
     return waitForNextFrame(timeoutMs, error);
 }
 
+bool QtQuickSurfaceAdapter::captureOffscreenFrame(int timeoutMs, QString* error)
+{
+    if (window_ == nullptr || window_->contentItem() == nullptr) {
+        if (error != nullptr) *error = QStringLiteral("OFFSCREEN_CONTENT_ITEM_MISSING");
+        return false;
+    }
+
+    const QSharedPointer<QQuickItemGrabResult> grab =
+        window_->contentItem()->grabToImage(window_->size());
+    if (grab.isNull()) {
+        if (error != nullptr) *error = QStringLiteral("OFFSCREEN_GRAB_REQUEST_REJECTED");
+        return false;
+    }
+
+    framePresented_ = false;
+    QEventLoop loop;
+    QTimer timeout;
+    timeout.setSingleShot(true);
+    QObject::connect(&timeout, &QTimer::timeout, &loop, &QEventLoop::quit);
+    QObject::connect(
+        grab.data(), &QQuickItemGrabResult::ready, &loop, [&]() {
+            lastFrame_ = grab->image();
+            framePresented_ = !lastFrame_.isNull() &&
+                              lastFrame_.width() > 0 && lastFrame_.height() > 0;
+            loop.quit();
+        }, Qt::QueuedConnection);
+
+    window_->requestUpdate();
+    timeout.start(timeoutMs);
+    loop.exec();
+
+    if (!framePresented_ && error != nullptr) {
+        *error = timeout.isActive()
+            ? QStringLiteral("OFFSCREEN_FRAME_CAPTURE_FAILED")
+            : QStringLiteral("OFFSCREEN_FRAME_CAPTURE_TIMEOUT");
+    }
+    return framePresented_;
+}
+
 bool QtQuickSurfaceAdapter::waitForNextFrame(int timeoutMs, QString* error)
 {
     if (window_ == nullptr || nativeHandle_ == nullptr || !IsWindowVisible(nativeHandle_)) {
@@ -272,14 +360,7 @@ bool QtQuickSurfaceAdapter::waitForNextFrame(int timeoutMs, QString* error)
     }
 
     if (isOffscreenFrameSource()) {
-        QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
-        lastFrame_ = window_->grabWindow();
-        framePresented_ = !lastFrame_.isNull() &&
-                          lastFrame_.width() > 0 && lastFrame_.height() > 0;
-        if (!framePresented_ && error != nullptr) {
-            *error = QStringLiteral("OFFSCREEN_FRAME_CAPTURE_FAILED");
-        }
-        return framePresented_;
+        return captureOffscreenFrame(timeoutMs, error);
     }
 
     framePresented_ = false;
@@ -489,10 +570,15 @@ bool DesktopHostCoordinator::attach(
     }
 
     shell_ = discoverShellTarget();
-    if (shell_.topology != QStringLiteral("RAISED_PROGMAN") ||
-        shell_.iconHost == nullptr || shell_.defView == nullptr ||
-        shell_.iconView == nullptr || shell_.visibleDefViewCount != 1) {
+    const QString nextShellSignature = shellTargetSignature(shell_);
+    if (!isSafeShellTarget(shell_)) {
         if (error != nullptr) *error = QStringLiteral("NO_SAFE_HOST_RAISED_PROGMAN_REQUIRED");
+        failed_ = true;
+        return false;
+    }
+    if (recoveryPending_ && !lastShellSignature_.isEmpty() &&
+        nextShellSignature == lastShellSignature_) {
+        if (error != nullptr) *error = QStringLiteral("SHELL_GENERATION_DID_NOT_ADVANCE");
         failed_ = true;
         return false;
     }
@@ -515,16 +601,22 @@ bool DesktopHostCoordinator::attach(
     MapWindowPoints(nullptr, shell_.iconHost, points, 2);
     parentRect_ = {points[0].x, points[0].y, points[1].x, points[1].y};
 
+    const bool isRecoveryAttachment =
+        recoveryPending_ && !identity_.attachmentId.isEmpty();
     plan_ = plan;
     adapter_ = &adapter;
     identity_.attachmentId = QUuid::createUuid().toString(QUuid::WithoutBraces);
     identity_.shellGeneration = shell_.explorerPid != 0 ? shell_.explorerPid : 1;
-    identity_.lifecycleEpoch = 1;
-    identity_.surfaceEpoch = 1;
-    identity_.hostProjectionRevision = 1;
-    identity_.sourceSnapshotRevision = 1;
-    identity_.hitRegionRevision = 1;
-    identity_.renderRevision = 0;
+    if (isRecoveryAttachment) {
+        ++identity_.surfaceEpoch;
+    } else {
+        identity_.lifecycleEpoch = 1;
+        identity_.surfaceEpoch = 1;
+        identity_.hostProjectionRevision = 1;
+        identity_.sourceSnapshotRevision = 1;
+        identity_.hitRegionRevision = 1;
+        identity_.renderRevision = 0;
+    }
     hostState_ = HostState::Attaching;
     surfaceState_ = SurfaceState::Binding;
     detached_ = false;
@@ -536,6 +628,10 @@ bool DesktopHostCoordinator::attach(
         failed_ = true;
         return false;
     }
+    lastShellSignature_ = nextShellSignature;
+    recoveryPending_ = false;
+    surfaceRecoveryPending_ = false;
+    failed_ = false;
     return true;
 }
 
@@ -598,10 +694,10 @@ bool DesktopHostCoordinator::commitProjection(QString* error)
         if (error != nullptr) *error = QStringLiteral("COMMIT_NOT_ALLOWED");
         return false;
     }
-    identity_.hostProjectionRevision = 2;
-    identity_.sourceSnapshotRevision = 2;
-    identity_.hitRegionRevision = 2;
-    identity_.renderRevision = 2;
+    ++identity_.hostProjectionRevision;
+    ++identity_.sourceSnapshotRevision;
+    ++identity_.hitRegionRevision;
+    ++identity_.renderRevision;
     QJsonObject fields = fencedFields();
     fields.insert(QStringLiteral("physical_bounds"), physicalBounds());
     fields.insert(QStringLiteral("surface_transport"), transportName(plan_.transport));
@@ -770,9 +866,20 @@ bool DesktopHostCoordinator::notifyProjectionFramePresented(QString* error)
 bool DesktopHostCoordinator::notifyProjectionFramePresentedAtRevision(
     quint64 observedRevision, QString* error)
 {
+    return notifyProjectionFramePresentedAtFence(
+        identity_.surfaceEpoch, observedRevision, error);
+}
+
+bool DesktopHostCoordinator::notifyProjectionFramePresentedAtFence(
+    quint64 observedSurfaceEpoch,
+    quint64 observedRevision,
+    QString* error)
+{
     if (detached_ || exiting_ || surfaceState_ == SurfaceState::Released ||
         surfaceState_ == SurfaceState::Unbound) {
         QJsonObject fields = fencedFields();
+        fields.insert(QStringLiteral("observed_surface_epoch"),
+                      static_cast<qint64>(observedSurfaceEpoch));
         fields.insert(QStringLiteral("observed_revision"),
                       static_cast<qint64>(observedRevision));
         fields.insert(QStringLiteral("expected_revision"),
@@ -784,8 +891,27 @@ bool DesktopHostCoordinator::notifyProjectionFramePresentedAtRevision(
         if (error != nullptr) *error = QStringLiteral("LATE_FRAME_REJECTED");
         return false;
     }
+    if (observedSurfaceEpoch != identity_.surfaceEpoch) {
+        QJsonObject fields = fencedFields();
+        fields.insert(QStringLiteral("observed_surface_epoch"),
+                      static_cast<qint64>(observedSurfaceEpoch));
+        fields.insert(QStringLiteral("expected_surface_epoch"),
+                      static_cast<qint64>(identity_.surfaceEpoch));
+        fields.insert(QStringLiteral("observed_revision"),
+                      static_cast<qint64>(observedRevision));
+        fields.insert(QStringLiteral("expected_revision"),
+                      static_cast<qint64>(identity_.hostProjectionRevision));
+        fields.insert(QStringLiteral("rejection_reason"),
+                      QStringLiteral("SURFACE_EPOCH_MISMATCH"));
+        fields.insert(QStringLiteral("result"), QStringLiteral("PASS"));
+        sink_.write(QStringLiteral("stale_frame_rejected"), fields);
+        if (error != nullptr) *error = QStringLiteral("STALE_SURFACE_EPOCH_REJECTED");
+        return false;
+    }
     if (observedRevision != identity_.hostProjectionRevision) {
         QJsonObject fields = fencedFields();
+        fields.insert(QStringLiteral("observed_surface_epoch"),
+                      static_cast<qint64>(observedSurfaceEpoch));
         fields.insert(QStringLiteral("observed_revision"),
                       static_cast<qint64>(observedRevision));
         fields.insert(QStringLiteral("expected_revision"),
@@ -799,19 +925,129 @@ bool DesktopHostCoordinator::notifyProjectionFramePresentedAtRevision(
     }
     return notifyProjectionFramePresented(error);
 }
-bool DesktopHostCoordinator::notifySurfaceFault(const QString& reason, bool recoverable)
+
+bool DesktopHostCoordinator::notifySurfaceFault(
+    const QString& reason, bool recoverable)
 {
-    if (detached_ || exiting_) return false;
+    if (detached_ || exiting_ || surfaceRecoveryPending_) return false;
     surfaceState_ = SurfaceState::Lost;
     hostState_ = HostState::Faulted;
     failed_ = true;
+    surfaceRecoveryPending_ = recoverable;
     QJsonObject fields = fencedFields();
     fields.insert(QStringLiteral("reason"), reason);
     fields.insert(QStringLiteral("recoverable"), recoverable);
+    fields.insert(QStringLiteral("recovery_scope"),
+                  recoverable
+                      ? QStringLiteral("SURFACE_ONLY_SAME_ATTACHMENT")
+                      : QStringLiteral("NONE"));
+    fields.insert(QStringLiteral("topmost"), false);
+    fields.insert(QStringLiteral("ordinary_top_level_fallback"), false);
     sink_.write(QStringLiteral("surface_fault"), fields);
     return true;
 }
 
+bool DesktopHostCoordinator::recoverSurfaceAfterFault(QString* error)
+{
+    if (exiting_) {
+        if (error != nullptr) *error = QStringLiteral("HOST_EXITING");
+        return false;
+    }
+    if (!surfaceRecoveryPending_ || detached_ || adapter_ == nullptr ||
+        hostState_ != HostState::Faulted || surfaceState_ != SurfaceState::Lost) {
+        if (error != nullptr) *error = QStringLiteral("SURFACE_RECOVERY_NOT_PENDING");
+        return false;
+    }
+    const ShellTarget currentShell = discoverShellTarget();
+    if (!isSafeShellTarget(currentShell) || !sameShellTarget(shell_, currentShell)) {
+        if (error != nullptr) *error = QStringLiteral("SURFACE_RECOVERY_SHELL_CHANGED");
+        return false;
+    }
+
+    const quint64 oldSurfaceEpoch = identity_.surfaceEpoch;
+    const QString attachmentBefore = identity_.attachmentId;
+    const quint64 shellGenerationBefore = identity_.shellGeneration;
+    const quint64 lifecycleBefore = identity_.lifecycleEpoch;
+    recordFixtureEvent(QStringLiteral("surface_recovery_started"), {
+        {QStringLiteral("old_surface_epoch"),
+         static_cast<qint64>(oldSurfaceEpoch)},
+        {QStringLiteral("recovery_scope"),
+         QStringLiteral("SURFACE_ONLY_SAME_ATTACHMENT")},
+        {QStringLiteral("topmost"), false},
+        {QStringLiteral("ordinary_top_level_fallback"), false}
+    });
+
+    const HWND oldSurface = adapter_->nativeHandle();
+    adapter_->hide();
+    adapter_->release();
+    if (oldSurface != nullptr && IsWindow(oldSurface)) {
+        failed_ = true;
+        if (error != nullptr) *error = QStringLiteral("SURFACE_RECOVERY_OLD_SURFACE_STILL_LIVE");
+        recordFixtureEvent(QStringLiteral("surface_recovery_failed"), {
+            {QStringLiteral("reason"),
+             QStringLiteral("OLD_SURFACE_STILL_LIVE")},
+            {QStringLiteral("result"), QStringLiteral("FAIL")}
+        });
+        return false;
+    }
+
+    ++identity_.surfaceEpoch;
+    hostState_ = HostState::Attaching;
+    surfaceState_ = SurfaceState::Binding;
+    writeAttachmentState(
+        QStringLiteral("SURFACE_RECOVERING"),
+        QStringLiteral("BINDING"),
+        QStringLiteral("OK"));
+
+    const bool rebuilt =
+        adapter_->createSurface(shell_.iconHost, parentRect_, error) &&
+        bindNativeSurface(error) &&
+        commitProjection(error) &&
+        adapter_->warmup(error) &&
+        notifySurfaceReady(error);
+    if (!rebuilt) {
+        adapter_->release();
+        hostState_ = HostState::Faulted;
+        surfaceState_ = SurfaceState::Lost;
+        failed_ = true;
+        recordFixtureEvent(QStringLiteral("surface_recovery_failed"), {
+            {QStringLiteral("reason"),
+             error != nullptr ? *error : QStringLiteral("UNKNOWN")},
+            {QStringLiteral("result"), QStringLiteral("FAIL")}
+        });
+        return false;
+    }
+
+    const bool identityPreserved =
+        identity_.attachmentId == attachmentBefore &&
+        identity_.shellGeneration == shellGenerationBefore &&
+        identity_.lifecycleEpoch == lifecycleBefore &&
+        identity_.surfaceEpoch == oldSurfaceEpoch + 1;
+    surfaceRecoveryPending_ = false;
+    failed_ = !identityPreserved;
+    recordFixtureEvent(QStringLiteral("surface_recovery_ready"), {
+        {QStringLiteral("old_surface_epoch"),
+         static_cast<qint64>(oldSurfaceEpoch)},
+        {QStringLiteral("new_surface_epoch"),
+         static_cast<qint64>(identity_.surfaceEpoch)},
+        {QStringLiteral("attachment_preserved"),
+         identity_.attachmentId == attachmentBefore},
+        {QStringLiteral("shell_generation_preserved"),
+         identity_.shellGeneration == shellGenerationBefore},
+        {QStringLiteral("lifecycle_epoch_preserved"),
+         identity_.lifecycleEpoch == lifecycleBefore},
+        {QStringLiteral("surface_epoch_advanced_once"),
+         identity_.surfaceEpoch == oldSurfaceEpoch + 1},
+        {QStringLiteral("result"),
+         identityPreserved ? QStringLiteral("OK")
+                           : QStringLiteral("FAIL")}
+    });
+    if (!identityPreserved) {
+        if (error != nullptr) *error = QStringLiteral("SURFACE_RECOVERY_IDENTITY_DRIFT");
+        return false;
+    }
+    return true;
+}
 QJsonObject DesktopHostCoordinator::observeHostState() const
 {
     QJsonObject observation = fencedFields();
@@ -823,20 +1059,142 @@ QJsonObject DesktopHostCoordinator::observeHostState() const
     return observation;
 }
 
-bool DesktopHostCoordinator::requestReconnect(
-    quint64 observedShellGeneration, const QString& requestId, QString* error)
+bool DesktopHostCoordinator::shellAttachmentStillValid() const
 {
-    Q_UNUSED(requestId);
+    if (detached_ || recoveryPending_ || hostState_ != HostState::AttachedSafe) {
+        return false;
+    }
+    return sameShellTarget(shell_, discoverShellTarget());
+}
+
+QString DesktopHostCoordinator::discoverSafeShellSignature() const
+{
+    return shellTargetSignature(discoverShellTarget());
+}
+
+bool DesktopHostCoordinator::enterShellDegraded(
+    const QString& reason, QString* error)
+{
     if (exiting_) {
         if (error != nullptr) *error = QStringLiteral("HOST_EXITING");
         return false;
     }
-    if (observedShellGeneration == identity_.shellGeneration && !failed_) {
+    if (recoveryPending_ && hostState_ == HostState::DegradedNoDesktopHost) {
+        return true;
+    }
+    if (detached_ || adapter_ == nullptr) {
+        if (error != nullptr) *error = QStringLiteral("SHELL_LOSS_WITHOUT_LIVE_ATTACHMENT");
+        return false;
+    }
+
+    QJsonObject lossFields = fencedFields();
+    lossFields.insert(QStringLiteral("reason"), reason);
+    lossFields.insert(QStringLiteral("lost_shell_signature"), lastShellSignature_);
+    lossFields.insert(QStringLiteral("topmost"), false);
+    lossFields.insert(QStringLiteral("ordinary_top_level_fallback"), false);
+    sink_.write(QStringLiteral("shell_generation_lost"), lossFields);
+
+    ++identity_.lifecycleEpoch;
+    hostState_ = HostState::DegradedNoDesktopHost;
+    surfaceState_ = SurfaceState::Releasing;
+    writeAttachmentState(
+        QStringLiteral("SHELL_GENERATION_LOST"),
+        QStringLiteral("RELEASING"),
+        QStringLiteral("OK"));
+
+    const HWND oldSurface = adapter_->nativeHandle();
+    adapter_->hide();
+    adapter_->release();
+    DWORD oldSurfacePid = 0;
+    if (oldSurface != nullptr && IsWindow(oldSurface)) {
+        GetWindowThreadProcessId(oldSurface, &oldSurfacePid);
+    }
+    const bool released =
+        oldSurface == nullptr || !IsWindow(oldSurface) ||
+        oldSurfacePid != GetCurrentProcessId();
+
+    detached_ = true;
+    recoveryPending_ = true;
+    surfaceState_ = SurfaceState::Released;
+    hostState_ = HostState::DegradedNoDesktopHost;
+    shell_ = {};
+    writeAttachmentState(
+        QStringLiteral("DEGRADED_NO_DESKTOP_HOST"),
+        QStringLiteral("RELEASED"),
+        released ? QStringLiteral("OK")
+                 : QStringLiteral("CLEANUP_INCOMPLETE"));
+    recordFixtureEvent(QStringLiteral("shell_degraded_ready"), {
+        {QStringLiteral("reason"), reason},
+        {QStringLiteral("resource_counts"), resourceCounts()},
+        {QStringLiteral("topmost"), false},
+        {QStringLiteral("ordinary_top_level_fallback"), false}
+    });
+    if (!released) {
+        failed_ = true;
+        if (error != nullptr) *error = QStringLiteral("SHELL_LOSS_SURFACE_STILL_LIVE");
+        return false;
+    }
+    failed_ = false;
+    return true;
+}
+
+bool DesktopHostCoordinator::recoverShellAttachment(QString* error)
+{
+    if (exiting_) {
+        if (error != nullptr) *error = QStringLiteral("HOST_EXITING");
+        return false;
+    }
+    if (!recoveryPending_ || !detached_ || adapter_ == nullptr) {
+        if (error != nullptr) *error = QStringLiteral("SHELL_RECOVERY_NOT_PENDING");
+        return false;
+    }
+    const QString candidateSignature = discoverSafeShellSignature();
+    if (candidateSignature.isEmpty()) {
+        if (error != nullptr) *error = QStringLiteral("NO_SAFE_HOST_RAISED_PROGMAN_REQUIRED");
+        return false;
+    }
+    if (candidateSignature == lastShellSignature_) {
+        if (error != nullptr) *error = QStringLiteral("SHELL_GENERATION_DID_NOT_ADVANCE");
+        return false;
+    }
+
+    failed_ = false;
+    if (!attach(plan_, *adapter_, error)) {
+        adapter_->release();
+        detached_ = true;
+        recoveryPending_ = true;
+        hostState_ = HostState::DegradedNoDesktopHost;
+        surfaceState_ = SurfaceState::Released;
+        failed_ = false;
+        return false;
+    }
+    recordFixtureEvent(QStringLiteral("shell_attachment_recovered"), {
+        {QStringLiteral("new_shell_signature"), lastShellSignature_},
+        {QStringLiteral("topmost"), false},
+        {QStringLiteral("ordinary_top_level_fallback"), false}
+    });
+    return true;
+}
+
+bool DesktopHostCoordinator::requestReconnect(
+    quint64 observedShellGeneration, const QString& requestId, QString* error)
+{
+    if (exiting_) {
+        if (error != nullptr) *error = QStringLiteral("HOST_EXITING");
+        return false;
+    }
+    if (!recoveryPending_ &&
+        observedShellGeneration == identity_.shellGeneration &&
+        !failed_) {
         if (error != nullptr) *error = QStringLiteral("RECONNECT_NOT_REQUIRED");
         return false;
     }
-    if (error != nullptr) *error = QStringLiteral("R1_RECONNECT_HOOK_DECLARED_NOT_EXERCISED");
-    return false;
+    recordFixtureEvent(QStringLiteral("explicit_reconnect_requested"), {
+        {QStringLiteral("request_id"), requestId},
+        {QStringLiteral("observed_shell_generation"),
+         static_cast<qint64>(observedShellGeneration)}
+    });
+    return recoverShellAttachment(error);
 }
 
 bool DesktopHostCoordinator::detach(const QString& requestId, QString* error)
@@ -865,6 +1223,7 @@ bool DesktopHostCoordinator::detach(const QString& requestId, QString* error)
     surfaceState_ = SurfaceState::Released;
     hostState_ = HostState::Detached;
     detached_ = true;
+    surfaceRecoveryPending_ = false;
     writeAttachmentState(QStringLiteral("DETACHED"), QStringLiteral("RELEASED"),
                          released ? QStringLiteral("OK") : QStringLiteral("CLEANUP_INCOMPLETE"));
     if (!released) {
@@ -939,6 +1298,21 @@ QRect DesktopHostCoordinator::screenPixelRect() const
 quint64 DesktopHostCoordinator::hostProjectionRevision() const
 {
     return identity_.hostProjectionRevision;
+}
+
+bool DesktopHostCoordinator::advanceDisplayEnvironmentRevision(
+    const QJsonObject& fields, QString* error)
+{
+    if (detached_ || recoveryPending_ ||
+        hostState_ != HostState::AttachedSafe || adapter_ == nullptr) {
+        if (error != nullptr) {
+            *error = QStringLiteral("DISPLAY_ENVIRONMENT_UPDATE_NOT_ATTACHED");
+        }
+        return false;
+    }
+    ++identity_.displayEnvironmentRevision;
+    recordFixtureEvent(QStringLiteral("display_environment_changed"), fields);
+    return true;
 }
 
 int DesktopHostCoordinator::exitCode() const

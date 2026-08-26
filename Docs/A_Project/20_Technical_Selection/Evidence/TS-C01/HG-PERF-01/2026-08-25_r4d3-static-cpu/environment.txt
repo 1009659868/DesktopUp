@@ -1,0 +1,11 @@
+OS: Windows 11 x64
+Qt: 6.8.3 msvc2022_64
+CMake: 4.4.2
+Generator: Visual Studio 18 2026
+Toolset: v143 version 14.44 host=x64
+Windows SDK: 10.0.26100.0
+Configuration: Release
+Transport: OFFSCREEN_FRAME_SOURCE
+Ownership: HOST
+Executable SHA-256: 4F1D76FCEC9C5271C1199D2CBAE48C748CA4EC0D8CA8C4D0AE50D325095CA673
+Source identity: UNFROZEN WORKTREE; binary hash is authoritative for this run

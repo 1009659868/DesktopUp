@@ -1,6 +1,6 @@
 # Desktop-Up V2 技术选型阶段索引
 
-状态：`ACTIVE — TS-02 / TS-C01 R0～R3 PASS / R4-A USER-ACCEPTED 1/20 / R4-B MANUAL SMOKE AWAITING USER CONFIRMATION / P0 NOT RUN / NO WINNER`
+状态：`ACTIVE — TS-02 / TS-C01 R5-01～05 COMPLETE / 2 PASS + 1 FAIL + 34 UNKNOWN + 4 NOT RUN / FAIL RECOMMENDED / R6 USER DECISION PENDING / NO WINNER`
 
 建立日期：2026-08-20
 
@@ -49,11 +49,18 @@
 | 13 | [TS-H01-E6 候选交接](TS_H01_E6_CANDIDATE_HANDOFF_2026-08-21.md) | adapter 进入门、证据隔离、fail-fast 与退出规则 | `COMPLETE / FROZEN` |
 | 14 | [DesktopHost 原型接口](DESKTOP_HOST_PROTOTYPE_INTERFACE_V1.md) | 实现中立能力、生命周期、几何、命中、诊断和错误语义 | `TS-H01-E COMPLETE / FROZEN` |
 | 15 | [TS-H01-E 完成审计](TS_H01_E_COMPLETION_AUDIT_2026-08-21.md) | E1-E6 产出、例外、夹具自测与退出门核对 | `COMPLETE` |
-| 16 | [TS-02 renderer adapter/P0 执行计划](TS_02_RENDERER_ADAPTER_P0_EXECUTION_PLAN_V1.md) | 候选顺序、R0～R6、公共不变量、证据与裁决 | `ACTIVE / TS-C01 R4-A USER-ACCEPTED 1/20 / R4-B MANUAL SMOKE AWAITING USER CONFIRMATION` |
-| 17 | [TS-C01 Qt Quick 进入门审计](TS_C01_QT_QUICK_ENTRY_AUDIT_2026-08-24.md) | Qt 版本、工具链、surface/ownership 和进入缺口 | `R0 + R1 + R2 PASS / R3 AUTO PASS / R4-A USER-ACCEPTED 1/20 / R4-B MANUAL SMOKE AWAITING USER CONFIRMATION / 6.8.3` |
-| 18 | [TS-C01 R4 人工 P0 手册](TS_C01_R4_MANUAL_P0_RUNBOOK_V1.md) | R4-A～D 完整矩阵、受控会话、真实夹具缺口和 fail-fast | `ACTIVE / R4-A ENTRY READY / P0 NOT RUN` |
-| 19 | [选型决策记录](SELECTION_DECISION_RECORD_V1.md) | 最终比较、敏感性分析、淘汰理由和架构输入 | `NOT READY / NO WINNER` |
-| 20 | [证据目录规则](Evidence/README.md) | 原始数据、视频、截图、日志和复现材料的组织方式 | `ACTIVE / TS-H01 + E5 FIXTURE PRESENT / NO CANDIDATE RUNS` |
+| 16 | [TS-02 renderer adapter/P0 执行计划](TS_02_RENDERER_ADAPTER_P0_EXECUTION_PLAN_V1.md) | 候选顺序、R0～R6、公共不变量、证据与裁决 | `ACTIVE / TS-C01 R5-01～05 COMPLETE / FAIL RECOMMENDED / R6 READY` |
+| 17 | [TS-C01 Qt Quick 进入门审计](TS_C01_QT_QUICK_ENTRY_AUDIT_2026-08-24.md) | Qt 版本、工具链、surface/ownership 和进入缺口 | `6.8.3 / R5 COMPLETE / FAIL RECOMMENDED / USER DECISION PENDING` |
+| 18 | [TS-C01 R4 人工 P0 手册](TS_C01_R4_MANUAL_P0_RUNBOOK_V1.md) | R4-A～D 完整矩阵、受控会话、真实夹具缺口和 fail-fast | `CLOSED / COUNT + WORKING-SET + AUTOSTART + DEVICE-RESTART EXCEPTIONS RETAINED` |
+| 19 | [TS-C01 R4-D4 当前用户生命周期计划](TS_C01_R4_D4_CURRENT_USER_LIFECYCLE_PLAN_V1.md) | user-level 安装、单实例、自启、状态、重启与卸载清理 | `CLOSED / EXECUTED SCOPE PASS / AUTOSTART DEFERRED / DEVICE RESTART SKIPPED` |
+| 20 | [TS-C01 R5 证据收敛与裁决准备计划](TS_C01_R5_EVIDENCE_CONVERGENCE_AND_DECISION_PREP_PLAN_V1.md) | 证据盘点、矩阵映射、缺口收敛和候选处置准备 | `COMPLETE / R5-01～05` |
+| 21 | [TS-C01 R5-01 原始证据盘点](TS_C01_R5_01_EVIDENCE_INVENTORY_2026-08-26.md) | 原始文件、哈希、构建血缘和可采性边界 | `COMPLETE / P0 NOT RUN` |
+| 22 | [TS-C01 R5-02 统一矩阵映射](TS_C01_R5_02_UNIFIED_MATRIX_MAPPING_V1.md) | 41 项硬门的严格结果、证据和缺口 | `COMPLETE / 2 PASS / 1 FAIL / 34 UNKNOWN / 4 NOT RUN` |
+| 23 | [TS-C01 Candidate Evidence](Evidence/TS-C01/README.md) | 正式证据索引、哈希、保留策略和确定结果记录 | `R5-03 COMPLETE` |
+| 24 | [TS-C01 R5-04 候选处置审计](TS_C01_R5_04_CANDIDATE_DISPOSITION_AUDIT_V1.md) | E6 PASS/FAIL/CONDITIONAL/WITHDRAWN 审计 | `COMPLETE / FAIL RECOMMENDED` |
+| 25 | [TS-C01 R5-05 R6 交接输入](TS_C01_R5_05_R6_HANDOFF_INPUT_V1.md) | 用户处置选项、禁止路径和下一候选入口 | `COMPLETE / R6 READY` |
+| 26 | [选型决策记录](SELECTION_DECISION_RECORD_V1.md) | 最终比较、敏感性分析、淘汰理由和架构输入 | `R6 USER DECISION PENDING / NO WINNER` |
+| 27 | [证据目录规则](Evidence/README.md) | 原始数据、视频、截图、日志和复现材料的组织方式 | `ACTIVE / TS-C01 FORMAL INDEX PRESENT` |
 
 ## 4. 阶段任务
 
@@ -61,14 +68,14 @@
 | --- | --- | --- | --- |
 | TS-00 | 冻结需求并激活技术选型 | 冻结状态、章程、候选表、统一矩阵 | `COMPLETE` |
 | TS-01 | 候选事实审查 | 官方支持范围、版本、许可证、构建与部署事实卡 | `COMPLETE` |
-| TS-02 | 公共 Desktop Overlay Host 探针，再接入海报渲染候选 | 先证明精确层级、Win+D、Explorer 重建和输入；再做同构渲染适配器 | `IN PROGRESS — TS-C01 R4 MANUAL P0 GATE` |
+| TS-02 | 公共 Desktop Overlay Host 探针，再接入海报渲染候选 | 先证明精确层级、Win+D、Explorer 重建和输入；再做同构渲染适配器 | `IN PROGRESS — TS-C01 R6 DISPOSITION DECISION` |
 | TS-03 | 控制中心、核心、状态、IPC、主题和安装支撑域审查 | 各域短名单与兼容约束 | `PENDING` |
 | TS-04 | 统一矩阵复测 | 同设备、同夹具、同脚本的完整证据包 | `PENDING` |
 | TS-05 | 选择与交接 | 决策记录、被淘汰理由、残余风险、架构输入清单 | `PENDING` |
 
 ## 5. 当前下一动作
 
-TS-C01 的 Qt 6.8.3 R0、R1 已通过；R2 修订版六项真实 Explorer 人工门已由用户确认 PASS；R3 自动预检完成双清洁可复现构建、依赖枚举、51/52 条正常/故障 E5 事件、stale/late frame 拒绝、故障注入、静态性能采样和最终零资源并 PASS。下一动作是 R4 人工 P0 门；未创建候选 Evidence run，状态仍 P0 NOT RUN。
+R5-01～05 已完成。TS-C01 矩阵为 2 PASS、1 FAIL、34 UNKNOWN、4 NOT RUN；HG-PERF-02 明确失败，因此 R5 按 E6 建议 FAIL，不能评分。正式 Candidate Evidence 已建立。下一动作是 R6 用户处置决定：接受 FAIL 并进入 TS-C02，或先发起对所有候选一致生效的正式资源预算变更。当前无 winner。
 
 ## 6. 阶段退出门
 

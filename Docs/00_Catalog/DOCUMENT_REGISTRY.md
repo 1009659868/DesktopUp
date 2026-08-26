@@ -23,11 +23,18 @@
 | `Docs/A_Project/20_Technical_Selection/CANDIDATE_REGISTER_V1.md` | 候选家族与事实卡 | `ACTIVE / FACT CHECKED` |
 | `Docs/A_Project/20_Technical_Selection/UNIFIED_CANDIDATE_EVIDENCE_MATRIX_V1.md` | 统一硬门、评分与证据格式 | `ACTIVE / NOT RUN` |
 | `Docs/A_Project/20_Technical_Selection/TS01_CANDIDATE_FACT_REVIEW_2026-08-20.md` | TS-01 官方与本机事实审查、静态筛选结果 | `COMPLETE` |
-| `Docs/A_Project/20_Technical_Selection/TS_02_RENDERER_ADAPTER_P0_EXECUTION_PLAN_V1.md` | renderer 候选 R0～R6、公共硬门、证据与裁决顺序 | `ACTIVE / TS-C01 R4-A USER-ACCEPTED 1/20 / R4-B MANUAL SMOKE AWAITING USER CONFIRMATION` |
-| `Docs/A_Project/20_Technical_Selection/TS_C01_QT_QUICK_ENTRY_AUDIT_2026-08-24.md` | Qt 6.8.3 工具链、surface/ownership 与进入门记录 | `R0 + R1 + R2 PASS / R3 AUTO PASS / R4-A USER-ACCEPTED 1/20 / R4-B MANUAL SMOKE AWAITING USER CONFIRMATION / P0 NOT RUN` |
-| `Docs/A_Project/20_Technical_Selection/TS_C01_R4_MANUAL_P0_RUNBOOK_V1.md` | TS-C01 R4 完整人工 P0 分段、会话入口与 fail-fast | `ACTIVE / R4-A ENTRY READY / P0 NOT RUN` |
+| `Docs/A_Project/20_Technical_Selection/TS_02_RENDERER_ADAPTER_P0_EXECUTION_PLAN_V1.md` | renderer 候选 R0～R6、公共硬门、证据与裁决顺序 | `ACTIVE / TS-C01 R5 COMPLETE / FAIL RECOMMENDED / R6 READY` |
+| `Docs/A_Project/20_Technical_Selection/TS_C01_QT_QUICK_ENTRY_AUDIT_2026-08-24.md` | Qt 6.8.3 工具链、surface/ownership 与进入门记录 | `R5 COMPLETE / FAIL RECOMMENDED / USER DECISION PENDING` |
+| `Docs/A_Project/20_Technical_Selection/TS_C01_R4_MANUAL_P0_RUNBOOK_V1.md` | TS-C01 R4 完整人工 P0 分段、会话入口与 fail-fast | `CLOSED / EXCEPTIONS RETAINED` |
+| `Docs/A_Project/20_Technical_Selection/TS_C01_R4_D4_CURRENT_USER_LIFECYCLE_PLAN_V1.md` | Qt 候选当前用户安装、单实例、自启、状态、重启与卸载合同 | `CLOSED / EXECUTED SCOPE PASS / AUTOSTART DEFERRED / DEVICE RESTART SKIPPED` |
+| `Docs/A_Project/20_Technical_Selection/TS_C01_R5_EVIDENCE_CONVERGENCE_AND_DECISION_PREP_PLAN_V1.md` | Qt 候选证据盘点、矩阵映射、缺口收敛与裁决准备 | `COMPLETE / R5-01～05` |
+| `Docs/A_Project/20_Technical_Selection/TS_C01_R5_01_EVIDENCE_INVENTORY_2026-08-26.md` | TS-C01 原始文件、哈希、构建血缘和可采性盘点 | `COMPLETE / P0 NOT RUN` |
+| `Docs/A_Project/20_Technical_Selection/TS_C01_R5_02_UNIFIED_MATRIX_MAPPING_V1.md` | TS-C01 41 项统一硬门映射与严格结果 | `COMPLETE / 2 PASS / 1 FAIL / 34 UNKNOWN / 4 NOT RUN` |
+| `Docs/A_Project/20_Technical_Selection/Evidence/TS-C01/README.md` | TS-C01 正式 Candidate Evidence 索引与完整性清单 | `R5-03 COMPLETE` |
+| `Docs/A_Project/20_Technical_Selection/TS_C01_R5_04_CANDIDATE_DISPOSITION_AUDIT_V1.md` | Qt 候选 E6 退出状态审计 | `COMPLETE / FAIL RECOMMENDED` |
+| `Docs/A_Project/20_Technical_Selection/TS_C01_R5_05_R6_HANDOFF_INPUT_V1.md` | R6 用户处置选项与下一候选入口 | `COMPLETE / R6 READY` |
 | `Docs/A_Project/20_Technical_Selection/DESKTOP_OVERLAY_HOST_PROBE_CHARTER_V1.md` | 公共原生桌面宿主探针合同与阶段门 | `TS-H01-E COMPLETE WITH RECORDED D EXCEPTIONS` |
-| `Docs/A_Project/20_Technical_Selection/SELECTION_DECISION_RECORD_V1.md` | 选择、淘汰、敏感性和架构输入 | `NOT READY / NO WINNER` |
+| `Docs/A_Project/20_Technical_Selection/SELECTION_DECISION_RECORD_V1.md` | 选择、淘汰、敏感性和架构输入 | `R6 USER DECISION PENDING / NO WINNER` |
 | `Docs/A_Project/20_Technical_Selection/TS_H01_D_EXECUTION_PLAN_V1.md` | D1/D2/D3 生命周期完整门执行顺序与独立判定 | `USER-ACCEPTED COMPLETE WITH RECORDED EXCEPTIONS` |
 | `Docs/A_Project/20_Technical_Selection/TS_H01_D3_MATRIX_V1.md` | 主屏分辨率、DPI、工作区、非客户区和交互边界矩阵 | `D3-3 PASS / D3 USER-ACCEPTED COMPLETE WITH EXCEPTIONS` |
 | `Docs/A_Project/20_Technical_Selection/TS_H01_E_DESKTOP_HOST_INTERFACE_FREEZE_PLAN_V1.md` | TS-H01 证据汇总、接口冻结和候选交接顺序 | `COMPLETE / E1-E6 FROZEN` |

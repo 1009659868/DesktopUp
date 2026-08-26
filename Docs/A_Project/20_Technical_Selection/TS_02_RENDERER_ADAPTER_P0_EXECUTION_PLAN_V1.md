@@ -1,6 +1,6 @@
 # TS-02 Renderer Adapter / P0 执行计划 V1
 
-状态：ACTIVE — TS-C01 R0 + R1 + R2 PASS / R3 AUTOMATED PREFLIGHT PASS / R4-A USER-ACCEPTED 1/20 / R4-B MANUAL SMOKE AWAITING USER CONFIRMATION / NO CANDIDATE P0 RESULT
+状态：ACTIVE — TS-C01 R5-01～05 COMPLETE / 2 PASS + 1 FAIL + 34 UNKNOWN + 4 NOT RUN / FAIL RECOMMENDED / R6 USER DECISION READY / NO WINNER
 
 建立日期：2026-08-24
 
@@ -39,7 +39,7 @@ TS-02 renderer adapter/P0 的目标是让每个候选在相同条件下：
 
 | 顺序 | ID | 候选 | 初始状态 |
 | ---: | --- | --- | --- |
-| 1 | TS-C01 | Qt 6.8.3 / Qt Quick + native DesktopHost | R0 + R1 + R2 PASS / R3 AUTO PASS / R4-A USER-ACCEPTED 1/20 / R4-B MANUAL SMOKE AWAITING USER CONFIRMATION / P0 NOT RUN |
+| 1 | TS-C01 | Qt 6.8.3 / Qt Quick + native DesktopHost | R0 + R1 + R2 PASS / R3 AUTO PASS / R4-A USER-ACCEPTED 1/20 / R4-B USER-ACCEPTED WITH COUNT EXCEPTION / R4-C USER-ACCEPTED WITH COUNT EXCEPTIONS C2 7/6 + C3 1/10 / R4-D D1 USER-ACCEPTED / D2 USER-ACCEPTED / D3 USER-ACCEPTED WITH WORKING-SET EXCEPTION (136.332 MiB; 50 MiB TARGET RETAINED) / D4 USER-ACCEPTED EXECUTED SCOPE PASS (AUTOSTART DEFERRED / DEVICE RESTART SKIPPED) / R5-01～05 COMPLETE / FAIL RECOMMENDED / R6 USER DECISION PENDING |
 | 2 | TS-C02 | Win32 + Direct2D/DirectComposition | P0 NOT RUN |
 | 3 | TS-C03 | WinUI 3 / Composition | P0 NOT RUN |
 | 4 | TS-C04 | WPF + native DesktopHost | P0 NOT RUN |
@@ -217,7 +217,7 @@ TS-C01 按登记顺序首先进入 R0。
 - 未创建 TS-C01 Evidence run；
 - R2 修订版 OFFSCREEN_FRAME_SOURCE / HOST 路线的六项真实 Explorer 人工门已由用户确认 PASS；`r2-manual-retest-user.jsonl` 共 52 条 E5 合规事件；
 - R3 自动预检已完成双清洁可复现构建、依赖枚举、正常/故障 E5、stale/late frame、故障注入、静态性能和零资源清理并 PASS；
-- 当前状态为 R0 + R1 + R2 PASS / R3 AUTO PASS / R4-A USER-ACCEPTED 1/20 / R4-B MANUAL SMOKE AWAITING USER CONFIRMATION / P0 NOT RUN。
+- 当前状态为 R0 + R1 + R2 PASS / R3 AUTO PASS / R4-A USER-ACCEPTED 1/20 / R4-B USER-ACCEPTED WITH COUNT EXCEPTION / R4-C USER-ACCEPTED WITH COUNT EXCEPTIONS C2 7/6 + C3 1/10 / R4-D D1 USER-ACCEPTED / D2 USER-ACCEPTED / D3 USER-ACCEPTED WITH WORKING-SET EXCEPTION (136.332 MiB; 50 MiB TARGET RETAINED) / D4 USER-ACCEPTED EXECUTED SCOPE PASS (AUTOSTART DEFERRED / DEVICE RESTART SKIPPED) / R5-01～05 COMPLETE / FAIL RECOMMENDED / R6 USER DECISION PENDING。
 
 ## 8. R2 Night Ops 同构夹具记录
 
@@ -280,33 +280,38 @@ R2 已实现六张 Item、展开/收起、锁定/解锁、USING/EDITING、标题
 
 ## 10. R3 自动预检记录
 
-执行时间：2026-08-24T17:43:53.1415382+08:00。
+执行时间：2026-08-25T11:57:33.057584+08:00。
 
 | 字段 | 结果 |
 | --- | --- |
 | Qt / toolchain | Qt 6.8.3；MSVC 19.44 / v143 14.44；Windows SDK 10.0.26100.0 |
 | Deterministic resource input | `SOURCE_DATE_EPOCH=1704067200`；用于固定 Qt rcc 资源时间戳 |
 | Clean builds | 2；同一受校验规范路径，每轮删除并全新配置/构建 |
-| Reproducible executable | PASS；两轮与部署后 SHA-256 均为 `FA36CD18B46A466F413A08A3DB21F5412610F028080F7FFF203333EFF7548965` |
+| Reproducible executable | PASS；两轮与部署后 SHA-256 均为 `8FF9F292B31A92CFDCDB44D81F10B647AD3D3DC6750D6F003F35A7F44E87D86D` |
 | Deployment inventory | 51 files / 39 runtime binaries |
 | E5 validator self-test | PASS：known-good accepted / known-bad rejected |
-| Normal diagnostics | PASS：51 events conform |
-| Fault diagnostics | PASS：52 events conform |
+| Normal diagnostics | PASS：61 events conform |
+| Fault diagnostics | PASS：62 events conform |
+| R4-C static lifecycle | PASS：66 events conform；monitor/probe ready；0 false Shell loss；0 recovery/degraded；product control center 尚未实现，仅提供窗口角色探针；最终零资源 |
+| R4-D1 static display environment | PASS：64 events conform；PRIMARY_DISPLAY_ONLY；0 false change；0 reprojection failure；multi-display DEFERRED；最终零资源 |
+| R4-D2 static theme/fallback/isolation | PASS：111 events conform；3 normal themes；5 atomic projections；4 rejected faults；3 LKG retains；1 fallback；2 superseded requests；1 geometry key；结构化枚举隔离；最终零资源 |
+| R4-D3 static fault/stale/performance | FUNCTIONAL PASS / HG-PERF-02 FAIL：111 events conform；同一 attachment/shell/lifecycle 的 surface-only 恢复；surface epoch 仅 +1；旧 revision、旧 surface frame、重复当前 Shell 事件均拒绝；200 Item ×64 轮排名/布局 0.180ms；6 次主题切换最大 27.106ms；CPU 62ms/10.223s、静态帧 0 PASS；工作集 135.648～136.332MiB，超过 50MiB 目标；最终零资源 |
 | Attach / first frame | PASS / Direct3D11 |
 | Stale / late frame | 各 1 次拒绝；PASS |
 | Injected renderer fault | `R3_INJECTED_RENDERER_DEVICE_LOSS`；detach/exit/cleanup PASS |
 | Final resources | visual=0 / island=0 / host=0 / adapter=0 / quarantine=0 |
-| Static sample | 3194.157 ms；single-core CPU 0.501%；working set 133.254～133.590 MiB |
+| Interaction latency | PASS：10 samples / 100ms budget；max total 42.919ms |
+| Static sample | 3152.792ms；single-core CPU 0.0%；working set 131.406～131.422MiB |
 | Static frame result | 0 new frames；当前夹具为事件驱动静态海报，无持续动画，不把 0 解释为渲染失败 |
 | Qt license payload | 安装树未发现顶层 license payload；分发前需单独补做 Qt 许可证材料审查，不阻断本次本地技术预检 |
 | Candidate Evidence | 未创建；P0 NOT RUN |
 
-机器可读摘要位于被 Git 忽略的 `out/r3-preflight.json`；本轮原始运行目录为 `out/r3-run-20260824-174241/`。R3 自动 PASS 只允许进入 R4，不能填写候选 P0 PASS。
+机器可读摘要位于被 Git 忽略的 out/r3-preflight.json；当前 D3 原始运行目录为 out/r3-run-20260825-170513/，双 Clean Release SHA-256 为 4F1D76FCEC9C5271C1199D2CBAE48C748CA4EC0D8CA8C4D0AE50D325095CA673。D3 自动功能门 PASS，但总体摘要因 HG-PERF-02 工作集 136.332MiB > 50MiB 正确记为 FAIL；不得启动 D3 人工门或填写候选 P0 PASS。
 
-## 11. 当前下一动作：R4 人工 P0 门
+## 11. 当前下一动作：R6 用户候选处置决定
 
 按冻结统一矩阵执行 R4：20 次冷启动；20 次拖动/缩放/收起展开/模式切换；Explorer 空白与原生图标；普通窗口、文件选择器、焦点与全屏；键盘、任务栏和 Win+D；控制中心；Explorer 重建/degraded；已声明 DPI/分辨率/工作区；主题/renderer 故障；性能、清理、安装和重启复测。
 
-执行细则见 [TS-C01 R4 人工 P0 手册](TS_C01_R4_MANUAL_P0_RUNBOOK_V1.md)。R4 被拆成 A～D 四个可追踪批次；完整矩阵不变。R4-A 已由用户接受并保留 1/20 例外；R4-B 真实交互入口已经补齐，本轮 53 条自动事件与零资源清理均通过，当前等待用户人工观察确认。
+R5-01～05 已完成。统一矩阵结果为 2 PASS、1 FAIL、34 UNKNOWN、4 NOT RUN；`HG-PERF-02` 工作集 136.332MiB 超过 50MiB，按 E6 建议 TS-C01 FAIL，且不具备加权评分资格。当前进入 [R6 交接输入](TS_C01_R5_05_R6_HANDOFF_INPUT_V1.md)，等待用户决定接受 FAIL 并进入 TS-C02，或先发起适用于所有候选的正式资源预算变更。
 
-任何白条、灰框、瞬时 TopMost、Win+D 隐藏再恢复、整窗输入接管、旧帧/旧命中或资源残留均按 E6 fail-fast。R4 未经用户完成并确认前，状态保持 `P0 NOT RUN / NO WINNER`，不得创建最终裁决或进入 R5。
+任何白条、灰框、瞬时 TopMost、Win+D 隐藏再恢复、整窗输入接管、旧帧/旧命中或资源残留均按 E6 fail-fast。R5 已保留全部计数例外、工作集失败、自启延期和设备重启跳过。最终 REJECTED/需求变更选择由 R6 用户决定；当前仍无 winner。

@@ -1,6 +1,6 @@
 # Desktop-Up V2 技术选型决策记录 V1
 
-状态：`NOT READY — NO RENDERER-UI WINNER / AXIOM CORE BLUEPRINT FROZEN INPUT`
+状态：`NOT READY — TS-C01 FAIL RECOMMENDED / R6 USER DECISION PENDING / NO RENDERER-UI WINNER / AXIOM CORE BLUEPRINT FROZEN INPUT`
 
 建立日期：2026-08-20
 
@@ -15,7 +15,7 @@
 | Decision ID | `TS-DEC-001` |
 | Frozen requirements revision | 2026-08-20 frozen baseline |
 | Evidence matrix | `UNIFIED_CANDIDATE_EVIDENCE_MATRIX_V1.md` |
-| Decision status | `NOT READY` |
+| Decision status | `R6 USER DECISION PENDING` |
 | Selected combination | `NONE` |
 | Controlled fallback | `NONE` |
 | User approval | `PENDING` |
@@ -31,18 +31,28 @@
 
 ## 3. 硬门结果
 
-待 TS-04 从证据目录生成。不得手工删除失败项。
+TS-C01 已在 R5 建立正式 Candidate Evidence 和候选级映射；其他候选仍未运行。下表是 R5 证据准备状态，不是最终用户批准，不得删除失败、未知或未运行项。
 
-| Candidate | P0 Pass | P0 Fail | Unknown | Conditional | Result |
-| --- | ---: | ---: | ---: | ---: | --- |
-| TS-C01 | 0 | 0 | ALL | 0 | `NOT RUN` |
-| TS-C02 | 0 | 0 | ALL | 0 | `NOT RUN` |
-| TS-C03 | 0 | 0 | ALL | 0 | `NOT RUN` |
-| TS-C04 | 0 | 0 | ALL | 0 | `NOT RUN` |
-| TS-C05 | 0 | 0 | ALL | 0 | `NOT RUN` |
-| TS-C06 | 0 | 0 | ALL | 0 | `NOT RUN` |
-| TS-C07 | 0 | 0 | ALL | 0 | `NOT RUN` |
-| TS-C08 | 0 | 0 | ALL | 0 | `NOT RUN` |
+| Candidate | P0 Pass | P0 Fail | Unknown | Not Run | Conditional | Result |
+| --- | ---: | ---: | ---: | ---: | ---: | --- |
+| TS-C01 | 2 | 1 | 34 | 4 | 0 | `FAIL RECOMMENDED / USER DECISION PENDING` |
+| TS-C02 | 0 | 0 | 0 | ALL | 0 | `NOT RUN` |
+| TS-C03 | 0 | 0 | 0 | ALL | 0 | `NOT RUN` |
+| TS-C04 | 0 | 0 | 0 | ALL | 0 | `NOT RUN` |
+| TS-C05 | 0 | 0 | 0 | ALL | 0 | `NOT RUN` |
+| TS-C06 | 0 | 0 | 0 | ALL | 0 | `NOT RUN` |
+| TS-C07 | 0 | 0 | 0 | ALL | 0 | `NOT RUN` |
+| TS-C08 | 0 | 0 | 0 | ALL | 0 | `NOT RUN` |
+
+### 3.1 TS-C01 R5 处置准备
+
+- 矩阵：2 PASS / 1 FAIL / 34 UNKNOWN / 4 NOT RUN；
+- 明确失败：`HG-PERF-02`，工作集峰值 136.332 MiB > 50 MiB；
+- 加权评分资格：NO；
+- R5 建议：FAIL；
+- 最终 rejected：等待 R6 用户决定；
+- 合法后续：接受 FAIL 并进入 TS-C02，或先正式修改对所有候选一致生效的资源预算并全量重跑；
+- 证据入口：[TS-C01 Candidate Evidence](Evidence/TS-C01/README.md) 与 [R5-05 R6 交接](TS_C01_R5_05_R6_HANDOFF_INPUT_V1.md)。
 
 ## 4. 评分与敏感性
 
@@ -68,7 +78,7 @@ Why another retest is or is not justified:
 Residual reusable findings:
 ```
 
-当前：`NONE — NO CANDIDATE HAS BEEN EVALUATED`。
+当前：`NONE FINALIZED`。TS-C01 已形成 `FAIL RECOMMENDED`，但在 R6 用户批准前不写入最终淘汰名单。
 
 ## 6. 最终组合
 
