@@ -1,6 +1,6 @@
 # TS-C01 R4 人工 P0 执行手册 V1
 
-状态：CLOSED — R4-A USER-ACCEPTED PASS WITH 1/20 EXCEPTION / R4-B USER-ACCEPTED WITH COUNT EXCEPTION / R4-C USER-ACCEPTED WITH COUNT EXCEPTIONS C2 7/6 + C3 1/10 / R4-D D1 USER-ACCEPTED / D2 USER-ACCEPTED / D3 USER-ACCEPTED WITH WORKING-SET EXCEPTION (136.332 MiB; 50 MiB TARGET RETAINED) / D4 USER-ACCEPTED EXECUTED SCOPE PASS (AUTOSTART DEFERRED / DEVICE RESTART SKIPPED) / R5-01～05 COMPLETE / FAIL RECOMMENDED / R6 USER DECISION PENDING / NO WINNER
+状态：CLOSED HISTORICAL RUNBOOK — ALL R4/R5 EXCEPTIONS RETAINED / USER LATER SELECTED QT IMPLEMENTATION ROUTE
 
 建立日期：2026-08-24
 
@@ -195,4 +195,4 @@ R4-C/C2 会话 `r4-manual-20260825-124220-r4c-c2-control-center-02` 已由用户
 
 R4-C/C3 会话 `r4-manual-20260825-143817-r4c-c3-explorer-04` 已由用户确认恢复成功。自然收尾共 183 条事件，E5 PASS、退出资源为零，实际记录 1 次 Shell degraded 与 1 次恢复，恢复耗时 1714ms，结束时不在 degraded；新 attachment/surface epoch 已建立。用户明确取消其余重复轮次，因此 C3 以实际 1/1 人工通过、冻结矩阵 1/10 计数例外归档，不能写成 10/10。
 
-R4-D2 会话 r4-manual-20260825-160909-r4d2-control-panel-r2b 已由用户确认通过；自然收尾 137 条事件、E5 PASS、零资源。R4-D3 已按用户决定以工作集例外关闭。R4-D4 正式自定义目录安装、普通第二实例、应用重启、精确卸载与托盘清理已经用户确认；自启延期，设备重启跳过。R4 已关闭。R5-01～05 已完成并形成正式 Candidate Evidence；HG-PERF-02 明确失败，当前等待 R6 用户处置决定。
+R4-D2 会话 r4-manual-20260825-160909-r4d2-control-panel-r2b 已由用户确认通过；自然收尾 137 条事件、E5 PASS、零资源。R4-D3 已按用户决定以工作集例外关闭。R4-D4 正式自定义目录安装、普通第二实例、应用重启、精确卸载与托盘清理已经用户确认；自启延期，设备重启跳过。R4 已关闭。R5-01～05 已完成并形成正式 Candidate Evidence；HG-PERF-02 明确失败。R6 用户后来选择 Qt 实施路线，但本手册中的例外不变。

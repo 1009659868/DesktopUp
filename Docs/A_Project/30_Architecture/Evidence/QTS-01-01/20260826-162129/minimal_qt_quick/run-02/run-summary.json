@@ -1,0 +1,46 @@
+{
+  "schema": "desktopup.qts-01-01.role-run.v1",
+  "roleId": "minimal_qt_quick",
+  "executable": "${REPO_ROOT}\\prototype\\memory-baselines\\qts-01-01\\out\\build-qt\\Release\\qts-01-01-minimal-qt-quick.exe",
+  "executableSha256": "F9661ABDCDE4C8DAC7CCE00F1B06298C9B1DADC929F3A7BBC76B0F4A307579A1",
+  "pid": 25800,
+  "warmupSeconds": 2,
+  "sampleCount": 10,
+  "sampleIntervalSeconds": 1,
+  "sampleDurationSeconds": 10,
+  "workingSetMiB": {
+    "min": 63.395,
+    "avg": 63.407,
+    "max": 63.41
+  },
+  "privateWorkingSetMiB": {
+    "min": 14.883,
+    "avg": 14.893,
+    "max": 14.895
+  },
+  "commitMiB": {
+    "min": 73.012,
+    "avg": 73.021,
+    "max": 73.023
+  },
+  "gpuDedicatedMiB": {
+    "min": 11.047,
+    "avg": 11.047,
+    "max": 11.047
+  },
+  "gpuSharedMiB": {
+    "min": 1.082,
+    "avg": 1.082,
+    "max": 1.082
+  },
+  "gpuCommittedMiB": {
+    "min": 12.895,
+    "avg": 12.895,
+    "max": 12.895
+  },
+  "cpuTimeDeltaMs": 0.0,
+  "singleCoreCpuPercent": 0.0,
+  "staticFrames": 0,
+  "staticFrameStatus": "MEASURED_FROM_EVENT_LOG",
+  "exitCode": 0
+}

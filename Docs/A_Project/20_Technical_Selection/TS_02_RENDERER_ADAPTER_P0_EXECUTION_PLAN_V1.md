@@ -1,6 +1,6 @@
 # TS-02 Renderer Adapter / P0 执行计划 V1
 
-状态：ACTIVE — TS-C01 R5-01～05 COMPLETE / 2 PASS + 1 FAIL + 34 UNKNOWN + 4 NOT RUN / FAIL RECOMMENDED / R6 USER DECISION READY / NO WINNER
+状态：CLOSED BY USER QT IMPLEMENTATION DECISION / HISTORICAL MATRIX AND HG-PERF-02 FAILURE RETAINED
 
 建立日期：2026-08-24
 
@@ -39,7 +39,7 @@ TS-02 renderer adapter/P0 的目标是让每个候选在相同条件下：
 
 | 顺序 | ID | 候选 | 初始状态 |
 | ---: | --- | --- | --- |
-| 1 | TS-C01 | Qt 6.8.3 / Qt Quick + native DesktopHost | R0 + R1 + R2 PASS / R3 AUTO PASS / R4-A USER-ACCEPTED 1/20 / R4-B USER-ACCEPTED WITH COUNT EXCEPTION / R4-C USER-ACCEPTED WITH COUNT EXCEPTIONS C2 7/6 + C3 1/10 / R4-D D1 USER-ACCEPTED / D2 USER-ACCEPTED / D3 USER-ACCEPTED WITH WORKING-SET EXCEPTION (136.332 MiB; 50 MiB TARGET RETAINED) / D4 USER-ACCEPTED EXECUTED SCOPE PASS (AUTOSTART DEFERRED / DEVICE RESTART SKIPPED) / R5-01～05 COMPLETE / FAIL RECOMMENDED / R6 USER DECISION PENDING |
+| 1 | TS-C01 | Qt 6.8.3 / Qt Quick + native DesktopHost | USER SELECTED IMPLEMENTATION ROUTE / HISTORICAL MATRIX 2 PASS + 1 FAIL + 34 UNKNOWN + 4 NOT RUN RETAINED |
 | 2 | TS-C02 | Win32 + Direct2D/DirectComposition | P0 NOT RUN |
 | 3 | TS-C03 | WinUI 3 / Composition | P0 NOT RUN |
 | 4 | TS-C04 | WPF + native DesktopHost | P0 NOT RUN |
@@ -217,7 +217,7 @@ TS-C01 按登记顺序首先进入 R0。
 - 未创建 TS-C01 Evidence run；
 - R2 修订版 OFFSCREEN_FRAME_SOURCE / HOST 路线的六项真实 Explorer 人工门已由用户确认 PASS；`r2-manual-retest-user.jsonl` 共 52 条 E5 合规事件；
 - R3 自动预检已完成双清洁可复现构建、依赖枚举、正常/故障 E5、stale/late frame、故障注入、静态性能和零资源清理并 PASS；
-- 当前状态为 R0 + R1 + R2 PASS / R3 AUTO PASS / R4-A USER-ACCEPTED 1/20 / R4-B USER-ACCEPTED WITH COUNT EXCEPTION / R4-C USER-ACCEPTED WITH COUNT EXCEPTIONS C2 7/6 + C3 1/10 / R4-D D1 USER-ACCEPTED / D2 USER-ACCEPTED / D3 USER-ACCEPTED WITH WORKING-SET EXCEPTION (136.332 MiB; 50 MiB TARGET RETAINED) / D4 USER-ACCEPTED EXECUTED SCOPE PASS (AUTOSTART DEFERRED / DEVICE RESTART SKIPPED) / R5-01～05 COMPLETE / FAIL RECOMMENDED / R6 USER DECISION PENDING。
+- 当前状态为用户选择 Qt 实施路线；原 R0～R5 结果、工作集失败、计数例外、自启延期和设备重启跳过全部保留，不回填为 P0 PASS。
 
 ## 8. R2 Night Ops 同构夹具记录
 
@@ -308,10 +308,10 @@ R2 已实现六张 Item、展开/收起、锁定/解锁、USING/EDITING、标题
 
 机器可读摘要位于被 Git 忽略的 out/r3-preflight.json；当前 D3 原始运行目录为 out/r3-run-20260825-170513/，双 Clean Release SHA-256 为 4F1D76FCEC9C5271C1199D2CBAE48C748CA4EC0D8CA8C4D0AE50D325095CA673。D3 自动功能门 PASS，但总体摘要因 HG-PERF-02 工作集 136.332MiB > 50MiB 正确记为 FAIL；不得启动 D3 人工门或填写候选 P0 PASS。
 
-## 11. 当前下一动作：R6 用户候选处置决定
+## 11. 最终交接：Qt 方案总执行计划
 
 按冻结统一矩阵执行 R4：20 次冷启动；20 次拖动/缩放/收起展开/模式切换；Explorer 空白与原生图标；普通窗口、文件选择器、焦点与全屏；键盘、任务栏和 Win+D；控制中心；Explorer 重建/degraded；已声明 DPI/分辨率/工作区；主题/renderer 故障；性能、清理、安装和重启复测。
 
-R5-01～05 已完成。统一矩阵结果为 2 PASS、1 FAIL、34 UNKNOWN、4 NOT RUN；`HG-PERF-02` 工作集 136.332MiB 超过 50MiB，按 E6 建议 TS-C01 FAIL，且不具备加权评分资格。当前进入 [R6 交接输入](TS_C01_R5_05_R6_HANDOFF_INPUT_V1.md)，等待用户决定接受 FAIL 并进入 TS-C02，或先发起适用于所有候选的正式资源预算变更。
+R5-01～05 的矩阵结果和 FAIL 建议保持不变。R6 用户决定选择 Qt 实施路线，详见 [R6 决定](TS_C01_R6_QT_IMPLEMENTATION_DECISION_2026-08-26.md)；后续不再顺序启动 TS-C02，而是进入 [Qt 方案总执行计划](../30_Architecture/QT_SOLUTION_EXECUTION_PLAN_V1.md)。
 
-任何白条、灰框、瞬时 TopMost、Win+D 隐藏再恢复、整窗输入接管、旧帧/旧命中或资源残留均按 E6 fail-fast。R5 已保留全部计数例外、工作集失败、自启延期和设备重启跳过。最终 REJECTED/需求变更选择由 R6 用户决定；当前仍无 winner。
+任何白条、灰框、瞬时 TopMost、Win+D 隐藏再恢复、整窗输入接管、旧帧/旧命中或资源残留仍按 E6 fail-fast。R5 的计数例外、工作集失败、自启延期和设备重启跳过继续保留；R6 用户选择 Qt 实施路线后，本计划关闭并交给 QTS，不再声明候选赢家证据或启动 TS-C02。

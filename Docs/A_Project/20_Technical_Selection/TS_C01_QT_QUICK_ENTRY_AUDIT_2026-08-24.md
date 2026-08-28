@@ -1,6 +1,6 @@
 # TS-C01 Qt 6 / Qt Quick 进入门审计
 
-状态：R5-01～05 COMPLETE / 2 PASS + 1 FAIL + 34 UNKNOWN + 4 NOT RUN / FAIL RECOMMENDED / R6 USER DECISION PENDING / NO WINNER
+状态：R5 HISTORICAL AUDIT COMPLETE / USER SELECTED QT IMPLEMENTATION ROUTE / MATRIX EXCEPTIONS RETAINED
 
 日期：2026-08-24
 
@@ -24,7 +24,7 @@
 | Build system | CMake |
 | Prototype configuration | Release |
 | Desktop host | frozen native DesktopHost contract |
-| Current disposition | R5-01～05 COMPLETE / 2 PASS + 1 FAIL + 34 UNKNOWN + 4 NOT RUN / FAIL RECOMMENDED / R6 USER DECISION PENDING |
+| Current disposition | USER SELECTED QT IMPLEMENTATION ROUTE / HISTORICAL MATRIX REMAINS 2 PASS + 1 FAIL + 34 UNKNOWN + 4 NOT RUN |
 
 Qt 6.11.2 在线安装失败后，用户提供了本机 Qt 6.8.3。该版本作为 TS-C01 的受控版本修订：Candidate ID、框架类别和 P0 状态不变，但从本次修订起所有构建与证据必须精确标注 6.8.3，禁止借用先前 6.11.2 的进入事实。
 
@@ -294,6 +294,6 @@ R3 为候选增加并验证：
 
 ## 16. 当前下一动作
 
-R5-01～05 已完成并形成正式 Candidate Evidence。矩阵结果为 2 PASS、1 FAIL、34 UNKNOWN、4 NOT RUN；HG-PERF-02 明确失败，R5 按 E6 建议 FAIL。当前等待 R6 用户处置决定，仍无 winner。
+R5-01～05 已完成并形成正式 Candidate Evidence。矩阵结果为 2 PASS、1 FAIL、34 UNKNOWN、4 NOT RUN；HG-PERF-02 明确失败，R5 按 E6 建议 FAIL。R6 用户随后选择 Qt 实施路线；该决定不覆盖本审计结论。
 
 详细执行历史见 [TS-C01 R4 人工 P0 手册](TS_C01_R4_MANUAL_P0_RUNBOOK_V1.md) 与 [R4-D4 生命周期计划](TS_C01_R4_D4_CURRENT_USER_LIFECYCLE_PLAN_V1.md)。R5 结论见 [统一矩阵映射](TS_C01_R5_02_UNIFIED_MATRIX_MAPPING_V1.md)、[Candidate Evidence](Evidence/TS-C01/README.md) 和 [R6 交接输入](TS_C01_R5_05_R6_HANDOFF_INPUT_V1.md)。

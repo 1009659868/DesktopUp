@@ -1,12 +1,12 @@
 # Desktop-Up V2 技术选型决策记录 V1
 
-状态：`NOT READY — TS-C01 FAIL RECOMMENDED / R6 USER DECISION PENDING / NO RENDERER-UI WINNER / AXIOM CORE BLUEPRINT FROZEN INPUT`
+状态：`USER APPROVED — QT IMPLEMENTATION ROUTE SELECTED / HISTORICAL P0 FAILURE RETAINED / SUPPORT DOMAINS PENDING`
 
 建立日期：2026-08-20
 
 ## 1. 使用规则
 
-本文件仍未形成最终技术组合。TS-01 至 TS-04 完成前禁止把 renderer/UI 候选填写为 `SELECTED`；用户明确批准的正交部分决策可以单独记录，但不能冒充完整组合或跳过候选证据。
+用户于 2026-08-26 明确选择 Qt 实施路线，形成对原选型程序的产品决策例外。该例外允许进入生产架构准备，但不能把历史 FAIL、UNKNOWN、NOT RUN、少轮次或跳过项改写为 PASS；完整支撑技术组合仍待 Qt 方案计划冻结。
 
 ## 2. 决策信息
 
@@ -15,10 +15,10 @@
 | Decision ID | `TS-DEC-001` |
 | Frozen requirements revision | 2026-08-20 frozen baseline |
 | Evidence matrix | `UNIFIED_CANDIDATE_EVIDENCE_MATRIX_V1.md` |
-| Decision status | `R6 USER DECISION PENDING` |
-| Selected combination | `NONE` |
-| Controlled fallback | `NONE` |
-| User approval | `PENDING` |
+| Decision status | `QT IMPLEMENTATION ROUTE SELECTED BY USER` |
+| Selected combination | `Qt 6.8.3 / Qt Quick + native DesktopHost` |
+| Controlled fallback | `Other renderer candidates deferred; no automatic runtime fallback` |
+| User approval | `APPROVED — 2026-08-26` |
 
 ### 2.1 已批准的部分架构输入
 
@@ -35,7 +35,7 @@ TS-C01 已在 R5 建立正式 Candidate Evidence 和候选级映射；其他候�
 
 | Candidate | P0 Pass | P0 Fail | Unknown | Not Run | Conditional | Result |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| TS-C01 | 2 | 1 | 34 | 4 | 0 | `FAIL RECOMMENDED / USER DECISION PENDING` |
+| TS-C01 | 2 | 1 | 34 | 4 | 0 | `SELECTED FOR IMPLEMENTATION BY USER / HISTORICAL MATRIX NOT PASS` |
 | TS-C02 | 0 | 0 | 0 | ALL | 0 | `NOT RUN` |
 | TS-C03 | 0 | 0 | 0 | ALL | 0 | `NOT RUN` |
 | TS-C04 | 0 | 0 | 0 | ALL | 0 | `NOT RUN` |
@@ -50,8 +50,8 @@ TS-C01 已在 R5 建立正式 Candidate Evidence 和候选级映射；其他候�
 - 明确失败：`HG-PERF-02`，工作集峰值 136.332 MiB > 50 MiB；
 - 加权评分资格：NO；
 - R5 建议：FAIL；
-- 最终 rejected：等待 R6 用户决定；
-- 合法后续：接受 FAIL 并进入 TS-C02，或先正式修改对所有候选一致生效的资源预算并全量重跑；
+- 最终 rejected：NO；用户选择进入 Qt 实施路线，但不改变历史 FAIL；
+- R6 用户决定：不删除上述结论，仍选择 Qt 作为实施路线；50 MiB 保持目标并进入专项归因/优化，必要时再形成正式预算变更；
 - 证据入口：[TS-C01 Candidate Evidence](Evidence/TS-C01/README.md) 与 [R5-05 R6 交接](TS_C01_R5_05_R6_HANDOFF_INPUT_V1.md)。
 
 ## 4. 评分与敏感性
@@ -78,23 +78,23 @@ Why another retest is or is not justified:
 Residual reusable findings:
 ```
 
-当前：`NONE FINALIZED`。TS-C01 已形成 `FAIL RECOMMENDED`，但在 R6 用户批准前不写入最终淘汰名单。
+当前：`NONE FINALIZED`。TS-C01 未被淘汰，而是以保留历史矩阵失败的用户例外进入实施；TS-C02～TS-C08 是延期替代项，不得写成已失败。
 
 ## 6. 最终组合
 
-以下字段只在用户批准后填写：
+当前已批准的组合边界：
 
-- 海报呈现技术；
-- Windows 桌面宿主技术；
-- 控制中心 UI；
-- 核心运行时；
-- 权威存储；
-- 进程通信；
-- 主题表达与隔离；
-- 安装、自启、升级和卸载；
-- 测试与诊断工具链。
+- 海报呈现：Qt 6.8.3 / Qt Quick；
+- Windows 桌面宿主：原生 Win32 DesktopHost；
+- 控制中心 UI 方向：Qt Quick，正式窗口和资源生命周期待 QTS-02/QTS-05 冻结；
+- 核心运行时、StateStore 与 IPC：未冻结；
+- 主题：结构化 schema/资源/受限 DSL；不可信代码不得在主进程 QML 引擎执行；
+- AI：Provider Adapter + ChangePlan + 普通命令/CAS 路径；
+- 安装、自启、升级和卸载：候选 D4 仅作证据，生产合同待 QTS-09；
+- 测试与诊断：复用 DesktopHost E5 合同并建立产品级矩阵；
+- 架构方法：仅 Axiom Core，axiom-runtime 排除。
 
-以上生产技术项仍全部为 `UNDECIDED`。唯一已决定的是“Axiom Core 作为系统描述方法”；它不等同于“核心运行时”已经选定。
+该组合是实施方向，不声称完整生产架构或全部支撑域已经冻结。
 
 ## 7. 架构阶段输入模板
 
@@ -114,6 +114,6 @@ Residual reusable findings:
 
 | 角色 | 状态 | 日期 | 说明 |
 | --- | --- | --- | --- |
-| Evidence reviewer | `PENDING` | — | — |
-| Product/user | `PENDING` | — | — |
-| Architecture stage activation | `BLOCKED UNTIL APPROVAL` | — | — |
+| Evidence reviewer | `RETAINED WITH EXCEPTIONS` | 2026-08-26 | R5 原始矩阵不改写 |
+| Product/user | `APPROVED QT ROUTE` | 2026-08-26 | 接受可行性和当前接受度，授权推进 |
+| Architecture stage activation | `ACTIVE — QTS-01 NEXT` | 2026-08-26 | 入口为 Qt 方案总执行计划 |

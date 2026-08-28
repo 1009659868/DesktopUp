@@ -1,0 +1,92 @@
+[
+  {
+    "timestamp": "2026-08-26T08:24:41.6765451Z",
+    "workingSetMiB": 136.484,
+    "privateWorkingSetMiB": 53.375,
+    "commitMiB": 127.039,
+    "gpuDedicatedMiB": 29.648,
+    "gpuSharedMiB": 4.074,
+    "gpuCommittedMiB": 34.664
+  },
+  {
+    "timestamp": "2026-08-26T08:24:42.7056100Z",
+    "workingSetMiB": 136.484,
+    "privateWorkingSetMiB": 53.375,
+    "commitMiB": 127.039,
+    "gpuDedicatedMiB": 29.648,
+    "gpuSharedMiB": 4.074,
+    "gpuCommittedMiB": 34.664
+  },
+  {
+    "timestamp": "2026-08-26T08:24:43.7327976Z",
+    "workingSetMiB": 136.488,
+    "privateWorkingSetMiB": 53.375,
+    "commitMiB": 127.039,
+    "gpuDedicatedMiB": 29.648,
+    "gpuSharedMiB": 4.074,
+    "gpuCommittedMiB": 34.664
+  },
+  {
+    "timestamp": "2026-08-26T08:24:44.7586043Z",
+    "workingSetMiB": 136.117,
+    "privateWorkingSetMiB": 53.004,
+    "commitMiB": 126.48,
+    "gpuDedicatedMiB": 29.648,
+    "gpuSharedMiB": 4.074,
+    "gpuCommittedMiB": 34.664
+  },
+  {
+    "timestamp": "2026-08-26T08:24:45.7842481Z",
+    "workingSetMiB": 136.117,
+    "privateWorkingSetMiB": 53.004,
+    "commitMiB": 126.48,
+    "gpuDedicatedMiB": 29.648,
+    "gpuSharedMiB": 4.074,
+    "gpuCommittedMiB": 34.664
+  },
+  {
+    "timestamp": "2026-08-26T08:24:46.8080598Z",
+    "workingSetMiB": 136.117,
+    "privateWorkingSetMiB": 53.004,
+    "commitMiB": 126.48,
+    "gpuDedicatedMiB": 29.648,
+    "gpuSharedMiB": 4.074,
+    "gpuCommittedMiB": 34.664
+  },
+  {
+    "timestamp": "2026-08-26T08:24:47.8369690Z",
+    "workingSetMiB": 136.117,
+    "privateWorkingSetMiB": 53.004,
+    "commitMiB": 126.48,
+    "gpuDedicatedMiB": 29.648,
+    "gpuSharedMiB": 4.074,
+    "gpuCommittedMiB": 34.664
+  },
+  {
+    "timestamp": "2026-08-26T08:24:48.8601352Z",
+    "workingSetMiB": 136.117,
+    "privateWorkingSetMiB": 53.004,
+    "commitMiB": 126.48,
+    "gpuDedicatedMiB": 29.648,
+    "gpuSharedMiB": 4.074,
+    "gpuCommittedMiB": 34.664
+  },
+  {
+    "timestamp": "2026-08-26T08:24:49.8850803Z",
+    "workingSetMiB": 136.117,
+    "privateWorkingSetMiB": 53.004,
+    "commitMiB": 126.48,
+    "gpuDedicatedMiB": 29.648,
+    "gpuSharedMiB": 4.074,
+    "gpuCommittedMiB": 34.664
+  },
+  {
+    "timestamp": "2026-08-26T08:24:50.9118600Z",
+    "workingSetMiB": 136.117,
+    "privateWorkingSetMiB": 53.004,
+    "commitMiB": 126.48,
+    "gpuDedicatedMiB": 29.648,
+    "gpuSharedMiB": 4.074,
+    "gpuCommittedMiB": 34.664
+  }
+]

@@ -1,0 +1,856 @@
+{
+  "schema": "desktopup.qts-01-01.baseline.v1",
+  "contract": "QTS_01_01_MEMORY_MEASUREMENT_CONTRACT_V1",
+  "result": "BASELINE_CAPTURED",
+  "budgetDecision": "NOT_EVALUATED_BY_QTS-01-01",
+  "machine": {
+    "schema": "desktopup.qts-01-01.machine.v1",
+    "capturedAtUtc": "2026-08-26T08:21:32.2118698Z",
+    "computerName": "redacted-local-host",
+    "osCaption": "Microsoft Windows 11 专业版",
+    "osVersion": "10.0.26100",
+    "osBuild": "26100",
+    "cpu": "Intel(R) Core(TM) i7-14700",
+    "logicalProcessors": 28,
+    "physicalMemoryMiB": 32426.0,
+    "gpu": [
+      {
+        "name": "Intel(R) UHD Graphics 770",
+        "driverVersion": "32.0.101.5972"
+      },
+      {
+        "name": "NVIDIA GeForce RTX 5060",
+        "driverVersion": "32.0.15.7652"
+      }
+    ],
+    "qtRoot": "${QT_ROOT}",
+    "qtVersion": "6.8.3",
+    "generator": "Visual Studio 18 2026 / v143 / x64 / Release",
+    "gitCommit": "b043366f16bc6401ce9aa3490b3e478a989e4348",
+    "gitDirty": true,
+    "gitStatus": [
+      " M Docs/00_Catalog/ACTIVE_PATH.md",
+      " M Docs/00_Catalog/DOCUMENT_REGISTRY.md",
+      " M Docs/A_Project/20_Technical_Selection/CANDIDATE_REGISTER_V1.md",
+      " M Docs/A_Project/20_Technical_Selection/SELECTION_DECISION_RECORD_V1.md",
+      " M Docs/A_Project/20_Technical_Selection/TECHNICAL_SELECTION_INDEX.md",
+      " M Docs/A_Project/20_Technical_Selection/TS_02_RENDERER_ADAPTER_P0_EXECUTION_PLAN_V1.md",
+      " M Docs/A_Project/20_Technical_Selection/TS_C01_QT_QUICK_ENTRY_AUDIT_2026-08-24.md",
+      " M Docs/A_Project/20_Technical_Selection/TS_C01_R4_MANUAL_P0_RUNBOOK_V1.md",
+      " M Docs/A_Project/20_Technical_Selection/TS_C01_R5_04_CANDIDATE_DISPOSITION_AUDIT_V1.md",
+      " M Docs/A_Project/20_Technical_Selection/TS_C01_R5_05_R6_HANDOFF_INPUT_V1.md",
+      " M Docs/A_Project/20_Technical_Selection/TS_C01_R5_EVIDENCE_CONVERGENCE_AND_DECISION_PREP_PLAN_V1.md",
+      " M Docs/README.md",
+      "?? Docs/A_Project/20_Technical_Selection/TS_C01_R6_QT_IMPLEMENTATION_DECISION_2026-08-26.md",
+      "?? Docs/A_Project/30_Architecture/QTS_01_01_MEMORY_MEASUREMENT_CONTRACT_V1.md",
+      "?? Docs/A_Project/30_Architecture/QT_SOLUTION_EXECUTION_PLAN_V1.md",
+      "?? prototype/memory-baselines/"
+    ],
+    "warmupSeconds": 2,
+    "sampleCount": 10,
+    "sampleIntervalSeconds": 1,
+    "repeatCount": 3,
+    "workingSetTrimCalled": false,
+    "processCounterSource": "Windows Process performance counters",
+    "gpuCounterSource": "Windows GPU Process Memory performance counters"
+  },
+  "roles": [
+    {
+      "roleId": "desktop_host",
+      "repeatCount": 3,
+      "workingSetMiBMedianAverage": 14.566,
+      "workingSetMiBEnvelopeMax": 14.57,
+      "privateWorkingSetMiBMedianAverage": 1.941,
+      "privateWorkingSetMiBEnvelopeMax": 1.945,
+      "commitMiBMedianAverage": 2.82,
+      "commitMiBEnvelopeMax": 2.824,
+      "gpuCommittedMiBMedianAverage": 0.0,
+      "gpuCommittedMiBEnvelopeMax": 0.0,
+      "cpuTimeDeltaMsMedian": 203.125,
+      "singleCoreCpuPercentMedian": 2.031,
+      "staticFramesEnvelopeMax": null,
+      "staticFrameStatus": [
+        "NOT_INSTRUMENTED_NO_FRAME_SCHEDULER"
+      ]
+    },
+    {
+      "roleId": "qt_gui_no_quick",
+      "repeatCount": 3,
+      "workingSetMiBMedianAverage": 26.453,
+      "workingSetMiBEnvelopeMax": 26.504,
+      "privateWorkingSetMiBMedianAverage": 3.371,
+      "privateWorkingSetMiBEnvelopeMax": 3.422,
+      "commitMiBMedianAverage": 4.715,
+      "commitMiBEnvelopeMax": 4.773,
+      "gpuCommittedMiBMedianAverage": 0.0,
+      "gpuCommittedMiBEnvelopeMax": 0.0,
+      "cpuTimeDeltaMsMedian": 0.0,
+      "singleCoreCpuPercentMedian": 0.0,
+      "staticFramesEnvelopeMax": 0,
+      "staticFrameStatus": [
+        "MEASURED_FROM_EVENT_LOG"
+      ]
+    },
+    {
+      "roleId": "minimal_qt_quick",
+      "repeatCount": 3,
+      "workingSetMiBMedianAverage": 63.454,
+      "workingSetMiBEnvelopeMax": 63.484,
+      "privateWorkingSetMiBMedianAverage": 14.939,
+      "privateWorkingSetMiBEnvelopeMax": 14.984,
+      "commitMiBMedianAverage": 72.564,
+      "commitMiBEnvelopeMax": 73.023,
+      "gpuCommittedMiBMedianAverage": 12.895,
+      "gpuCommittedMiBEnvelopeMax": 12.91,
+      "cpuTimeDeltaMsMedian": 0.0,
+      "singleCoreCpuPercentMedian": 0.0,
+      "staticFramesEnvelopeMax": 0,
+      "staticFrameStatus": [
+        "MEASURED_FROM_EVENT_LOG"
+      ]
+    },
+    {
+      "roleId": "offscreen_renderer",
+      "repeatCount": 3,
+      "workingSetMiBMedianAverage": 71.881,
+      "workingSetMiBEnvelopeMax": 72.906,
+      "privateWorkingSetMiBMedianAverage": 20.081,
+      "privateWorkingSetMiBEnvelopeMax": 20.41,
+      "commitMiBMedianAverage": 82.191,
+      "commitMiBEnvelopeMax": 83.535,
+      "gpuCommittedMiBMedianAverage": 20.418,
+      "gpuCommittedMiBEnvelopeMax": 20.418,
+      "cpuTimeDeltaMsMedian": 15.625,
+      "singleCoreCpuPercentMedian": 0.156,
+      "staticFramesEnvelopeMax": 0,
+      "staticFrameStatus": [
+        "MEASURED_FROM_EVENT_LOG"
+      ]
+    },
+    {
+      "roleId": "current_single_poster",
+      "repeatCount": 3,
+      "workingSetMiBMedianAverage": 136.228,
+      "workingSetMiBEnvelopeMax": 137.141,
+      "privateWorkingSetMiBMedianAverage": 53.115,
+      "privateWorkingSetMiBEnvelopeMax": 54.074,
+      "commitMiBMedianAverage": 126.648,
+      "commitMiBEnvelopeMax": 129.328,
+      "gpuCommittedMiBMedianAverage": 33.262,
+      "gpuCommittedMiBEnvelopeMax": 34.664,
+      "cpuTimeDeltaMsMedian": 15.625,
+      "singleCoreCpuPercentMedian": 0.156,
+      "staticFramesEnvelopeMax": 0,
+      "staticFrameStatus": [
+        "MEASURED_FROM_EVENT_LOG"
+      ]
+    }
+  ],
+  "runs": [
+    {
+      "schema": "desktopup.qts-01-01.role-run.v1",
+      "roleId": "desktop_host",
+      "executable": "${REPO_ROOT}\\prototype\\memory-baselines\\qts-01-01\\out\\build-native\\Release\\desktop-host-layer-probe.exe",
+      "executableSha256": "1CF570F81A734F84F42C27F9B620A007F2756805124639E7C591C4B93B817B4E",
+      "pid": 68064,
+      "warmupSeconds": 2,
+      "sampleCount": 10,
+      "sampleIntervalSeconds": 1,
+      "sampleDurationSeconds": 10,
+      "workingSetMiB": {
+        "min": 14.57,
+        "avg": 14.57,
+        "max": 14.57
+      },
+      "privateWorkingSetMiB": {
+        "min": 1.945,
+        "avg": 1.945,
+        "max": 1.945
+      },
+      "commitMiB": {
+        "min": 2.824,
+        "avg": 2.824,
+        "max": 2.824
+      },
+      "gpuDedicatedMiB": {
+        "min": 0.0,
+        "avg": 0.0,
+        "max": 0.0
+      },
+      "gpuSharedMiB": {
+        "min": 0.0,
+        "avg": 0.0,
+        "max": 0.0
+      },
+      "gpuCommittedMiB": {
+        "min": 0.0,
+        "avg": 0.0,
+        "max": 0.0
+      },
+      "cpuTimeDeltaMs": 187.5,
+      "singleCoreCpuPercent": 1.875,
+      "staticFrames": null,
+      "staticFrameStatus": "NOT_INSTRUMENTED_NO_FRAME_SCHEDULER",
+      "exitCode": 0,
+      "repeat": 1
+    },
+    {
+      "schema": "desktopup.qts-01-01.role-run.v1",
+      "roleId": "desktop_host",
+      "executable": "${REPO_ROOT}\\prototype\\memory-baselines\\qts-01-01\\out\\build-native\\Release\\desktop-host-layer-probe.exe",
+      "executableSha256": "1CF570F81A734F84F42C27F9B620A007F2756805124639E7C591C4B93B817B4E",
+      "pid": 2004,
+      "warmupSeconds": 2,
+      "sampleCount": 10,
+      "sampleIntervalSeconds": 1,
+      "sampleDurationSeconds": 10,
+      "workingSetMiB": {
+        "min": 14.551,
+        "avg": 14.551,
+        "max": 14.551
+      },
+      "privateWorkingSetMiB": {
+        "min": 1.926,
+        "avg": 1.926,
+        "max": 1.926
+      },
+      "commitMiB": {
+        "min": 2.812,
+        "avg": 2.812,
+        "max": 2.812
+      },
+      "gpuDedicatedMiB": {
+        "min": 0.0,
+        "avg": 0.0,
+        "max": 0.0
+      },
+      "gpuSharedMiB": {
+        "min": 0.0,
+        "avg": 0.0,
+        "max": 0.0
+      },
+      "gpuCommittedMiB": {
+        "min": 0.0,
+        "avg": 0.0,
+        "max": 0.0
+      },
+      "cpuTimeDeltaMs": 203.125,
+      "singleCoreCpuPercent": 2.031,
+      "staticFrames": null,
+      "staticFrameStatus": "NOT_INSTRUMENTED_NO_FRAME_SCHEDULER",
+      "exitCode": 0,
+      "repeat": 2
+    },
+    {
+      "schema": "desktopup.qts-01-01.role-run.v1",
+      "roleId": "desktop_host",
+      "executable": "${REPO_ROOT}\\prototype\\memory-baselines\\qts-01-01\\out\\build-native\\Release\\desktop-host-layer-probe.exe",
+      "executableSha256": "1CF570F81A734F84F42C27F9B620A007F2756805124639E7C591C4B93B817B4E",
+      "pid": 55256,
+      "warmupSeconds": 2,
+      "sampleCount": 10,
+      "sampleIntervalSeconds": 1,
+      "sampleDurationSeconds": 10,
+      "workingSetMiB": {
+        "min": 14.566,
+        "avg": 14.566,
+        "max": 14.566
+      },
+      "privateWorkingSetMiB": {
+        "min": 1.941,
+        "avg": 1.941,
+        "max": 1.941
+      },
+      "commitMiB": {
+        "min": 2.82,
+        "avg": 2.82,
+        "max": 2.82
+      },
+      "gpuDedicatedMiB": {
+        "min": 0.0,
+        "avg": 0.0,
+        "max": 0.0
+      },
+      "gpuSharedMiB": {
+        "min": 0.0,
+        "avg": 0.0,
+        "max": 0.0
+      },
+      "gpuCommittedMiB": {
+        "min": 0.0,
+        "avg": 0.0,
+        "max": 0.0
+      },
+      "cpuTimeDeltaMs": 218.75,
+      "singleCoreCpuPercent": 2.188,
+      "staticFrames": null,
+      "staticFrameStatus": "NOT_INSTRUMENTED_NO_FRAME_SCHEDULER",
+      "exitCode": 0,
+      "repeat": 3
+    },
+    {
+      "schema": "desktopup.qts-01-01.role-run.v1",
+      "roleId": "qt_gui_no_quick",
+      "executable": "${REPO_ROOT}\\prototype\\memory-baselines\\qts-01-01\\out\\build-qt\\Release\\qts-01-01-qt-gui.exe",
+      "executableSha256": "6E29CA3F36FBB54A3ED66D9731D9D3A66A3260F26400FF5CFE23E634082F2A98",
+      "pid": 55892,
+      "warmupSeconds": 2,
+      "sampleCount": 10,
+      "sampleIntervalSeconds": 1,
+      "sampleDurationSeconds": 10,
+      "workingSetMiB": {
+        "min": 26.453,
+        "avg": 26.453,
+        "max": 26.453
+      },
+      "privateWorkingSetMiB": {
+        "min": 3.371,
+        "avg": 3.371,
+        "max": 3.371
+      },
+      "commitMiB": {
+        "min": 4.715,
+        "avg": 4.715,
+        "max": 4.715
+      },
+      "gpuDedicatedMiB": {
+        "min": 0.0,
+        "avg": 0.0,
+        "max": 0.0
+      },
+      "gpuSharedMiB": {
+        "min": 0.0,
+        "avg": 0.0,
+        "max": 0.0
+      },
+      "gpuCommittedMiB": {
+        "min": 0.0,
+        "avg": 0.0,
+        "max": 0.0
+      },
+      "cpuTimeDeltaMs": 0.0,
+      "singleCoreCpuPercent": 0.0,
+      "staticFrames": 0,
+      "staticFrameStatus": "MEASURED_FROM_EVENT_LOG",
+      "exitCode": 0,
+      "repeat": 1
+    },
+    {
+      "schema": "desktopup.qts-01-01.role-run.v1",
+      "roleId": "qt_gui_no_quick",
+      "executable": "${REPO_ROOT}\\prototype\\memory-baselines\\qts-01-01\\out\\build-qt\\Release\\qts-01-01-qt-gui.exe",
+      "executableSha256": "6E29CA3F36FBB54A3ED66D9731D9D3A66A3260F26400FF5CFE23E634082F2A98",
+      "pid": 49916,
+      "warmupSeconds": 2,
+      "sampleCount": 10,
+      "sampleIntervalSeconds": 1,
+      "sampleDurationSeconds": 10,
+      "workingSetMiB": {
+        "min": 26.441,
+        "avg": 26.441,
+        "max": 26.441
+      },
+      "privateWorkingSetMiB": {
+        "min": 3.355,
+        "avg": 3.355,
+        "max": 3.355
+      },
+      "commitMiB": {
+        "min": 4.695,
+        "avg": 4.695,
+        "max": 4.695
+      },
+      "gpuDedicatedMiB": {
+        "min": 0.0,
+        "avg": 0.0,
+        "max": 0.0
+      },
+      "gpuSharedMiB": {
+        "min": 0.0,
+        "avg": 0.0,
+        "max": 0.0
+      },
+      "gpuCommittedMiB": {
+        "min": 0.0,
+        "avg": 0.0,
+        "max": 0.0
+      },
+      "cpuTimeDeltaMs": 0.0,
+      "singleCoreCpuPercent": 0.0,
+      "staticFrames": 0,
+      "staticFrameStatus": "MEASURED_FROM_EVENT_LOG",
+      "exitCode": 0,
+      "repeat": 2
+    },
+    {
+      "schema": "desktopup.qts-01-01.role-run.v1",
+      "roleId": "qt_gui_no_quick",
+      "executable": "${REPO_ROOT}\\prototype\\memory-baselines\\qts-01-01\\out\\build-qt\\Release\\qts-01-01-qt-gui.exe",
+      "executableSha256": "6E29CA3F36FBB54A3ED66D9731D9D3A66A3260F26400FF5CFE23E634082F2A98",
+      "pid": 51724,
+      "warmupSeconds": 2,
+      "sampleCount": 10,
+      "sampleIntervalSeconds": 1,
+      "sampleDurationSeconds": 10,
+      "workingSetMiB": {
+        "min": 26.504,
+        "avg": 26.504,
+        "max": 26.504
+      },
+      "privateWorkingSetMiB": {
+        "min": 3.422,
+        "avg": 3.422,
+        "max": 3.422
+      },
+      "commitMiB": {
+        "min": 4.773,
+        "avg": 4.773,
+        "max": 4.773
+      },
+      "gpuDedicatedMiB": {
+        "min": 0.0,
+        "avg": 0.0,
+        "max": 0.0
+      },
+      "gpuSharedMiB": {
+        "min": 0.0,
+        "avg": 0.0,
+        "max": 0.0
+      },
+      "gpuCommittedMiB": {
+        "min": 0.0,
+        "avg": 0.0,
+        "max": 0.0
+      },
+      "cpuTimeDeltaMs": 0.0,
+      "singleCoreCpuPercent": 0.0,
+      "staticFrames": 0,
+      "staticFrameStatus": "MEASURED_FROM_EVENT_LOG",
+      "exitCode": 0,
+      "repeat": 3
+    },
+    {
+      "schema": "desktopup.qts-01-01.role-run.v1",
+      "roleId": "minimal_qt_quick",
+      "executable": "${REPO_ROOT}\\prototype\\memory-baselines\\qts-01-01\\out\\build-qt\\Release\\qts-01-01-minimal-qt-quick.exe",
+      "executableSha256": "F9661ABDCDE4C8DAC7CCE00F1B06298C9B1DADC929F3A7BBC76B0F4A307579A1",
+      "pid": 70284,
+      "warmupSeconds": 2,
+      "sampleCount": 10,
+      "sampleIntervalSeconds": 1,
+      "sampleDurationSeconds": 10,
+      "workingSetMiB": {
+        "min": 63.441,
+        "avg": 63.454,
+        "max": 63.457
+      },
+      "privateWorkingSetMiB": {
+        "min": 14.93,
+        "avg": 14.939,
+        "max": 14.941
+      },
+      "commitMiB": {
+        "min": 72.555,
+        "avg": 72.564,
+        "max": 72.566
+      },
+      "gpuDedicatedMiB": {
+        "min": 11.047,
+        "avg": 11.047,
+        "max": 11.047
+      },
+      "gpuSharedMiB": {
+        "min": 1.098,
+        "avg": 1.098,
+        "max": 1.098
+      },
+      "gpuCommittedMiB": {
+        "min": 12.91,
+        "avg": 12.91,
+        "max": 12.91
+      },
+      "cpuTimeDeltaMs": 0.0,
+      "singleCoreCpuPercent": 0.0,
+      "staticFrames": 0,
+      "staticFrameStatus": "MEASURED_FROM_EVENT_LOG",
+      "exitCode": 0,
+      "repeat": 1
+    },
+    {
+      "schema": "desktopup.qts-01-01.role-run.v1",
+      "roleId": "minimal_qt_quick",
+      "executable": "${REPO_ROOT}\\prototype\\memory-baselines\\qts-01-01\\out\\build-qt\\Release\\qts-01-01-minimal-qt-quick.exe",
+      "executableSha256": "F9661ABDCDE4C8DAC7CCE00F1B06298C9B1DADC929F3A7BBC76B0F4A307579A1",
+      "pid": 25800,
+      "warmupSeconds": 2,
+      "sampleCount": 10,
+      "sampleIntervalSeconds": 1,
+      "sampleDurationSeconds": 10,
+      "workingSetMiB": {
+        "min": 63.395,
+        "avg": 63.407,
+        "max": 63.41
+      },
+      "privateWorkingSetMiB": {
+        "min": 14.883,
+        "avg": 14.893,
+        "max": 14.895
+      },
+      "commitMiB": {
+        "min": 73.012,
+        "avg": 73.021,
+        "max": 73.023
+      },
+      "gpuDedicatedMiB": {
+        "min": 11.047,
+        "avg": 11.047,
+        "max": 11.047
+      },
+      "gpuSharedMiB": {
+        "min": 1.082,
+        "avg": 1.082,
+        "max": 1.082
+      },
+      "gpuCommittedMiB": {
+        "min": 12.895,
+        "avg": 12.895,
+        "max": 12.895
+      },
+      "cpuTimeDeltaMs": 0.0,
+      "singleCoreCpuPercent": 0.0,
+      "staticFrames": 0,
+      "staticFrameStatus": "MEASURED_FROM_EVENT_LOG",
+      "exitCode": 0,
+      "repeat": 2
+    },
+    {
+      "schema": "desktopup.qts-01-01.role-run.v1",
+      "roleId": "minimal_qt_quick",
+      "executable": "${REPO_ROOT}\\prototype\\memory-baselines\\qts-01-01\\out\\build-qt\\Release\\qts-01-01-minimal-qt-quick.exe",
+      "executableSha256": "F9661ABDCDE4C8DAC7CCE00F1B06298C9B1DADC929F3A7BBC76B0F4A307579A1",
+      "pid": 65864,
+      "warmupSeconds": 2,
+      "sampleCount": 10,
+      "sampleIntervalSeconds": 1,
+      "sampleDurationSeconds": 10,
+      "workingSetMiB": {
+        "min": 63.48,
+        "avg": 63.483,
+        "max": 63.484
+      },
+      "privateWorkingSetMiB": {
+        "min": 14.984,
+        "avg": 14.984,
+        "max": 14.984
+      },
+      "commitMiB": {
+        "min": 71.98,
+        "avg": 71.98,
+        "max": 71.98
+      },
+      "gpuDedicatedMiB": {
+        "min": 11.047,
+        "avg": 11.047,
+        "max": 11.047
+      },
+      "gpuSharedMiB": {
+        "min": 1.082,
+        "avg": 1.082,
+        "max": 1.082
+      },
+      "gpuCommittedMiB": {
+        "min": 12.895,
+        "avg": 12.895,
+        "max": 12.895
+      },
+      "cpuTimeDeltaMs": 0.0,
+      "singleCoreCpuPercent": 0.0,
+      "staticFrames": 0,
+      "staticFrameStatus": "MEASURED_FROM_EVENT_LOG",
+      "exitCode": 0,
+      "repeat": 3
+    },
+    {
+      "schema": "desktopup.qts-01-01.role-run.v1",
+      "roleId": "offscreen_renderer",
+      "executable": "${REPO_ROOT}\\prototype\\memory-baselines\\qts-01-01\\out\\build-qt\\Release\\qts-01-01-offscreen-renderer.exe",
+      "executableSha256": "C995CD116CB3C406C0E031F00D0D703BACDB556512E6BAA9AB66F096AADDD995",
+      "pid": 51912,
+      "warmupSeconds": 2,
+      "sampleCount": 10,
+      "sampleIntervalSeconds": 1,
+      "sampleDurationSeconds": 10,
+      "workingSetMiB": {
+        "min": 72.898,
+        "avg": 72.904,
+        "max": 72.906
+      },
+      "privateWorkingSetMiB": {
+        "min": 20.406,
+        "avg": 20.409,
+        "max": 20.41
+      },
+      "commitMiB": {
+        "min": 83.535,
+        "avg": 83.535,
+        "max": 83.535
+      },
+      "gpuDedicatedMiB": {
+        "min": 17.105,
+        "avg": 17.105,
+        "max": 17.105
+      },
+      "gpuSharedMiB": {
+        "min": 2.547,
+        "avg": 2.547,
+        "max": 2.547
+      },
+      "gpuCommittedMiB": {
+        "min": 20.418,
+        "avg": 20.418,
+        "max": 20.418
+      },
+      "cpuTimeDeltaMs": 0.0,
+      "singleCoreCpuPercent": 0.0,
+      "staticFrames": 0,
+      "staticFrameStatus": "MEASURED_FROM_EVENT_LOG",
+      "exitCode": 0,
+      "repeat": 1
+    },
+    {
+      "schema": "desktopup.qts-01-01.role-run.v1",
+      "roleId": "offscreen_renderer",
+      "executable": "${REPO_ROOT}\\prototype\\memory-baselines\\qts-01-01\\out\\build-qt\\Release\\qts-01-01-offscreen-renderer.exe",
+      "executableSha256": "C995CD116CB3C406C0E031F00D0D703BACDB556512E6BAA9AB66F096AADDD995",
+      "pid": 46192,
+      "warmupSeconds": 2,
+      "sampleCount": 10,
+      "sampleIntervalSeconds": 1,
+      "sampleDurationSeconds": 10,
+      "workingSetMiB": {
+        "min": 71.875,
+        "avg": 71.881,
+        "max": 71.883
+      },
+      "privateWorkingSetMiB": {
+        "min": 20.078,
+        "avg": 20.081,
+        "max": 20.082
+      },
+      "commitMiB": {
+        "min": 81.656,
+        "avg": 81.656,
+        "max": 81.656
+      },
+      "gpuDedicatedMiB": {
+        "min": 17.105,
+        "avg": 17.105,
+        "max": 17.105
+      },
+      "gpuSharedMiB": {
+        "min": 2.547,
+        "avg": 2.547,
+        "max": 2.547
+      },
+      "gpuCommittedMiB": {
+        "min": 20.418,
+        "avg": 20.418,
+        "max": 20.418
+      },
+      "cpuTimeDeltaMs": 46.875,
+      "singleCoreCpuPercent": 0.469,
+      "staticFrames": 0,
+      "staticFrameStatus": "MEASURED_FROM_EVENT_LOG",
+      "exitCode": 0,
+      "repeat": 2
+    },
+    {
+      "schema": "desktopup.qts-01-01.role-run.v1",
+      "roleId": "offscreen_renderer",
+      "executable": "${REPO_ROOT}\\prototype\\memory-baselines\\qts-01-01\\out\\build-qt\\Release\\qts-01-01-offscreen-renderer.exe",
+      "executableSha256": "C995CD116CB3C406C0E031F00D0D703BACDB556512E6BAA9AB66F096AADDD995",
+      "pid": 23344,
+      "warmupSeconds": 2,
+      "sampleCount": 10,
+      "sampleIntervalSeconds": 1,
+      "sampleDurationSeconds": 10,
+      "workingSetMiB": {
+        "min": 71.773,
+        "avg": 71.776,
+        "max": 71.777
+      },
+      "privateWorkingSetMiB": {
+        "min": 0.0,
+        "avg": 0.0,
+        "max": 0.0
+      },
+      "commitMiB": {
+        "min": 82.191,
+        "avg": 82.191,
+        "max": 82.191
+      },
+      "gpuDedicatedMiB": {
+        "min": 17.105,
+        "avg": 17.105,
+        "max": 17.105
+      },
+      "gpuSharedMiB": {
+        "min": 2.547,
+        "avg": 2.547,
+        "max": 2.547
+      },
+      "gpuCommittedMiB": {
+        "min": 20.418,
+        "avg": 20.418,
+        "max": 20.418
+      },
+      "cpuTimeDeltaMs": 15.625,
+      "singleCoreCpuPercent": 0.156,
+      "staticFrames": 0,
+      "staticFrameStatus": "MEASURED_FROM_EVENT_LOG",
+      "exitCode": 0,
+      "repeat": 3
+    },
+    {
+      "schema": "desktopup.qts-01-01.role-run.v1",
+      "roleId": "current_single_poster",
+      "executable": "${REPO_ROOT}\\prototype\\memory-baselines\\qts-01-01\\out\\build-current-poster\\Release\\ts-c01-qt-r2.exe",
+      "executableSha256": "05D258D8D5B58A72F50ACB2ED2F5AB35530CD226C6404ECAD29E613AC63AB581",
+      "pid": 32964,
+      "warmupSeconds": 2,
+      "sampleCount": 10,
+      "sampleIntervalSeconds": 1,
+      "sampleDurationSeconds": 10,
+      "workingSetMiB": {
+        "min": 136.117,
+        "avg": 136.228,
+        "max": 136.488
+      },
+      "privateWorkingSetMiB": {
+        "min": 53.004,
+        "avg": 53.115,
+        "max": 53.375
+      },
+      "commitMiB": {
+        "min": 126.48,
+        "avg": 126.648,
+        "max": 127.039
+      },
+      "gpuDedicatedMiB": {
+        "min": 29.648,
+        "avg": 29.648,
+        "max": 29.648
+      },
+      "gpuSharedMiB": {
+        "min": 4.074,
+        "avg": 4.074,
+        "max": 4.074
+      },
+      "gpuCommittedMiB": {
+        "min": 34.664,
+        "avg": 34.664,
+        "max": 34.664
+      },
+      "cpuTimeDeltaMs": 0.0,
+      "singleCoreCpuPercent": 0.0,
+      "staticFrames": 0,
+      "staticFrameStatus": "MEASURED_FROM_EVENT_LOG",
+      "exitCode": 0,
+      "repeat": 1
+    },
+    {
+      "schema": "desktopup.qts-01-01.role-run.v1",
+      "roleId": "current_single_poster",
+      "executable": "${REPO_ROOT}\\prototype\\memory-baselines\\qts-01-01\\out\\build-current-poster\\Release\\ts-c01-qt-r2.exe",
+      "executableSha256": "05D258D8D5B58A72F50ACB2ED2F5AB35530CD226C6404ECAD29E613AC63AB581",
+      "pid": 34308,
+      "warmupSeconds": 2,
+      "sampleCount": 10,
+      "sampleIntervalSeconds": 1,
+      "sampleDurationSeconds": 10,
+      "workingSetMiB": {
+        "min": 136.742,
+        "avg": 136.861,
+        "max": 137.141
+      },
+      "privateWorkingSetMiB": {
+        "min": 53.676,
+        "avg": 53.795,
+        "max": 54.074
+      },
+      "commitMiB": {
+        "min": 127.348,
+        "avg": 127.942,
+        "max": 129.328
+      },
+      "gpuDedicatedMiB": {
+        "min": 28.234,
+        "avg": 28.234,
+        "max": 28.234
+      },
+      "gpuSharedMiB": {
+        "min": 4.074,
+        "avg": 4.074,
+        "max": 4.074
+      },
+      "gpuCommittedMiB": {
+        "min": 33.227,
+        "avg": 33.227,
+        "max": 33.227
+      },
+      "cpuTimeDeltaMs": 15.625,
+      "singleCoreCpuPercent": 0.156,
+      "staticFrames": 0,
+      "staticFrameStatus": "MEASURED_FROM_EVENT_LOG",
+      "exitCode": 0,
+      "repeat": 2
+    },
+    {
+      "schema": "desktopup.qts-01-01.role-run.v1",
+      "roleId": "current_single_poster",
+      "executable": "${REPO_ROOT}\\prototype\\memory-baselines\\qts-01-01\\out\\build-current-poster\\Release\\ts-c01-qt-r2.exe",
+      "executableSha256": "05D258D8D5B58A72F50ACB2ED2F5AB35530CD226C6404ECAD29E613AC63AB581",
+      "pid": 68476,
+      "warmupSeconds": 2,
+      "sampleCount": 10,
+      "sampleIntervalSeconds": 1,
+      "sampleDurationSeconds": 10,
+      "workingSetMiB": {
+        "min": 134.695,
+        "avg": 135.81,
+        "max": 136.629
+      },
+      "privateWorkingSetMiB": {
+        "min": 51.629,
+        "avg": 52.745,
+        "max": 53.562
+      },
+      "commitMiB": {
+        "min": 126.387,
+        "avg": 126.611,
+        "max": 127.133
+      },
+      "gpuDedicatedMiB": {
+        "min": 28.27,
+        "avg": 28.27,
+        "max": 28.27
+      },
+      "gpuSharedMiB": {
+        "min": 4.074,
+        "avg": 4.074,
+        "max": 4.074
+      },
+      "gpuCommittedMiB": {
+        "min": 33.262,
+        "avg": 33.262,
+        "max": 33.262
+      },
+      "cpuTimeDeltaMs": 15.625,
+      "singleCoreCpuPercent": 0.156,
+      "staticFrames": 0,
+      "staticFrameStatus": "MEASURED_FROM_EVENT_LOG",
+      "exitCode": 0,
+      "repeat": 3
+    }
+  ]
+}

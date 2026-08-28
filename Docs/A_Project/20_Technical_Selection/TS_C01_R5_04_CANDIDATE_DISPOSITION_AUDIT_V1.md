@@ -1,6 +1,6 @@
 # TS-C01 R5-04 Qt 候选处置审计 V1
 
-状态：`COMPLETE — E6 DISPOSITION RECOMMENDATION = FAIL / USER DECISION PENDING / NO WINNER`
+状态：`COMPLETE HISTORICAL AUDIT — E6 FAIL RECOMMENDATION RETAINED / USER LATER SELECTED QT IMPLEMENTATION ROUTE`
 
 日期：2026-08-26
 
@@ -75,7 +75,7 @@ P0 disposition recommendation: FAIL
 Primary failed hard gate: HG-PERF-02
 Eligible for weighted scoring: NO
 Selected: NO
-Final rejection: PENDING USER DECISION IN R6
+Final rejection: NOT APPLIED; USER SELECTED IMPLEMENTATION ROUTE WITH HISTORICAL FAIL RETAINED
 ```
 
 这是一项证据审计建议，不代替用户最终裁决。R5-05 应把它和两条合法后续路径交给 R6：接受 FAIL 并进入 TS-C02；或先发起正式需求预算变更，再让所有受影响候选按新基线重跑。

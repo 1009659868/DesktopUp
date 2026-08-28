@@ -1,0 +1,46 @@
+{
+  "schema": "desktopup.qts-01-01.role-run.v1",
+  "roleId": "offscreen_renderer",
+  "executable": "${REPO_ROOT}\\prototype\\memory-baselines\\qts-01-01\\out\\build-qt\\Release\\qts-01-01-offscreen-renderer.exe",
+  "executableSha256": "C995CD116CB3C406C0E031F00D0D703BACDB556512E6BAA9AB66F096AADDD995",
+  "pid": 23344,
+  "warmupSeconds": 2,
+  "sampleCount": 10,
+  "sampleIntervalSeconds": 1,
+  "sampleDurationSeconds": 10,
+  "workingSetMiB": {
+    "min": 71.773,
+    "avg": 71.776,
+    "max": 71.777
+  },
+  "privateWorkingSetMiB": {
+    "min": 0.0,
+    "avg": 0.0,
+    "max": 0.0
+  },
+  "commitMiB": {
+    "min": 82.191,
+    "avg": 82.191,
+    "max": 82.191
+  },
+  "gpuDedicatedMiB": {
+    "min": 17.105,
+    "avg": 17.105,
+    "max": 17.105
+  },
+  "gpuSharedMiB": {
+    "min": 2.547,
+    "avg": 2.547,
+    "max": 2.547
+  },
+  "gpuCommittedMiB": {
+    "min": 20.418,
+    "avg": 20.418,
+    "max": 20.418
+  },
+  "cpuTimeDeltaMs": 15.625,
+  "singleCoreCpuPercent": 0.156,
+  "staticFrames": 0,
+  "staticFrameStatus": "MEASURED_FROM_EVENT_LOG",
+  "exitCode": 0
+}

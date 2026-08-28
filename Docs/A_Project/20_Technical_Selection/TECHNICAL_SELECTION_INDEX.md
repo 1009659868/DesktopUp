@@ -1,6 +1,6 @@
 # Desktop-Up V2 技术选型阶段索引
 
-状态：`ACTIVE — TS-02 / TS-C01 R5-01～05 COMPLETE / 2 PASS + 1 FAIL + 34 UNKNOWN + 4 NOT RUN / FAIL RECOMMENDED / R6 USER DECISION PENDING / NO WINNER`
+状态：`QT IMPLEMENTATION ROUTE SELECTED BY USER / HISTORICAL MATRIX RETAINED / HANDOFF TO QTS ACTIVE`
 
 建立日期：2026-08-20
 
@@ -59,7 +59,9 @@
 | 23 | [TS-C01 Candidate Evidence](Evidence/TS-C01/README.md) | 正式证据索引、哈希、保留策略和确定结果记录 | `R5-03 COMPLETE` |
 | 24 | [TS-C01 R5-04 候选处置审计](TS_C01_R5_04_CANDIDATE_DISPOSITION_AUDIT_V1.md) | E6 PASS/FAIL/CONDITIONAL/WITHDRAWN 审计 | `COMPLETE / FAIL RECOMMENDED` |
 | 25 | [TS-C01 R5-05 R6 交接输入](TS_C01_R5_05_R6_HANDOFF_INPUT_V1.md) | 用户处置选项、禁止路径和下一候选入口 | `COMPLETE / R6 READY` |
-| 26 | [选型决策记录](SELECTION_DECISION_RECORD_V1.md) | 最终比较、敏感性分析、淘汰理由和架构输入 | `R6 USER DECISION PENDING / NO WINNER` |
+| 26 | [选型决策记录](SELECTION_DECISION_RECORD_V1.md) | 最终比较、敏感性分析、淘汰理由和架构输入 | `QT ROUTE SELECTED / SUPPORT DOMAINS PENDING` |
+| 26a | [R6 Qt 实施路线决定](TS_C01_R6_QT_IMPLEMENTATION_DECISION_2026-08-26.md) | 用户选择、历史证据边界、工作集处理和实施入口 | `APPROVED` |
+| 26b | [Qt 方案总执行计划](../30_Architecture/QT_SOLUTION_EXECUTION_PLAN_V1.md) | Qt 生产路线、阶段门与立即动作 | `ACTIVE / QTS-01 NEXT` |
 | 27 | [证据目录规则](Evidence/README.md) | 原始数据、视频、截图、日志和复现材料的组织方式 | `ACTIVE / TS-C01 FORMAL INDEX PRESENT` |
 
 ## 4. 阶段任务
@@ -68,14 +70,14 @@
 | --- | --- | --- | --- |
 | TS-00 | 冻结需求并激活技术选型 | 冻结状态、章程、候选表、统一矩阵 | `COMPLETE` |
 | TS-01 | 候选事实审查 | 官方支持范围、版本、许可证、构建与部署事实卡 | `COMPLETE` |
-| TS-02 | 公共 Desktop Overlay Host 探针，再接入海报渲染候选 | 先证明精确层级、Win+D、Explorer 重建和输入；再做同构渲染适配器 | `IN PROGRESS — TS-C01 R6 DISPOSITION DECISION` |
-| TS-03 | 控制中心、核心、状态、IPC、主题和安装支撑域审查 | 各域短名单与兼容约束 | `PENDING` |
-| TS-04 | 统一矩阵复测 | 同设备、同夹具、同脚本的完整证据包 | `PENDING` |
-| TS-05 | 选择与交接 | 决策记录、被淘汰理由、残余风险、架构输入清单 | `PENDING` |
+| TS-02 | 公共 Desktop Overlay Host 探针，再接入海报渲染候选 | 先证明精确层级、Win+D、Explorer 重建和输入；再做同构渲染适配器 | `CLOSED BY USER QT IMPLEMENTATION DECISION / MATRIX EXCEPTION RETAINED` |
+| TS-03 | 控制中心、核心、状态、IPC、主题和安装支撑域审查 | 各域短名单与兼容约束 | `HANDED TO QTS-02/QTS-05/QTS-07/QTS-09` |
+| TS-04 | 统一矩阵复测 | 同设备、同夹具、同脚本的完整证据包 | `DEFERRED UNTIL QT PRODUCT SLICES EXIST` |
+| TS-05 | 选择与交接 | 决策记录、被淘汰理由、残余风险、架构输入清单 | `USER DECISION COMPLETE / QTS HANDOFF ACTIVE` |
 
 ## 5. 当前下一动作
 
-R5-01～05 已完成。TS-C01 矩阵为 2 PASS、1 FAIL、34 UNKNOWN、4 NOT RUN；HG-PERF-02 明确失败，因此 R5 按 E6 建议 FAIL，不能评分。正式 Candidate Evidence 已建立。下一动作是 R6 用户处置决定：接受 FAIL 并进入 TS-C02，或先发起对所有候选一致生效的正式资源预算变更。当前无 winner。
+R6 已由用户决定选择 Qt 实施路线，历史矩阵和 `HG-PERF-02` 失败继续保留。技术选型主线交给 [Qt 方案总执行计划](../30_Architecture/QT_SOLUTION_EXECUTION_PLAN_V1.md)；下一动作是 `QTS-01-01` 工作集测量合同与分层基线。
 
 ## 6. 阶段退出门
 

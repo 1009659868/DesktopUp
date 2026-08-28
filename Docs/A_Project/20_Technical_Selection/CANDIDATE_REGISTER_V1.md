@@ -1,12 +1,13 @@
 # Desktop-Up V2 技术候选登记表 V1
 
-状态：`ACTIVE REGISTER — TS-C01 R0 + R1 + R2 PASS / R3 AUTO PASS / R4-A USER-ACCEPTED 1/20 / R4-B USER-ACCEPTED WITH COUNT EXCEPTION / R4-C USER-ACCEPTED WITH COUNT EXCEPTIONS C2 7/6 + C3 1/10 / R4-D D1 USER-ACCEPTED / D2 USER-ACCEPTED / D3 USER-ACCEPTED WITH WORKING-SET EXCEPTION (136.332 MiB; 50 MiB TARGET RETAINED) / D4 USER-ACCEPTED EXECUTED SCOPE PASS (AUTOSTART DEFERRED / DEVICE RESTART SKIPPED) / R5-01～05 COMPLETE / PROVISIONAL P0 FAIL RECOMMENDATION (HG-PERF-02) / R6 USER DECISION PENDING / NO WINNER`
+状态：`QT IMPLEMENTATION ROUTE SELECTED BY USER — TS-C01 HISTORICAL MATRIX RETAINED / TS-C02～C08 DEFERRED ALTERNATIVES`
 
 日期：2026-08-20
 
 ## 1. 登记规则
 
 本表只定义要调查和实测的候选空间，不代表推荐、排序或兼容性结论。候选名称不附带“轻量”“稳定”“容易”等未经证据支持的评价。
+用户于 2026-08-26 以明确的实施路线决定选择 TS-C01；该决定不把历史矩阵改写为 P0 PASS。详见 [R6 Qt 实施路线决定](TS_C01_R6_QT_IMPLEMENTATION_DECISION_2026-08-26.md)。
 
 每个候选已在 TS-01 补齐事实卡；结果见 [TS-01 候选事实审查](TS01_CANDIDATE_FACT_REVIEW_2026-08-20.md)。公共 `TS-H01 Desktop Overlay Host` 探针和 E1-E6 接口冻结已经完成；候选下一步必须按 [E6 交接规则](TS_H01_E6_CANDIDATE_HANDOFF_2026-08-21.md) 独立接入同一 DesktopHost、Night Ops 夹具和 E5 诊断 schema，再执行完整 P0 子矩阵。公共结论不等于候选通过。
 
@@ -14,14 +15,14 @@
 
 | ID | 候选家族 | 统一评估边界 | 当前状态 |
 | --- | --- | --- | --- |
-| TS-C01 | Qt 6.8.3 / Qt Quick + Windows 原生宿主适配 | Qt 负责海报绘制/布局；有界原生层负责窗口、桌面层、命中和 Shell 事件 | `R0 + R1 + R2 PASS / R3 AUTO PASS / R4-A USER-ACCEPTED 1/20 / R4-B USER-ACCEPTED WITH COUNT EXCEPTION / R4-C USER-ACCEPTED WITH COUNT EXCEPTIONS C2 7/6 + C3 1/10 / R4-D D1 USER-ACCEPTED / D2 USER-ACCEPTED / D3 USER-ACCEPTED WITH WORKING-SET EXCEPTION (136.332 MiB; 50 MiB TARGET RETAINED) / D4 USER-ACCEPTED EXECUTED SCOPE PASS (AUTOSTART DEFERRED / DEVICE RESTART SKIPPED) / R5-01～05 COMPLETE / PROVISIONAL P0 FAIL RECOMMENDATION (HG-PERF-02) / R6 USER DECISION PENDING` |
-| TS-C02 | 原生 Win32 + Direct2D/DirectComposition | 原生窗口、绘制、合成、命中和桌面适配作为一个候选栈 | `FACT CHECKED / COMMON HOST USER-ACCEPTED COMPLETE WITH RECORDED EXCEPTIONS / P0 NOT RUN / NOT A WINNER` |
-| TS-C03 | WinUI 3 / Windows App SDK + Windows Composition/原生适配 | WinUI/Composition 负责视觉；有界原生层补充特殊桌面窗口能力 | `FACT CHECKED / P0 NOT RUN` |
-| TS-C04 | WPF + Windows 原生宿主适配 | WPF 负责海报 UI；有界 Win32 层负责桌面宿主和窗口语义 | `FACT CHECKED / P0 NOT RUN` |
-| TS-C05 | Avalonia + Windows 原生宿主适配 | Avalonia 负责海报 UI；有界原生层负责桌面宿主和窗口语义 | `FACT CHECKED / P0 NOT RUN` |
-| TS-C06 | WebView2 + Windows 原生宿主适配 | Web 内容负责海报视觉；有界原生层负责窗口、桌面宿主、命中和进程/渲染故障边界 | `FACT CHECKED / P0 NOT RUN / HISTORICAL RISK` |
-| TS-C07 | Slint + Windows 原生宿主适配 | Slint 负责海报 UI；有界原生层负责桌面宿主和窗口语义 | `FACT CHECKED / P0 NOT RUN` |
-| TS-C08 | 分离式组合：原生海报 + 独立高层控制中心 | 海报使用通过 P0 的原生呈现栈，控制中心另选 UI 技术；必须计入双栈和状态投影成本 | `FACT CHECKED / DEFERRED UNTIL ONE POSTER CANDIDATE PASSES P0` |
+| TS-C01 | Qt 6.8.3 / Qt Quick + Windows 原生宿主适配 | Qt 负责海报绘制/布局；有界原生层负责窗口、桌面层、命中和 Shell 事件 | `SELECTED FOR IMPLEMENTATION BY USER / FORMAL MATRIX REMAINS 2 PASS + 1 FAIL + 34 UNKNOWN + 4 NOT RUN / HG-PERF-02 OPEN` |
+| TS-C02 | 原生 Win32 + Direct2D/DirectComposition | 原生窗口、绘制、合成、命中和桌面适配作为一个候选栈 | `DEFERRED ALTERNATIVE / P0 NOT RUN` |
+| TS-C03 | WinUI 3 / Windows App SDK + Windows Composition/原生适配 | WinUI/Composition 负责视觉；有界原生层补充特殊桌面窗口能力 | `DEFERRED ALTERNATIVE / P0 NOT RUN` |
+| TS-C04 | WPF + Windows 原生宿主适配 | WPF 负责海报 UI；有界 Win32 层负责桌面宿主和窗口语义 | `DEFERRED ALTERNATIVE / P0 NOT RUN` |
+| TS-C05 | Avalonia + Windows 原生宿主适配 | Avalonia 负责海报 UI；有界原生层负责桌面宿主和窗口语义 | `DEFERRED ALTERNATIVE / P0 NOT RUN` |
+| TS-C06 | WebView2 + Windows 原生宿主适配 | Web 内容负责海报视觉；有界原生层负责窗口、桌面宿主、命中和进程/渲染故障边界 | `DEFERRED ALTERNATIVE / P0 NOT RUN / HISTORICAL RISK` |
+| TS-C07 | Slint + Windows 原生宿主适配 | Slint 负责海报 UI；有界原生层负责桌面宿主和窗口语义 | `DEFERRED ALTERNATIVE / P0 NOT RUN` |
+| TS-C08 | 分离式组合：原生海报 + 独立高层控制中心 | 海报使用通过 P0 的原生呈现栈，控制中心另选 UI 技术；必须计入双栈和状态投影成本 | `DEFERRED ALTERNATIVE / NOT ACTIVATED` |
 
 候选登记顺序固定按编号，不表示优先级。TS-01 可新增候选，但必须说明与现有候选的实质差异，不能用换语言绑定的方式重复登记同一渲染栈。
 
@@ -35,11 +36,11 @@
 - 空白输入原生落到桌面和图标，Item/标题/按钮仍由海报命中；
 - DPI、尺寸、非客户区和渲染表面边界一致。
 
-TS-H01 通过不表示 TS-C02 获选；它只冻结所有渲染候选共用的 `DesktopHost` 原型边界。接口、原子投影、诊断与交接见 [DesktopHost 原型接口](DESKTOP_HOST_PROTOTYPE_INTERFACE_V1.md)、[E4 合同](TS_H01_E4_GEOMETRY_HIT_RENDER_CONTRACT_2026-08-21.md)、[E5 夹具](TS_H01_E5_DIAGNOSTIC_CONFORMANCE_FIXTURE_2026-08-21.md) 和 [E6 规则](TS_H01_E6_CANDIDATE_HANDOFF_2026-08-21.md)。所有候选当前仍为 P0 NOT RUN。
+TS-H01 只冻结所有渲染候选共用的 `DesktopHost` 原型边界。接口、原子投影、诊断与交接见 [DesktopHost 原型接口](DESKTOP_HOST_PROTOTYPE_INTERFACE_V1.md)、[E4 合同](TS_H01_E4_GEOMETRY_HIT_RENDER_CONTRACT_2026-08-21.md)、[E5 夹具](TS_H01_E5_DIAGNOSTIC_CONFORMANCE_FIXTURE_2026-08-21.md) 和 [E6 规则](TS_H01_E6_CANDIDATE_HANDOFF_2026-08-21.md)。TS-C01 已被用户选为实施路线但历史矩阵未通过；其他候选保持 P0 NOT RUN。
 
 ## 3. 支撑技术决策域
 
-海报候选通过 P0 后，再组合以下支撑域。支撑域不能反向放宽海报硬门。
+支撑域从现在起在 [Qt 方案总执行计划](../30_Architecture/QT_SOLUTION_EXECUTION_PLAN_V1.md) 中按 Qt 路线冻结。它们不能反向删除 TS-C01 的历史硬门失败或放宽桌面宿主合同。
 
 ### TS-D03 控制中心 UI
 

@@ -1,0 +1,46 @@
+{
+  "schema": "desktopup.qts-01-01.role-run.v1",
+  "roleId": "desktop_host",
+  "executable": "${REPO_ROOT}\\prototype\\memory-baselines\\qts-01-01\\out\\build-native\\Release\\desktop-host-layer-probe.exe",
+  "executableSha256": "1CF570F81A734F84F42C27F9B620A007F2756805124639E7C591C4B93B817B4E",
+  "pid": 68064,
+  "warmupSeconds": 2,
+  "sampleCount": 10,
+  "sampleIntervalSeconds": 1,
+  "sampleDurationSeconds": 10,
+  "workingSetMiB": {
+    "min": 14.57,
+    "avg": 14.57,
+    "max": 14.57
+  },
+  "privateWorkingSetMiB": {
+    "min": 1.945,
+    "avg": 1.945,
+    "max": 1.945
+  },
+  "commitMiB": {
+    "min": 2.824,
+    "avg": 2.824,
+    "max": 2.824
+  },
+  "gpuDedicatedMiB": {
+    "min": 0.0,
+    "avg": 0.0,
+    "max": 0.0
+  },
+  "gpuSharedMiB": {
+    "min": 0.0,
+    "avg": 0.0,
+    "max": 0.0
+  },
+  "gpuCommittedMiB": {
+    "min": 0.0,
+    "avg": 0.0,
+    "max": 0.0
+  },
+  "cpuTimeDeltaMs": 187.5,
+  "singleCoreCpuPercent": 1.875,
+  "staticFrames": null,
+  "staticFrameStatus": "NOT_INSTRUMENTED_NO_FRAME_SCHEDULER",
+  "exitCode": 0
+}
