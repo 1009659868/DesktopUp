@@ -1,16 +1,15 @@
 # Desktop-Up V2 文档入口
 
-七份需求已经用户确认冻结。技术选型仍在执行且没有 renderer/UI 赢家；仅使用 Axiom Core 的系统描述蓝图 AX-BP-01～06 已经完成并冻结，Axiom 已退出执行主线。旧技术选型、旧架构尝试、旧制作计划、旧工作流、旧交接和旧实现日志不具有执行权威。
-
+七份需求已经用户确认冻结，并于 2026-08-28 经用户反馈继续修订为外框/内容分权、稳定 resize capture 与连续 Item viewport。QTS-04-04 生命周期矩阵已通过；R4.2 已按用户决定实现 Qt Quick GridView/Flickable renderer adapter 与 Host staged-present，Release 14/14 和真实 Runtime smoke 已通过。当前只剩真实桌面 reflow flash 人工关闭门；历史候选矩阵与工作集失败继续保留。
 ## 当前状态
 
 ```text
-需求基线：FROZEN — 2026-08-20
-技术选型：ACTIVE — TS-C01 R5-01～05 COMPLETE / 2 PASS + 1 FAIL + 34 UNKNOWN + 4 NOT RUN / FAIL RECOMMENDED / R6 USER DECISION PENDING / NO WINNER
+需求基线：FROZEN — USER REVISION 2026-08-28
+技术选型：QT ROUTE SELECTED BY USER — HISTORICAL MATRIX 2 PASS + 1 FAIL + 34 UNKNOWN + 4 NOT RUN RETAINED
 系统描述蓝图：FROZEN — AXIOM CORE / AX-BP-01～06 COMPLETE
-完整生产架构：NOT FROZEN — PHYSICAL ADAPTERS UNSELECTED
-制作计划与 B/C 工作流：NOT STARTED
-代码落地：TECHNICAL PROBES + AXIOM TYPE FIXTURE ONLY
+完整生产架构：FROZEN — QTS-02 / HYBRID QT PHYSICAL BOUNDARIES
+Qt 方案计划：ACTIVE — QTS-04-04 R4.2 AUTO PASS / MANUAL REFLOW FLASH GATE PENDING
+代码落地：REAL DESKTOP HOST + NIGHT OPS + SPLIT INPUT ISLANDS + FILTERED SHELL EVENTS + DISPLAY REPROJECTION + LOW-LATENCY RELOCATION + FRAME/CONTENT LAYOUT SEPARATION / RELEASE 13 OF 13 CTEST PASS
 ```
 
 ## 唯一阅读路径
@@ -49,17 +48,49 @@
 32. [TS-C01 Candidate Evidence](A_Project/20_Technical_Selection/Evidence/TS-C01/README.md)
 33. [TS-C01 R5-04 候选处置审计](A_Project/20_Technical_Selection/TS_C01_R5_04_CANDIDATE_DISPOSITION_AUDIT_V1.md)
 34. [TS-C01 R5-05 R6 交接输入](A_Project/20_Technical_Selection/TS_C01_R5_05_R6_HANDOFF_INPUT_V1.md)
-35. [选型决策记录](A_Project/20_Technical_Selection/SELECTION_DECISION_RECORD_V1.md)
-36. [AX-BP 蓝图索引](A_Project/30_Architecture/AXIOM_BLUEPRINT_INDEX.md)
-37. [Axiom Core 程序蓝图](A_Project/30_Architecture/AXIOM_CORE_PROGRAM_BLUEPRINT_V1.md)
-38. [AX-BP-01 Core 语义映射](A_Project/30_Architecture/AX_BP_01_AXIOM_CORE_SEMANTIC_MAPPING_V1.md)
-39. [AX-BP-02 整体程序拓扑](A_Project/30_Architecture/AX_BP_02_PROGRAM_TOPOLOGY_V1.md)
-40. [AX-BP-03 模块与端口冻结](A_Project/30_Architecture/AX_BP_03_MODULE_PORT_FREEZE_V1.md)
-41. [AX-BP-04 调用、数据与组合关系冻结](A_Project/30_Architecture/AX_BP_04_FLOW_COMPOSITION_FREEZE_V1.md)
-42. [AX-BP-05 物理执行边界冻结](A_Project/30_Architecture/AX_BP_05_PHYSICAL_EXECUTION_BOUNDARIES_V1.md)
-43. [AX-BP-06 一致性审计与交接](A_Project/30_Architecture/AX_BP_06_CONSISTENCY_AUDIT_AND_HANDOFF_V1.md)
-44. [Axiom 蓝图类型夹具](../prototype/axiom-desktopup-blueprint/README.md)
-
+35. [TS-C01 R6 Qt 实施路线决定](A_Project/20_Technical_Selection/TS_C01_R6_QT_IMPLEMENTATION_DECISION_2026-08-26.md)
+36. [选型决策记录](A_Project/20_Technical_Selection/SELECTION_DECISION_RECORD_V1.md)
+37. [Qt 方案总执行计划](A_Project/30_Architecture/QT_SOLUTION_EXECUTION_PLAN_V1.md)
+38. [QTS-01-01 内存测量合同](A_Project/30_Architecture/QTS_01_01_MEMORY_MEASUREMENT_CONTRACT_V1.md)
+39. [QTS-01-01 内存基线审计](A_Project/30_Architecture/QTS_01_01_MEMORY_BASELINE_AUDIT_2026-08-26.md)
+40. [QTS-01 混合 Qt 优化方向](A_Project/30_Architecture/QTS_01_HYBRID_QT_OPTIMIZATION_DIRECTION_2026-08-26.md)
+41. [QTS-02 生产物理架构](A_Project/30_Architecture/QTS_02_PRODUCTION_PHYSICAL_ARCHITECTURE_V1.md)
+42. [QTS-02 一致性审计与 QTS-03 交接](A_Project/30_Architecture/QTS_02_CONSISTENCY_AUDIT_AND_QTS_03_HANDOFF_2026-08-26.md)
+43. [AX-BP 蓝图索引](A_Project/30_Architecture/AXIOM_BLUEPRINT_INDEX.md)
+44. [Axiom Core 程序蓝图](A_Project/30_Architecture/AXIOM_CORE_PROGRAM_BLUEPRINT_V1.md)
+45. [AX-BP-01 Core 语义映射](A_Project/30_Architecture/AX_BP_01_AXIOM_CORE_SEMANTIC_MAPPING_V1.md)
+46. [AX-BP-02 整体程序拓扑](A_Project/30_Architecture/AX_BP_02_PROGRAM_TOPOLOGY_V1.md)
+47. [AX-BP-03 模块与端口冻结](A_Project/30_Architecture/AX_BP_03_MODULE_PORT_FREEZE_V1.md)
+48. [AX-BP-04 调用、数据与组合关系冻结](A_Project/30_Architecture/AX_BP_04_FLOW_COMPOSITION_FREEZE_V1.md)
+49. [AX-BP-05 物理执行边界冻结](A_Project/30_Architecture/AX_BP_05_PHYSICAL_EXECUTION_BOUNDARIES_V1.md)
+50. [AX-BP-06 一致性审计与交接](A_Project/30_Architecture/AX_BP_06_CONSISTENCY_AUDIT_AND_HANDOFF_V1.md)
+51. [Axiom 蓝图类型夹具](../prototype/axiom-desktopup-blueprint/README.md)
+52. [QTS-03 生产骨架与合同夹具审计](A_Project/30_Architecture/QTS_03_PRODUCTION_SKELETON_AND_CONTRACT_FIXTURE_AUDIT_2026-08-27.md)
+53. [QTS-03 代码锚点](A_Project/30_Architecture/QTS_03_CODE_ANCHORS_V1.md)
+54. [QTS-03 实施日志](A_Project/30_Architecture/QTS_03_IMPLEMENTATION_LOG_2026-08-27.md)
+55. [QTS-03 → QTS-04 交接](A_Project/30_Architecture/QTS_03_HANDOFF_TO_QTS_04_2026-08-27.md)
+56. [QTS-04-01 真实 DesktopHost 与重连审计](A_Project/30_Architecture/QTS_04_01_REAL_DESKTOP_HOST_AND_RECONNECT_AUDIT_2026-08-27.md)
+57. [QTS-04-01 代码锚点](A_Project/30_Architecture/QTS_04_01_CODE_ANCHORS_V1.md)
+58. [QTS-04-01 实施日志](A_Project/30_Architecture/QTS_04_01_IMPLEMENTATION_LOG_2026-08-27.md)
+59. [QTS-04-01 → QTS-04-02 交接](A_Project/30_Architecture/QTS_04_01_HANDOFF_TO_QTS_04_02_2026-08-27.md)
+60. [QTS-04-02 NIGHT OPS renderer 审计](A_Project/30_Architecture/QTS_04_02_NIGHT_OPS_QPAINTER_RENDERER_AUDIT_2026-08-27.md)
+61. [QTS-04-02 代码锚点](A_Project/30_Architecture/QTS_04_02_CODE_ANCHORS_V1.md)
+62. [QTS-04-02 实施日志](A_Project/30_Architecture/QTS_04_02_IMPLEMENTATION_LOG_2026-08-27.md)
+63. [QTS-04-02 用户桌面视觉门](A_Project/30_Architecture/QTS_04_02_MANUAL_VISUAL_GATE_V1.md)
+64. [QTS-04-02 → QTS-04-03 交接](A_Project/30_Architecture/QTS_04_02_HANDOFF_TO_QTS_04_03_2026-08-27.md)
+65. [QTS-04-03 split input islands 审计](A_Project/30_Architecture/QTS_04_03_SPLIT_INPUT_ISLANDS_AUDIT_2026-08-27.md)
+66. [QTS-04-03 代码锚点](A_Project/30_Architecture/QTS_04_03_CODE_ANCHORS_V1.md)
+67. [QTS-04-03 实施日志](A_Project/30_Architecture/QTS_04_03_IMPLEMENTATION_LOG_2026-08-27.md)
+68. [QTS-04-03 用户单海报输入门](A_Project/30_Architecture/QTS_04_03_MANUAL_INPUT_GATE_V1.md)
+69. [QTS-04-04 生命周期矩阵计划](A_Project/30_Architecture/QTS_04_04_LIFECYCLE_MATRIX_PLAN_V1.md)
+70. [QTS-04-04 代码锚点](A_Project/30_Architecture/QTS_04_04_CODE_ANCHORS_V1.md)
+71. [QTS-04-04 实施日志](A_Project/30_Architecture/QTS_04_04_IMPLEMENTATION_LOG_2026-08-28.md)
+72. [QTS-04-04 用户生命周期矩阵](A_Project/30_Architecture/QTS_04_04_MANUAL_LIFECYCLE_GATE_V1.md)
+73. [QTS-04-04 R2 外框与内容布局分离修订](A_Project/30_Architecture/QTS_04_04_FRAME_CONTENT_LAYOUT_REVISION_V1.md)
+74. [QTS-04-04 R3 V1 连续缩放与 Item 溢出对齐](A_Project/30_Architecture/QTS_04_04_V1_PARITY_RESIZE_OVERFLOW_R3.md)
+75. [QTS-04-04 R4 连续 Item viewport](A_Project/30_Architecture/QTS_04_04_CONTINUOUS_ITEM_VIEWPORT_R4.md)
+76. [QTS-04-04 R4.1 底部裁切与 Renderer 组件审计](A_Project/30_Architecture/QTS_04_04_R4_1_CLIP_AND_COMPONENT_AUDIT_2026-08-28.md)
+77. [QTS-04-04 R4.2 Qt Quick Adapter 与 Host 分阶段提交](A_Project/30_Architecture/QTS_04_04_R4_2_QTQUICK_ADAPTER_AND_HOST_TRANSACTION_2026-08-28.md)
 ## 权威顺序
 
 发生冲突时按以下顺序判断：
@@ -74,4 +105,4 @@
 
 ## 下一阶段的建立条件
 
-需求和 AX-BP 系统描述蓝图已经冻结；Axiom Core 只作为架构方法与追溯输入保留，axiom-runtime 明确排除。TS-C01 R5-01～05 已完成并形成正式 Candidate Evidence：2 PASS、1 FAIL、34 UNKNOWN、4 NOT RUN；HG-PERF-02 明确失败，R5 建议 FAIL。当前进入 R6 用户处置决定，TS-C01 尚未最终 REJECTED，且没有 renderer/UI winner。StateStore、生产 runtime、进程与安装架构仍未冻结。
+QTS-04-04 生命周期矩阵 1～6 已通过；R1～R4 历史证据保留。R4.1 已用 IntersectClip 和像素门关闭 card-local clip 泄漏。R4.2 已实现 Qt Quick renderer adapter 与 Host staged-present，并通过 Release 14/14 与真实进程 smoke；当前执行真实桌面 reflow flash 最小人工门，通过前不把单海报 P0 扩写为完整 PASS。

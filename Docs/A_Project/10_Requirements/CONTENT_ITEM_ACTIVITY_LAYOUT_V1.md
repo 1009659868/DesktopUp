@@ -1,8 +1,8 @@
 # DesktopUP V2 内容 Item、活跃度与动态排版模型 V1
 
-状态：`FROZEN REQUIREMENTS — TECHNOLOGY NEUTRAL`
+状态：`FROZEN REQUIREMENTS — USER REVISION 2026-08-28 / TECHNOLOGY NEUTRAL`
 
-日期：2026-08-18
+最后修订：2026-08-28
 
 ## 1. 文档职责
 
@@ -294,6 +294,10 @@ scale = min_scale + (max_scale - min_scale) × ratio
 
 确定性网格是最早可交付布局：稳定顺序、响应式列数、Item 不重叠、空间不足分页/滚动。它不依赖活跃度算法即可使用。
 
+外框 resize 只改变 `container width/height`，不得改写 Item 基准尺寸、标题参数、图标尺寸或主题密度。布局引擎可以在相同内容参数下换列、换行、分页或滚动；只有控制中心/主题参数、活动度缩放或显式布局命令可以改变内容尺寸。
+
+当前视口绘制每个 Item 与 viewport 的可见交集，并只为该交集启用命中；Item 在 viewport 上/下边缘必须连续进入或退出，不得按完整行突然消失。全部 Item 的布局结果和排序身份始终保留，并且必须存在连续滚动、分页或独立滚动控件的可达路径，不能因 frame resize 被静默删除。
+
 ### 11.2 增强布局风格
 
 - 网格：易读，适合数量多；
@@ -311,8 +315,8 @@ scale = min_scale + (max_scale - min_scale) × ratio
 - 排序后的 Item；
 - scale；
 - pinned index；
-- container width/height；
-- base item size；
+- frame viewport width/height；
+- 独立 ContentMetrics（标题、base item size、图标尺寸、gap、density）；
 - horizontal/vertical gap；
 -分页或滚动策略。
 
@@ -333,9 +337,12 @@ scale = min_scale + (max_scale - min_scale) × ratio
 ### 12.4 几何性质
 
 - 不重叠；
-- 不越出内容区；
+- 不越出内容区，不压住标题栏、控制按钮或页脚；
 - 同一输入、容器和配置产生相同位置；
-- resize 后重新计算，但 pinned index 不变；
+- resize 后重新计算行列/分页，但 ContentMetrics、Item scale 与 pinned index 不变；
+- 同一 DPI 下改变 frame width/height，不得改变标题、卡片、图标或字体的实际尺寸；
+- DPI 变化只做设备投影，不写回用户内容参数；
+- Item 与 viewport 的可见交集产生裁切绘制和同范围命中；viewport 外不绘制、不命中，连续滚动不得按整行跳变，且滚动入口不能依赖当前存在完整可见 Item；
 - 装饰层不改变布局可用边界；
 - 收起态不计算可见 Item 布局，数据标记保留。
 
@@ -479,6 +486,9 @@ scale = min_scale + (max_scale - min_scale) × ratio
 
 | 日期 | 版本 | 内容 |
 | --- | --- | --- |
+| 2026-08-28 | V1.6 | 用户纠正完整行隐藏/滚动死锁：采用 viewport 交集裁切、连续 offset，并冻结独立于可见 Item 的最小滚动入口。 |
+| 2026-08-28 | V1.5 | 用户要求完整参考 V1：resize 跨列边界必须保持连续捕获，全部 Item 保留在布局流中，空间不足通过分页或按完整行滚动访问。 |
+| 2026-08-28 | V1.4 | 用户正式冻结外框视口与 ContentMetrics 分离；resize 只重排/分页完整 Item，不再触发全局内容缩放。 |
 | 2026-08-20 | V1.3 | 用户确认冻结一致性审计后的 Item、启动、活跃度与动态排版需求；显式 TBD 保持开放。 |
 | 2026-08-20 | V1.2 | 一致性审计：禁止失效锚定静默自动清理，冻结 USING 双击单次启动语义，移除未冻结的 7/14/30 衰减档位，并把已裁决全手动策略移出待决表。 |
 | 2026-08-18 | V1.1 | 需求确认：全手动退出默认策略冻结（未选择保持全手动）；ACT-TBD-02 同步至画像 RP-TBD-10 |

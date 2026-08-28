@@ -3,6 +3,7 @@
 /.pnpm-store/
 /dist/
 /artifacts/
+/out/
 
 # Rust / Tauri generated output
 /src-tauri/target/
