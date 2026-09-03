@@ -1,6 +1,0 @@
-"roleId","repeatCount","workingSetMiBMedianAverage","workingSetMiBEnvelopeMax","privateWorkingSetMiBMedianAverage","privateWorkingSetMiBEnvelopeMax","commitMiBMedianAverage","commitMiBEnvelopeMax","gpuCommittedMiBMedianAverage","gpuCommittedMiBEnvelopeMax","cpuTimeDeltaMsMedian","singleCoreCpuPercentMedian","staticFramesEnvelopeMax","staticFrameStatus"
-"desktop_host","3","14.566","14.57","1.941","1.945","2.82","2.824","0","0","203.125","2.031",,"System.Object[]"
-"qt_gui_no_quick","3","26.453","26.504","3.371","3.422","4.715","4.773","0","0","0","0","0","System.Object[]"
-"minimal_qt_quick","3","63.454","63.484","14.939","14.984","72.564","73.023","12.895","12.91","0","0","0","System.Object[]"
-"offscreen_renderer","3","71.881","72.906","20.081","20.41","82.191","83.535","20.418","20.418","15.625","0.156","0","System.Object[]"
-"current_single_poster","3","136.228","137.141","53.115","54.074","126.648","129.328","33.262","34.664","15.625","0.156","0","System.Object[]"

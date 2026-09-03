@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" PrivateAssets="all" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\DesktopUp.Application\DesktopUp.Application.csproj" />
+    <ProjectReference Include="..\..\src\DesktopUp.Domain\DesktopUp.Domain.csproj" />
+    <ProjectReference Include="..\..\src\DesktopUp.Infrastructure\DesktopUp.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\DesktopUp.Windows\DesktopUp.Windows.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+</Project>

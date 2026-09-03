@@ -1,9 +1,0 @@
-OS: Windows 11 x64
-Primary monitor rect: 0,0,2560,1440
-Observed work-area rect A: 0,0,2560,1392
-Observed work-area rect B: 0,0,2560,1440
-Effective DPI: 96
-Scale baseline: 100 percent
-Resolution baseline: 2560 x 1440
-Probe binary SHA-256: 4039C93329014023F64FB72FFD84F1A83C8BB1AABE19059B37505337148008AD
-Probe scenario: display-change / work-area runner

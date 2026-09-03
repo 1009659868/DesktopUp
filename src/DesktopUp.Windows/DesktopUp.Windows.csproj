@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\DesktopUp.Application\DesktopUp.Application.csproj" />
+    <ProjectReference Include="..\DesktopUp.Domain\DesktopUp.Domain.csproj" />
+  </ItemGroup>
+</Project>

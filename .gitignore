@@ -1,42 +1,25 @@
-# Frontend dependencies and generated output
-/node_modules/
-/.pnpm-store/
-/dist/
-/artifacts/
-/out/
+# Visual Studio / .NET
+.vs/
+**/bin/
+**/obj/
+artifacts/
+out/
+TestResults/
+*.user
+*.suo
 
-# Rust / Tauri generated output
-/src-tauri/target/
-/src-tauri/gen/
+# Native helper builds
+**/target/
+*.pdb
 
-# Prototype build artifacts and runtime diagnostics
-/prototype/**/target/
-/prototype/**/build/
-/prototype/renderer-adapters/**/out/
-/prototype/**/*.log
-/prototype/**/capture.png
-
-# Production source build artifacts and runtime diagnostics
-/src/**/target/
-/logs/
-
-# Local runtime data and diagnostics
-/.desktop-up/
+# Local DesktopUp data
+.desktopup/
+*.db-shm
+*.db-wal
 *.log
-.probe/
 
-# IDE and OS metadata
-/.idea/
-/.vscode/
+# Editors and operating system
+.idea/
+.vscode/
 .DS_Store
 Thumbs.db
-
-# Prototype runtime artifacts (more)
-/prototype/**/*.err
-/prototype/**/screen-check.png
-
-# Privacy-sensitive raw window inventory; the evidence record retains size/hash.
-/Docs/A_Project/20_Technical_Selection/Evidence/TS-H01/TS-H01-A/2026-08-20_01_initial-diagnostics/snapshot.jsonl
-
-# External Axiom research checkout; blueprint outputs are tracked separately.
-/axiom/

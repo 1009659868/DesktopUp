@@ -1,0 +1,434 @@
+# DesktopUp V2 V3 制作计划 V1
+
+状态：`IN PROGRESS — V3-03 POSTER INPUT CLUSTER`
+
+建立日期：2026-09-03
+
+适用分支：`impl/poster-redesign-V3`
+
+## 1. 总目标
+
+以 DeskBox 已验证的 Windows 原生桌面整理路线为工程基线，从空项目实现 DesktopUp V2：先证明桌面层级、Win+D、透明空白穿透和窗口生命周期，再完成控制中心、文件收纳、内容 Item、活跃度排版、主题热更新和可选 AI。
+
+本计划不恢复旧 Qt/Win32/Axiom 代码，也不把 DeskBox 自身的功能或测试结果当成 DesktopUp 的完成证据。
+
+## 2. 执行原则
+
+1. 每阶段只实现本阶段出口门需要的最小完整能力；
+2. P0 桌面层和文件安全失败时停止扩展功能，先修根因；
+3. DeskBox 代码可以移植，但每个移植单元必须登记来源、许可证和 DesktopUp 改动；
+4. 自动测试验证合同，真实 Windows 桌面人工门验证窗口、Shell 和视觉；二者不能互相替代；
+5. 先主屏单海报，暂不创建多海报、多屏或混合 DPI 假能力；
+6. 先功能完整，再做 Native AOT、内存压缩和安装器深化；
+7. 每个阶段关闭时更新计划、模块目录、代码锚点、验证记录和下一阶段交接。
+
+## 3. 总阶段图
+
+```text
+V3-00 文档与仓库重置
+  ↓
+V3-01 WinUI 工程骨架与许可证基线
+  ↓
+V3-02 桌面层海报宿主与 Explorer 生命周期
+  ↓
+V3-03 海报输入、拖缩、锁定和收起
+  ↓
+V3-04 权威状态、控制中心与托盘
+  ↓
+V3-05 文件收纳与真实 Item CRUD/启动
+  ↓
+V3-06 连续 viewport、活跃度与动态排版
+  ↓
+V3-07 主题平台、热更新与失败隔离
+  ↓
+V3-08 BYOK AI 与受控 ChangePlan
+  ↓
+V3-09 安装、恢复、更新与零残留
+  ↓
+V3-10 性能、AOT 和 Release 认证
+```
+
+## 4. V3-00：文档与仓库重置
+
+状态：`COMPLETE — UNCOMMITTED`
+
+### 工作项
+
+- V3-00-01：建立 `impl/poster-redesign-V3`；
+- V3-00-02：移除旧 `src/`、`prototype/`、构建工程和测试集；
+- V3-00-03：移除旧技术选型、Qt/Axiom 架构和候选证据；
+- V3-00-04：保留并同步七份冻结需求；
+- V3-00-05：形成 DeskBox 路线总体架构、模块目录和本计划；
+- V3-00-06：登记 GPLv3 与品牌边界。
+
+### 出口门
+
+- 工作树除需求、V3 架构、计划、入口和 Git 元数据外无旧实现；
+- `src`、`prototype`、旧 `out` 和旧测试不存在；
+- 所有当前文档链接可解析；
+- Git diff 能清楚显示“旧路线删除 + V3 文档基线”。
+
+## 5. V3-01：WinUI 工程骨架与许可证基线
+
+目标：建立能启动、显示托盘、打开空控制中心并干净退出的最小 Windows 原生工程，但暂不显示真实海报。
+
+状态：`COMPLETE — AUTOMATED 10/10 + USER MANUAL PASS`
+
+### 工作项
+
+- V3-01-01：锁定 .NET、Windows App SDK、WinUIEx、MVVM、DI 与测试框架版本；
+- V3-01-02：建立 `DesktopUp.sln` 和 App/Application/Domain/Infrastructure/Windows 五项目；
+- V3-01-03：建立单实例和第二实例启动意图转发；
+- V3-01-04：建立当前用户数据目录、结构日志和 resource ledger；
+- V3-01-05：建立最小托盘、空控制中心和普通退出；
+- V3-01-06：建立 `LICENSE`、`THIRD_PARTY_NOTICES.md`、DeskBox 来源登记格式；
+- V3-01-07：建立 CI/本地 build、test、run 脚本和第一批合同测试；
+- V3-01-08：验证普通用户权限运行，不以管理员权限启动。
+
+### 自动门
+
+- Release x64 可构建；
+- 单实例合同通过；
+- 数据目录不写入安装目录；
+- 退出后无托盘、进程、临时窗口和未释放 ledger 项；
+- Domain/Application 不引用 WinUI/Win32。
+
+自动结果（2026-09-03）：
+
+- Release x64：0 warning / 0 error；
+- 合同测试：10/10 PASS；
+- 真实进程 smoke：托盘创建成功，正常退出，resource ledger 为 `clean=true` 且零资源；
+- 当前用户数据根：`%LOCALAPPDATA%\DesktopUp\V3`，不写安装/构建目录；
+- 从最终 exe 提取确认 `asInvoker`、PerMonitorV2 与 UTF-8；当前机器的 Explorer Shell 自身已提权，标准 token 实测仍需在非提权账户/环境完成。
+
+### 人工门
+
+- 第一次启动只出现一个托盘图标；
+- 双击托盘只打开一个控制中心；
+- 关闭控制中心后主进程仍在；
+- 托盘退出后完全结束。
+
+## 6. V3-02：桌面层海报宿主与 Explorer 生命周期
+
+目标：以 DeskBox 的 `SHELLDLL_DefView` owner 路线显示最小纯色/诊断海报，先关闭历史上反复出现的白条、层级和 Win+D 风险。
+
+状态：`COMPLETE — R2 AUTOMATED PASS + USER MANUAL P0 PASS`
+
+当前增量（2026-09-03）：
+
+- V3-02-01/02：既有 DefView 定位、五次稳定采样和单调 generation 已实现；
+- V3-02-03/04/05：纯色 WinUI 诊断海报、owner attach/read-back/detach、非 topmost/no-activate/sibling bottom 已实现；
+- V3-02-06：内容、bounds、边框策略和 owner 全部在隐藏态准备，最后以一次 native desktop-bottom/show 提交变为可见；
+- V3-02-07：与 V3-02-08/09 合并执行完整人工 P0 门，不再拆成缺少生命周期覆盖的首轮结论；
+- V3-02-08：已监听 `TaskbarCreated` 并以 owner/host 健康探针兜底；失效后等待新 DefView 稳定，在同一 poster HWND 上重挂、读回验证并拒绝旧 shell generation；
+- V3-02-09：已建立显示器 bounds/work-area/DPI 签名、独立 topology generation、稳定采样、DIP 到物理像素投影、工作区夹紧和显示消息/低频探针恢复；
+- V3-02-08/09：恢复请求按 `(DesktopShellGeneration, DisplayTopologyGeneration)` 版本对在提交前后校验，较新请求使迟到结果失效；
+- V3-02-10：启动、监控、重挂、重投影、retry、stale、commit、detach 和停止均有结构日志；
+- 首次完整人工门发现冷启动及点击后海报可能进入普通窗口前方，判定 P0 FAIL；日志证明当时 recovery 未运行，根因为原 V3 只吸收了 owner/no-activate，遗漏 DeskBox 的原子 bottom/show 与 native pointer activation guard；
+- V3-02 层级修订 R1：隐藏态先准备内容和 bounds，最后以 `HWND_BOTTOM + SWP_SHOWWINDOW` 原子显示；`WM_MOUSEACTIVATE` 同步 no-show bottom reassert 后返回 `MA_NOACTIVATE`；失败转入既有 generation 恢复；
+- R1 实机仍可在桌面右键/刷新后被 Explorer owner 组抬高；R2 补齐 `WM_ACTIVATE`/`WM_ACTIVATEAPP` 同步归位，并在 `WM_WINDOWPOSCHANGING` 提交前把非 bottom Z-order 改写为 `HWND_BOTTOM + SWP_NOACTIVATE`；
+- 自动证据：Release 构建 0 warning / 0 error，合同测试 45/45，真实 Explorer 启动 smoke 及 clean ledger 通过；
+- DeskBox 吸收项与 V3 补强合同见 `../40_Implementation/V3-02/DESKBOX_RECOVERY_REFERENCE_AND_V3_STRENGTHENING.md`。
+
+### 工作项
+
+- V3-02-01：实现 `ExplorerDesktopLocator`，只发现现有 DefView，不强制生成 WorkerW；
+- V3-02-02：实现启动稳定采样和 desktop generation；
+- V3-02-03：实现无边框 WinUI PosterVisualWindow；
+- V3-02-04：实现 owner attach/read-back/detach；
+- V3-02-05：实现非 topmost、no-activate 和 sibling Z-order；
+- V3-02-06：实现首帧准备后一次显示，禁止白底中间帧；
+- V3-02-07：实现 Win+D、桌面刷新、文件选择器、普通窗口和全屏矩阵；
+- V3-02-08：实现 Explorer 重启后的稳定重挂：监听失效信号、建立独立 `DesktopShellGeneration`、等待新 DefView 稳定、对同一 PosterWindowCluster 执行单航班 owner 重挂、读回验证并拒绝旧 generation；禁止新建第二海报、hide/show、激活或临时 topmost；
+- V3-02-09：实现分辨率、DPI、工作区变化重投影：建立独立 `DisplayTopologyGeneration`，合并原生消息与低频拓扑兜底，等待稳定后按 DIP 尺寸、显示器身份、锚点和工作区一次提交物理 bounds；恢复期间禁止持久化暂态几何；
+- V3-02-10：建立窗口 handle、owner、style、generation 诊断事件。
+
+V3-02-08/09 共同遵循：恢复任务捕获 `(DesktopShellGeneration, DisplayTopologyGeneration)`；提交前后任一 generation 改变，本轮结果作废并由最新状态接管。Explorer 恢复只修复宿主关系，显示恢复只按稳定快照重投影几何，两者都不能绕过 owner、样式、层级和实际 bounds 的读回验证。
+
+### 自动门
+
+- attach/detach 幂等；
+- 错误 handle 不污染缓存；
+- Explorer generation 变化只产生一个有效重挂，迟到 generation 不得提交；
+- 同一 HWND 集完成重挂，不产生第二张海报、第二套输入岛或第二个托盘；
+- 重挂不得出现 hide/show、激活、topmost 或未绘制中间帧；
+- 退出后 owner 和 HWND 全释放；
+- 100/125/150/200% 的逻辑/物理坐标转换合同通过；
+- 拓扑恢复至少需要稳定样本、提交后验证和有界重试；恢复期间的 bounds 变化不得进入正式持久状态。
+
+### 人工 P0 门
+
+- 海报可见且无系统标题栏、顶部白条、灰框和矩形未绘制区；
+- 层级严格为普通/全屏程序 > 海报 > 桌面图标 > 壁纸；
+- 连续 Win+D 不隐藏、恢复或闪烁海报；
+- 桌面右键/刷新和文件选择器不令海报瞬时置顶；
+- Explorer 重启后自动恢复且只有一张海报；
+- 显示变化后海报仍在工作区内。
+
+失败处理：任何 P0 不通过时停留 V3-02，不进入海报内容和文件功能。
+
+## 7. V3-03：海报输入、拖缩、锁定和收起
+
+目标：把诊断海报升级为 NIGHT OPS 结构，并完成 DesktopUp 独有的视觉/输入分离。
+
+状态：`IN PROGRESS — R1 RELEASE BUILT / MANUAL RECHECK PENDING`
+
+当前增量（2026-09-03）：
+
+- V3-03-01/02：建立全幅透明视觉 HWND 与同 owner 的稀疏原生 InputIsland；USING 空白不进入输入岛；
+- V3-03-03：输入 layout 使用单调 revision，每次视觉重排后一次提交对应形状区域；
+- V3-03-04：标题拖动及 EDITING 的右、下、右下缩放使用系统 pointer capture 和屏幕坐标增量，跨重排阈值不重启手势；
+- V3-03-05/06：外框几何不缩放字体/图标语义；USING、EDITING、LOCKED 权限由独立策略约束；
+- V3-03-07：收起固定 60 DIP，保持 top/left/width 和展开高度，展开按钮不改变屏幕位置；
+- V3-03-08：预览逐帧应用，取消回滚，松开只产生一次 `poster.geometry_committed`；正式 SQLite 持久化由 V3-04 状态权威接管；
+- V3-03-09：NIGHT OPS 受保护 chrome 与六张测试 Item 已替换诊断卡；
+- V3-03-10：无边框/透明视觉、物理 bounds read-back、输入区域边界校验、结构日志和退出 ledger 已接入；像素级视觉稳定性仍由本阶段人工门裁决；
+- 首轮人工门：Item、标题拖动、锁定、收起、缩放、层级和退出通过；应用外框、跨进程空白穿透及缩小后滚动失败，因此未关闭本阶段；
+- V3-03-R1：实机定位 WinUI `DesktopChildSiteBridge` 为真实空白拦截者；在 post-composition 阶段恢复并持续校验视觉 HWND 的 layered+transparent style，原生探针证明空白落到 Explorer、Item 留在 InputIsland；
+- V3-03-R1：USING 取消外框，EDITING 仅保留 1 DIP 状态边线；六项区域改由标准 WinUI `ScrollViewer` 连续滚动，InputIsland 转发 Item/滚动轨 wheel；
+- V3-03-R1：吸收 DeskBox 最新采样逐帧合并、最终帧刷新和单次提交意图，同列数 resize 不再反复重建 Item grid；
+- 自动证据：Release 构建 0 warning / 0 error，合同测试 52/52，真实桌面 smoke 证明视觉窗和输入岛同代际创建并在退出后零残留；R1 人工复测仍待执行。
+
+### 工作项
+
+- V3-03-01：建立 PosterWindowCluster 和最小 InputIsland；
+- V3-03-02：验证半透明空白对 Explorer 的真实穿透机制；
+- V3-03-03：按同一 layout revision 生成视觉和输入区；
+- V3-03-04：实现标题栏拖动、右下缩放和 pointer capture；
+- V3-03-05：实现 FrameGeometry 与 ContentMetrics 分离；
+- V3-03-06：实现 USING/EDITING/LOCKED 权限；
+- V3-03-07：实现 expanded/collapsed bounds 与顶部锚定收起；
+- V3-03-08：实现按帧几何事务和松开后一次持久化接口；
+- V3-03-09：实现 NIGHT OPS 受保护 chrome 与六个测试 Item；
+- V3-03-10：建立白条、灰框、裁切和输入岛错位检测。
+
+### 自动门
+
+- geometry transaction 的 prepare/commit/rollback；
+- 一次按下跨列数阈值仍保持 capture；
+- 收起/展开不改变顶部、水平位置和宽度；
+- 锁定时外框不变，按钮仍工作；
+- 视觉与命中 revision 永远一致。
+
+### 人工 P0 门
+
+- 海报空白左拖出现 Windows 桌面框选；
+- 同一空白右键出现 Windows 桌面菜单；
+- 空白覆盖范围内原生快捷方式可单击/双击；
+- 六个 Item、标题拖动、锁定、收起和缩放分别可用；
+- 收起按钮保持原位，展开后不跳动；
+- 连续拖动/缩放无规律性闪烁、白条、灰框或置顶。
+
+## 8. V3-04：权威状态、控制中心与托盘
+
+目标：用一个状态权威连接海报、控制中心和托盘，消除 UI 回弹和两端状态不一致。
+
+### 工作项
+
+- V3-04-01：建立 SQLite schema、迁移、revision/CAS 和备份；
+- V3-04-02：建立 Poster/Settings repository；
+- V3-04-03：建立 command/query 和三端 projection；
+- V3-04-04：实现控制中心海报预览、位置、锁定、收起和内容参数编辑；
+- V3-04-05：实现托盘显示、暂停动态效果、打开控制中心和退出；
+- V3-04-06：实现最近可用状态与数据库失败回退；
+- V3-04-07：实现控制中心窗口按需释放和重新打开；
+- V3-04-08：实现普通退出、重启和状态恢复。
+
+### 出口门
+
+- 海报、控制中心、托盘显示同一 committed revision；
+- slider/主题/几何编辑无回弹；
+- CAS 冲突保留用户待处理意图并显示可理解结果；
+- 关闭控制中心不影响海报；
+- 重启恢复位置、尺寸、锁定和收起状态；
+- 数据库损坏不会启动空白或第二份默认状态。
+
+## 9. V3-05：文件收纳与真实 Item CRUD/启动
+
+目标：实现 DesktopUp 作为桌面整理工具的核心内容能力，替换六个演示 Item。
+
+### 工作项
+
+- V3-05-01：冻结 `ContentItem` 与 `Collection` schema；
+- V3-05-02：实现 Mapped Collection，不移动原文件；
+- V3-05-03：实现 Managed Collection 目录与所有权标识；
+- V3-05-04：实现文件/文件夹/快捷方式/应用添加和去重；
+- V3-05-05：实现图标、显示名、失效状态和后台刷新；
+- V3-05-06：实现启动、在资源管理器中显示和移除 Item；
+- V3-05-07：实现 native drag/drop 与 Windows copy/move/link 语义；
+- V3-05-08：实现 dry-run、recovery journal、执行、验证和补偿；
+- V3-05-09：实现新建文件/文件夹/快捷方式；
+- V3-05-10：实现重命名、复制、移动、回收站与系统菜单；
+- V3-05-11：实现 watcher 合并、断盘和恢复；
+- V3-05-12：建立孤儿受管目录检查与卸载恢复入口。
+
+### 安全 P0 门
+
+- 未经确认不移动、覆盖、永久删除用户文件；
+- 每次移动前已有落盘 journal；
+- 跨盘、冲突、取消、占用、权限失败和崩溃均有逐项结果；
+- 映射集合移除只移除关联，不删除文件夹；
+- 受管集合卸载前能打开、迁回或保留独立入口；
+- 原生拖入、拖出、快捷方式和普通文件启动符合 Windows 语义。
+
+## 10. V3-06：连续 viewport、活跃度与动态排版
+
+目标：完成 DesktopUp 区别于 DeskBox 普通文件格子的核心内容模型。
+
+### 工作项
+
+- V3-06-01：实现 Item viewport 和虚拟化集合；
+- V3-06-02：实现连续像素裁剪和连续 scroll offset；
+- V3-06-03：实现独立滚动入口，零完整 Item 时仍可滚动；
+- V3-06-04：实现动态列数与稳定 Item identity；
+- V3-06-05：实现 recency/frequency/newness 原始统计；
+- V3-06-06：冻结 30 天存在保护的最终公式；
+- V3-06-07：实现 50%–300% 尺寸映射和新 Item 初始值；
+- V3-06-08：实现自动、锚定+自动、全手动三层模式；
+- V3-06-09：实现拖动重排、冲突偏移、撤销和跳变机制；
+- V3-06-10：实现重排延迟，不让刚启动的 Item 当场跳走。
+
+### 出口门
+
+- 外框缩放不改变内容参数；
+- 部分行连续显示，不整排消失留大空位；
+- 所有 Item 可达，滚动不依赖鼠标停在 Item 上；
+- 跨 2/3/4/6 列连续缩放不丢 capture、不闪帧；
+- 排名稳定、固定项稳定、自动调整可撤销；
+- 零/一/多/失效/重复 Item 全部有测试。
+
+## 11. V3-07：主题平台、热更新与失败隔离
+
+目标：保持 WinUI 原生宿主稳定，同时允许视觉资源和受限模板热更新。
+
+### 工作项
+
+- V3-07-01：冻结 ThemeManifest、tokens、资源和能力 schema；
+- V3-07-02：实现 transparent-default、neon-hud、cinema-lightbox；
+- V3-07-03：实现不可选但始终可用的 minimal-fallback；
+- V3-07-04：实现主题目录、导入/导出和路径安全；
+- V3-07-05：实现 ResourceDictionary/ControlTemplate 原子切换；
+- V3-07-06：实现文件监听、去抖、候选预览和热更新；
+- V3-07-07：验证受保护 chrome 不能被主题删除；
+- V3-07-08：实现资源配额、错误隔离和最近可用主题；
+- V3-07-09：评估用户代码主题；需要时建立 ThemeHost 进程；
+- V3-07-10：建立主题兼容版本与迁移。
+
+### 出口门
+
+- 三主题可即时切换且不改变业务状态；
+- 主题文件修改后无需重启即可预览/应用；
+- 语法错误、缺资源、超限和 ThemeHost 崩溃不影响海报操作；
+- 失败后保持上一主题或进入 minimal fallback；
+- 主题没有 Shell、任意文件、进程、注册表和默认网络权限。
+
+## 12. V3-08：BYOK AI 与受控 ChangePlan
+
+目标：AI 只作为主题和布局的可选建议器，不成为程序正常运行的依赖。
+
+### 工作项
+
+- V3-08-01：建立 provider-neutral `IAIProvider`；
+- V3-08-02：接入 OpenAI、DeepSeek 和 OpenAI-compatible；
+- V3-08-03：实现凭据保存、测试、替换和删除；
+- V3-08-04：实现上下文裁剪和隐私预览；
+- V3-08-05：实现结构化 AIChangePlan schema；
+- V3-08-06：实现 R0–R5 权限、拒绝与确认矩阵；
+- V3-08-07：实现 diff 预览、应用、撤销和失败保留；
+- V3-08-08：实现速率、超时、取消和费用提示；
+- V3-08-09：验证无 Key/离线时主题和 Item 全功能可用。
+
+### 出口门
+
+- AI 不能直接执行 Shell、进程、任意文件和窗口层级操作；
+- 未确认 ChangePlan 不改变正式状态；
+- provider 输出异常只产生可见错误；
+- Key 不进入日志、主题包、备份或诊断包；
+- AI 关闭、断网或删除 Key 后程序正常工作。
+
+## 13. V3-09：安装、恢复、更新与零残留
+
+目标：形成当前用户可安装、可选择目录、可升级、可卸载且保护受管文件的完整生命周期。
+
+### 工作项
+
+- V3-09-01：当前用户安装器和用户可选安装目录；
+- V3-09-02：依赖探针和离线/联网运行时策略；
+- V3-09-03：自启显式 opt-in 和状态同步；
+- V3-09-04：单实例安装版重启、更新和路径锁定；
+- V3-09-05：ShellProxy/Updater 退出协调；
+- V3-09-06：数据库与主题备份恢复；
+- V3-09-07：卸载前检测受管文件并提供保留/迁回入口；
+- V3-09-08：正式卸载后程序、托盘、自启、缓存和临时文件零残留；
+- V3-09-09：隐私过滤诊断包。
+
+### 出口门
+
+- 可安装到用户选择的有效目录；
+- 覆盖安装不产生第二份实例或第二份状态；
+- 自启关闭时绝不写入启动项；
+- 卸载不删除未迁出的用户文件；
+- 用户选择完全清理后无进程、托盘、注册表自启和程序缓存残留。
+
+## 14. V3-10：性能、AOT 和 Release 认证
+
+目标：在功能冻结后优化常驻成本，并决定 Native AOT 发布形态。
+
+### 工作项
+
+- V3-10-01：冻结 CPU、Working Set、GPU、handle、首帧和交互延迟测量合同；
+- V3-10-02：测量 Debug/Release、海报静态、控制中心打开和文件突发场景；
+- V3-10-03：虚拟化、缓存上限、窗口释放、动画和 watcher 优化；
+- V3-10-04：Native AOT 兼容审计，隔离动态 XAML/主题边界；
+- V3-10-05：x64 AOT/非 AOT A/B；ARM64 后续决定；
+- V3-10-06：全量 P0 回归和长时间稳定性；
+- V3-10-07：安装、升级、卸载、Explorer、Win+D、DPI 和文件安全矩阵；
+- V3-10-08：Release 证据、许可证材料和交接。
+
+### 最终门
+
+- 冻结需求的每条验收项均有证据；
+- 常驻资源目标达成，或经用户形成明确、量化的例外决定；
+- AOT 不能破坏主题热更新、状态恢复或 Shell 能力；
+- 没有已知文件丢失、窗口置顶、Win+D 闪烁、白条或空白输入回归；
+- 发布包包含必要许可证和第三方通知。
+
+## 15. 测试梯度
+
+每阶段按下列顺序执行：
+
+1. Domain 纯单元/性质测试；
+2. Application command、CAS、事务和失败注入测试；
+3. Windows adapter 的 handle、owner、style 与 Shell 合同测试；
+4. 真实进程 smoke；
+5. 主屏 Release 人工门；
+6. 前阶段核心回归。
+
+任何人工观察必须记录启动命令、构建路径、版本/commit、显示器/DPI、步骤、预期、实际和结论。截图只能证明画面，不能代替 handle、状态或文件事务证据。
+
+## 16. DeskBox 移植规则
+
+每个直接移植工作项必须同时提交：
+
+- DeskBox 源文件相对路径和来源 commit/tag；
+- 原许可证声明；
+- DesktopUp 目标模块；
+- 删除了哪些 DeskBox 非需求功能；
+- 修改了哪些行为以满足 DesktopUp 需求；
+- 新增的 DesktopUp 自动测试；
+- 是否需要 GPLv3 对应源码交付。
+
+禁止整仓复制后再删除。应按一个可验证模块一批迁入，优先顺序为窗口层、生命周期、文件安全和 Shell 适配器。
+
+## 17. Git 与文档节奏
+
+- V3 实现只在 `impl/poster-redesign-V3` 进行；
+- 未经用户指示不推送、不合并；
+- 每个阶段至少形成一个可复核提交，不把所有阶段压成一次大提交；
+- 阶段开始前更新 ACTIVE_PATH，阶段关闭后记录证据和下一步；
+- 需求变更必须先回写需求文档，再调整架构和计划；
+- DeskBox 更新不会自动覆盖已经冻结的 DesktopUp 模块端口。
+
+## 18. 立即下一步
+
+运行 V3-03 Release，执行透明空白框选/右键/原生快捷方式、六 Item、标题拖动、托盘编辑缩放、锁定、顶部锚定收起及连续手势视觉稳定性人工 P0 门。全部通过后关闭 V3-03，进入 V3-04 权威状态、控制中心与托盘。

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window
+    x:Class="DesktopUp.ControlCenterWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="DesktopUp V3">
+    <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+        <StackPanel
+            Width="520"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center"
+            Spacing="12">
+            <TextBlock
+                FontSize="32"
+                FontWeight="SemiBold"
+                Text="DesktopUp V3" />
+            <TextBlock
+                FontSize="16"
+                Text="控制中心工程骨架已运行。海报宿主将在 V3-02 接入。"
+                TextWrapping="Wrap" />
+            <InfoBar
+                IsOpen="True"
+                IsClosable="False"
+                Severity="Informational"
+                Title="V3-01"
+                Message="当前只验证托盘、单实例、启动意图、日志和干净退出。" />
+        </StackPanel>
+    </Grid>
+</Window>

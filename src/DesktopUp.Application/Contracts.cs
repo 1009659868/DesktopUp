@@ -1,0 +1,219 @@
+using DesktopUp.Domain;
+
+namespace DesktopUp.Application;
+
+public interface IUserDataPaths
+{
+    string Root { get; }
+    string Logs { get; }
+    string State { get; }
+    string Temp { get; }
+    void EnsureCreated();
+}
+
+public interface IStructuredLog
+{
+    void Write(string level, string eventName, object? data = null);
+}
+
+public interface IResourceLedger
+{
+    IReadOnlyCollection<string> ActiveResources { get; }
+    IDisposable Acquire(string resourceId, string kind);
+    void WriteSnapshot();
+}
+
+public interface IStartupIntentSink
+{
+    void Dispatch(StartupIntent intent);
+}
+
+public readonly record struct DesktopShellHostIdentity(
+    nint IconViewHandle,
+    nint ContainerHandle,
+    uint ProcessId)
+{
+    public bool IsEmpty =>
+        IconViewHandle == 0 ||
+        ContainerHandle == 0 ||
+        ProcessId == 0;
+}
+
+public sealed record DesktopShellHostSnapshot(
+    DesktopShellHostIdentity Identity,
+    long Generation,
+    DateTimeOffset StableAtUtc);
+
+public enum DesktopShellProbeState
+{
+    Missing,
+    Candidate,
+    Stable,
+    Unchanged,
+    Invalidated
+}
+
+public sealed record DesktopShellProbeResult(
+    DesktopShellProbeState State,
+    DesktopShellHostSnapshot? Snapshot,
+    DesktopShellHostIdentity? Candidate,
+    int ConsecutiveSamples);
+
+public interface IDesktopShellLocator
+{
+    DesktopShellHostSnapshot? Current { get; }
+    DesktopShellProbeResult Probe();
+    ValueTask<DesktopShellHostSnapshot?> WaitForStableHostAsync(
+        CancellationToken cancellationToken = default);
+    void Invalidate();
+}
+
+public sealed record DesktopLayerAttachResult(
+    bool Succeeded,
+    nint WindowHandle,
+    nint ExpectedOwner,
+    nint ActualOwner,
+    long DesktopGeneration,
+    int NativeError,
+    string? Error);
+
+public interface IDesktopLayerAttachment
+{
+    DesktopLayerAttachResult Attach(
+        nint windowHandle,
+        DesktopShellHostSnapshot desktopHost,
+        bool showWindow = false,
+        bool inputTransparent = false);
+    bool ReassertDesktopBottom(
+        nint windowHandle,
+        DesktopShellHostSnapshot desktopHost);
+    bool Detach(nint windowHandle);
+    bool IsAttached(nint windowHandle, DesktopShellHostSnapshot desktopHost);
+}
+
+public readonly record struct DesktopPixelRect(
+    int X,
+    int Y,
+    int Width,
+    int Height)
+{
+    public int Right => checked(X + Width);
+    public int Bottom => checked(Y + Height);
+    public bool IsUsable => Width > 0 && Height > 0;
+}
+
+public sealed record DisplayMonitorSnapshot(
+    string DeviceName,
+    bool IsPrimary,
+    DesktopPixelRect MonitorBounds,
+    DesktopPixelRect WorkArea,
+    uint DpiX,
+    uint DpiY)
+{
+    public double ScaleX => Math.Max(1, DpiX) / 96d;
+    public double ScaleY => Math.Max(1, DpiY) / 96d;
+}
+
+public sealed record DisplayTopologySnapshot(
+    string Signature,
+    IReadOnlyList<DisplayMonitorSnapshot> Monitors,
+    long Generation,
+    DateTimeOffset StableAtUtc)
+{
+    public DisplayMonitorSnapshot? PrimaryMonitor =>
+        Monitors.FirstOrDefault(static monitor => monitor.IsPrimary) ??
+        Monitors.FirstOrDefault();
+}
+
+public enum DisplayTopologyProbeState
+{
+    Missing,
+    Candidate,
+    Stable,
+    Unchanged
+}
+
+public sealed record DisplayTopologyProbeResult(
+    DisplayTopologyProbeState State,
+    DisplayTopologySnapshot? Snapshot,
+    string? CandidateSignature,
+    int ConsecutiveSamples);
+
+public interface IDisplayTopologyService
+{
+    DisplayTopologySnapshot? Current { get; }
+    DisplayTopologyProbeResult Probe();
+    ValueTask<DisplayTopologySnapshot?> WaitForStableTopologyAsync(
+        CancellationToken cancellationToken = default);
+    bool IsCurrent(DisplayTopologySnapshot snapshot);
+}
+
+public readonly record struct PosterPlacementState(
+    double WidthDip,
+    double HeightDip,
+    double HorizontalAnchor,
+    double VerticalAnchor);
+
+public readonly record struct DesktopRecoveryGenerationPair(
+    long DesktopShellGeneration,
+    long DisplayTopologyGeneration);
+
+public enum PosterInputTargetKind
+{
+    TitleBar = 0,
+    EditSurface = 1,
+    LockButton = 2,
+    CollapseButton = 3,
+    Item = 4,
+    ResizeRight = 5,
+    ResizeBottom = 6,
+    ResizeBottomRight = 7,
+    ItemScroll = 8
+}
+
+public readonly record struct PosterInputRegion(
+    PosterInputTargetKind Kind,
+    int Index,
+    DesktopPixelRect Bounds);
+
+public sealed record PosterInputLayoutSnapshot(
+    long Revision,
+    int FrameWidth,
+    int FrameHeight,
+    IReadOnlyList<PosterInputRegion> Regions);
+
+public enum PosterInputEventKind
+{
+    GesturePreview = 0,
+    GestureCompleted = 1,
+    GestureCancelled = 2,
+    Invoked = 3,
+    Scrolled = 4
+}
+
+public sealed record PosterInputEventArgs(
+    PosterInputEventKind EventKind,
+    PosterInputTargetKind TargetKind,
+    int TargetIndex,
+    DesktopPixelRect InitialFrame,
+    int DeltaX,
+    int DeltaY,
+    long LayoutRevision,
+    int WheelDelta = 0);
+
+public interface IInputRegionHost : IDisposable
+{
+    nint WindowHandle { get; }
+    long AppliedLayoutRevision { get; }
+    event EventHandler<PosterInputEventArgs>? Input;
+    bool Create(
+        DesktopShellHostSnapshot desktopHost,
+        DesktopPixelRect frame,
+        PosterInputLayoutSnapshot layout);
+    bool ApplyLayout(
+        DesktopPixelRect frame,
+        PosterInputLayoutSnapshot layout);
+    bool Reattach(DesktopShellHostSnapshot desktopHost);
+    bool ReassertDesktopBottom(DesktopShellHostSnapshot desktopHost);
+    bool IsAttached(DesktopShellHostSnapshot desktopHost);
+}

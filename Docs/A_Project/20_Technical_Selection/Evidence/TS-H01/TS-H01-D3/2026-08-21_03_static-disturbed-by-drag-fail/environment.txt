@@ -1,6 +1,0 @@
-Evidence ID: TS-H01-D3-20260821-03
-Date: 2026-08-21 Asia/Shanghai
-Scale / expected DPI: 100% / 96
-Architecture/configuration: x64 Release
-Probe SHA-256: FEB7C6EDCAB0063979BD80424165D3E6E963620E73AAD8B27D31B9FB1B665141
-Result: FAIL — unexpected drag count in static scenario

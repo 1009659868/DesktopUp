@@ -1,2 +1,0 @@
-{"event":"baseline_ready","graphics_api":"Direct3D11","role":"minimal_qt_quick","scene":"one_rectangle","schema":"desktopup.qts-01-01.baseline-event.v1","utc":"2026-08-26T08:23:04.276Z","window_visible_during_sample":false}
-{"event":"baseline_finished","exit_code":0,"role":"minimal_qt_quick","schema":"desktopup.qts-01-01.baseline-event.v1","static_frame_count":0,"utc":"2026-08-26T08:23:19.279Z"}

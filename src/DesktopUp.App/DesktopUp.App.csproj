@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <RootNamespace>DesktopUp</RootNamespace>
+    <AssemblyName>DesktopUp</AssemblyName>
+    <UseWinUI>true</UseWinUI>
+    <WindowsPackageType>None</WindowsPackageType>
+    <AppxPackage>false</AppxPackage>
+    <EnableMsixTooling>true</EnableMsixTooling>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <PublishSingleFile>false</PublishSingleFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+    <PackageReference Include="H.NotifyIcon.WinUI" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" />
+    <PackageReference Include="Microsoft.WindowsAppSDK" />
+    <PackageReference Include="WinUIEx" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\DesktopUp.Application\DesktopUp.Application.csproj" />
+    <ProjectReference Include="..\DesktopUp.Domain\DesktopUp.Domain.csproj" />
+    <ProjectReference Include="..\DesktopUp.Infrastructure\DesktopUp.Infrastructure.csproj" />
+    <ProjectReference Include="..\DesktopUp.Windows\DesktopUp.Windows.csproj" />
+  </ItemGroup>
+</Project>
