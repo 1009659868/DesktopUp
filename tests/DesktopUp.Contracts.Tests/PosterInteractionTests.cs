@@ -1,3 +1,4 @@
+using DesktopUp.Application;
 using DesktopUp.Domain;
 
 namespace DesktopUp.Contracts.Tests;
@@ -29,6 +30,20 @@ public sealed class PosterInteractionTests
         Assert.Equal(Expanded.ExpandedHeightDip, collapsed.ExpandedHeightDip);
         Assert.False(restored.IsCollapsed);
         Assert.Equal(Expanded.ExpandedHeightDip, restored.HeightDip);
+    }
+
+    [Fact]
+    public void TitleBarActionsUseOneDeskBoxAlignedGeometryContract()
+    {
+        PosterTitleBarLayout layout = PosterTitleBarLayoutPolicy.Resolve(420);
+
+        Assert.Equal(46, layout.HeaderHeightDip);
+        Assert.Equal(358, layout.CollapseAction.XDip);
+        Assert.Equal(384, layout.MoreAction.XDip);
+        Assert.Equal(12, layout.CollapseAction.YDip);
+        Assert.Equal(24, layout.CollapseAction.SizeDip);
+        Assert.Equal(2, layout.MoreAction.XDip - layout.CollapseAction.RightDip);
+        Assert.Equal(12, 420 - layout.MoreAction.RightDip);
     }
 
     [Fact]
@@ -64,6 +79,88 @@ public sealed class PosterInteractionTests
             PosterOperatingMode.Editing,
             PosterFrameGeometryPolicy.ToggleCollapsed(Expanded),
             PosterGestureKind.ResizeRight));
+    }
+
+    [Theory]
+    [InlineData(PosterGestureKind.ResizeLeft)]
+    [InlineData(PosterGestureKind.ResizeRight)]
+    [InlineData(PosterGestureKind.ResizeTop)]
+    [InlineData(PosterGestureKind.ResizeBottom)]
+    [InlineData(PosterGestureKind.ResizeTopLeft)]
+    [InlineData(PosterGestureKind.ResizeTopRight)]
+    [InlineData(PosterGestureKind.ResizeBottomLeft)]
+    [InlineData(PosterGestureKind.ResizeBottomRight)]
+    public void AllEightResizeDirectionsShareTheEditingPermissionContract(
+        PosterGestureKind gesture)
+    {
+        Assert.True(LockPermissionPolicy.CanBeginGesture(
+            PosterOperatingMode.Editing,
+            Expanded,
+            gesture));
+        Assert.False(LockPermissionPolicy.CanBeginGesture(
+            PosterOperatingMode.Using,
+            Expanded,
+            gesture));
+    }
+
+    [Theory]
+    [InlineData(PosterGestureKind.ResizeLeft, 50, 0, 150, 100, 350, 500)]
+    [InlineData(PosterGestureKind.ResizeRight, 50, 0, 100, 100, 450, 500)]
+    [InlineData(PosterGestureKind.ResizeTop, 0, 50, 100, 150, 400, 450)]
+    [InlineData(PosterGestureKind.ResizeBottom, 0, 50, 100, 100, 400, 550)]
+    [InlineData(PosterGestureKind.ResizeTopLeft, 50, 50, 150, 150, 350, 450)]
+    [InlineData(PosterGestureKind.ResizeTopRight, 50, 50, 100, 150, 450, 450)]
+    [InlineData(PosterGestureKind.ResizeBottomLeft, 50, 50, 150, 100, 350, 550)]
+    [InlineData(PosterGestureKind.ResizeBottomRight, 50, 50, 100, 100, 450, 550)]
+    public void EightWayResizeKeepsTheOppositeEdgesAnchored(
+        PosterGestureKind gesture,
+        int deltaX,
+        int deltaY,
+        int expectedX,
+        int expectedY,
+        int expectedWidth,
+        int expectedHeight)
+    {
+        DesktopPixelRect resolved = PosterFrameResizePolicy.Resolve(
+            gesture,
+            new DesktopPixelRect(100, 100, 400, 500),
+            deltaX,
+            deltaY,
+            new DesktopPixelRect(0, 0, 1000, 900),
+            minimumWidth: 240,
+            minimumHeight: 240);
+
+        Assert.Equal(
+            new DesktopPixelRect(
+                expectedX,
+                expectedY,
+                expectedWidth,
+                expectedHeight),
+            resolved);
+    }
+
+    [Fact]
+    public void LeftAndTopResizeClampToWorkAreaAndMinimumSize()
+    {
+        DesktopPixelRect maximum = PosterFrameResizePolicy.Resolve(
+            PosterGestureKind.ResizeTopLeft,
+            new DesktopPixelRect(100, 100, 400, 500),
+            deltaX: -1000,
+            deltaY: -1000,
+            new DesktopPixelRect(0, 0, 1000, 900),
+            minimumWidth: 240,
+            minimumHeight: 240);
+        DesktopPixelRect minimum = PosterFrameResizePolicy.Resolve(
+            PosterGestureKind.ResizeTopLeft,
+            new DesktopPixelRect(100, 100, 400, 500),
+            deltaX: 1000,
+            deltaY: 1000,
+            new DesktopPixelRect(0, 0, 1000, 900),
+            minimumWidth: 240,
+            minimumHeight: 240);
+
+        Assert.Equal(new DesktopPixelRect(50, 0, 450, 600), maximum);
+        Assert.Equal(new DesktopPixelRect(260, 360, 240, 240), minimum);
     }
 
     [Fact]

@@ -24,6 +24,11 @@
 | `Docs/A_Project/40_Implementation/V3-02/DESKBOX_PROVENANCE_LEDGER.md` | V3-02 DeskBox 参考来源 | `ACTIVE` |
 | `Docs/A_Project/40_Implementation/V3-02/DESKBOX_RECOVERY_REFERENCE_AND_V3_STRENGTHENING.md` | Explorer/显示恢复的 DeskBox 吸收项、V3 补强和验收合同 | `RECORDED INPUT` |
 | `Docs/A_Project/40_Implementation/V3-02/VERIFICATION.md` | V3-02 自动证据和人工门 | `IN PROGRESS` |
+| `Docs/A_Project/40_Implementation/V3-04/STATE_STORE_SCHEMA_V1.md` | V3-04-01 SQLite 状态底座合同 | `FROZEN` |
+| `Docs/A_Project/40_Implementation/V3-04/POSTER_SETTINGS_REPOSITORY_V2.md` | V3-04-02 Poster/Settings schema 与 repository 合同 | `FROZEN` |
+| `Docs/A_Project/40_Implementation/V3-04/COMMAND_QUERY_PROJECTION_V1.md` | V3-04-03 command/query 与三端 projection 合同 | `CURRENT` |
+| `Docs/A_Project/40_Implementation/V3-04/CODE_ANCHORS.md` | V3-04 代码锚点 | `CURRENT` |
+| `Docs/A_Project/40_Implementation/V3-04/VERIFICATION.md` | V3-04 自动证据与人工门 | `IN PROGRESS` |
 | `LICENSE` | DesktopUp V3 GPL-3.0-only 正文 | `ACTIVE` |
 | `THIRD_PARTY_NOTICES.md` | 第三方依赖与许可证通知 | `ACTIVE` |
 

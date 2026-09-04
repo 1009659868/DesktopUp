@@ -11,7 +11,52 @@ public enum PosterGestureKind
     Move = 0,
     ResizeRight = 1,
     ResizeBottom = 2,
-    ResizeBottomRight = 3
+    ResizeBottomRight = 3,
+    ResizeLeft = 4,
+    ResizeTop = 5,
+    ResizeTopLeft = 6,
+    ResizeTopRight = 7,
+    ResizeBottomLeft = 8
+}
+
+public readonly record struct PosterTitleBarActionLayout(
+    double XDip,
+    double YDip,
+    double SizeDip)
+{
+    public double RightDip => XDip + SizeDip;
+}
+
+public readonly record struct PosterTitleBarLayout(
+    double HeaderHeightDip,
+    PosterTitleBarActionLayout CollapseAction,
+    PosterTitleBarActionLayout MoreAction);
+
+public static class PosterTitleBarLayoutPolicy
+{
+    public const double HeaderHeightDip = 46;
+    public const double LeftPaddingDip = 14;
+    public const double TopPaddingDip = 7;
+    public const double RightPaddingDip = 12;
+    public const double BottomPaddingDip = 5;
+    public const double ActionSizeDip = 24;
+    public const double ActionGapDip = 2;
+
+    public static PosterTitleBarLayout Resolve(double frameWidthDip)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(
+            frameWidthDip,
+            PosterFrameGeometryPolicy.MinimumWidthDip);
+
+        double actionTop = TopPaddingDip +
+            ((HeaderHeightDip - TopPaddingDip - BottomPaddingDip - ActionSizeDip) / 2);
+        double moreX = frameWidthDip - RightPaddingDip - ActionSizeDip;
+        double collapseX = moreX - ActionGapDip - ActionSizeDip;
+        return new PosterTitleBarLayout(
+            HeaderHeightDip,
+            new PosterTitleBarActionLayout(collapseX, actionTop, ActionSizeDip),
+            new PosterTitleBarActionLayout(moreX, actionTop, ActionSizeDip));
+    }
 }
 
 public readonly record struct PosterFrameGeometry(
@@ -97,7 +142,12 @@ public static class LockPermissionPolicy
         PosterGestureKind.Move => !frame.IsLocked,
         PosterGestureKind.ResizeRight or
         PosterGestureKind.ResizeBottom or
-        PosterGestureKind.ResizeBottomRight =>
+        PosterGestureKind.ResizeBottomRight or
+        PosterGestureKind.ResizeLeft or
+        PosterGestureKind.ResizeTop or
+        PosterGestureKind.ResizeTopLeft or
+        PosterGestureKind.ResizeTopRight or
+        PosterGestureKind.ResizeBottomLeft =>
             mode == PosterOperatingMode.Editing &&
             !frame.IsLocked &&
             !frame.IsCollapsed,

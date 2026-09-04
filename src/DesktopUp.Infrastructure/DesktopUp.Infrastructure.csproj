@@ -3,4 +3,10 @@
     <ProjectReference Include="..\DesktopUp.Application\DesktopUp.Application.csproj" />
     <ProjectReference Include="..\DesktopUp.Domain\DesktopUp.Domain.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.Sqlite" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="DesktopUp.Contracts.Tests" />
+  </ItemGroup>
 </Project>

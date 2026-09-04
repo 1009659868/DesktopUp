@@ -88,6 +88,39 @@ public sealed class DesktopLayerAttachmentTests
     }
 
     [Fact]
+    public void RoundedRegionRejectsInvalidGeometryAndForwardsValidPhysicalBounds()
+    {
+        var windows = new FakeDesktopWindowApi();
+        var attachment = new DesktopLayerAttachment(
+            windows,
+            new FakeExplorerDesktopApi());
+
+        Assert.False(attachment.ApplyRoundedRegion(100, 0, 700, 8));
+        Assert.False(attachment.ApplyRoundedRegion(100, 400, 700, 201));
+        Assert.True(attachment.ApplyRoundedRegion(100, 400, 700, 8));
+
+        Assert.Equal(1, windows.RoundedRegionApplyCount);
+        Assert.Equal((400, 700, 8), windows.LastRoundedRegion);
+    }
+
+    [Fact]
+    public void PreparedBoundsRequireAttachmentAndUseNoEraseNativeCommit()
+    {
+        var windows = new FakeDesktopWindowApi();
+        var attachment = new DesktopLayerAttachment(
+            windows,
+            new FakeExplorerDesktopApi());
+        var bounds = new DesktopPixelRect(100, 120, 420, 700);
+
+        Assert.False(attachment.ApplyPreparedBounds(100, bounds));
+        Assert.True(attachment.Attach(100, Host).Succeeded);
+        Assert.True(attachment.ApplyPreparedBounds(100, bounds));
+
+        Assert.Equal(1, windows.PreparedBoundsApplyCount);
+        Assert.Equal(bounds, windows.LastPreparedBounds);
+    }
+
+    [Fact]
     public void BottomReassertRejectsStaleDesktopGeneration()
     {
         var windows = new FakeDesktopWindowApi();
@@ -194,6 +227,10 @@ public sealed class DesktopLayerAttachmentTests
         public bool LastBottomPlacementShowsWindow { get; private set; }
         public bool BorderRemoved { get; private set; }
         public int TransparentCompositionApplyCount { get; private set; }
+        public int RoundedRegionApplyCount { get; private set; }
+        public int PreparedBoundsApplyCount { get; private set; }
+        public (int Width, int Height, int Radius) LastRoundedRegion { get; private set; }
+        public DesktopPixelRect LastPreparedBounds { get; private set; }
 
         public bool IsWindow(nint windowHandle) => windowHandle != 0;
         public nint GetOwner(nint windowHandle) => Owner;
@@ -234,6 +271,24 @@ public sealed class DesktopLayerAttachmentTests
         public bool ApplyInputTransparentComposition(nint windowHandle)
         {
             TransparentCompositionApplyCount++;
+            return true;
+        }
+        public bool ApplyRoundedRegion(
+            nint windowHandle,
+            int width,
+            int height,
+            int cornerRadius)
+        {
+            RoundedRegionApplyCount++;
+            LastRoundedRegion = (width, height, cornerRadius);
+            return true;
+        }
+        public bool ApplyPreparedBounds(
+            nint windowHandle,
+            DesktopPixelRect bounds)
+        {
+            PreparedBoundsApplyCount++;
+            LastPreparedBounds = bounds;
             return true;
         }
         public void RemoveDwmBorder(nint windowHandle) => BorderRemoved = true;

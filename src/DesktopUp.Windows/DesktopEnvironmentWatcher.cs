@@ -118,12 +118,15 @@ internal static class DesktopEnvironmentSignalClassifier
 
 public sealed class DesktopEnvironmentWatcher : IDisposable
 {
+    private const uint WmEraseBackground = 0x0014;
     private const uint WmNcDestroy = 0x0082;
+    private const uint PosterFallbackColorRef = 0x002A2421;
     private static readonly nuint SubclassId = 0xD35C;
     private readonly nint _windowHandle;
     private readonly uint _taskbarCreatedMessage;
     private readonly SubclassProc _subclassProc;
     private readonly Func<bool> _reassertDesktopBottom;
+    private nint _fallbackBrush;
     private bool _installed;
     private bool _disposed;
     private bool _layerRepairInProgress;
@@ -147,6 +150,11 @@ public sealed class DesktopEnvironmentWatcher : IDisposable
         _windowHandle = windowHandle;
         _reassertDesktopBottom = reassertDesktopBottom;
         _subclassProc = WindowSubclassProc;
+        _fallbackBrush = CreateSolidBrush(PosterFallbackColorRef);
+        if (_fallbackBrush == 0)
+        {
+            throw new Win32Exception(Marshal.GetLastPInvokeError());
+        }
         _installed = SetWindowSubclass(
             _windowHandle,
             _subclassProc,
@@ -154,6 +162,7 @@ public sealed class DesktopEnvironmentWatcher : IDisposable
             0);
         if (!_installed)
         {
+            ReleaseFallbackBrush();
             throw new Win32Exception(Marshal.GetLastPInvokeError());
         }
     }
@@ -178,6 +187,15 @@ public sealed class DesktopEnvironmentWatcher : IDisposable
         {
             _installed = false;
             _disposed = true;
+            ReleaseFallbackBrush();
+        }
+        else if (message == WmEraseBackground &&
+            wParam != 0 &&
+            _fallbackBrush != 0 &&
+            GetClientRect(windowHandle, out NativeRect client))
+        {
+            _ = FillRect((nint)wParam, ref client, _fallbackBrush);
+            return new nint(1);
         }
         else if (message == DesktopZOrderPolicy.WmWindowPosChanging)
         {
@@ -322,10 +340,21 @@ public sealed class DesktopEnvironmentWatcher : IDisposable
             _ = RemoveWindowSubclass(_windowHandle, _subclassProc, SubclassId);
         }
         _installed = false;
+        ReleaseFallbackBrush();
         Changed = null;
         PointerActivationGuarded = null;
         LayerActivationGuarded = null;
         ZOrderChangeConstrained = null;
+    }
+
+    private void ReleaseFallbackBrush()
+    {
+        nint brush = _fallbackBrush;
+        _fallbackBrush = 0;
+        if (brush != 0)
+        {
+            _ = DeleteObject(brush);
+        }
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -338,6 +367,15 @@ public sealed class DesktopEnvironmentWatcher : IDisposable
         public int Width;
         public int Height;
         public uint Flags;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct NativeRect
+    {
+        public int Left;
+        public int Top;
+        public int Right;
+        public int Bottom;
     }
 
     private delegate nint SubclassProc(
@@ -376,4 +414,18 @@ public sealed class DesktopEnvironmentWatcher : IDisposable
         uint message,
         nuint wParam,
         nint lParam);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetClientRect(nint windowHandle, out NativeRect rectangle);
+
+    [DllImport("user32.dll")]
+    private static extern int FillRect(nint device, ref NativeRect rectangle, nint brush);
+
+    [DllImport("gdi32.dll", SetLastError = true)]
+    private static extern nint CreateSolidBrush(uint color);
+
+    [DllImport("gdi32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool DeleteObject(nint handle);
 }

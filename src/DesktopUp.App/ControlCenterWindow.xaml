@@ -6,7 +6,7 @@
     Title="DesktopUp V3">
     <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
         <StackPanel
-            Width="520"
+            Width="620"
             HorizontalAlignment="Center"
             VerticalAlignment="Center"
             Spacing="12">
@@ -16,14 +16,59 @@
                 Text="DesktopUp V3" />
             <TextBlock
                 FontSize="16"
-                Text="控制中心工程骨架已运行。海报宿主将在 V3-02 接入。"
+                Text="控制中心、真实海报与托盘读取同一个已提交状态投影。"
                 TextWrapping="Wrap" />
             <InfoBar
+                x:Name="StateInfoBar"
                 IsOpen="True"
                 IsClosable="False"
                 Severity="Informational"
-                Title="V3-01"
-                Message="当前只验证托盘、单实例、启动意图、日志和干净退出。" />
+                Title="状态正在初始化"
+                Message="等待桌面宿主和 Poster projection。" />
+            <Border
+                Padding="16"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="1"
+                CornerRadius="8">
+                <StackPanel Spacing="8">
+                    <TextBlock
+                        x:Name="PosterTitleText"
+                        FontSize="22"
+                        FontWeight="SemiBold"
+                        Text="Poster 尚未就绪" />
+                    <TextBlock
+                        x:Name="RevisionText"
+                        Opacity="0.7"
+                        Text="committed revision —" />
+                    <TextBlock
+                        x:Name="PosterDetailText"
+                        Text="等待状态投影。"
+                        TextWrapping="Wrap" />
+                    <TextBlock
+                        x:Name="SettingsDetailText"
+                        Text="设置尚未就绪。"
+                        TextWrapping="Wrap" />
+                    <StackPanel
+                        Orientation="Horizontal"
+                        Spacing="8">
+                        <Button
+                            x:Name="LockButton"
+                            Click="LockButton_Click"
+                            Content="锁定"
+                            IsEnabled="False" />
+                        <Button
+                            x:Name="CollapseButton"
+                            Click="CollapseButton_Click"
+                            Content="收起"
+                            IsEnabled="False" />
+                        <Button
+                            x:Name="PauseButton"
+                            Click="PauseButton_Click"
+                            Content="暂停动态效果"
+                            IsEnabled="False" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
         </StackPanel>
     </Grid>
 </Window>

@@ -21,6 +21,8 @@ public partial class App : Microsoft.UI.Xaml.Application
     private ControlCenterService? _controlCenter;
     private TrayService? _tray;
     private PosterVisualWindow? _poster;
+    private IStateProjectionCoordinator? _stateCoordinator;
+    private IStateCommandService? _stateCommands;
     private IStructuredLog? _log;
     private IResourceLedger? _ledger;
     private CancellationTokenSource? _desktopDiscoveryCancellation;
@@ -62,9 +64,57 @@ public partial class App : Microsoft.UI.Xaml.Application
         _services = BuildServices();
         _log = _services.GetRequiredService<IStructuredLog>();
         _ledger = _services.GetRequiredService<IResourceLedger>();
-        _controlCenter = new ControlCenterService(_ledger, _log);
+        StateStoreInitializationResult stateInitialization =
+            _services.GetRequiredService<IStateStore>().Initialize();
+        if (!stateInitialization.Succeeded)
+        {
+            _log.Write("critical", "application.state_store_unavailable", new
+            {
+                stateInitialization.PreviousSchemaVersion,
+                stateInitialization.Error
+            });
+            ExitApplication();
+            return;
+        }
+        try
+        {
+            SettingsStateSnapshot settings =
+                _services.GetRequiredService<ISettingsRepository>().Read();
+            _log.Write("info", "state_repositories.ready", new
+            {
+                settings.Revision,
+                settings.SettingsRevision,
+                settings.Settings.DynamicEffectsPaused,
+                performanceMode = settings.Settings.PerformanceMode.ToString()
+            });
+        }
+        catch (Exception exception)
+        {
+            _log.Write("critical", "application.state_repository_unavailable", new
+            {
+                exceptionType = exception.GetType().FullName,
+                exception.HResult,
+                exception.Message
+            });
+            ExitApplication();
+            return;
+        }
+        _stateCoordinator = _services.GetRequiredService<IStateProjectionCoordinator>();
+        _stateCommands = _services.GetRequiredService<IStateCommandService>();
+        _stateCoordinator.ProjectionChanged += OnStateProjectionChanged;
+        _controlCenter = new ControlCenterService(
+            _ledger,
+            _log,
+            () => TogglePosterLocked(StateCommandSource.ControlCenter),
+            () => TogglePosterCollapsed(StateCommandSource.ControlCenter),
+            () => ToggleDynamicEffectsPaused(StateCommandSource.ControlCenter));
         _tray = new TrayService(_ledger, _log);
-        _tray.Create(_controlCenter.Show, TogglePosterEditing, ExitApplication);
+        _tray.Create(
+            _controlCenter.Show,
+            TogglePosterEditing,
+            () => TogglePosterLocked(StateCommandSource.Tray),
+            () => ToggleDynamicEffectsPaused(StateCommandSource.Tray),
+            ExitApplication);
         _log.Write("info", "application.started", new
         {
             version = typeof(App).Assembly.GetName().Version?.ToString(),
@@ -89,6 +139,19 @@ public partial class App : Microsoft.UI.Xaml.Application
         services.AddSingleton<IUserDataPaths, UserDataPaths>();
         services.AddSingleton<IStructuredLog, JsonLineLog>();
         services.AddSingleton<IResourceLedger, ResourceLedger>();
+        services.AddSingleton<SqliteStateStore>();
+        services.AddSingleton<IStateStore>(static provider =>
+            provider.GetRequiredService<SqliteStateStore>());
+        services.AddSingleton<IPosterRepository, SqlitePosterRepository>();
+        services.AddSingleton<ISettingsRepository, SqliteSettingsRepository>();
+        services.AddSingleton<
+            IStateProjectionRepository,
+            SqliteStateProjectionRepository>();
+        services.AddSingleton<StateProjectionCoordinator>();
+        services.AddSingleton<IStateProjectionCoordinator>(static provider =>
+            provider.GetRequiredService<StateProjectionCoordinator>());
+        services.AddSingleton<IStateCommandService>(static provider =>
+            provider.GetRequiredService<StateProjectionCoordinator>());
         services.AddSingleton<IDesktopShellLocator, ExplorerDesktopLocator>();
         services.AddSingleton<IDesktopLayerAttachment, DesktopLayerAttachment>();
         services.AddSingleton<IDisplayTopologyService, DisplayTopologyService>();
@@ -172,7 +235,8 @@ public partial class App : Microsoft.UI.Xaml.Application
         if (Volatile.Read(ref _exiting) != 0 ||
             _services is null ||
             _ledger is null ||
-            _log is null)
+            _log is null ||
+            _controlCenter is null)
         {
             return;
         }
@@ -181,8 +245,12 @@ public partial class App : Microsoft.UI.Xaml.Application
         {
             _poster ??= new PosterVisualWindow(
                 _services.GetRequiredService<IDesktopLayerAttachment>(),
+                _services.GetRequiredService<IStateProjectionCoordinator>(),
+                _services.GetRequiredService<IStateCommandService>(),
                 _ledger,
-                _log);
+                _log,
+                _controlCenter.Show,
+                editing => _tray?.SetPosterEditing(editing));
             if (!_poster.Show(desktopHost, displayTopology))
             {
                 _log.Write("error", "poster.show_failed", new
@@ -734,11 +802,133 @@ public partial class App : Microsoft.UI.Xaml.Application
         }
 
         bool target = !_poster.IsEditing;
-        if (_poster.SetEditing(target))
-        {
-            _tray?.SetPosterEditing(target);
-        }
+        _ = _poster.SetEditing(target);
     }
+
+    private void OnStateProjectionChanged(
+        object? sender,
+        StateProjectionChangedEventArgs args)
+    {
+        if (_dispatcher is not null && !_dispatcher.HasThreadAccess)
+        {
+            _ = _dispatcher.TryEnqueue(() => ApplyStateProjection(args));
+            return;
+        }
+        ApplyStateProjection(args);
+    }
+
+    private void ApplyStateProjection(StateProjectionChangedEventArgs args)
+    {
+        if (Volatile.Read(ref _exiting) != 0)
+        {
+            return;
+        }
+        _controlCenter?.ApplyProjection(args.Projection.ControlCenter);
+        _tray?.ApplyProjection(args.Projection.Tray);
+        _ = _poster?.ApplyProjection(args);
+    }
+
+    private void TogglePosterLocked(StateCommandSource source)
+    {
+        if (!TryGetProjection(source, "lock", out DesktopUpProjection? projection))
+        {
+            return;
+        }
+        DesktopUpProjection currentProjection = projection!;
+        PosterDefinition desired = currentProjection.Poster.Poster with
+        {
+            IsLocked = !currentProjection.Poster.Poster.IsLocked
+        };
+        StateCommandResult result = _stateCommands!.Execute(new PosterStateCommand(
+            $"{SourceToken(source)}-lock-{Guid.NewGuid():N}",
+            source,
+            PosterStateCommandKind.SetLocked,
+            currentProjection.Revision,
+            desired.PosterId,
+            desired));
+        LogCommandResult("poster-lock", result);
+    }
+
+    private void TogglePosterCollapsed(StateCommandSource source)
+    {
+        if (!TryGetProjection(source, "collapse", out DesktopUpProjection? projection))
+        {
+            return;
+        }
+        DesktopUpProjection currentProjection = projection!;
+        PosterDefinition desired = currentProjection.Poster.Poster with
+        {
+            IsCollapsed = !currentProjection.Poster.Poster.IsCollapsed
+        };
+        StateCommandResult result = _stateCommands!.Execute(new PosterStateCommand(
+            $"{SourceToken(source)}-collapse-{Guid.NewGuid():N}",
+            source,
+            PosterStateCommandKind.SetCollapsed,
+            currentProjection.Revision,
+            desired.PosterId,
+            desired));
+        LogCommandResult("poster-collapse", result);
+    }
+
+    private void ToggleDynamicEffectsPaused(StateCommandSource source)
+    {
+        if (!TryGetProjection(source, "pause", out DesktopUpProjection? projection))
+        {
+            return;
+        }
+        DesktopUpProjection currentProjection = projection!;
+        DesktopUpSettings current = currentProjection.ControlCenter.Settings.Settings;
+        DesktopUpSettings desired = current with
+        {
+            DynamicEffectsPaused = !current.DynamicEffectsPaused
+        };
+        StateCommandResult result = _stateCommands!.Execute(new SettingsStateCommand(
+            $"{SourceToken(source)}-pause-{Guid.NewGuid():N}",
+            source,
+            SettingsStateCommandKind.SetDynamicEffectsPaused,
+            currentProjection.Revision,
+            desired));
+        LogCommandResult("dynamic-effects-pause", result);
+    }
+
+    private bool TryGetProjection(
+        StateCommandSource source,
+        string action,
+        out DesktopUpProjection? projection)
+    {
+        if (_stateCoordinator?.TryGetCurrent(out projection) == true &&
+            projection is not null)
+        {
+            return true;
+        }
+        _log?.Write("warning", "state_command.not_ready", new
+        {
+            source = source.ToString(),
+            action
+        });
+        projection = null;
+        return false;
+    }
+
+    private void LogCommandResult(string action, StateCommandResult result)
+    {
+        if (result.Succeeded)
+        {
+            return;
+        }
+        _log?.Write("warning", "state_command.rejected", new
+        {
+            action,
+            status = result.Status.ToString(),
+            result.RequestId,
+            result.ExpectedRevision,
+            result.CurrentRevision,
+            result.Error
+        });
+    }
+
+    private static string SourceToken(StateCommandSource source) =>
+        source.ToString().ToLowerInvariant();
 
     private void ScheduleSmokeExitIfRequested(IEnumerable<string> arguments)
     {
@@ -767,6 +957,12 @@ public partial class App : Microsoft.UI.Xaml.Application
         StopDesktopDiscovery();
         _poster?.Dispose();
         _poster = null;
+        if (_stateCoordinator is not null)
+        {
+            _stateCoordinator.ProjectionChanged -= OnStateProjectionChanged;
+            _stateCoordinator = null;
+        }
+        _stateCommands = null;
         _controlCenter?.Dispose();
         _controlCenter = null;
         _tray?.Dispose();

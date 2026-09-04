@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "diagram_type": "lifecycle",
+  "meta": {
+    "title": "DesktopUp V3 — Runtime Lifecycle",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "viewBox": [1080, 600],
+    "views": [
+      {
+        "id": "main-runtime",
+        "label": "运行主生命周期",
+        "focus": ["not_running", "starting", "host_attached", "running", "clean_exit"],
+        "note": "单实例启动、稳定宿主、运行和资源账本清理。"
+      },
+      {
+        "id": "environment-recovery",
+        "label": "环境恢复环",
+        "focus": ["running", "environment_changed", "reacquiring", "recommit_verify"],
+        "note": "Explorer 或显示 generation 改变后，旧恢复结果作废并重新挂载。"
+      },
+      {
+        "id": "clean-shutdown",
+        "label": "清理退出",
+        "focus": ["running", "clean_exit"],
+        "note": "按序停止监控、释放输入岛和窗口、移除托盘并验证资源账本。"
+      }
+    ]
+  },
+  "lanes": [
+    {"id": "main", "label": "应用生命周期"},
+    {"id": "recovery", "label": "Shell / 显示恢复"}
+  ],
+  "states": [
+    {"id": "not_running", "type": "start", "label": "Not Running", "sublabel": "无窗口、无托盘", "lane": "main", "col": 0, "step": "01"},
+    {"id": "starting", "type": "active", "label": "Starting", "sublabel": "单实例、DI、托盘", "lane": "main", "col": 1, "step": "02"},
+    {"id": "host_attached", "type": "decision", "label": "Host Attached", "sublabel": "Shell + 显示快照稳定", "lane": "main", "col": 2, "step": "03"},
+    {"id": "running", "type": "active", "label": "Running", "sublabel": "海报、托盘、监控", "lane": "main", "col": 3, "step": "04"},
+    {"id": "clean_exit", "type": "success", "label": "Clean Exit", "sublabel": "资源账本归零", "lane": "main", "col": 4, "step": "05"},
+    {"id": "environment_changed", "type": "failure", "label": "Generation Shift", "sublabel": "Explorer / DPI / work area", "lane": "recovery", "col": 0, "width": 118, "tag": "recoverable"},
+    {"id": "reacquiring", "type": "active", "label": "Reacquire Host", "sublabel": "debounce + bounded retry", "lane": "recovery", "col": 1, "width": 118},
+    {"id": "recommit_verify", "type": "decision", "label": "Recommit + Verify", "sublabel": "owner · bounds · region", "lane": "recovery", "col": 2, "width": 118}
+  ],
+  "transitions": [
+    {"id": "start", "from": "not_running", "to": "starting", "variant": "emphasis"},
+    {"id": "discover", "from": "starting", "to": "host_attached"},
+    {"id": "show", "from": "host_attached", "to": "running", "route": "straight", "variant": "emphasis"},
+    {"id": "exit_requested", "from": "running", "to": "clean_exit", "label": "退出", "route": "straight", "variant": "emphasis"},
+    {"id": "environment_event", "from": "running", "to": "environment_changed", "label": "代际变化", "variant": "security"},
+    {"id": "retry_host", "from": "environment_changed", "to": "reacquiring", "route": "straight", "variant": "emphasis"},
+    {"id": "verify_host", "from": "reacquiring", "to": "recommit_verify", "route": "straight"},
+    {"id": "resume", "from": "recommit_verify", "to": "running", "label": "读回通过", "variant": "emphasis"},
+    {"id": "retry_generation", "from": "recommit_verify", "to": "reacquiring", "label": "过期 / 失败", "route": "bottom-channel", "labelAt": [633, 350], "variant": "dashed"}
+  ]
+}

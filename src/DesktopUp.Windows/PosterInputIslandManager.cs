@@ -28,6 +28,7 @@ public sealed class PosterInputIslandManager : IInputRegionHost
     private const uint WmCaptureChanged = 0x0215;
     private const int MaNoActivate = 3;
     private const int HtClient = 1;
+    private const int RgnAnd = 1;
     private const int RgnOr = 2;
     private const uint SwpNoSize = 0x0001;
     private const uint SwpNoMove = 0x0002;
@@ -39,6 +40,7 @@ public sealed class PosterInputIslandManager : IInputRegionHost
     private const int IdcSizeNs = 32645;
     private const int IdcSizeWe = 32644;
     private const int IdcSizeNwse = 32642;
+    private const int IdcSizeNesw = 32643;
     private static readonly nint HwndBottom = new(1);
     private static readonly object ClassGate = new();
     private static readonly Dictionary<nint, PosterInputIslandManager> Instances = [];
@@ -171,7 +173,7 @@ public sealed class PosterInputIslandManager : IInputRegionHost
             return false;
         }
 
-        nint region = BuildWindowRegion(layout.Regions);
+        nint region = BuildWindowRegion(layout);
         if (region == 0)
         {
             return false;
@@ -425,9 +427,14 @@ public sealed class PosterInputIslandManager : IInputRegionHost
 
         int cursorId = target.Kind switch
         {
+            PosterInputTargetKind.ResizeLeft or
             PosterInputTargetKind.ResizeRight => IdcSizeWe,
+            PosterInputTargetKind.ResizeTop or
             PosterInputTargetKind.ResizeBottom => IdcSizeNs,
+            PosterInputTargetKind.ResizeTopLeft or
             PosterInputTargetKind.ResizeBottomRight => IdcSizeNwse,
+            PosterInputTargetKind.ResizeTopRight or
+            PosterInputTargetKind.ResizeBottomLeft => IdcSizeNesw,
             _ => IdcArrow
         };
         _ = SetCursor(LoadCursor(0, new nint(cursorId)));
@@ -437,8 +444,13 @@ public sealed class PosterInputIslandManager : IInputRegionHost
     private static bool IsGestureTarget(PosterInputTargetKind kind) => kind is
         PosterInputTargetKind.TitleBar or
         PosterInputTargetKind.EditSurface or
+        PosterInputTargetKind.ResizeLeft or
         PosterInputTargetKind.ResizeRight or
+        PosterInputTargetKind.ResizeTop or
         PosterInputTargetKind.ResizeBottom or
+        PosterInputTargetKind.ResizeTopLeft or
+        PosterInputTargetKind.ResizeTopRight or
+        PosterInputTargetKind.ResizeBottomLeft or
         PosterInputTargetKind.ResizeBottomRight;
 
     private static bool ValidateFrameAndLayout(
@@ -455,7 +467,7 @@ public sealed class PosterInputIslandManager : IInputRegionHost
             region.Bounds.Right <= layout.FrameWidth &&
             region.Bounds.Bottom <= layout.FrameHeight);
 
-    private static nint BuildWindowRegion(IReadOnlyList<PosterInputRegion> regions)
+    private static nint BuildWindowRegion(PosterInputLayoutSnapshot layout)
     {
         nint combined = CreateRectRgn(0, 0, 0, 0);
         if (combined == 0)
@@ -463,7 +475,7 @@ public sealed class PosterInputIslandManager : IInputRegionHost
             return 0;
         }
 
-        foreach (PosterInputRegion input in regions)
+        foreach (PosterInputRegion input in layout.Regions)
         {
             DesktopPixelRect bounds = input.Bounds;
             nint part = CreateRectRgn(bounds.X, bounds.Y, bounds.Right, bounds.Bottom);
@@ -477,6 +489,28 @@ public sealed class PosterInputIslandManager : IInputRegionHost
                 return 0;
             }
             _ = DeleteObject(part);
+        }
+
+        if (layout.OuterCornerRadius > 0)
+        {
+            int diameter = checked(layout.OuterCornerRadius * 2);
+            nint outer = CreateRoundRectRgn(
+                0,
+                0,
+                checked(layout.FrameWidth + 1),
+                checked(layout.FrameHeight + 1),
+                diameter,
+                diameter);
+            if (outer == 0 || CombineRgn(combined, combined, outer, RgnAnd) == 0)
+            {
+                if (outer != 0)
+                {
+                    _ = DeleteObject(outer);
+                }
+                _ = DeleteObject(combined);
+                return 0;
+            }
+            _ = DeleteObject(outer);
         }
         return combined;
     }
@@ -704,6 +738,15 @@ public sealed class PosterInputIslandManager : IInputRegionHost
 
     [DllImport("gdi32.dll", SetLastError = true)]
     private static extern nint CreateRectRgn(int left, int top, int right, int bottom);
+
+    [DllImport("gdi32.dll", SetLastError = true)]
+    private static extern nint CreateRoundRectRgn(
+        int left,
+        int top,
+        int right,
+        int bottom,
+        int ellipseWidth,
+        int ellipseHeight);
 
     [DllImport("gdi32.dll", SetLastError = true)]
     private static extern int CombineRgn(nint destination, nint first, nint second, int mode);

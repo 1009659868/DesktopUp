@@ -1,6 +1,6 @@
 # DesktopUp V2 V3 制作计划 V1
 
-状态：`IN PROGRESS — V3-03 POSTER INPUT CLUSTER`
+状态：`IN PROGRESS — V3-04 AUTHORITATIVE STATE / V3-04-03 IMPLEMENTED`
 
 建立日期：2026-09-03
 
@@ -171,13 +171,13 @@ V3-02-08/09 共同遵循：恢复任务捕获 `(DesktopShellGeneration, DisplayT
 
 目标：把诊断海报升级为 NIGHT OPS 结构，并完成 DesktopUp 独有的视觉/输入分离。
 
-状态：`IN PROGRESS — R1 RELEASE BUILT / MANUAL RECHECK PENDING`
+状态：`COMPLETE — R5 AUTOMATED 73/73 + USER MANUAL PASS 2026-09-04`
 
 当前增量（2026-09-03）：
 
 - V3-03-01/02：建立全幅透明视觉 HWND 与同 owner 的稀疏原生 InputIsland；USING 空白不进入输入岛；
 - V3-03-03：输入 layout 使用单调 revision，每次视觉重排后一次提交对应形状区域；
-- V3-03-04：标题拖动及 EDITING 的右、下、右下缩放使用系统 pointer capture 和屏幕坐标增量，跨重排阈值不重启手势；
+- V3-03-04：标题拖动及 EDITING 的四边、四角八向缩放使用系统 pointer capture 和屏幕坐标增量，跨重排阈值不重启手势；
 - V3-03-05/06：外框几何不缩放字体/图标语义；USING、EDITING、LOCKED 权限由独立策略约束；
 - V3-03-07：收起固定 60 DIP，保持 top/left/width 和展开高度，展开按钮不改变屏幕位置；
 - V3-03-08：预览逐帧应用，取消回滚，松开只产生一次 `poster.geometry_committed`；正式 SQLite 持久化由 V3-04 状态权威接管；
@@ -187,7 +187,17 @@ V3-02-08/09 共同遵循：恢复任务捕获 `(DesktopShellGeneration, DisplayT
 - V3-03-R1：实机定位 WinUI `DesktopChildSiteBridge` 为真实空白拦截者；在 post-composition 阶段恢复并持续校验视觉 HWND 的 layered+transparent style，原生探针证明空白落到 Explorer、Item 留在 InputIsland；
 - V3-03-R1：USING 取消外框，EDITING 仅保留 1 DIP 状态边线；六项区域改由标准 WinUI `ScrollViewer` 连续滚动，InputIsland 转发 Item/滚动轨 wheel；
 - V3-03-R1：吸收 DeskBox 最新采样逐帧合并、最终帧刷新和单次提交意图，同列数 resize 不再反复重建 Item grid；
-- 自动证据：Release 构建 0 warning / 0 error，合同测试 52/52，真实桌面 smoke 证明视觉窗和输入岛同代际创建并在退出后零残留；R1 人工复测仍待执行。
+- V3-03-R1 人工反馈：空白框选/右键、原生图标、Item、交互、层级均通过，细编辑边线可接受；仅四个圆角露出矩形 HWND 默认底色；
+- V3-03-R2：视觉 HWND 与 InputIsland 同 revision 提交 8-DIP 物理圆角 HRGN，尺寸/DPI 变化时重新生成；采用 DeskBox 常规 Box 的默认圆角、细边、标题栏、操作按钮和深色实色回退尺度，但不提前实现 V3-07 主题系统；
+- V3-03-R2 人工反馈：四角问题不再作为主要反馈，但 DeskBox 默认 0.8-DIP 浅色边线在桌面上形成明显白框，整体视觉近似未获接受；
+- V3-03-R3：USING 外边界改为透明/零厚度，EDITING 保留 1-DIP 状态线；不在本阶段引入跨窗口阴影层，DeskBox 风格重新设计延后；
+  - 自动证据：Release 构建 0 warning / 0 error，合同测试 53/53，真实桌面 smoke 证明视觉窗和输入岛同代际创建并在退出后零残留；原生探针证明左上角在 HRGN 外、中心在 HRGN 内；
+- V3-03-R4：修复右上角视觉位置与 InputIsland 命中位置由两套常量分别计算造成的错位；标题栏 padding、24-DIP 操作尺寸、2-DIP 间距及 46-DIP 高度统一进入 Domain 几何合同；
+- V3-03-R4：受保护操作改为“收起/展开 + 更多”；更多菜单提供锁定/解除锁定、进入/完成编辑、打开控制中心，并预留“新建文件/新建文件夹”入口。文件入口在 V3-05 完成事务、恢复账本和真实 Item CRUD 前保持禁用，不提前制造无保护的文件写入；
+  - 自动证据：Release 构建 0 warning / 0 error，合同测试 54/54，真实桌面 smoke 证明视觉窗和输入岛同代际创建并在退出后零残留；R4 交互焦点复测待执行。
+- V3-03-R5：补齐四边四角八向 InputIsland、方向光标与对边锚定纯几何策略；尺寸提交改为“先准备 layout/region，再以 `NOCOPYBITS | DEFERERASE` 一次提交 bounds”；HRGN 负责窗口外透明，WinUI 根层与 `WM_ERASEBKGND` 统一使用 `#21242A` 回退，关闭扩大窗口时系统默认白底入口；
+  - 自动证据：正式 Release 构建 0 warning / 0 error，合同测试 73/73；真实桌面 smoke PID 14672 证明视觉窗和输入岛同代际创建并在退出后零残留；
+  - 人工裁决：2026-09-04 用户确认八向缩放、对边锚定及无白底通过，V3-03 正式关闭。
 
 ### 工作项
 
@@ -201,6 +211,8 @@ V3-02-08/09 共同遵循：恢复任务捕获 `(DesktopShellGeneration, DisplayT
 - V3-03-08：实现按帧几何事务和松开后一次持久化接口；
 - V3-03-09：实现 NIGHT OPS 受保护 chrome 与六个测试 Item；
 - V3-03-10：建立白条、灰框、裁切和输入岛错位检测。
+- V3-03-11：统一标题栏操作的视觉/命中几何，建立收起 + 更多菜单。
+- V3-03-12：补齐八向缩放与对边锚定，建立无白色默认擦除的 prepared bounds 提交边界。
 
 ### 自动门
 
@@ -208,7 +220,10 @@ V3-02-08/09 共同遵循：恢复任务捕获 `(DesktopShellGeneration, DisplayT
 - 一次按下跨列数阈值仍保持 capture；
 - 收起/展开不改变顶部、水平位置和宽度；
 - 锁定时外框不变，按钮仍工作；
+- 收起与更多图标的可见矩形和 InputIsland 命中矩形来自同一布局合同；
 - 视觉与命中 revision 永远一致。
+- 四边四角共享一套最小/最大/工作区边界，左/上缩放保持相反边不动；
+- 尺寸提交不得暴露系统默认白色客户区，不得改变 owner、Z-order 或激活态。
 
 ### 人工 P0 门
 
@@ -216,12 +231,27 @@ V3-02-08/09 共同遵循：恢复任务捕获 `(DesktopShellGeneration, DisplayT
 - 同一空白右键出现 Windows 桌面菜单；
 - 空白覆盖范围内原生快捷方式可单击/双击；
 - 六个 Item、标题拖动、锁定、收起和缩放分别可用；
+- 右上角仅显示收起/展开与更多，点击各自可见图标只触发对应动作；更多菜单可切换锁定、编辑并打开控制中心；
 - 收起按钮保持原位，展开后不跳动；
 - 连续拖动/缩放无规律性闪烁、白条、灰框或置顶。
 
 ## 8. V3-04：权威状态、控制中心与托盘
 
 目标：用一个状态权威连接海报、控制中心和托盘，消除 UI 回弹和两端状态不一致。
+
+状态：`IN PROGRESS — V3-04-03 IMPLEMENTED / MANUAL THREE-SURFACE GATE NEXT`
+
+当前增量（2026-09-04）：
+
+- V3-04-01：引入 `Microsoft.Data.Sqlite 10.0.11`，建立独立 `IStateStore` 端口与 Infrastructure adapter；
+- schema v1 建立 migration ledger、单例 state head 和 operation idempotency journal；每次提交按 expected revision 执行 SQLite 事务 CAS；
+- 首次创建、重复初始化、旧 v0 迁移、迁移前在线备份、备份完整性验证、冲突、幂等重放、事务回滚和双 store revision 竞争均有真实 SQLite 自动测试；
+- 状态初始化现在位于托盘、控制中心和海报创建之前；损坏数据库保留原文件并中止启动，不以第二份默认状态掩盖失败；
+- 自动证据：Release 0 warning / 0 error，合同测试 81/81；真实启动日志顺序为 `state_store.initialized → tray.created → poster.shown`，退出 `activeResources=0`。
+- V3-04-02：schema v2 建立 Poster/Settings 持久字段、repository snapshot/CAS 和应用服务边界；拖缩完成、锁定、收起已提交同一 global revision，冲突/失败恢复 committed snapshot；
+- V3-04-02 自动证据：Release 0 warning / 0 error，合同测试 87/87；下一门为普通退出/重启恢复几何、锁定和收起。
+- V3-04-03：建立读写分离 command/query 端口、单事务 aggregate snapshot、三端同 revision projection、单调分发、冲突/权限/幂等语义；
+- V3-04-03 自动证据：Release 0 warning / 0 error，合同测试 97/97；真实 v1→v2 迁移、projection 发布、启动/退出和临时文件零残留 smoke 通过。
 
 ### 工作项
 
@@ -431,4 +461,4 @@ V3-02-08/09 共同遵循：恢复任务捕获 `(DesktopShellGeneration, DisplayT
 
 ## 18. 立即下一步
 
-运行 V3-03 Release，执行透明空白框选/右键/原生快捷方式、六 Item、标题拖动、托盘编辑缩放、锁定、顶部锚定收起及连续手势视觉稳定性人工 P0 门。全部通过后关闭 V3-03，进入 V3-04 权威状态、控制中心与托盘。
+执行 V3-04-03 人工三端门；通过后进入 V3-04-04，在统一 command/projection 上实现控制中心桌面预览、位置/尺寸编辑和内容参数入口，不允许预览成为第二状态权威。

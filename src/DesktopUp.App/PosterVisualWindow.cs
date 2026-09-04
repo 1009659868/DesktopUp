@@ -14,11 +14,16 @@ namespace DesktopUp;
 
 internal sealed class PosterVisualWindow(
     IDesktopLayerAttachment attachment,
+    IStateProjectionCoordinator stateCoordinator,
+    IStateCommandService stateCommands,
     IResourceLedger ledger,
-    IStructuredLog log) : IDisposable
+    IStructuredLog log,
+    Action? showControlCenter = null,
+    Action<bool>? editingStateChanged = null) : IDisposable
 {
     private const double SafeMarginDip = 24;
-    private const double HeaderHeightDip = 60;
+    private const double SurfaceCornerRadiusDip = 8;
+    private const double HeaderHeightDip = PosterTitleBarLayoutPolicy.HeaderHeightDip;
     private const double MetaHeightDip = 130;
     private const double ItemsTopInsetDip = 10;
     private const double FooterHeightDip = 42;
@@ -40,9 +45,10 @@ internal sealed class PosterVisualWindow(
     private Border? _surface;
     private ScrollViewer? _itemsScrollViewer;
     private Grid? _itemsGrid;
-    private TextBlock? _lockGlyph;
     private TextBlock? _collapseGlyph;
+    private TextBlock? _moreGlyph;
     private TextBlock? _modeLabel;
+    private MenuFlyout? _posterMenu;
     private nint _windowHandle;
     private IDisposable? _windowLease;
     private PosterInputIslandManager? _inputIsland;
@@ -51,6 +57,10 @@ internal sealed class PosterVisualWindow(
     private DesktopPixelRect _bounds;
     private PosterPlacementState _placement;
     private PosterFrameGeometry _geometry;
+    private PosterDefinition? _authoritativePoster;
+    private long _stateRevision;
+    private long _posterRevision;
+    private string? _activeCommandRequestId;
     private PosterOperatingMode _mode = PosterOperatingMode.Using;
     private long _layoutRevision;
     private long _attachedDesktopGeneration;
@@ -60,6 +70,7 @@ internal sealed class PosterVisualWindow(
     private DispatcherQueueTimer? _gestureFrameTimer;
     private PendingGestureFrame? _pendingGestureFrame;
     private bool _gestureFrameScheduled;
+    private VisualRegionState? _appliedVisualRegion;
     private bool _disposed;
 
     public nint WindowHandle => _windowHandle;
@@ -89,14 +100,23 @@ internal sealed class PosterVisualWindow(
         }
 
         _monitor = primaryMonitor;
-        _bounds = CreateDefaultBounds(primaryMonitor);
-        _geometry = GeometryFromBounds(
-            _bounds,
-            primaryMonitor,
-            isLocked: false,
-            isCollapsed: false,
-            revision: 1);
-        _placement = PlacementFromBounds(_bounds, primaryMonitor);
+        DesktopPixelRect defaultBounds = CreateDefaultBounds(primaryMonitor);
+        DesktopUpProjection projection = stateCoordinator.EnsureInitialized(
+            CreateDefaultPoster(defaultBounds, primaryMonitor));
+        PosterSurfaceProjection state = projection.Poster;
+        AdoptPosterProjection(state, primaryMonitor, applyFrame: false);
+        if (!string.Equals(
+                state.Poster.MonitorDeviceName,
+                primaryMonitor.DeviceName,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            log.Write("info", "poster.monitor_fallback_applied", new
+            {
+                savedMonitor = state.Poster.MonitorDeviceName,
+                targetMonitor = primaryMonitor.DeviceName,
+                state.Revision
+            });
+        }
 
         Window window = CreateWindow();
         nint windowHandle = WindowNative.GetWindowHandle(window);
@@ -109,6 +129,18 @@ internal sealed class PosterVisualWindow(
             {
                 error = "initial-bounds-readback-mismatch",
                 expected = _bounds
+            });
+            return false;
+        }
+        if (!ApplyVisualRegion(windowHandle, _bounds))
+        {
+            window.Close();
+            ClearVisualReferences();
+            log.Write("error", "poster.show_failed", new
+            {
+                error = "initial-rounded-region-failed",
+                expected = _bounds,
+                cornerRadius = ResolveOuterCornerRadiusPixels()
             });
             return false;
         }
@@ -160,6 +192,8 @@ internal sealed class PosterVisualWindow(
             owner = $"0x{desktopHost.Identity.IconViewHandle:X}",
             desktopGeneration = desktopHost.Generation,
             displayGeneration = displayTopology.Generation,
+            stateRevision = _stateRevision,
+            posterRevision = _posterRevision,
             atomicDesktopBottomShow = true,
             visualInputTransparent = true,
             inputRegionCount = inputLayout.Regions.Count,
@@ -184,13 +218,18 @@ internal sealed class PosterVisualWindow(
                     return;
                 }
 
-                bool restored = ReassertDesktopBottom(_desktopHost);
+                bool regionRestored = ApplyVisualRegion(
+                    _windowHandle,
+                    _bounds,
+                    force: true);
+                bool restored = regionRestored && ReassertDesktopBottom(_desktopHost);
                 log.Write(
                     restored ? "info" : "warning",
                     "poster.post_composition_reasserted",
                     new
                     {
                         restored,
+                        regionRestored,
                         handle = $"0x{_windowHandle:X}",
                         _desktopHost.Generation
                     });
@@ -275,7 +314,7 @@ internal sealed class PosterVisualWindow(
                 primaryMonitor,
                 _geometry.IsLocked,
                 _geometry.IsCollapsed,
-                checked(_geometry.Revision + 1),
+                _geometry.Revision,
                 _geometry.ExpandedHeightDip);
             _appliedTopologyGeneration = displayTopology.Generation;
             log.Write("info", "poster_reproject.committed", new
@@ -285,7 +324,9 @@ internal sealed class PosterVisualWindow(
                 bounds = expectedBounds,
                 primaryMonitor.DeviceName,
                 primaryMonitor.DpiX,
-                primaryMonitor.DpiY
+                primaryMonitor.DpiY,
+                stateRevision = _stateRevision,
+                persisted = false
             });
         }
         else if (!_inputIsland.ApplyLayout(_bounds, BuildInputLayout(_bounds)))
@@ -320,6 +361,10 @@ internal sealed class PosterVisualWindow(
             layoutRevision = _layoutRevision,
             applied
         });
+        if (applied)
+        {
+            editingStateChanged?.Invoke(editing);
+        }
         return applied;
     }
 
@@ -410,20 +455,30 @@ internal sealed class PosterVisualWindow(
 
         if (args.EventKind == PosterInputEventKind.GestureCompleted)
         {
-            _geometry = GeometryFromBounds(
+            PosterFrameGeometry candidateGeometry = GeometryFromBounds(
                 candidate,
                 _monitor,
                 _geometry.IsLocked,
                 _geometry.IsCollapsed,
-                checked(_geometry.Revision + 1),
+                _geometry.Revision,
                 _geometry.ExpandedHeightDip);
-            _placement = PlacementFromBounds(candidate, _monitor);
+            if (!CommitPosterState(
+                    candidate,
+                    candidateGeometry,
+                    gesture == PosterGestureKind.Move
+                        ? PosterStateCommandKind.Move
+                        : PosterStateCommandKind.Resize,
+                    $"geometry-{gesture.ToString().ToLowerInvariant()}"))
+            {
+                return;
+            }
             log.Write("info", "poster.geometry_committed", new
             {
                 gesture = gesture.ToString(),
-                geometryRevision = _geometry.Revision,
+                stateRevision = _stateRevision,
+                posterRevision = _posterRevision,
                 layoutRevision = _layoutRevision,
-                bounds = candidate
+                bounds = _bounds
             });
         }
     }
@@ -479,18 +534,13 @@ internal sealed class PosterVisualWindow(
         switch (args.TargetKind)
         {
             case PosterInputTargetKind.LockButton:
-                _geometry = PosterFrameGeometryPolicy.ToggleLocked(_geometry);
-                UpdateVisualState();
-                _ = _inputIsland?.ApplyLayout(_bounds, BuildInputLayout(_bounds));
-                log.Write("info", "poster.lock_changed", new
-                {
-                    _geometry.IsLocked,
-                    _geometry.Revision,
-                    layoutRevision = _layoutRevision
-                });
+                ToggleLocked("legacy-button");
                 break;
             case PosterInputTargetKind.CollapseButton:
                 ToggleCollapsed();
+                break;
+            case PosterInputTargetKind.MoreButton:
+                ShowPosterMenu();
                 break;
             case PosterInputTargetKind.Item:
                 if (LockPermissionPolicy.CanActivateItem(_geometry) &&
@@ -505,6 +555,39 @@ internal sealed class PosterVisualWindow(
                 }
                 break;
         }
+    }
+
+    private void ToggleLocked(string source)
+    {
+        PosterFrameGeometry previous = _geometry;
+        _geometry = PosterFrameGeometryPolicy.ToggleLocked(_geometry);
+        UpdateVisualState();
+        bool applied = _inputIsland?.ApplyLayout(
+            _bounds,
+            BuildInputLayout(_bounds)) == true;
+        if (!applied)
+        {
+            _geometry = previous;
+            UpdateVisualState();
+            _ = _inputIsland?.ApplyLayout(_bounds, BuildInputLayout(_bounds));
+        }
+        else
+        {
+            applied = CommitPosterState(
+                _bounds,
+                _geometry,
+                PosterStateCommandKind.SetLocked,
+                $"lock-{source}");
+        }
+        log.Write(applied ? "info" : "warning", "poster.lock_changed", new
+        {
+            source,
+            applied,
+            _geometry.IsLocked,
+            stateRevision = _stateRevision,
+            posterRevision = _posterRevision,
+            layoutRevision = _layoutRevision
+        });
     }
 
     private void ToggleCollapsed()
@@ -536,16 +619,282 @@ internal sealed class PosterVisualWindow(
             return;
         }
 
-        _placement = PlacementFromBounds(nextBounds, _monitor);
+        if (!CommitPosterState(
+                nextBounds,
+                next,
+                PosterStateCommandKind.SetCollapsed,
+                "collapse-toggle"))
+        {
+            return;
+        }
         log.Write("info", "poster.collapse_changed", new
         {
             _geometry.IsCollapsed,
-            _geometry.Revision,
+            stateRevision = _stateRevision,
+            posterRevision = _posterRevision,
             topPreserved = true,
             leftPreserved = true,
             widthPreserved = true,
             bounds = nextBounds
         });
+    }
+
+    private static PosterDefinition CreateDefaultPoster(
+        DesktopPixelRect bounds,
+        DisplayMonitorSnapshot monitor)
+    {
+        PosterPlacementState placement = PlacementFromBounds(bounds, monitor);
+        DesktopPixelRect work = monitor.WorkArea;
+        return new PosterDefinition(
+            BuiltInStateIdentities.PrimaryPosterId,
+            "NIGHT OPS",
+            "TACTICAL ARCHIVE / 01",
+            monitor.DeviceName,
+            (bounds.X - work.X) / monitor.ScaleX,
+            (bounds.Y - work.Y) / monitor.ScaleY,
+            bounds.Width / monitor.ScaleX,
+            bounds.Height / monitor.ScaleY,
+            placement.HorizontalAnchor,
+            placement.VerticalAnchor,
+            Math.Clamp(bounds.Width / (double)work.Width, 0.000001, 1),
+            Math.Clamp(bounds.Height / (double)work.Height, 0.000001, 1),
+            IsLocked: false,
+            IsCollapsed: false,
+            AutoCollapseEnabled: false,
+            LayoutKind: "adaptive-grid",
+            LayoutParametersJson:
+                "{\"itemGapDip\":12,\"cardHeightDip\":82,\"rowHeightDip\":118}",
+            TemplateKey: "night-ops");
+    }
+
+    private bool AdoptPosterProjection(
+        PosterSurfaceProjection snapshot,
+        DisplayMonitorSnapshot monitor,
+        bool applyFrame)
+    {
+        PosterDefinition poster = snapshot.Poster;
+        DesktopPixelRect work = monitor.WorkArea;
+        double workWidthDip = work.Width / monitor.ScaleX;
+        double workHeightDip = work.Height / monitor.ScaleY;
+        double widthDip = Math.Clamp(
+            poster.WidthDip,
+            Math.Min(PosterFrameGeometryPolicy.MinimumWidthDip, workWidthDip),
+            workWidthDip);
+        double expandedHeightDip = Math.Clamp(
+            poster.ExpandedHeightDip,
+            Math.Min(PosterFrameGeometryPolicy.MinimumExpandedHeightDip, workHeightDip),
+            workHeightDip);
+        double visibleHeightDip = poster.IsCollapsed
+            ? Math.Min(PosterFrameGeometryPolicy.CollapsedHeightDip, workHeightDip)
+            : expandedHeightDip;
+        var placement = new PosterPlacementState(
+            widthDip,
+            visibleHeightDip,
+            poster.HorizontalAnchor,
+            poster.VerticalAnchor);
+        DesktopPixelRect projected = PosterGeometryProjector.Project(placement, monitor);
+
+        _stateRevision = snapshot.Revision;
+        _posterRevision = snapshot.PosterRevision;
+        _authoritativePoster = poster;
+        _placement = placement;
+        _geometry = GeometryFromBounds(
+            projected,
+            monitor,
+            poster.IsLocked,
+            poster.IsCollapsed,
+            snapshot.PosterRevision,
+            expandedHeightDip);
+        UpdateVisualState();
+        if (applyFrame)
+        {
+            return ApplyFrame(projected);
+        }
+
+        _bounds = projected;
+        return true;
+    }
+
+    private PosterDefinition CapturePosterDefinition(
+        DesktopPixelRect bounds,
+        PosterFrameGeometry geometry,
+        DisplayMonitorSnapshot monitor)
+    {
+        PosterDefinition seed = _authoritativePoster ??
+            CreateDefaultPoster(bounds, monitor);
+        PosterPlacementState placement = PlacementFromBounds(bounds, monitor);
+        DesktopPixelRect work = monitor.WorkArea;
+        double expandedHeightPixels = geometry.ExpandedHeightDip * monitor.ScaleY;
+        return seed with
+        {
+            MonitorDeviceName = monitor.DeviceName,
+            FallbackXDip = (bounds.X - work.X) / monitor.ScaleX,
+            FallbackYDip = (bounds.Y - work.Y) / monitor.ScaleY,
+            WidthDip = bounds.Width / monitor.ScaleX,
+            ExpandedHeightDip = geometry.ExpandedHeightDip,
+            HorizontalAnchor = placement.HorizontalAnchor,
+            VerticalAnchor = placement.VerticalAnchor,
+            NormalizedWidth = Math.Clamp(
+                bounds.Width / (double)work.Width,
+                0.000001,
+                1),
+            NormalizedExpandedHeight = Math.Clamp(
+                expandedHeightPixels / work.Height,
+                0.000001,
+                1),
+            IsLocked = geometry.IsLocked,
+            IsCollapsed = geometry.IsCollapsed
+        };
+    }
+
+    public bool ApplyProjection(StateProjectionChangedEventArgs change)
+    {
+        ArgumentNullException.ThrowIfNull(change);
+        if (_window is null || _monitor is null)
+        {
+            return false;
+        }
+        DesktopUpProjection projection = change.Projection;
+        if (projection.Revision < _stateRevision)
+        {
+            log.Write("info", "poster.projection_stale_ignored", new
+            {
+                incomingRevision = projection.Revision,
+                currentRevision = _stateRevision,
+                change.RequestId
+            });
+            return true;
+        }
+        if (string.Equals(
+                change.RequestId,
+                _activeCommandRequestId,
+                StringComparison.Ordinal))
+        {
+            return true;
+        }
+        if (projection.Poster.PosterRevision == _posterRevision)
+        {
+            _stateRevision = projection.Revision;
+            _authoritativePoster = projection.Poster.Poster;
+            return true;
+        }
+
+        bool applied = AdoptPosterProjection(
+            projection.Poster,
+            _monitor,
+            applyFrame: true);
+        log.Write(applied ? "info" : "error", "poster.projection_applied", new
+        {
+            projection.Revision,
+            projection.Poster.PosterRevision,
+            source = change.Source.ToString(),
+            change.RequestId,
+            applied
+        });
+        return applied;
+    }
+
+    private bool CommitPosterState(
+        DesktopPixelRect appliedBounds,
+        PosterFrameGeometry candidateGeometry,
+        PosterStateCommandKind commandKind,
+        string commandName)
+    {
+        if (_monitor is null || _authoritativePoster is null)
+        {
+            return false;
+        }
+
+        PosterDefinition desired = commandKind switch
+        {
+            PosterStateCommandKind.SetLocked => _authoritativePoster with
+            {
+                IsLocked = candidateGeometry.IsLocked
+            },
+            PosterStateCommandKind.SetCollapsed => _authoritativePoster with
+            {
+                IsCollapsed = candidateGeometry.IsCollapsed
+            },
+            _ => CapturePosterDefinition(
+                appliedBounds,
+                candidateGeometry,
+                _monitor)
+        };
+        string requestId = $"poster-{commandName}-{Guid.NewGuid():N}";
+        _activeCommandRequestId = requestId;
+        StateCommandResult result;
+        try
+        {
+            result = stateCommands.Execute(new PosterStateCommand(
+                requestId,
+                StateCommandSource.Poster,
+                commandKind,
+                _stateRevision,
+                desired.PosterId,
+                desired));
+        }
+        finally
+        {
+            _activeCommandRequestId = null;
+        }
+
+        if (result.Succeeded && result.Projection is { } committed)
+        {
+            _stateRevision = committed.Revision;
+            _posterRevision = committed.Poster.PosterRevision;
+            _authoritativePoster = committed.Poster.Poster;
+            _bounds = appliedBounds;
+            _placement = PlacementFromBounds(appliedBounds, _monitor);
+            _geometry = GeometryFromBounds(
+                appliedBounds,
+                _monitor,
+                committed.Poster.Poster.IsLocked,
+                committed.Poster.Poster.IsCollapsed,
+                committed.Poster.PosterRevision,
+                committed.Poster.Poster.ExpandedHeightDip);
+            UpdateVisualState();
+            log.Write("info", "poster.state_committed", new
+            {
+                commandName,
+                status = result.Status.ToString(),
+                result.RequestId,
+                stateRevision = _stateRevision,
+                posterRevision = _posterRevision,
+                bounds = _bounds,
+                _geometry.IsLocked,
+                _geometry.IsCollapsed
+            });
+            return true;
+        }
+
+        log.Write("warning", "poster.state_commit_rejected", new
+        {
+            commandName,
+            status = result.Status.ToString(),
+            result.RequestId,
+            result.ExpectedRevision,
+            result.CurrentRevision,
+            result.Error
+        });
+        PosterSurfaceProjection fallback = result.Projection?.Poster ??
+            new PosterSurfaceProjection(
+                _stateRevision,
+                _posterRevision,
+                _authoritativePoster,
+                CanMove: !_authoritativePoster.IsLocked,
+                CanResize: !_authoritativePoster.IsLocked &&
+                    !_authoritativePoster.IsCollapsed,
+                CanToggleCollapsed: true);
+        bool restored = AdoptPosterProjection(fallback, _monitor, applyFrame: true);
+        log.Write(restored ? "info" : "error", "poster.state_restored", new
+        {
+            commandName,
+            restored,
+            stateRevision = _stateRevision,
+            posterRevision = _posterRevision,
+            bounds = _bounds
+        });
+        return false;
     }
 
     private bool ApplyFrame(DesktopPixelRect frame)
@@ -555,16 +904,25 @@ internal sealed class PosterVisualWindow(
             return false;
         }
 
-        _window.AppWindow.MoveAndResize(ToRect(frame));
+        RebuildItemGrid(FrameWidthDip(frame));
+        UpdateItemScrollState(frame);
+        PosterInputLayoutSnapshot inputLayout = BuildInputLayout(frame);
+        if (!ApplyVisualRegion(_windowHandle, frame))
+        {
+            return false;
+        }
+
+        if (!attachment.ApplyPreparedBounds(_windowHandle, frame))
+        {
+            return false;
+        }
         if (!HasExpectedBounds(_window, frame))
         {
             return false;
         }
 
         _bounds = frame;
-        RebuildItemGrid(FrameWidthDip(frame));
-        UpdateItemScrollState(frame);
-        return _inputIsland.ApplyLayout(frame, BuildInputLayout(frame));
+        return _inputIsland.ApplyLayout(frame, inputLayout);
     }
 
     private PosterInputLayoutSnapshot BuildInputLayout(DesktopPixelRect frame)
@@ -576,19 +934,21 @@ internal sealed class PosterVisualWindow(
 
         long revision = checked(++_layoutRevision);
         double scaleX = _monitor.ScaleX;
-        int headerHeight = ToPhysicalY(HeaderHeightDip, _monitor);
-        int buttonSize = ToPhysicalX(34, _monitor);
-        int buttonTop = ToPhysicalY(13, _monitor);
-        int buttonGap = ToPhysicalX(10, _monitor);
-        int right = ToPhysicalX(20, _monitor);
-        int collapseX = frame.Width - right - buttonSize;
-        int lockX = collapseX - buttonGap - buttonSize;
+        PosterTitleBarLayout titleBar =
+            PosterTitleBarLayoutPolicy.Resolve(frame.Width / scaleX);
+        int headerHeight = ToPhysicalY(titleBar.HeaderHeightDip, _monitor);
+        DesktopPixelRect collapseBounds = ToPhysicalRect(
+            titleBar.CollapseAction,
+            _monitor);
+        DesktopPixelRect moreBounds = ToPhysicalRect(
+            titleBar.MoreAction,
+            _monitor);
         var regions = new List<PosterInputRegion>
         {
-            new(PosterInputTargetKind.LockButton, -1,
-                new DesktopPixelRect(lockX, buttonTop, buttonSize, buttonSize)),
             new(PosterInputTargetKind.CollapseButton, -1,
-                new DesktopPixelRect(collapseX, buttonTop, buttonSize, buttonSize))
+                collapseBounds),
+            new(PosterInputTargetKind.MoreButton, -1,
+                moreBounds)
         };
 
         if (!_geometry.IsCollapsed)
@@ -648,32 +1008,70 @@ internal sealed class PosterVisualWindow(
             !_geometry.IsLocked &&
             !_geometry.IsCollapsed)
         {
-            int edge = Math.Max(6, ToPhysicalX(8, _monitor));
-            int corner = Math.Max(16, ToPhysicalX(20, _monitor));
+            int edgeX = Math.Max(6, ToPhysicalX(8, _monitor));
+            int edgeY = Math.Max(6, ToPhysicalY(8, _monitor));
+            int cornerX = Math.Max(16, ToPhysicalX(20, _monitor));
+            int cornerY = Math.Max(16, ToPhysicalY(20, _monitor));
+            regions.Add(new PosterInputRegion(
+                PosterInputTargetKind.ResizeTopLeft,
+                -1,
+                new DesktopPixelRect(0, 0, cornerX, cornerY)));
+            regions.Add(new PosterInputRegion(
+                PosterInputTargetKind.ResizeTopRight,
+                -1,
+                new DesktopPixelRect(
+                    frame.Width - cornerX,
+                    0,
+                    cornerX,
+                    cornerY)));
+            regions.Add(new PosterInputRegion(
+                PosterInputTargetKind.ResizeBottomLeft,
+                -1,
+                new DesktopPixelRect(
+                    0,
+                    frame.Height - cornerY,
+                    cornerX,
+                    cornerY)));
             regions.Add(new PosterInputRegion(
                 PosterInputTargetKind.ResizeBottomRight,
                 -1,
                 new DesktopPixelRect(
-                    frame.Width - corner,
-                    frame.Height - corner,
-                    corner,
-                    corner)));
+                    frame.Width - cornerX,
+                    frame.Height - cornerY,
+                    cornerX,
+                    cornerY)));
+            regions.Add(new PosterInputRegion(
+                PosterInputTargetKind.ResizeLeft,
+                -1,
+                new DesktopPixelRect(
+                    0,
+                    cornerY,
+                    edgeX,
+                    Math.Max(1, frame.Height - (cornerY * 2)))));
             regions.Add(new PosterInputRegion(
                 PosterInputTargetKind.ResizeRight,
                 -1,
                 new DesktopPixelRect(
-                    frame.Width - edge,
-                    headerHeight,
-                    edge,
-                    Math.Max(1, frame.Height - headerHeight - corner))));
+                    frame.Width - edgeX,
+                    cornerY,
+                    edgeX,
+                    Math.Max(1, frame.Height - (cornerY * 2)))));
+            regions.Add(new PosterInputRegion(
+                PosterInputTargetKind.ResizeTop,
+                -1,
+                new DesktopPixelRect(
+                    cornerX,
+                    0,
+                    Math.Max(1, frame.Width - (cornerX * 2)),
+                    edgeY)));
             regions.Add(new PosterInputRegion(
                 PosterInputTargetKind.ResizeBottom,
                 -1,
                 new DesktopPixelRect(
-                    0,
-                    frame.Height - edge,
-                    Math.Max(1, frame.Width - corner),
-                    edge)));
+                    cornerX,
+                    frame.Height - edgeY,
+                    Math.Max(1, frame.Width - (cornerX * 2)),
+                    edgeY)));
         }
 
         regions.Add(new PosterInputRegion(
@@ -692,7 +1090,8 @@ internal sealed class PosterVisualWindow(
             revision,
             frame.Width,
             frame.Height,
-            regions);
+            regions,
+            ResolveOuterCornerRadiusPixels());
     }
 
     private Window CreateWindow()
@@ -719,14 +1118,17 @@ internal sealed class PosterVisualWindow(
     {
         var root = new Grid
         {
-            Background = new SolidColorBrush(Colors.Transparent)
+            // The native HRGN owns the outer transparency. Keep the WinUI root
+            // painted so a newly exposed resize strip never falls through to
+            // the HWND class/default background while composition catches up.
+            Background = Brush(245, 33, 36, 42)
         };
         _surface = new Border
         {
-            Background = Brush(232, 5, 15, 24),
-            BorderBrush = Brush(190, 105, 226, 240),
+            Background = new SolidColorBrush(Colors.Transparent),
+            BorderBrush = Brush(0, 0, 0, 0),
             BorderThickness = new Thickness(0),
-            CornerRadius = new CornerRadius(24)
+            CornerRadius = new CornerRadius(SurfaceCornerRadiusDip)
         };
         root.Children.Add(_surface);
 
@@ -776,49 +1178,153 @@ internal sealed class PosterVisualWindow(
     {
         var header = new Grid
         {
-            Padding = new Thickness(24, 0, 20, 0)
+            Padding = new Thickness(
+                PosterTitleBarLayoutPolicy.LeftPaddingDip,
+                PosterTitleBarLayoutPolicy.TopPaddingDip,
+                PosterTitleBarLayoutPolicy.RightPaddingDip,
+                PosterTitleBarLayoutPolicy.BottomPaddingDip)
         };
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        header.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(10) });
+        header.ColumnDefinitions.Add(new ColumnDefinition
+        {
+            Width = new GridLength(PosterTitleBarLayoutPolicy.ActionGapDip)
+        });
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
         var collection = new StackPanel
         {
             Orientation = Orientation.Horizontal,
             VerticalAlignment = VerticalAlignment.Center,
-            Spacing = 10
+            Spacing = 8
         };
-        collection.Children.Add(Text("DESKTOP COLLECTION", 10, 110, 255, 137, 158, 172));
-        collection.Children.Add(new Border
-        {
-            Width = 86,
-            Height = 1,
-            Background = Brush(210, 76, 197, 218)
-        });
-        collection.Children.Add(Text("01", 10, 120, 255, 105, 222, 238));
+        collection.Children.Add(Text("DESKTOP COLLECTION", 14, 400, 255, 242, 242, 242));
         Grid.SetColumn(collection, 0);
         header.Children.Add(collection);
 
-        _lockGlyph = CreateCircleGlyph("○");
-        Grid.SetColumn(_lockGlyph, 1);
-        header.Children.Add(_lockGlyph);
         _collapseGlyph = CreateCircleGlyph("⌄");
-        Grid.SetColumn(_collapseGlyph, 3);
+        Grid.SetColumn(_collapseGlyph, 1);
         header.Children.Add(_collapseGlyph);
+        _moreGlyph = CreateCircleGlyph("⋯");
+        Grid.SetColumn(_moreGlyph, 3);
+        header.Children.Add(_moreGlyph);
         return header;
+    }
+
+    private void ShowPosterMenu()
+    {
+        if (_moreGlyph is null || _window is null)
+        {
+            return;
+        }
+
+        _posterMenu?.Hide();
+        var flyout = new MenuFlyout();
+        var lockItem = StyleMenuItem(new MenuFlyoutItem
+        {
+            Text = _geometry.IsLocked ? "解除锁定" : "锁定",
+            Icon = new FontIcon { Glyph = "\uE72E" }
+        });
+        lockItem.Click += (_, _) => ToggleLocked("more-menu");
+        flyout.Items.Add(lockItem);
+
+        var editItem = StyleMenuItem(new MenuFlyoutItem
+        {
+            Text = _mode == PosterOperatingMode.Editing ? "完成编辑" : "进入编辑",
+            Icon = new FontIcon { Glyph = "\uE70F" }
+        });
+        editItem.Click += (_, _) => _ = SetEditing(_mode != PosterOperatingMode.Editing);
+        flyout.Items.Add(editItem);
+        flyout.Items.Add(new MenuFlyoutSeparator());
+
+        var newFileItem = StyleMenuItem(new MenuFlyoutItem
+        {
+            Text = "新建文件",
+            Icon = new FontIcon { Glyph = "\uE8A5" },
+            IsEnabled = false
+        });
+        ToolTipService.SetToolTip(newFileItem, "将在 V3-05 文件能力中接入");
+        flyout.Items.Add(newFileItem);
+
+        var newFolderItem = StyleMenuItem(new MenuFlyoutItem
+        {
+            Text = "新建文件夹",
+            Icon = new FontIcon { Glyph = "\uE8F4" },
+            IsEnabled = false
+        });
+        ToolTipService.SetToolTip(newFolderItem, "将在 V3-05 文件能力中接入");
+        flyout.Items.Add(newFolderItem);
+        flyout.Items.Add(new MenuFlyoutSeparator());
+
+        var controlCenterItem = StyleMenuItem(new MenuFlyoutItem
+        {
+            Text = "打开控制中心",
+            Icon = new FontIcon { Glyph = "\uE713" },
+            IsEnabled = showControlCenter is not null
+        });
+        controlCenterItem.Click += (_, _) => showControlCenter?.Invoke();
+        flyout.Items.Add(controlCenterItem);
+
+        _posterMenu = flyout;
+        flyout.Closed += (_, _) =>
+        {
+            if (ReferenceEquals(_posterMenu, flyout))
+            {
+                _posterMenu = null;
+            }
+            if (!_disposed)
+            {
+                bool restored = ReassertCurrentClusterBottom();
+                log.Write(
+                    restored ? "info" : "warning",
+                    "poster.more_menu_closed",
+                    new { desktopBottomRestored = restored });
+            }
+        };
+
+        try
+        {
+            flyout.ShowAt(_moreGlyph);
+            log.Write("info", "poster.more_menu_opened", new
+            {
+                _geometry.IsLocked,
+                mode = _mode.ToString()
+            });
+        }
+        catch (Exception exception)
+        {
+            _posterMenu = null;
+            _ = ReassertCurrentClusterBottom();
+            log.Write("warning", "poster.more_menu_failed", new
+            {
+                exceptionType = exception.GetType().FullName,
+                exception.HResult,
+                exception.Message
+            });
+        }
+    }
+
+    private static T StyleMenuItem<T>(T item)
+        where T : MenuFlyoutItemBase
+    {
+        item.FontFamily = new FontFamily(
+            "Microsoft YaHei UI, Segoe UI Variable Text, Segoe UI");
+        item.FontSize = 13;
+        item.MinHeight = 36;
+        item.Padding = new Thickness(10, 8, 10, 8);
+        return item;
     }
 
     private static StackPanel CreateMeta()
     {
         var meta = new StackPanel
         {
-            Margin = new Thickness(HorizontalPaddingDip, 22, HorizontalPaddingDip, 0),
+            Margin = new Thickness(HorizontalPaddingDip, 18, HorizontalPaddingDip, 0),
             Spacing = 5
         };
-        meta.Children.Add(Text("TACTICAL ARCHIVE / 01", 11, 120, 255, 103, 218, 235));
-        meta.Children.Add(Text("NIGHT OPS", 36, 700, 255, 239, 244, 247));
-        meta.Children.Add(Text("06 TITLES  ·  READY", 9, 130, 255, 119, 132, 145));
+        meta.Children.Add(Text("TACTICAL ARCHIVE / 01", 11, 500, 230, 153, 206, 255));
+        meta.Children.Add(Text("NIGHT OPS", 36, 700, 255, 242, 242, 242));
+        meta.Children.Add(Text("06 TITLES  ·  READY", 10, 400, 170, 198, 198, 198));
         return meta;
     }
 
@@ -827,13 +1333,13 @@ internal sealed class PosterVisualWindow(
         var footer = new Grid
         {
             Padding = new Thickness(HorizontalPaddingDip, 0, HorizontalPaddingDip, 0),
-            BorderBrush = Brush(42, 126, 147, 160),
+            BorderBrush = Brush(16, 255, 255, 255),
             BorderThickness = new Thickness(0, 1, 0, 0)
         };
         footer.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         footer.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        footer.Children.Add(Text("LOCAL LIBRARY", 9, 110, 255, 100, 113, 126));
-        _modeLabel = Text("USING  ·  DRAG TO MOVE", 9, 110, 255, 100, 113, 126);
+        footer.Children.Add(Text("LOCAL LIBRARY", 10, 400, 150, 198, 198, 198));
+        _modeLabel = Text("USING  ·  DRAG TO MOVE", 10, 400, 150, 198, 198, 198);
         Grid.SetColumn(_modeLabel, 1);
         footer.Children.Add(_modeLabel);
         return footer;
@@ -982,10 +1488,10 @@ internal sealed class PosterVisualWindow(
         cell.RowDefinitions.Add(new RowDefinition { Height = new GridLength(20) });
         var card = new Border
         {
-            Background = Brush(205, 7, 15, 25),
-            BorderBrush = Brush(80, 116, 140, 154),
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(7)
+            Background = Brush(230, 22, 24, 29),
+            BorderBrush = Brush(24, 255, 255, 255),
+            BorderThickness = new Thickness(0.8),
+            CornerRadius = new CornerRadius(4)
         };
         var cardGrid = new Grid();
         cardGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -1013,7 +1519,7 @@ internal sealed class PosterVisualWindow(
         cardGrid.Children.Add(index);
         card.Child = cardGrid;
         cell.Children.Add(card);
-        TextBlock name = Text(item.Name, 9, 115, 255, 171, 181, 190);
+        TextBlock name = Text(item.Name, 10, 400, 185, 218, 218, 218);
         name.Margin = new Thickness(0, 7, 0, 0);
         name.TextTrimming = TextTrimming.CharacterEllipsis;
         Grid.SetRow(name, 1);
@@ -1039,29 +1545,66 @@ internal sealed class PosterVisualWindow(
                 ? Visibility.Collapsed
                 : Visibility.Visible;
         }
-        if (_lockGlyph is not null)
-        {
-            _lockGlyph.Text = _geometry.IsLocked ? "●" : "○";
-            _lockGlyph.Foreground = _geometry.IsLocked
-                ? Brush(255, 216, 180, 96)
-                : Brush(255, 169, 187, 198);
-        }
         if (_collapseGlyph is not null)
         {
             _collapseGlyph.Text = _geometry.IsCollapsed ? "⌃" : "⌄";
         }
         if (_modeLabel is not null)
         {
-            _modeLabel.Text = _mode == PosterOperatingMode.Editing
-                ? "EDITING  ·  RESIZE ENABLED"
-                : "USING  ·  DRAG TO MOVE";
+            _modeLabel.Text = _geometry.IsLocked
+                ? "LOCKED"
+                : _mode == PosterOperatingMode.Editing
+                    ? "EDITING  ·  RESIZE ENABLED"
+                    : "USING  ·  DRAG TO MOVE";
         }
         _surface.BorderBrush = _mode == PosterOperatingMode.Editing
-            ? Brush(190, 105, 226, 240)
+            ? Brush(230, 96, 205, 255)
             : Brush(0, 0, 0, 0);
         _surface.BorderThickness = _mode == PosterOperatingMode.Editing
             ? new Thickness(1)
             : new Thickness(0);
+    }
+
+    private bool ApplyVisualRegion(
+        nint windowHandle,
+        DesktopPixelRect frame,
+        bool force = false)
+    {
+        int cornerRadius = ResolveOuterCornerRadiusPixels();
+        var requested = new VisualRegionState(
+            windowHandle,
+            frame.Width,
+            frame.Height,
+            cornerRadius);
+        if (!force && _appliedVisualRegion == requested)
+        {
+            return true;
+        }
+
+        bool applied = windowHandle != 0 &&
+            attachment.ApplyRoundedRegion(
+                windowHandle,
+                frame.Width,
+                frame.Height,
+                cornerRadius);
+        if (applied)
+        {
+            _appliedVisualRegion = requested;
+        }
+        return applied;
+    }
+
+    private int ResolveOuterCornerRadiusPixels()
+    {
+        if (_monitor is null)
+        {
+            return checked((int)SurfaceCornerRadiusDip);
+        }
+
+        double scale = Math.Min(_monitor.ScaleX, _monitor.ScaleY);
+        return Math.Max(
+            1,
+            checked((int)Math.Round(SurfaceCornerRadiusDip * scale)));
     }
 
     private static DesktopPixelRect ResolveGestureFrame(
@@ -1071,31 +1614,14 @@ internal sealed class PosterVisualWindow(
         int deltaY,
         DisplayMonitorSnapshot monitor)
     {
-        DesktopPixelRect work = monitor.WorkArea;
-        if (gesture == PosterGestureKind.Move)
-        {
-            int x = Math.Clamp(initial.X + deltaX, work.X, work.Right - initial.Width);
-            int y = Math.Clamp(initial.Y + deltaY, work.Y, work.Bottom - initial.Height);
-            return initial with { X = x, Y = y };
-        }
-
-        int minimumWidth = ToPhysicalX(PosterFrameGeometryPolicy.MinimumWidthDip, monitor);
-        int minimumHeight = ToPhysicalY(PosterFrameGeometryPolicy.MinimumExpandedHeightDip, monitor);
-        int maximumWidth = Math.Min(
-            work.Right - initial.X,
-            Math.Max(minimumWidth, (int)Math.Round(work.Width * 0.45)));
-        int maximumHeight = Math.Max(minimumHeight, work.Bottom - initial.Y);
-        int width = initial.Width;
-        int height = initial.Height;
-        if (gesture is PosterGestureKind.ResizeRight or PosterGestureKind.ResizeBottomRight)
-        {
-            width = Math.Clamp(initial.Width + deltaX, minimumWidth, maximumWidth);
-        }
-        if (gesture is PosterGestureKind.ResizeBottom or PosterGestureKind.ResizeBottomRight)
-        {
-            height = Math.Clamp(initial.Height + deltaY, minimumHeight, maximumHeight);
-        }
-        return initial with { Width = width, Height = height };
+        return PosterFrameResizePolicy.Resolve(
+            gesture,
+            initial,
+            deltaX,
+            deltaY,
+            monitor.WorkArea,
+            ToPhysicalX(PosterFrameGeometryPolicy.MinimumWidthDip, monitor),
+            ToPhysicalY(PosterFrameGeometryPolicy.MinimumExpandedHeightDip, monitor));
     }
 
     private static bool TryResolveGesture(
@@ -1109,6 +1635,11 @@ internal sealed class PosterVisualWindow(
             PosterInputTargetKind.ResizeRight => PosterGestureKind.ResizeRight,
             PosterInputTargetKind.ResizeBottom => PosterGestureKind.ResizeBottom,
             PosterInputTargetKind.ResizeBottomRight => PosterGestureKind.ResizeBottomRight,
+            PosterInputTargetKind.ResizeLeft => PosterGestureKind.ResizeLeft,
+            PosterInputTargetKind.ResizeTop => PosterGestureKind.ResizeTop,
+            PosterInputTargetKind.ResizeTopLeft => PosterGestureKind.ResizeTopLeft,
+            PosterInputTargetKind.ResizeTopRight => PosterGestureKind.ResizeTopRight,
+            PosterInputTargetKind.ResizeBottomLeft => PosterGestureKind.ResizeBottomLeft,
             _ => (PosterGestureKind)(-1)
         };
         return (int)gesture >= 0;
@@ -1183,12 +1714,12 @@ internal sealed class PosterVisualWindow(
     private static TextBlock CreateCircleGlyph(string glyph) => new()
     {
         Text = glyph,
-        Width = 34,
-        Height = 34,
+        Width = PosterTitleBarLayoutPolicy.ActionSizeDip,
+        Height = PosterTitleBarLayoutPolicy.ActionSizeDip,
         TextAlignment = TextAlignment.Center,
         VerticalAlignment = VerticalAlignment.Center,
-        FontSize = 19,
-        Foreground = Brush(255, 169, 187, 198)
+        FontSize = 14,
+        Foreground = Brush(225, 226, 226, 226)
     };
 
     private static TextBlock Text(
@@ -1203,6 +1734,7 @@ internal sealed class PosterVisualWindow(
         Text = value,
         FontSize = size,
         FontWeight = new global::Windows.UI.Text.FontWeight { Weight = (ushort)weight },
+        FontFamily = new FontFamily("Segoe UI Variable Text"),
         Foreground = Brush(alpha, red, green, blue),
         VerticalAlignment = VerticalAlignment.Center,
         CharacterSpacing = size <= 11 ? 100 : 0
@@ -1216,6 +1748,14 @@ internal sealed class PosterVisualWindow(
 
     private static int ToPhysicalY(double dip, DisplayMonitorSnapshot monitor) =>
         Math.Max(1, checked((int)Math.Round(dip * monitor.ScaleY)));
+
+    private static DesktopPixelRect ToPhysicalRect(
+        PosterTitleBarActionLayout action,
+        DisplayMonitorSnapshot monitor) => new(
+            checked((int)Math.Round(action.XDip * monitor.ScaleX)),
+            checked((int)Math.Round(action.YDip * monitor.ScaleY)),
+            ToPhysicalX(action.SizeDip, monitor),
+            ToPhysicalY(action.SizeDip, monitor));
 
     private static int ToPhysicalYOffset(double dip, DisplayMonitorSnapshot monitor) =>
         checked((int)Math.Round(dip * monitor.ScaleY));
@@ -1249,12 +1789,16 @@ internal sealed class PosterVisualWindow(
 
     private void ClearVisualReferences()
     {
+        MenuFlyout? menu = _posterMenu;
+        _posterMenu = null;
+        menu?.Hide();
         _surface = null;
         _itemsScrollViewer = null;
         _itemsGrid = null;
-        _lockGlyph = null;
         _collapseGlyph = null;
+        _moreGlyph = null;
         _modeLabel = null;
+        _appliedVisualRegion = null;
     }
 
     public void Dispose()
@@ -1304,4 +1848,10 @@ internal sealed class PosterVisualWindow(
     private readonly record struct PendingGestureFrame(
         DesktopPixelRect Candidate,
         DesktopPixelRect InitialFrame);
+
+    private readonly record struct VisualRegionState(
+        nint WindowHandle,
+        int Width,
+        int Height,
+        int CornerRadius);
 }

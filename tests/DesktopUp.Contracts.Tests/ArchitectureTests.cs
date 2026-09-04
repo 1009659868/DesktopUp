@@ -43,6 +43,30 @@ public sealed class ArchitectureTests
     }
 
     [Fact]
+    public void UiSurfacesUseCommandsAndProjectionsInsteadOfRepositories()
+    {
+        string root = FindRepositoryRoot();
+        string appDirectory = Path.Combine(root, "src", "DesktopUp.App");
+        string surfaces = string.Join(
+            Environment.NewLine,
+            new[]
+            {
+                "PosterVisualWindow.cs",
+                "ControlCenterService.cs",
+                "ControlCenterWindow.xaml.cs",
+                "TrayService.cs"
+            }.Select(file => File.ReadAllText(Path.Combine(appDirectory, file))));
+
+        Assert.DoesNotContain("IPosterRepository", surfaces, StringComparison.Ordinal);
+        Assert.DoesNotContain("ISettingsRepository", surfaces, StringComparison.Ordinal);
+        Assert.DoesNotContain("SqliteConnection", surfaces, StringComparison.Ordinal);
+        Assert.Contains("IStateProjectionCoordinator", surfaces, StringComparison.Ordinal);
+        Assert.Contains("IStateCommandService", surfaces, StringComparison.Ordinal);
+        Assert.Contains("ControlCenterProjection", surfaces, StringComparison.Ordinal);
+        Assert.Contains("TrayProjection", surfaces, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void PosterStartupUsesAtomicNativeBottomShowAndActivationGuard()
     {
         string root = FindRepositoryRoot();
@@ -67,6 +91,34 @@ public sealed class ArchitectureTests
         Assert.Contains("WmActivateApp = 0x001C", watcher, StringComparison.Ordinal);
         Assert.Contains("WmWindowPosChanging = 0x0046", watcher, StringComparison.Ordinal);
         Assert.Contains("position.HwndInsertAfter = DesktopZOrderPolicy.HwndBottom", watcher, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void PosterResizePaintsBeforeADeferredNoCopyBoundsCommit()
+    {
+        string root = FindRepositoryRoot();
+        string poster = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "DesktopUp.App",
+            "PosterVisualWindow.cs"));
+        string watcher = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "DesktopUp.Windows",
+            "DesktopEnvironmentWatcher.cs"));
+        string attachment = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "DesktopUp.Windows",
+            "DesktopLayerAttachment.cs"));
+
+        Assert.Contains("Background = Brush(245, 33, 36, 42)", poster, StringComparison.Ordinal);
+        Assert.Contains("attachment.ApplyPreparedBounds", poster, StringComparison.Ordinal);
+        Assert.Contains("WmEraseBackground", watcher, StringComparison.Ordinal);
+        Assert.Contains("FillRect", watcher, StringComparison.Ordinal);
+        Assert.Contains("SwpNoCopyBits", attachment, StringComparison.Ordinal);
+        Assert.Contains("SwpDeferErase", attachment, StringComparison.Ordinal);
     }
 
     private static string FindRepositoryRoot()

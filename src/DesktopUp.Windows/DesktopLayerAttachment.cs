@@ -15,6 +15,12 @@ internal interface IDesktopWindowApi
     bool ApplyFrameAndNonTopmost(nint windowHandle);
     bool PlaceAtDesktopSiblingBottom(nint windowHandle, bool showWindow);
     bool ApplyInputTransparentComposition(nint windowHandle);
+    bool ApplyRoundedRegion(
+        nint windowHandle,
+        int width,
+        int height,
+        int cornerRadius);
+    bool ApplyPreparedBounds(nint windowHandle, DesktopPixelRect bounds);
     void RemoveDwmBorder(nint windowHandle);
     int GetLastError();
 }
@@ -195,6 +201,40 @@ public sealed class DesktopLayerAttachment : IDesktopLayerAttachment
         }
     }
 
+    public bool ApplyRoundedRegion(
+        nint windowHandle,
+        int width,
+        int height,
+        int cornerRadius)
+    {
+        lock (_gate)
+        {
+            return _windows.IsWindow(windowHandle) &&
+                width > 0 &&
+                height > 0 &&
+                cornerRadius >= 0 &&
+                cornerRadius <= Math.Min(width, height) / 2 &&
+                _windows.ApplyRoundedRegion(
+                    windowHandle,
+                    width,
+                    height,
+                    cornerRadius);
+        }
+    }
+
+    public bool ApplyPreparedBounds(
+        nint windowHandle,
+        DesktopPixelRect bounds)
+    {
+        lock (_gate)
+        {
+            return bounds.IsUsable &&
+                _original.ContainsKey(windowHandle) &&
+                _windows.IsWindow(windowHandle) &&
+                _windows.ApplyPreparedBounds(windowHandle, bounds);
+        }
+    }
+
     public bool Detach(nint windowHandle)
     {
         lock (_gate)
@@ -295,6 +335,8 @@ internal sealed class DesktopWindowNativeApi : IDesktopWindowApi
     private const uint SwpNoActivate = 0x0010;
     private const uint SwpFrameChanged = 0x0020;
     private const uint SwpShowWindow = 0x0040;
+    private const uint SwpNoCopyBits = 0x0100;
+    private const uint SwpDeferErase = 0x2000;
     private const uint LwaAlpha = 0x00000002;
     private const int DwmwaWindowCornerPreference = 33;
     private const int DwmwaBorderColor = 34;
@@ -342,6 +384,49 @@ internal sealed class DesktopWindowNativeApi : IDesktopWindowApi
     public bool ApplyInputTransparentComposition(nint windowHandle) =>
         SetLayeredWindowAttributes(windowHandle, 0, 255, LwaAlpha);
 
+    public bool ApplyRoundedRegion(
+        nint windowHandle,
+        int width,
+        int height,
+        int cornerRadius)
+    {
+        int diameter = checked(cornerRadius * 2);
+        nint region = CreateRoundRectRgn(
+            0,
+            0,
+            checked(width + 1),
+            checked(height + 1),
+            diameter,
+            diameter);
+        if (region == 0)
+        {
+            return false;
+        }
+
+        if (SetWindowRgn(windowHandle, region, redraw: false) != 0)
+        {
+            // A successful SetWindowRgn transfers region ownership to Windows.
+            return true;
+        }
+
+        _ = DeleteObject(region);
+        return false;
+    }
+
+    public bool ApplyPreparedBounds(
+        nint windowHandle,
+        DesktopPixelRect bounds) => SetWindowPos(
+            windowHandle,
+            0,
+            bounds.X,
+            bounds.Y,
+            bounds.Width,
+            bounds.Height,
+            DesktopZOrderPolicy.SwpNoZOrder |
+            SwpNoActivate |
+            SwpNoCopyBits |
+            SwpDeferErase);
+
     public void RemoveDwmBorder(nint windowHandle)
     {
         int cornerPreference = DwmwcpDoNotRound;
@@ -388,6 +473,25 @@ internal sealed class DesktopWindowNativeApi : IDesktopWindowApi
         uint colorKey,
         byte alpha,
         uint flags);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern int SetWindowRgn(
+        nint windowHandle,
+        nint region,
+        [MarshalAs(UnmanagedType.Bool)] bool redraw);
+
+    [DllImport("gdi32.dll", SetLastError = true)]
+    private static extern nint CreateRoundRectRgn(
+        int left,
+        int top,
+        int right,
+        int bottom,
+        int ellipseWidth,
+        int ellipseHeight);
+
+    [DllImport("gdi32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool DeleteObject(nint handle);
 
     [DllImport("dwmapi.dll")]
     private static extern int DwmSetWindowAttribute(

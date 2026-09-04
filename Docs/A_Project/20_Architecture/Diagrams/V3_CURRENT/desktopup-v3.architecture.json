@@ -1,0 +1,176 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "DesktopUp V3 — Architecture",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/1009659868/DesktopUp",
+      "revision": "d7aa3f4590abfe63742fac058ab206940ac26e8a"
+    },
+    "viewBox": [1250, 600],
+    "views": [
+      {
+        "id": "current-runtime",
+        "label": "当前运行时",
+        "focus": ["app_shell", "application_core", "domain_contracts", "poster_visual", "desktop_host", "windows_shell"],
+        "note": "V3-03 已落地的启动、桌面宿主、海报视觉与稀疏输入边界。"
+      },
+      {
+        "id": "state-control",
+        "label": "V3-04 状态与控制",
+        "focus": ["app_shell", "application_core", "state_store", "poster_visual"],
+        "note": "下一阶段以单一状态权威连接控制中心、托盘和海报。"
+      },
+      {
+        "id": "content-extension",
+        "label": "内容与扩展",
+        "focus": ["content_items", "theme_sandbox"],
+        "note": "V3-05 之后的文件 Item、活跃度排版、主题热更新与可选 AI。"
+      }
+    ]
+  },
+  "layout": {
+    "mode": "grid",
+    "origin": [50, 90],
+    "cols": 5,
+    "gapX": 80,
+    "gapY": 86,
+    "cellW": 160,
+    "cellH": 68
+  },
+  "components": [
+    {
+      "id": "app_shell",
+      "type": "frontend",
+      "label": "App + Control UI",
+      "sublabel": "Bootstrap · Center · Tray",
+      "tag": "CURRENT",
+      "row": 1,
+      "col": 0,
+      "size": [160, 68],
+      "sources": [
+        {"path": "src/DesktopUp.App/App.xaml.cs", "label": "启动与编排"},
+        {"path": "src/DesktopUp.App/ControlCenterService.cs", "label": "控制中心生命周期"},
+        {"path": "src/DesktopUp.App/TrayService.cs", "label": "托盘入口"}
+      ]
+    },
+    {
+      "id": "poster_visual",
+      "type": "frontend",
+      "label": "Poster Window Cluster",
+      "sublabel": "Visual + sparse InputIsland",
+      "tag": "CURRENT",
+      "row": 1,
+      "col": 2,
+      "size": [160, 68],
+      "sources": [
+        {"path": "src/DesktopUp.App/PosterVisualWindow.cs", "label": "海报视觉与协调"},
+        {"path": "src/DesktopUp.Windows/PosterInputIslandManager.cs", "label": "稀疏输入岛"}
+      ]
+    },
+    {
+      "id": "windows_shell",
+      "type": "external",
+      "label": "Windows Shell",
+      "sublabel": "Explorer · DefView · WorkerW",
+      "tag": "OS",
+      "row": 1,
+      "col": 4,
+      "size": [160, 68],
+      "sources": [{"path": "src/DesktopUp.Windows/ExplorerDesktopLocator.cs", "label": "Shell 定位"}]
+    },
+    {
+      "id": "application_core",
+      "type": "backend",
+      "label": "Application Core",
+      "sublabel": "use cases · projections",
+      "tag": "CURRENT → V3-04",
+      "row": 1,
+      "col": 1,
+      "size": [160, 68],
+      "sources": [{"path": "src/DesktopUp.Application/Contracts.cs", "label": "应用端口"}]
+    },
+    {
+      "id": "domain_contracts",
+      "type": "backend",
+      "label": "Domain Contracts",
+      "sublabel": "geometry · permissions",
+      "tag": "CURRENT",
+      "row": 2,
+      "col": 1,
+      "size": [160, 68],
+      "sources": [{"path": "src/DesktopUp.Domain/PosterInteraction.cs", "label": "领域策略"}]
+    },
+    {
+      "id": "desktop_host",
+      "type": "backend",
+      "label": "DesktopHost Adapter",
+      "sublabel": "owner · bottom · generation",
+      "tag": "CURRENT",
+      "row": 1,
+      "col": 3,
+      "size": [160, 68],
+      "sources": [{"path": "src/DesktopUp.Windows/DesktopLayerAttachment.cs", "label": "桌面挂载"}]
+    },
+    {
+      "id": "state_store",
+      "type": "database",
+      "label": "SQLite StateStore",
+      "sublabel": "revision · CAS · fallback",
+      "tag": "V3-04 PLANNED",
+      "row": 0,
+      "col": 1,
+      "size": [160, 68],
+      "sources": [{"path": "Docs/A_Project/30_Plans/DESKTOPUP_V2_V3_IMPLEMENTATION_PLAN_V1.md", "label": "V3-04 合同"}]
+    },
+    {
+      "id": "content_items",
+      "type": "backend",
+      "label": "Content + Layout",
+      "sublabel": "files · activity · layout",
+      "tag": "V3-05/06 PLANNED",
+      "row": 2,
+      "col": 2,
+      "size": [160, 68],
+      "sources": [{"path": "Docs/A_Project/30_Plans/DESKTOPUP_V2_V3_IMPLEMENTATION_PLAN_V1.md", "label": "V3-05 合同"}]
+    },
+    {
+      "id": "theme_sandbox",
+      "type": "security",
+      "label": "Theme + AI Control",
+      "sublabel": "validated snapshots / plans",
+      "tag": "V3-07/08 PLANNED",
+      "row": 0,
+      "col": 2,
+      "size": [160, 68],
+      "sources": [{"path": "Docs/A_Project/20_Architecture/DESKTOPUP_V2_V3_ARCHITECTURE_V1.md", "label": "扩展边界"}]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "DesktopUp V3 Process",
+      "wraps": ["app_shell", "poster_visual", "application_core", "domain_contracts", "desktop_host", "state_store", "content_items", "theme_sandbox"],
+      "pad": 24
+    },
+    {
+      "kind": "security-group",
+      "label": "受限扩展边界",
+      "wraps": ["theme_sandbox"],
+      "pad": 12
+    }
+  ],
+  "connections": [
+    {"id": "control-intents", "from": "app_shell", "to": "application_core", "label": "commands", "variant": "emphasis"},
+    {"id": "core-domain", "from": "application_core", "to": "domain_contracts", "label": "policies", "labelAt": [370, 326]},
+    {"id": "core-visual", "from": "application_core", "to": "poster_visual", "variant": "emphasis"},
+    {"id": "visual-host", "from": "poster_visual", "to": "desktop_host", "label": "attach"},
+    {"id": "host-shell", "from": "desktop_host", "to": "windows_shell", "label": "owner", "variant": "emphasis"},
+    {"id": "core-state", "from": "application_core", "to": "state_store", "label": "revision / CAS", "variant": "dashed"},
+    {"id": "content-core", "from": "content_items", "to": "application_core", "label": "item / layout", "variant": "dashed"},
+    {"id": "extension-core", "from": "theme_sandbox", "to": "application_core", "label": "validated plan", "variant": "security"},
+    {"id": "theme-visual", "from": "theme_sandbox", "to": "poster_visual", "label": "theme snapshot", "labelAt": [610, 172], "variant": "security"}
+  ]
+}

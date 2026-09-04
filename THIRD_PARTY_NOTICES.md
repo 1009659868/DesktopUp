@@ -11,6 +11,8 @@ DesktopUp V3 is an exploratory GPL-3.0-only branch. The following projects are u
 | H.NotifyIcon.WinUI | 2.5.0-beta.1 | MIT |
 | CommunityToolkit.Mvvm | 8.4.2 | MIT |
 | Microsoft.Extensions.DependencyInjection | 8.0.1 | MIT |
+| Microsoft.Data.Sqlite | 10.0.11 | MIT |
+| SQLitePCLRaw / bundled e_sqlite3 | 2.1.12 | Apache-2.0; bundled SQLite native library |
 | xUnit.net | 2.5.3 | Apache-2.0 |
 | coverlet.collector | 6.0.0 | MIT |
 

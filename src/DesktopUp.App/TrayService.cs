@@ -15,12 +15,17 @@ internal sealed class TrayService(IResourceLedger ledger, IStructuredLog log) : 
     private Window? _ownerWindow;
     private TaskbarIcon? _icon;
     private MenuFlyoutItem? _editItem;
+    private ToggleMenuFlyoutItem? _lockItem;
+    private ToggleMenuFlyoutItem? _pauseItem;
     private IDisposable? _ownerLease;
     private IDisposable? _iconLease;
+    private long _projectionRevision = -1;
 
     public void Create(
         Action openControlCenter,
         Action togglePosterEditing,
+        Action togglePosterLocked,
+        Action toggleDynamicEffectsPaused,
         Action exitApplication)
     {
         if (_icon is not null)
@@ -46,6 +51,20 @@ internal sealed class TrayService(IResourceLedger ledger, IStructuredLog log) : 
             Command = new RelayCommand(togglePosterEditing)
         };
         menu.Items.Add(_editItem);
+        _lockItem = new ToggleMenuFlyoutItem
+        {
+            Text = "锁定全部海报",
+            Command = new RelayCommand(togglePosterLocked),
+            IsEnabled = false
+        };
+        menu.Items.Add(_lockItem);
+        _pauseItem = new ToggleMenuFlyoutItem
+        {
+            Text = "暂停动态效果",
+            Command = new RelayCommand(toggleDynamicEffectsPaused),
+            IsEnabled = false
+        };
+        menu.Items.Add(_pauseItem);
         menu.Items.Add(new MenuFlyoutSeparator());
         menu.Items.Add(exitItem);
 
@@ -97,6 +116,29 @@ internal sealed class TrayService(IResourceLedger ledger, IStructuredLog log) : 
         }
     }
 
+    public void ApplyProjection(TrayProjection projection)
+    {
+        if (projection.Revision < _projectionRevision)
+        {
+            return;
+        }
+        _projectionRevision = projection.Revision;
+        if (_icon is not null)
+        {
+            _icon.ToolTipText = projection.ToolTipText;
+        }
+        if (_lockItem is not null)
+        {
+            _lockItem.IsChecked = projection.AllPostersLocked;
+            _lockItem.IsEnabled = true;
+        }
+        if (_pauseItem is not null)
+        {
+            _pauseItem.IsChecked = projection.DynamicEffectsPaused;
+            _pauseItem.IsEnabled = true;
+        }
+    }
+
     public void Dispose()
     {
         if (_icon is not null)
@@ -115,5 +157,8 @@ internal sealed class TrayService(IResourceLedger ledger, IStructuredLog log) : 
         _ownerLease?.Dispose();
         _ownerLease = null;
         _editItem = null;
+        _lockItem = null;
+        _pauseItem = null;
+        _projectionRevision = -1;
     }
 }

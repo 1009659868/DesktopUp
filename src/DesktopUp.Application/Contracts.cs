@@ -7,6 +7,7 @@ public interface IUserDataPaths
     string Root { get; }
     string Logs { get; }
     string State { get; }
+    string Backups { get; }
     string Temp { get; }
     void EnsureCreated();
 }
@@ -87,6 +88,14 @@ public interface IDesktopLayerAttachment
     bool ReassertDesktopBottom(
         nint windowHandle,
         DesktopShellHostSnapshot desktopHost);
+    bool ApplyRoundedRegion(
+        nint windowHandle,
+        int width,
+        int height,
+        int cornerRadius);
+    bool ApplyPreparedBounds(
+        nint windowHandle,
+        DesktopPixelRect bounds);
     bool Detach(nint windowHandle);
     bool IsAttached(nint windowHandle, DesktopShellHostSnapshot desktopHost);
 }
@@ -168,7 +177,13 @@ public enum PosterInputTargetKind
     ResizeRight = 5,
     ResizeBottom = 6,
     ResizeBottomRight = 7,
-    ItemScroll = 8
+    ItemScroll = 8,
+    MoreButton = 9,
+    ResizeLeft = 10,
+    ResizeTop = 11,
+    ResizeTopLeft = 12,
+    ResizeTopRight = 13,
+    ResizeBottomLeft = 14
 }
 
 public readonly record struct PosterInputRegion(
@@ -180,7 +195,8 @@ public sealed record PosterInputLayoutSnapshot(
     long Revision,
     int FrameWidth,
     int FrameHeight,
-    IReadOnlyList<PosterInputRegion> Regions);
+    IReadOnlyList<PosterInputRegion> Regions,
+    int OuterCornerRadius = 0);
 
 public enum PosterInputEventKind
 {
