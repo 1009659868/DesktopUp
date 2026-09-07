@@ -10,7 +10,7 @@ public sealed class SqliteStateStore : IStateStore
 {
     private const int ApplicationId = 0x44555033; // "DUP3"
     private const int BusyTimeoutMilliseconds = 5_000;
-    private const int CurrentSchemaVersion = 2;
+    private const int CurrentSchemaVersion = 4;
     private const string DatabaseFileName = "desktopup.sqlite3";
     private static readonly Migration[] Migrations =
     [
@@ -92,6 +92,59 @@ public sealed class SqliteStateStore : IStateStore
                 0,
                 0,
                 strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));
+            """),
+        new(
+            3,
+            "multi-poster-catalog",
+            """
+            ALTER TABLE posters ADD COLUMN purpose TEXT NOT NULL DEFAULT 'general';
+            ALTER TABLE posters ADD COLUMN is_visible INTEGER NOT NULL DEFAULT 1 CHECK (is_visible IN (0, 1));
+            ALTER TABLE posters ADD COLUMN stack_order INTEGER NOT NULL DEFAULT 0 CHECK (stack_order >= 0);
+            ALTER TABLE posters ADD COLUMN entity_version INTEGER NOT NULL DEFAULT 1 CHECK (entity_version >= 1);
+            ALTER TABLE posters ADD COLUMN collection_id TEXT NULL;
+            ALTER TABLE posters ADD COLUMN theme_instance_id TEXT NOT NULL DEFAULT '';
+            UPDATE posters SET theme_instance_id = 'theme-' || poster_id;
+            UPDATE posters SET stack_order = (
+                SELECT COUNT(*) FROM posters p WHERE p.poster_id < posters.poster_id);
+            CREATE UNIQUE INDEX posters_theme_instance_id ON posters(theme_instance_id);
+            CREATE INDEX posters_stack_order ON posters(stack_order, poster_id);
+
+            CREATE TABLE poster_profile (
+                singleton_id INTEGER PRIMARY KEY NOT NULL CHECK (singleton_id = 1),
+                profile_initialized INTEGER NOT NULL CHECK (profile_initialized IN (0, 1)),
+                catalog_version INTEGER NOT NULL CHECK (catalog_version >= 0),
+                state_revision INTEGER NOT NULL CHECK (state_revision >= 0)
+            ) STRICT;
+            INSERT INTO poster_profile
+            SELECT 1, EXISTS(SELECT 1 FROM posters),
+                CASE WHEN EXISTS(SELECT 1 FROM posters) THEN 1 ELSE 0 END, revision
+            FROM state_head WHERE singleton_id = 1;
+
+            CREATE TABLE poster_catalog_operations (
+                operation_id TEXT PRIMARY KEY NOT NULL,
+                request_sha256 TEXT NOT NULL,
+                result_poster_id TEXT NULL,
+                FOREIGN KEY (operation_id) REFERENCES state_operations(operation_id)
+                    DEFERRABLE INITIALLY DEFERRED
+            ) STRICT;
+            """),
+        new(
+            4,
+            "scoped-command-receipts",
+            """
+            ALTER TABLE app_settings ADD COLUMN entity_version INTEGER NOT NULL DEFAULT 1 CHECK (entity_version >= 1);
+            CREATE TABLE state_command_receipts (
+                request_id TEXT PRIMARY KEY NOT NULL,
+                request_sha256 TEXT NOT NULL,
+                outcome TEXT NOT NULL CHECK (outcome IN ('committed', 'no_change')),
+                observed_revision INTEGER NOT NULL CHECK (observed_revision >= 0),
+                committed_revision INTEGER NULL,
+                result_poster_id TEXT NULL,
+                CHECK ((outcome = 'committed' AND committed_revision IS NOT NULL) OR
+                    (outcome = 'no_change' AND committed_revision IS NULL)),
+                FOREIGN KEY (committed_revision) REFERENCES state_operations(committed_revision)
+                    DEFERRABLE INITIALLY DEFERRED
+            ) STRICT;
             """)
     ];
 
@@ -260,6 +313,15 @@ public sealed class SqliteStateStore : IStateStore
             using SqliteTransaction transaction = connection.BeginTransaction(deferred: false);
             StateStoreHead head = ReadHead(connection, transaction);
 
+            using (SqliteCommand scoped = connection.CreateCommand())
+            {
+                scoped.Transaction = transaction;
+                scoped.CommandText = "SELECT COUNT(*) FROM state_command_receipts WHERE request_id = $id;";
+                scoped.Parameters.AddWithValue("$id", operationId);
+                if (Convert.ToInt64(scoped.ExecuteScalar(), CultureInfo.InvariantCulture) != 0)
+                    throw new InvalidOperationException("This request id belongs to the scoped command protocol.");
+            }
+
             (long Expected, long Committed)? prior = ReadOperation(
                 connection,
                 transaction,
@@ -358,6 +420,20 @@ public sealed class SqliteStateStore : IStateStore
         }
     }
 
+    internal TResult ExecuteWrite<TResult>(Func<SqliteConnection, SqliteTransaction, TResult> mutation)
+    {
+        lock (_gate)
+        {
+            ThrowIfDisposed();
+            using SqliteConnection connection = OpenWritableConnection();
+            VerifyCurrentSchema(connection);
+            using SqliteTransaction transaction = connection.BeginTransaction(deferred: false);
+            TResult result = mutation(connection, transaction);
+            transaction.Commit();
+            return result;
+        }
+    }
+
     internal TResult ExecuteRead<TResult>(
         Func<SqliteConnection, SqliteTransaction, TResult> query)
     {
@@ -439,6 +515,14 @@ public sealed class SqliteStateStore : IStateStore
                 schema.CommandText = migration.Sql;
                 schema.ExecuteNonQuery();
             }
+
+            if (migration.Version >= 3)
+            {
+                // Never certify a batched DDL script solely by its return value.
+                // Verify the resulting contract before recording/committing the version.
+                VerifyCatalogSchema(connection, transaction);
+            }
+            if (migration.Version >= 4) VerifyCommandSchema(connection, transaction);
 
             string appliedUtc = DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture);
             using (SqliteCommand ledger = connection.CreateCommand())
@@ -541,12 +625,62 @@ public sealed class SqliteStateStore : IStateStore
             }
         }
         StateStoreHead head = ReadHead(connection, null);
+        if (expectedVersion >= 3)
+        {
+            VerifyCatalogSchema(connection, null);
+        }
+        if (expectedVersion >= 4) VerifyCommandSchema(connection, null);
         if (head.SchemaVersion != version)
         {
             throw new InvalidDataException(
                 $"State head schema {head.SchemaVersion} does not match user_version {version}.");
         }
         return head;
+    }
+
+    private static void VerifyCommandSchema(SqliteConnection connection, SqliteTransaction? transaction)
+    {
+        using SqliteCommand command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = "SELECT request_id, request_sha256, outcome, observed_revision, committed_revision, result_poster_id FROM state_command_receipts LIMIT 0;";
+        using (command.ExecuteReader()) { }
+        command.CommandText = "SELECT entity_version FROM app_settings WHERE singleton_id = 1;";
+        using SqliteDataReader reader = command.ExecuteReader();
+        if (!reader.Read() || reader.GetInt64(0) < 1 || reader.Read())
+            throw new InvalidDataException("Invalid settings entity version.");
+    }
+
+    private static void VerifyCatalogSchema(SqliteConnection connection, SqliteTransaction? transaction)
+    {
+        foreach (string sql in new[]
+        {
+            "SELECT purpose, is_visible, stack_order, collection_id, theme_instance_id, entity_version FROM posters LIMIT 0;",
+            "SELECT operation_id, request_sha256, result_poster_id FROM poster_catalog_operations LIMIT 0;"
+        })
+        {
+            using SqliteCommand shape = connection.CreateCommand();
+            shape.Transaction = transaction;
+            shape.CommandText = sql;
+            using SqliteDataReader reader = shape.ExecuteReader();
+        }
+        using (SqliteCommand profile = connection.CreateCommand())
+        {
+            profile.Transaction = transaction;
+            profile.CommandText = """
+                SELECT profile_initialized, catalog_version, state_revision
+                FROM poster_profile WHERE singleton_id = 1;
+                """;
+            using SqliteDataReader reader = profile.ExecuteReader();
+            if (!reader.Read() || reader.GetInt64(0) is < 0 or > 1 ||
+                reader.GetInt64(1) < 0 || reader.GetInt64(2) < 0)
+                throw new InvalidDataException("The poster profile contract is invalid.");
+        }
+        using SqliteCommand foreignKeys = connection.CreateCommand();
+        foreignKeys.Transaction = transaction;
+        foreignKeys.CommandText = "PRAGMA foreign_key_check;";
+        using SqliteDataReader violations = foreignKeys.ExecuteReader();
+        if (violations.Read())
+            throw new InvalidDataException("State contains invalid foreign key references.");
     }
 
     private static StateStoreHead ReadHead(

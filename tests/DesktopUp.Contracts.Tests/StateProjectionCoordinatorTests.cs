@@ -15,14 +15,14 @@ public sealed class StateProjectionCoordinatorTests
         DesktopUpProjection projection = fixture.Coordinator.EnsureInitialized(DefaultPoster());
 
         Assert.Equal(1, projection.Revision);
-        Assert.Equal(projection.Revision, projection.Poster.Revision);
+        Assert.Equal(projection.Revision, projection.Poster!.Revision);
         Assert.Equal(projection.Revision, projection.ControlCenter.Revision);
-        Assert.Equal(projection.Revision, projection.ControlCenter.Poster.Revision);
+        Assert.Equal(projection.Revision, projection.ControlCenter.Poster!.Revision);
         Assert.Equal(projection.Revision, projection.ControlCenter.Settings.Revision);
         Assert.Equal(projection.Revision, projection.Tray.Revision);
-        Assert.Equal(1, projection.Poster.PosterRevision);
+        Assert.Equal(1, projection.Poster!.PosterRevision);
         Assert.Equal(0, projection.ControlCenter.Settings.SettingsRevision);
-        Assert.Equal(projection.Poster.Poster, projection.ControlCenter.Poster.Poster);
+        Assert.Equal(projection.Poster!.Poster, projection.ControlCenter.Poster!.Poster);
     }
 
     [Fact]
@@ -32,7 +32,7 @@ public sealed class StateProjectionCoordinatorTests
         DesktopUpProjection initial = fixture.Coordinator.EnsureInitialized(DefaultPoster());
         var changes = new List<StateProjectionChangedEventArgs>();
         fixture.Coordinator.ProjectionChanged += (_, args) => changes.Add(args);
-        PosterDefinition desired = initial.Poster.Poster with { IsLocked = true };
+        PosterDefinition desired = initial.Poster!.Poster with { IsLocked = true };
 
         StateCommandResult result = fixture.Coordinator.Execute(new PosterStateCommand(
             "control-lock-1",
@@ -44,8 +44,8 @@ public sealed class StateProjectionCoordinatorTests
 
         Assert.Equal(StateCommandStatus.Committed, result.Status);
         Assert.Equal(2, result.CurrentRevision);
-        Assert.True(result.Projection?.Poster.Poster.IsLocked);
-        Assert.True(result.Projection?.ControlCenter.Poster.Poster.IsLocked);
+        Assert.True(result.Projection?.Poster!.Poster.IsLocked);
+        Assert.True(result.Projection?.ControlCenter.Poster!.Poster.IsLocked);
         Assert.True(result.Projection?.Tray.AllPostersLocked);
         StateProjectionChangedEventArgs change = Assert.Single(changes);
         Assert.Equal(2, change.Projection.Revision);
@@ -73,7 +73,7 @@ public sealed class StateProjectionCoordinatorTests
         DesktopUpProjection projection = Assert.IsType<DesktopUpProjection>(result.Projection);
         Assert.Equal(StateCommandStatus.Committed, result.Status);
         Assert.Equal(2, projection.Revision);
-        Assert.Equal(1, projection.Poster.PosterRevision);
+        Assert.Equal(1, projection.Poster!.PosterRevision);
         Assert.Equal(2, projection.ControlCenter.Settings.SettingsRevision);
         Assert.True(projection.Tray.DynamicEffectsPaused);
         Assert.Contains("已暂停", projection.Tray.ToolTipText, StringComparison.Ordinal);
@@ -84,7 +84,7 @@ public sealed class StateProjectionCoordinatorTests
     {
         using var fixture = new ProjectionFixture();
         DesktopUpProjection initial = fixture.Coordinator.EnsureInitialized(DefaultPoster());
-        PosterDefinition locked = initial.Poster.Poster with { IsLocked = true };
+        PosterDefinition locked = initial.Poster!.Poster with { IsLocked = true };
         _ = fixture.Coordinator.Execute(new PosterStateCommand(
             "lock-before-stale",
             StateCommandSource.Tray,
@@ -92,7 +92,7 @@ public sealed class StateProjectionCoordinatorTests
             initial.Revision,
             locked.PosterId,
             locked));
-        PosterDefinition staleCollapse = initial.Poster.Poster with { IsCollapsed = true };
+        PosterDefinition staleCollapse = initial.Poster!.Poster with { IsCollapsed = true };
 
         StateCommandResult result = fixture.Coordinator.Execute(new PosterStateCommand(
             "stale-collapse",
@@ -104,8 +104,8 @@ public sealed class StateProjectionCoordinatorTests
 
         Assert.Equal(StateCommandStatus.Conflict, result.Status);
         Assert.Equal(2, result.CurrentRevision);
-        Assert.True(result.Projection?.Poster.Poster.IsLocked);
-        Assert.False(result.Projection?.Poster.Poster.IsCollapsed);
+        Assert.True(result.Projection?.Poster!.Poster.IsLocked);
+        Assert.False(result.Projection?.Poster!.Poster.IsCollapsed);
         Assert.Equal(2, fixture.Store.ReadHead().Revision);
     }
 
@@ -114,7 +114,7 @@ public sealed class StateProjectionCoordinatorTests
     {
         using var fixture = new ProjectionFixture();
         DesktopUpProjection initial = fixture.Coordinator.EnsureInitialized(DefaultPoster());
-        PosterDefinition desired = initial.Poster.Poster with { IsCollapsed = true };
+        PosterDefinition desired = initial.Poster!.Poster with { IsCollapsed = true };
         var command = new PosterStateCommand(
             "collapse-idempotent",
             StateCommandSource.ControlCenter,
@@ -140,7 +140,7 @@ public sealed class StateProjectionCoordinatorTests
     {
         using var fixture = new ProjectionFixture();
         DesktopUpProjection initial = fixture.Coordinator.EnsureInitialized(DefaultPoster());
-        PosterDefinition locked = initial.Poster.Poster with { IsLocked = true };
+        PosterDefinition locked = initial.Poster!.Poster with { IsLocked = true };
         StateCommandResult lockResult = fixture.Coordinator.Execute(new PosterStateCommand(
             "lock-first",
             StateCommandSource.Poster,
@@ -149,7 +149,7 @@ public sealed class StateProjectionCoordinatorTests
             locked.PosterId,
             locked));
         DesktopUpProjection lockedProjection = lockResult.Projection!;
-        PosterDefinition resized = lockedProjection.Poster.Poster with { WidthDip = 640 };
+        PosterDefinition resized = lockedProjection.Poster!.Poster with { WidthDip = 640 };
 
         StateCommandResult resizeResult = fixture.Coordinator.Execute(new PosterStateCommand(
             "resize-while-locked",
@@ -161,7 +161,7 @@ public sealed class StateProjectionCoordinatorTests
 
         Assert.Equal(StateCommandStatus.PermissionDenied, resizeResult.Status);
         Assert.Equal(2, fixture.Store.ReadHead().Revision);
-        Assert.Equal(420, resizeResult.Projection?.Poster.Poster.WidthDip);
+        Assert.Equal(420, resizeResult.Projection?.Poster!.Poster.WidthDip);
     }
 
     [Fact]
@@ -194,8 +194,8 @@ public sealed class StateProjectionCoordinatorTests
     {
         using var fixture = new ProjectionFixture();
         DesktopUpProjection initial = fixture.Coordinator.EnsureInitialized(DefaultPoster());
-        double initialTop = NormalizedTop(initial.Poster.Poster);
-        PosterDefinition collapsed = initial.Poster.Poster with { IsCollapsed = true };
+        double initialTop = NormalizedTop(initial.Poster!.Poster);
+        PosterDefinition collapsed = initial.Poster!.Poster with { IsCollapsed = true };
 
         StateCommandResult collapsedResult = fixture.Coordinator.Execute(
             new PosterStateCommand(
@@ -205,7 +205,7 @@ public sealed class StateProjectionCoordinatorTests
                 initial.Revision,
                 collapsed.PosterId,
                 collapsed));
-        PosterDefinition collapsedState = collapsedResult.Projection!.Poster.Poster;
+        PosterDefinition collapsedState = collapsedResult.Projection!.Poster!.Poster;
         double collapsedTop = NormalizedTop(collapsedState);
         PosterDefinition expanded = collapsedState with { IsCollapsed = false };
         StateCommandResult expandedResult = fixture.Coordinator.Execute(
@@ -218,7 +218,7 @@ public sealed class StateProjectionCoordinatorTests
                 expanded));
 
         Assert.Equal(initialTop, collapsedTop, precision: 10);
-        Assert.Equal(initialTop, NormalizedTop(expandedResult.Projection!.Poster.Poster), precision: 10);
+        Assert.Equal(initialTop, NormalizedTop(expandedResult.Projection!.Poster!.Poster), precision: 10);
     }
 
     private static double NormalizedTop(PosterDefinition poster)
@@ -267,9 +267,7 @@ public sealed class StateProjectionCoordinatorTests
             var settings = new SqliteSettingsRepository(Store);
             Aggregates = new SqliteStateProjectionRepository(Store);
             Coordinator = new StateProjectionCoordinator(
-                posters,
-                settings,
-                Aggregates);
+                new SqliteStateCommandRepository(Store));
         }
 
         public SqliteStateStore Store { get; }

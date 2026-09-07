@@ -14,7 +14,6 @@ namespace DesktopUp;
 
 internal sealed class PosterVisualWindow(
     IDesktopLayerAttachment attachment,
-    IStateProjectionCoordinator stateCoordinator,
     IStateCommandService stateCommands,
     IResourceLedger ledger,
     IStructuredLog log,
@@ -60,6 +59,7 @@ internal sealed class PosterVisualWindow(
     private PosterDefinition? _authoritativePoster;
     private long _stateRevision;
     private long _posterRevision;
+    private long _posterEntityVersion;
     private string? _activeCommandRequestId;
     private PosterOperatingMode _mode = PosterOperatingMode.Using;
     private long _layoutRevision;
@@ -85,14 +85,16 @@ internal sealed class PosterVisualWindow(
 
     public bool Show(
         DesktopShellHostSnapshot desktopHost,
-        DisplayTopologySnapshot displayTopology)
+        DisplayTopologySnapshot displayTopology,
+        PosterSurfaceProjection state)
     {
+        if (_disposed) return false;
         if (_window is not null)
         {
             return Recover(desktopHost, displayTopology, request: 0);
         }
 
-        DisplayMonitorSnapshot? primaryMonitor = displayTopology.PrimaryMonitor;
+        DisplayMonitorSnapshot? primaryMonitor = ResolveMonitor(displayTopology, state.Poster.MonitorDeviceName);
         if (primaryMonitor is null)
         {
             log.Write("error", "poster.show_failed", new { error = "primary-monitor-missing" });
@@ -100,10 +102,10 @@ internal sealed class PosterVisualWindow(
         }
 
         _monitor = primaryMonitor;
-        DesktopPixelRect defaultBounds = CreateDefaultBounds(primaryMonitor);
-        DesktopUpProjection projection = stateCoordinator.EnsureInitialized(
-            CreateDefaultPoster(defaultBounds, primaryMonitor));
-        PosterSurfaceProjection state = projection.Poster;
+        if (!state.Poster.IsVisible)
+        {
+            return false;
+        }
         AdoptPosterProjection(state, primaryMonitor, applyFrame: false);
         if (!string.Equals(
                 state.Poster.MonitorDeviceName,
@@ -244,7 +246,7 @@ internal sealed class PosterVisualWindow(
         if (_window is null ||
             _windowHandle == 0 ||
             _inputIsland is null ||
-            displayTopology.PrimaryMonitor is not { } primaryMonitor)
+            ResolveMonitor(displayTopology, _authoritativePoster?.MonitorDeviceName) is not { } primaryMonitor)
         {
             return false;
         }
@@ -290,6 +292,11 @@ internal sealed class PosterVisualWindow(
 
         _desktopHost = desktopHost;
         _monitor = primaryMonitor;
+        // Reproject from committed DIP geometry, not a previous screen's clamped presentation.
+        if (_appliedTopologyGeneration != displayTopology.Generation && _authoritativePoster is { } saved)
+            AdoptPosterProjection(new PosterSurfaceProjection(_stateRevision, _posterRevision, saved,
+                !_geometry.IsLocked, !_geometry.IsLocked, true) { EntityVersion = _posterEntityVersion },
+                primaryMonitor, applyFrame: false);
         DesktopPixelRect expectedBounds =
             PosterGeometryProjector.Project(_placement, primaryMonitor);
         bool needsReproject =
@@ -639,6 +646,13 @@ internal sealed class PosterVisualWindow(
         });
     }
 
+    internal static PosterDefinition CreateInitialDefault(DisplayMonitorSnapshot monitor) =>
+        CreateDefaultPoster(CreateDefaultBounds(monitor), monitor);
+
+    private static DisplayMonitorSnapshot? ResolveMonitor(DisplayTopologySnapshot topology, string? savedName) =>
+        topology.Monitors.FirstOrDefault(m => string.Equals(m.DeviceName, savedName, StringComparison.OrdinalIgnoreCase))
+        ?? topology.PrimaryMonitor;
+
     private static PosterDefinition CreateDefaultPoster(
         DesktopPixelRect bounds,
         DisplayMonitorSnapshot monitor)
@@ -696,6 +710,7 @@ internal sealed class PosterVisualWindow(
 
         _stateRevision = snapshot.Revision;
         _posterRevision = snapshot.PosterRevision;
+        _posterEntityVersion = snapshot.EntityVersion;
         _authoritativePoster = poster;
         _placement = placement;
         _geometry = GeometryFromBounds(
@@ -772,21 +787,27 @@ internal sealed class PosterVisualWindow(
         {
             return true;
         }
-        if (projection.Poster.PosterRevision == _posterRevision)
+        if (_authoritativePoster is null || !projection.PostersById.TryGetValue(_authoritativePoster.PosterId, out PosterSurfaceProjection? target))
+        {
+            Dispose();
+            return true;
+        }
+        if (target.PosterRevision == _posterRevision)
         {
             _stateRevision = projection.Revision;
-            _authoritativePoster = projection.Poster.Poster;
+            _posterEntityVersion = target.EntityVersion;
+            _authoritativePoster = target.Poster;
             return true;
         }
 
         bool applied = AdoptPosterProjection(
-            projection.Poster,
+            target,
             _monitor,
             applyFrame: true);
         log.Write(applied ? "info" : "error", "poster.projection_applied", new
         {
             projection.Revision,
-            projection.Poster.PosterRevision,
+            target.PosterRevision,
             source = change.Source.ToString(),
             change.RequestId,
             applied
@@ -831,27 +852,29 @@ internal sealed class PosterVisualWindow(
                 commandKind,
                 _stateRevision,
                 desired.PosterId,
-                desired));
+                desired) { ReadSet = StateReadSet.ForPoster(desired.PosterId, _posterEntityVersion) });
         }
         finally
         {
             _activeCommandRequestId = null;
         }
 
-        if (result.Succeeded && result.Projection is { } committed)
+        if (result.Succeeded && result.Projection is { } committed &&
+            committed.PostersById.TryGetValue(desired.PosterId, out PosterSurfaceProjection? committedTarget))
         {
             _stateRevision = committed.Revision;
-            _posterRevision = committed.Poster.PosterRevision;
-            _authoritativePoster = committed.Poster.Poster;
+            _posterRevision = committedTarget.PosterRevision;
+            _posterEntityVersion = committedTarget.EntityVersion;
+            _authoritativePoster = committedTarget.Poster;
             _bounds = appliedBounds;
             _placement = PlacementFromBounds(appliedBounds, _monitor);
             _geometry = GeometryFromBounds(
                 appliedBounds,
                 _monitor,
-                committed.Poster.Poster.IsLocked,
-                committed.Poster.Poster.IsCollapsed,
-                committed.Poster.PosterRevision,
-                committed.Poster.Poster.ExpandedHeightDip);
+                committedTarget.Poster.IsLocked,
+                committedTarget.Poster.IsCollapsed,
+                committedTarget.PosterRevision,
+                committedTarget.Poster.ExpandedHeightDip);
             UpdateVisualState();
             log.Write("info", "poster.state_committed", new
             {
@@ -876,7 +899,12 @@ internal sealed class PosterVisualWindow(
             result.CurrentRevision,
             result.Error
         });
-        PosterSurfaceProjection fallback = result.Projection?.Poster ??
+        if (result.Projection is { } latest && !latest.PostersById.ContainsKey(desired.PosterId))
+        {
+            Dispose();
+            return false;
+        }
+        PosterSurfaceProjection fallback = result.Projection?.PostersById.GetValueOrDefault(desired.PosterId) ??
             new PosterSurfaceProjection(
                 _stateRevision,
                 _posterRevision,
@@ -884,7 +912,7 @@ internal sealed class PosterVisualWindow(
                 CanMove: !_authoritativePoster.IsLocked,
                 CanResize: !_authoritativePoster.IsLocked &&
                     !_authoritativePoster.IsCollapsed,
-                CanToggleCollapsed: true);
+                CanToggleCollapsed: true) { EntityVersion = _posterEntityVersion };
         bool restored = AdoptPosterProjection(fallback, _monitor, applyFrame: true);
         log.Write(restored ? "info" : "error", "poster.state_restored", new
         {
@@ -1803,11 +1831,13 @@ internal sealed class PosterVisualWindow(
 
     public void Dispose()
     {
-        if (_disposed)
-        {
-            return;
-        }
+        if (_disposed && _window is null && _inputIsland is null && _windowLease is null) return;
         _disposed = true;
+        var failures = new List<Exception>();
+        void Cleanup(Action action)
+        {
+            try { action(); } catch (Exception exception) { failures.Add(exception); }
+        }
         CancelScheduledGestureFrame();
         if (_gestureFrameTimer is not null)
         {
@@ -1817,24 +1847,26 @@ internal sealed class PosterVisualWindow(
         if (_inputIsland is not null)
         {
             _inputIsland.Input -= OnInput;
-            _inputIsland.Dispose();
-            _inputIsland = null;
+            Cleanup(() => { _inputIsland.Dispose(); _inputIsland = null; });
         }
         if (_window is not null)
         {
-            _ = attachment.Detach(_windowHandle);
-            _window.Close();
-            _window = null;
-            log.Write("info", "poster.disposed", new { handle = $"0x{_windowHandle:X}" });
-            _windowHandle = 0;
-            _desktopHost = null;
-            _monitor = null;
-            _attachedDesktopGeneration = 0;
-            _appliedTopologyGeneration = 0;
-            ClearVisualReferences();
+            Cleanup(() => { _ = attachment.Detach(_windowHandle); });
+            Cleanup(() =>
+            {
+                _window.Close();
+                _window = null;
+                log.Write("info", "poster.disposed", new { handle = $"0x{_windowHandle:X}" });
+                _windowHandle = 0;
+                _desktopHost = null;
+                _monitor = null;
+                _attachedDesktopGeneration = 0;
+                _appliedTopologyGeneration = 0;
+                ClearVisualReferences();
+            });
         }
-        _windowLease?.Dispose();
-        _windowLease = null;
+        if (_window is null) Cleanup(() => { _windowLease?.Dispose(); _windowLease = null; });
+        if (failures.Count != 0) throw new AggregateException("Poster session cleanup failed.", failures);
     }
 
     private sealed record PosterItem(

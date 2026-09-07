@@ -1,8 +1,28 @@
 # DesktopUp V2 V3 模块分类与端口目录 V1
 
-状态：`DRAFT — MODULE BOUNDARIES DEFINED`
+状态：`DESIGN BASELINE — MULTI-POSTER PORTS UPDATED 2026-09-07`
 
 建立日期：2026-09-03
+
+## 0. 多实例新增/调整端口
+
+设计细节见 [通用多海报合同](GENERAL_CONTENT_MULTI_POSTER_CONTRACT_V1.md)。M01 已实现目录/实体/schema v3；M02 已将 D11/D12 职责落实到现有 StateProjectionCoordinator、StateCommandPolicy 和 IStateCommandRepository/SqliteStateCommandRepository，并追加 schema v4。不是新增平行权威服务或要求同名类；M03 的 A07 对应 Application/PosterSessionRegistry + App/WinUiPosterSessionFactory；A08 对应 App 中唯一共享恢复调度、隐藏环境监听锚点及版本门，并非强制另建同名类。其他端口按计划实现，已有 DesktopHost 不重写。
+
+| ID | 模块 | 所有权与端口 | 任务 |
+| --- | --- | --- | --- |
+| A07 | PosterSessionRegistry | PosterId → Session；List/Create/Close/Dispose，晚到回调校验 session generation | V3-04-M03 |
+| A08 | DesktopEnvironmentCoordinator | 唯一环境发现/恢复调度，逐实例结果；不保存单张业务状态 | V3-04-M03 |
+| A09 | PosterSpatialCoordinator（设计职责） | 完整占位/障碍读集、候选推让、条件归位因果、异构几何CAS与呈现协调；纯求解放Domain，复用现有命令权威 | V3-04-M04-02..05 |
+| B13 | PosterStackCoordinator | 正常布局无重叠；保留异常重叠命中防御和cluster顺序；不得以抬层消除碰撞或盖住普通程序 | V3-04-M04-06 |
+| D11 | PosterCatalogApplicationService | Create/CloneConfig/Rename/Remove/List，profile 初始化与零实例 | V3-04-M01/02 |
+| D12 | ScopedCommandCoordinator | Entity/ReadSet CAS、全局提交序列、批量状态事务和 NotFound | V3-04-M02 |
+| D13 | PortableProfileApplicationService（设计） | 一致快照导出、解析/依赖映射/影响预览、确认后按目标版本导入；不形成第二权威 | V3-04-06；主题载荷复用 V3-07-04 |
+| E14 | ContentCapabilities | 文件/应用/Shell/虚拟流能力和 DropIntent；不越权搬运 | V3-05-01/07/13 |
+| E15 | PosterThemeParameterContract | 每实例 schema/默认/单位/范围/版本；不强制固定 NIGHT OPS 字段 | V3-04-M05、V3-07 |
+| F13 | CollectionSubscriptionHub | 共享来源 watcher 引用计数、取消、事件合并，更新多个关联视图 | V3-05-11 |
+| D07/D08 扩展 | Existing Theme/AI Services | 共享服务但每次计划带目标 IDs/实体版本，实例覆盖与草稿独立 | V3-07/08 |
+
+已实现状态以代码锚点为准。App/PosterVisualWindow 中尚集中存在的协调和演示逻辑，在对应项逐步提取；模块目录不把计划中的类当作现有代码。
 
 ## 1. 目的
 
@@ -82,7 +102,7 @@ B01/B02 的 Shell generation 与 B09 的 topology generation 必须分离。两�
 | ID | 模块 | 职责 | 主要输入/输出 | 阶段 |
 | --- | --- | --- | --- | --- |
 | C01 | `PosterShellView` | 受保护标题栏、按钮、内容 viewport 和底栏结构 | `PosterProjection` / `PosterCommand` | V3-02/03 |
-| C02 | `ItemViewportView` | 虚拟化 Item、连续裁剪、滚动与稳定 identity | `LayoutSnapshot` / `ItemCommand` | V3-06 |
+| C02 | `ItemViewportView` | 虚拟化 Item、连续裁剪、滚动与稳定 identity | `LayoutSnapshot` / `ItemCommand` | V3-05 接真实内容时推进 V3-06-01..04 |
 | C03 | `ItemCardView` | 图标、标题、状态、选择、启动和拖放反馈 | `ItemProjection` | V3-05 |
 | C04 | `ControlCenterWindow` | 海报列表、编辑、Item 管理、主题和设置 | `ControlCenterProjection` | V3-04 起 |
 | C05 | `TraySurface` | 快速入口、暂停、可见性和退出 | `TrayProjection` | V3-01/04 |
@@ -106,6 +126,8 @@ C 类不得直接写数据库或调用 Shell API。所有交互转换成 Applica
 | D09 | `SettingsApplicationService` | 用户设置、性能模式、自启 opt-in 和同步 | `UpdateSettings` | V3-04/09 |
 | D10 | `RecoveryApplicationService` | 最近可用状态、孤儿文件、失败操作和诊断恢复 | `RecoverOperation`, `RestoreBackup` | V3-04/05/09 |
 
+D13 的 PortableProfile 是跨机习惯配置，不替代 D10 的完整数据库灾难恢复。删除确认由中心/海报菜单共用呈现服务，核心负责目标/版本/影响校验；导入与主题包校验复用既有服务，不允许 UI 直接写 SQLite。
+
 Application 层拥有用例顺序和事务，不拥有 WinUI 控件或 HWND。
 
 ## 7. E 类：领域模型与纯策略
@@ -114,12 +136,12 @@ Application 层拥有用例顺序和事务，不拥有 WinUI 控件或 HWND。
 | --- | --- | --- | --- | --- |
 | E01 | `PosterModel` | 海报身份、标题、状态、几何引用和主题引用 | WinUI/Win32/SQLite | V3-04 |
 | E02 | `FrameGeometry` | DIP 几何、显示器身份、锚点、约束和收起配对 | WinUI/Win32 | V3-03 |
-| E03 | `ContentMetrics` | 字体、Item 尺寸、间距、密度和用户参数 | UI 控件 | V3-06 |
+| E03 | `ContentMetrics` | 字体、Item 尺寸、间距、密度和用户参数 | UI 控件 | V3-04-M05 合同，V3-06 扩充 |
 | E04 | `ResponsiveLayoutPolicy` | 列数、行流、viewport、裁剪和可达性 | HWND/数据库 | V3-06 |
 | E05 | `ContentItemModel` | 类型、来源、目标、状态、排序和活跃度 | Shell API | V3-05 |
 | E06 | `ActivityScoringPolicy` | recency/frequency/newness、衰减和稳定排序 | 网络/UI | V3-06 |
 | E07 | `ManualLayoutPolicy` | 自动、锚定+自动、全手动与冲突偏移 | UI 控件 | V3-06 |
-| E08 | `CollectionModel` | mapped/managed 所有权和删除语义 | 文件系统 | V3-05 |
+| E08 | `CollectionModel` | reference/mapped/managed 所有权、能力和删除语义 | 文件系统 | V3-05 |
 | E09 | `FileTransferPlan` | 来源、目标、动作、冲突、回滚和逐项结果 | IFileOperation | V3-05 |
 | E10 | `ThemeManifest` | 主题身份、版本、资源、能力和权限 | XAML loader | V3-07 |
 | E11 | `ThemeValidationPolicy` | schema、资源范围、受保护交互与兼容性 | 网络/文件写入 | V3-07 |
@@ -169,7 +191,7 @@ F06/F07/F08/F11 可先用 C# 适配器，遇到 AOT、COM 稳定性或第三方�
 | H02 | `DiagnosticsBundleService` | 隐私过滤后的诊断导出 | V3-09 |
 | H03 | `HealthMonitor` | StateStore、desktop host、watcher、theme host 状态 | V3-04 起 |
 | H04 | `PerformanceSampler` | CPU、Working Set、GPU、句柄、首帧和交互延迟 | V3-02 起 |
-| H05 | `ShellProxyProcess` | 隔离第三方 Shell 扩展和缩略图 | V3-09 |
+| H05 | `ShellProxyProcess` | 隔离第三方 Shell 扩展和缩略图 | V3-05 启用扩展前；V3-09 完善退出/发布 |
 | H06 | `ThemeHostProcess` | 未来受限用户代码主题 | V3-07 后半 |
 | H07 | `UpdaterProcess` | 主进程退出后的版本替换与回滚 | V3-09 |
 | H08 | `InstallerLifecycle` | 当前用户安装、路径选择、自启 opt-in、卸载恢复 | V3-09 |
@@ -214,7 +236,7 @@ Bootstrap → 所有组合根
 
 | DesktopUp 模块 | DeskBox 可参考区域 | 复用判断 |
 | --- | --- | --- |
-| B01/B02/B07/B12 | `Services/WidgetLayerService.cs`、相关 layer/recovery tests | 高；需改成 DesktopUp 单海报 cluster |
+| B01/B02/B07/B12 | `Services/WidgetLayerService.cs`、相关 layer/recovery tests | 高；保留已验证 cluster，扩展按 PosterId 管理多个实例 |
 | B03/B05/B09/B10 | `Views/WidgetWindowBase.*`、Win32Helper、显示器策略 | 高；去除无关 Widget 类型 |
 | B11 | `WidgetWindowBase.Collapse.cs`、`WidgetCompact*` policies | 中高；只保留点击收起与顶部锚定核心 |
 | A01–A06/C05 | App 启动、Tray、bounded scheduler、runtime policy | 中高；重新命名并删去无关服务 |

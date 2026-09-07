@@ -20,13 +20,14 @@ public partial class App : Microsoft.UI.Xaml.Application
     private ServiceProvider? _services;
     private ControlCenterService? _controlCenter;
     private TrayService? _tray;
-    private PosterVisualWindow? _poster;
+    private PosterSessionRegistry? _posterSessions;
+    private bool _controlCenterEnvironmentPending = true;
+    private Window? _desktopEnvironmentAnchor;
+    private IDisposable? _desktopEnvironmentAnchorLease;
     private IStateProjectionCoordinator? _stateCoordinator;
     private IStateCommandService? _stateCommands;
     private IStructuredLog? _log;
     private IResourceLedger? _ledger;
-    private CancellationTokenSource? _desktopDiscoveryCancellation;
-    private Task? _desktopDiscoveryTask;
     private DesktopEnvironmentWatcher? _desktopEnvironmentWatcher;
     private IDisposable? _desktopEnvironmentWatcherLease;
     private DispatcherQueueTimer? _desktopHealthTimer;
@@ -40,6 +41,7 @@ public partial class App : Microsoft.UI.Xaml.Application
     private DesktopEnvironmentChangeKind _pendingDesktopRecoveryKinds;
     private int _activeShellRecoveries;
     private int _activeDisplayRecoveries;
+    private readonly List<Task> _desktopRecoveryTasks = new();
     private int _exiting;
 
     public App()
@@ -100,17 +102,19 @@ public partial class App : Microsoft.UI.Xaml.Application
             return;
         }
         _stateCoordinator = _services.GetRequiredService<IStateProjectionCoordinator>();
+        DebugSettings.IsXamlResourceReferenceTracingEnabled = true;
+        DebugSettings.XamlResourceReferenceFailed += OnXamlResourceReferenceFailed;
         _stateCommands = _services.GetRequiredService<IStateCommandService>();
         _stateCoordinator.ProjectionChanged += OnStateProjectionChanged;
         _controlCenter = new ControlCenterService(
             _ledger,
             _log,
-            () => TogglePosterLocked(StateCommandSource.ControlCenter),
-            () => TogglePosterCollapsed(StateCommandSource.ControlCenter),
-            () => ToggleDynamicEffectsPaused(StateCommandSource.ControlCenter));
+            ExecuteControlCenterPosterCommand,
+            () => ToggleDynamicEffectsPaused(StateCommandSource.ControlCenter),
+            OnControlCenterSelectionChanged);
         _tray = new TrayService(_ledger, _log);
         _tray.Create(
-            _controlCenter.Show,
+            ShowControlCenter,
             TogglePosterEditing,
             () => TogglePosterLocked(StateCommandSource.Tray),
             () => ToggleDynamicEffectsPaused(StateCommandSource.Tray),
@@ -122,7 +126,12 @@ public partial class App : Microsoft.UI.Xaml.Application
             isElevated = IsProcessElevated(),
             requestedExecutionLevel = "asInvoker"
         });
-        StartDesktopDiscovery();
+        _posterSessions = new PosterSessionRegistry(new WinUiPosterSessionFactory(
+            _services.GetRequiredService<IDesktopLayerAttachment>(), _stateCommands, _ledger, _log,
+            ShowControlCenter, OnPosterEditingChanged, args => OnDesktopEnvironmentChanged(this, args)), _log);
+        StartDesktopEnvironmentMonitoring();
+        QueueDesktopRecovery(DesktopEnvironmentChangeKind.DesktopShell | DesktopEnvironmentChangeKind.DisplayTopology,
+            "startup", invalidateShell: false);
 
         DispatchIntent(_startupIntent);
         while (_pendingIntents.TryDequeue(out StartupIntent? pending))
@@ -136,7 +145,9 @@ public partial class App : Microsoft.UI.Xaml.Application
     private static ServiceProvider BuildServices()
     {
         var services = new ServiceCollection();
-        services.AddSingleton<IUserDataPaths, UserDataPaths>();
+        // Explicit child-process test override. Normal launches keep the existing per-user root.
+        services.AddSingleton<IUserDataPaths>(new UserDataPaths(
+            Environment.GetEnvironmentVariable("DESKTOPUP_V3_TEST_DATA_ROOT")));
         services.AddSingleton<IStructuredLog, JsonLineLog>();
         services.AddSingleton<IResourceLedger, ResourceLedger>();
         services.AddSingleton<SqliteStateStore>();
@@ -148,6 +159,7 @@ public partial class App : Microsoft.UI.Xaml.Application
             IStateProjectionRepository,
             SqliteStateProjectionRepository>();
         services.AddSingleton<StateProjectionCoordinator>();
+        services.AddSingleton<IStateCommandRepository, SqliteStateCommandRepository>();
         services.AddSingleton<IStateProjectionCoordinator>(static provider =>
             provider.GetRequiredService<StateProjectionCoordinator>());
         services.AddSingleton<IStateCommandService>(static provider =>
@@ -158,131 +170,9 @@ public partial class App : Microsoft.UI.Xaml.Application
         return services.BuildServiceProvider(validateScopes: true);
     }
 
-    private void StartDesktopDiscovery()
-    {
-        if (_services is null || _log is null || _ledger is null)
-        {
-            return;
-        }
-
-        _desktopDiscoveryCancellation = new CancellationTokenSource();
-        _desktopDiscoveryTask = DiscoverDesktopShellAsync(
-            _services.GetRequiredService<IDesktopShellLocator>(),
-            _log,
-            _ledger,
-            _desktopDiscoveryCancellation.Token);
-    }
-
-    private async Task DiscoverDesktopShellAsync(
-        IDesktopShellLocator locator,
-        IStructuredLog log,
-        IResourceLedger ledger,
-        CancellationToken cancellationToken)
-    {
-        using IDisposable lease = ledger.Acquire(
-            "background.desktop-shell-discovery",
-            "bounded-background-task");
-        try
-        {
-            IDisplayTopologyService displayTopology =
-                _services!.GetRequiredService<IDisplayTopologyService>();
-            Task<DesktopShellHostSnapshot?> shellTask =
-                locator.WaitForStableHostAsync(cancellationToken).AsTask();
-            Task<DisplayTopologySnapshot?> topologyTask =
-                displayTopology.WaitForStableTopologyAsync(cancellationToken).AsTask();
-            await Task.WhenAll(shellTask, topologyTask).ConfigureAwait(false);
-
-            DesktopShellHostSnapshot? shellSnapshot = await shellTask.ConfigureAwait(false);
-            DisplayTopologySnapshot? topologySnapshot = await topologyTask.ConfigureAwait(false);
-            if (shellSnapshot is null || topologySnapshot is null)
-            {
-                log.Write("warning", "desktop_environment.unavailable", new
-                {
-                    shellAvailable = shellSnapshot is not null,
-                    topologyAvailable = topologySnapshot is not null
-                });
-                return;
-            }
-
-            log.Write("info", "desktop_shell.stable", new
-            {
-                generation = shellSnapshot.Generation,
-                iconViewHandle = $"0x{shellSnapshot.Identity.IconViewHandle:X}",
-                containerHandle = $"0x{shellSnapshot.Identity.ContainerHandle:X}",
-                explorerProcessId = shellSnapshot.Identity.ProcessId,
-                shellSnapshot.StableAtUtc
-            });
-            log.Write("info", "display_topology.stable", new
-            {
-                generation = topologySnapshot.Generation,
-                topologySnapshot.Signature,
-                monitorCount = topologySnapshot.Monitors.Count,
-                primary = topologySnapshot.PrimaryMonitor?.DeviceName,
-                topologySnapshot.StableAtUtc
-            });
-            _dispatcher?.TryEnqueue(() => ShowPoster(shellSnapshot, topologySnapshot));
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            log.Write("info", "desktop_shell.discovery_cancelled");
-        }
-    }
-
-    private void ShowPoster(
-        DesktopShellHostSnapshot desktopHost,
-        DisplayTopologySnapshot displayTopology)
-    {
-        if (Volatile.Read(ref _exiting) != 0 ||
-            _services is null ||
-            _ledger is null ||
-            _log is null ||
-            _controlCenter is null)
-        {
-            return;
-        }
-
-        try
-        {
-            _poster ??= new PosterVisualWindow(
-                _services.GetRequiredService<IDesktopLayerAttachment>(),
-                _services.GetRequiredService<IStateProjectionCoordinator>(),
-                _services.GetRequiredService<IStateCommandService>(),
-                _ledger,
-                _log,
-                _controlCenter.Show,
-                editing => _tray?.SetPosterEditing(editing));
-            if (!_poster.Show(desktopHost, displayTopology))
-            {
-                _log.Write("error", "poster.show_failed", new
-                {
-                    desktopHost.Generation,
-                    displayGeneration = displayTopology.Generation
-                });
-                return;
-            }
-
-            StartDesktopEnvironmentMonitoring();
-        }
-        catch (Exception exception)
-        {
-            _log.Write("error", "poster.show_exception", new
-            {
-                desktopHost.Generation,
-                exceptionType = exception.GetType().FullName,
-                exception.HResult,
-                exception.Message,
-                exception.StackTrace
-            });
-            _poster?.Dispose();
-            _poster = null;
-        }
-    }
-
     private void StartDesktopEnvironmentMonitoring()
     {
-        if (_poster is null ||
-            _poster.WindowHandle == 0 ||
-            _dispatcher is null ||
+        if (_dispatcher is null ||
             _ledger is null ||
             _desktopEnvironmentWatcher is not null)
         {
@@ -290,16 +180,13 @@ public partial class App : Microsoft.UI.Xaml.Application
         }
 
         _desktopEnvironmentCancellation = new CancellationTokenSource();
+        // Hidden top-level listener survives a zero-poster catalog and receives broadcasts.
+        _desktopEnvironmentAnchor = new Window { Title = "DesktopUp environment listener" };
+        _desktopEnvironmentAnchor.AppWindow.Hide();
+        _desktopEnvironmentAnchorLease = _ledger.Acquire("window.desktop-environment-anchor", "hidden-broadcast-listener");
         _desktopEnvironmentWatcher = new DesktopEnvironmentWatcher(
-            _poster.WindowHandle,
-            ReassertPosterDesktopBottom);
+            WinRT.Interop.WindowNative.GetWindowHandle(_desktopEnvironmentAnchor), () => true, guardPosterWindow: false);
         _desktopEnvironmentWatcher.Changed += OnDesktopEnvironmentChanged;
-        _desktopEnvironmentWatcher.PointerActivationGuarded +=
-            OnPosterPointerActivationGuarded;
-        _desktopEnvironmentWatcher.LayerActivationGuarded +=
-            OnPosterLayerActivationGuarded;
-        _desktopEnvironmentWatcher.ZOrderChangeConstrained +=
-            OnPosterZOrderChangeConstrained;
         _desktopEnvironmentWatcherLease = _ledger.Acquire(
             "watcher.desktop-environment",
             "native-window-subclass");
@@ -322,102 +209,22 @@ public partial class App : Microsoft.UI.Xaml.Application
 
         _log?.Write("info", "desktop_environment.monitoring_started", new
         {
-            handle = $"0x{_poster.WindowHandle:X}"
+            sessions = _posterSessions?.Sessions
         });
     }
 
-    private void OnDesktopEnvironmentChanged(
-        object? sender,
-        DesktopEnvironmentChangedEventArgs args)
+    private void OnDesktopEnvironmentChanged(object? sender, DesktopEnvironmentChangedEventArgs args)
     {
-        QueueDesktopRecovery(args.Kind, args.Reason, invalidateShell: true);
+        bool sessionGuard = args.Reason.StartsWith("session-guard-", StringComparison.Ordinal);
+        if (sessionGuard && HasPendingOrActiveRecovery(DesktopEnvironmentChangeKind.DesktopShell)) return;
+        QueueDesktopRecovery(args.Kind, args.Reason, invalidateShell: !sessionGuard &&
+            !HasPendingOrActiveRecovery(DesktopEnvironmentChangeKind.DesktopShell));
     }
-
-    private bool ReassertPosterDesktopBottom()
-    {
-        if (Volatile.Read(ref _exiting) != 0 ||
-            _services is null ||
-            _poster is null)
-        {
-            return false;
-        }
-
-        DesktopShellHostSnapshot? shell =
-            _services.GetRequiredService<IDesktopShellLocator>().Current;
-        return shell is not null && _poster.ReassertDesktopBottom(shell);
-    }
-
-    private void OnPosterPointerActivationGuarded(
-        object? sender,
-        DesktopPointerActivationGuardedEventArgs args)
-    {
-        _log?.Write(
-            args.DesktopBottomRestored ? "info" : "warning",
-            "poster.pointer_activation_suppressed",
-            new
-            {
-                args.DesktopBottomRestored,
-                args.Error,
-                handle = _poster is null ? null : $"0x{_poster.WindowHandle:X}"
-            });
-
-        if (!args.DesktopBottomRestored &&
-            !HasPendingOrActiveRecovery(DesktopEnvironmentChangeKind.DesktopShell))
-        {
-            QueueDesktopRecovery(
-                DesktopEnvironmentChangeKind.DesktopShell |
-                    DesktopEnvironmentChangeKind.DisplayTopology,
-                "pointer-layer-reassert-failed",
-                invalidateShell: true);
-        }
-    }
-
-    private void OnPosterLayerActivationGuarded(
-        object? sender,
-        DesktopLayerActivationGuardedEventArgs args)
-    {
-        _log?.Write(
-            args.DesktopBottomRestored ? "info" : "warning",
-            "poster.layer_activation_reasserted",
-            new
-            {
-                args.Reason,
-                args.DesktopBottomRestored,
-                args.Error,
-                handle = _poster is null ? null : $"0x{_poster.WindowHandle:X}"
-            });
-
-        if (!args.DesktopBottomRestored &&
-            !HasPendingOrActiveRecovery(DesktopEnvironmentChangeKind.DesktopShell))
-        {
-            QueueDesktopRecovery(
-                DesktopEnvironmentChangeKind.DesktopShell |
-                    DesktopEnvironmentChangeKind.DisplayTopology,
-                $"{args.Reason}-layer-reassert-failed",
-                invalidateShell: true);
-        }
-    }
-
-    private void OnPosterZOrderChangeConstrained(
-        object? sender,
-        DesktopZOrderChangeConstrainedEventArgs args)
-    {
-        _log?.Write(
-            "info",
-            "poster.z_order_change_constrained",
-            new
-            {
-                requestedInsertAfter = $"0x{args.RequestedInsertAfter:X}",
-                enforcedInsertAfter = "HWND_BOTTOM",
-                handle = _poster is null ? null : $"0x{_poster.WindowHandle:X}"
-            });
-    }
-
     private void DesktopHealthTimer_Tick(DispatcherQueueTimer sender, object args)
     {
         if (Volatile.Read(ref _exiting) != 0 ||
             _services is null ||
-            _poster is null)
+            _posterSessions is null)
         {
             return;
         }
@@ -427,14 +234,14 @@ public partial class App : Microsoft.UI.Xaml.Application
             IDesktopShellLocator locator =
                 _services.GetRequiredService<IDesktopShellLocator>();
             DesktopShellHostSnapshot? shell = locator.Current;
-            if ((shell is null || !_poster.IsAttached(shell)) &&
+            if ((shell is null || _posterSessions.NeedsRecovery(shell)) &&
                 !HasPendingOrActiveRecovery(DesktopEnvironmentChangeKind.DesktopShell))
             {
                 QueueDesktopRecovery(
                     DesktopEnvironmentChangeKind.DesktopShell |
                         DesktopEnvironmentChangeKind.DisplayTopology,
-                    shell is null ? "shell-health-invalid" : "owner-health-mismatch",
-                    invalidateShell: shell is not null);
+                    shell is null ? "shell-health-invalid" : "session-health-retry",
+                    invalidateShell: false);
                 return;
             }
 
@@ -494,6 +301,9 @@ public partial class App : Microsoft.UI.Xaml.Application
         }
 
         long request = _desktopRecoveryVersionGate.Signal();
+        _posterSessions?.SuspendEnvironment(request);
+        _controlCenterEnvironmentPending = true;
+        RefreshControlCenterRuntime();
         _pendingDesktopRecoveryKinds |= kind;
         _pendingDesktopRecoveryReasons.Add(reason);
         if (invalidateShell &&
@@ -517,14 +327,20 @@ public partial class App : Microsoft.UI.Xaml.Application
         });
     }
 
-    private async void DesktopRecoveryTimer_Tick(
+    private void DesktopRecoveryTimer_Tick(
         DispatcherQueueTimer sender,
         object args)
     {
         sender.Stop();
+        _desktopRecoveryTasks.RemoveAll(task => task.IsCompleted);
+        _desktopRecoveryTasks.Add(RunDesktopRecoveryAsync());
+    }
+
+    private async Task RunDesktopRecoveryAsync()
+    {
         if (Volatile.Read(ref _exiting) != 0 ||
             _services is null ||
-            _poster is null ||
+            _posterSessions is null ||
             _desktopEnvironmentCancellation is null)
         {
             return;
@@ -544,17 +360,20 @@ public partial class App : Microsoft.UI.Xaml.Application
             _activeDisplayRecoveries++;
         }
 
+        CancellationToken cancellationToken = _desktopEnvironmentCancellation.Token;
+        using IDisposable? recoveryLease = _ledger?.Acquire($"background.desktop-recovery/{request}", "shared-recovery-task");
         try
         {
             await RecoverDesktopEnvironmentAsync(
                 request,
                 kinds,
                 reasons,
-                _desktopEnvironmentCancellation.Token);
+                cancellationToken);
         }
         catch (OperationCanceledException)
-            when (_desktopEnvironmentCancellation.IsCancellationRequested)
+            when (cancellationToken.IsCancellationRequested)
         {
+            _log?.Write("info", "desktop_environment.recovery_cancelled", new { request });
         }
         catch (Exception exception)
         {
@@ -588,7 +407,7 @@ public partial class App : Microsoft.UI.Xaml.Application
         string reasons,
         CancellationToken cancellationToken)
     {
-        if (_services is null || _poster is null)
+        if (_services is null || _posterSessions is null)
         {
             return;
         }
@@ -664,7 +483,19 @@ public partial class App : Microsoft.UI.Xaml.Application
                 });
             }
 
-            bool applied = _poster.Recover(shell, topology, request);
+            if (topology.PrimaryMonitor is not { } primaryMonitor) return;
+            if (!_stateCoordinator!.TryGetCurrent(out DesktopUpProjection? current) || current is null)
+                current = _stateCoordinator.EnsureInitialized(PosterVisualWindow.CreateInitialDefault(primaryMonitor));
+            ApplyStateProjection(new StateProjectionChangedEventArgs(current, StateCommandSource.System, $"sessions-recovery-{request}"));
+            bool IsCurrentEnvironment() => Volatile.Read(ref _exiting) == 0 &&
+                CaptureCurrentGenerationPair(locator, topologyService, topology) is { } observed &&
+                _desktopRecoveryVersionGate.CanCommit(request, expectedPair, observed);
+            bool applied = _posterSessions.Recover(new(shell, topology), request, IsCurrentEnvironment);
+            if (_desktopRecoveryVersionGate.IsCurrent(request))
+            {
+                _controlCenterEnvironmentPending = false;
+                RefreshControlCenterRuntime();
+            }
             observedPair = CaptureCurrentGenerationPair(
                 locator,
                 topologyService,
@@ -674,8 +505,7 @@ public partial class App : Microsoft.UI.Xaml.Application
                 _desktopRecoveryVersionGate.CanCommit(
                     request,
                     expectedPair,
-                    observedPair.Value) &&
-                _poster.CurrentGenerationPair == expectedPair)
+                    observedPair.Value))
             {
                 _log?.Write("info", "desktop_environment.recovery_committed", new
                 {
@@ -685,7 +515,7 @@ public partial class App : Microsoft.UI.Xaml.Application
                     attempt,
                     shellGeneration = shell.Generation,
                     topologyGeneration = topology.Generation,
-                    handle = $"0x{_poster.WindowHandle:X}"
+                    sessions = _posterSessions?.Sessions
                 });
                 return;
             }
@@ -782,7 +612,7 @@ public partial class App : Microsoft.UI.Xaml.Application
         switch (intent.Kind)
         {
             case StartupIntentKind.ShowControlCenter:
-                _controlCenter?.Show();
+                ShowControlCenter();
                 break;
             case StartupIntentKind.Exit:
                 ExitApplication();
@@ -790,21 +620,56 @@ public partial class App : Microsoft.UI.Xaml.Application
         }
     }
 
-    private void TogglePosterEditing()
+    private void ShowControlCenter()
     {
-        if (_poster is null)
+        // Load XAML on the UI dispatcher after the native notification callback returns.
+        _ = _dispatcher?.TryEnqueue(() =>
         {
-            _log?.Write("warning", "poster.mode_change_ignored", new
+            if (Volatile.Read(ref _exiting) == 0)
             {
-                error = "poster-not-ready"
-            });
-            return;
-        }
-
-        bool target = !_poster.IsEditing;
-        _ = _poster.SetEditing(target);
+                _controlCenter?.Show();
+            }
+        });
     }
 
+    private void OnXamlResourceReferenceFailed(
+        DebugSettings sender,
+        XamlResourceReferenceFailedEventArgs args) =>
+        _log?.Write("error", "xaml.resource_reference_failed", new { args.Message });
+
+    private void TogglePosterEditing()
+    {
+        string? selected = _controlCenter?.SelectedPosterId;
+        IPosterSession? session = _posterSessions?.Find(selected);
+        if (session is not null) _ = session.SetEditing(!session.IsEditing);
+        else _log?.Write("info", "poster.mode_change_ignored", new { posterId = selected, reason = "session-not-ready" });
+    }
+
+    private void OnPosterEditingChanged(string posterId, bool editing)
+    {
+        if (_controlCenter?.SelectedPosterId == posterId)
+            _tray?.SetPosterEditing(editing);
+    }
+
+    private void OnControlCenterSelectionChanged(string? posterId) =>
+        _tray?.SetPosterEditing(_posterSessions?.Find(posterId)?.IsEditing == true);
+
+    private void RefreshControlCenterRuntime() =>
+        _controlCenter?.ApplySessions(_posterSessions?.Sessions ?? Array.Empty<PosterSessionSnapshot>(), _controlCenterEnvironmentPending);
+
+    private void ExecuteControlCenterPosterCommand(PosterStateCommand command)
+    {
+        if (Volatile.Read(ref _exiting) != 0 || _stateCommands is null) return;
+        // Do not look up the current UI selection here: the displayed command is already targeted.
+        StateCommandResult result = _stateCommands.Execute(command);
+        _controlCenter?.ShowCommandResult(result);
+        LogCommandResult("control-center-poster", result);
+        _log?.Write("info", "control_center.command_completed", new
+        {
+            command.PosterId, Kind = command.Kind.ToString(), Status = result.Status.ToString(),
+            command.RequestId, result.CurrentRevision
+        });
+    }
     private void OnStateProjectionChanged(
         object? sender,
         StateProjectionChangedEventArgs args)
@@ -825,7 +690,9 @@ public partial class App : Microsoft.UI.Xaml.Application
         }
         _controlCenter?.ApplyProjection(args.Projection.ControlCenter);
         _tray?.ApplyProjection(args.Projection.Tray);
-        _ = _poster?.ApplyProjection(args);
+        _posterSessions?.ApplyProjection(args);
+        RefreshControlCenterRuntime();
+        OnControlCenterSelectionChanged(_controlCenter?.SelectedPosterId);
     }
 
     private void TogglePosterLocked(StateCommandSource source)
@@ -835,39 +702,18 @@ public partial class App : Microsoft.UI.Xaml.Application
             return;
         }
         DesktopUpProjection currentProjection = projection!;
-        PosterDefinition desired = currentProjection.Poster.Poster with
+        if (source == StateCommandSource.Tray)
         {
-            IsLocked = !currentProjection.Poster.Poster.IsLocked
-        };
-        StateCommandResult result = _stateCommands!.Execute(new PosterStateCommand(
-            $"{SourceToken(source)}-lock-{Guid.NewGuid():N}",
-            source,
-            PosterStateCommandKind.SetLocked,
-            currentProjection.Revision,
-            desired.PosterId,
-            desired));
-        LogCommandResult("poster-lock", result);
-    }
-
-    private void TogglePosterCollapsed(StateCommandSource source)
-    {
-        if (!TryGetProjection(source, "collapse", out DesktopUpProjection? projection))
-        {
+            var reads = new StateReadSet(currentProjection.Posters.ToDictionary(p => p.Poster.PosterId, p => p.EntityVersion),
+                CatalogVersion: currentProjection.CatalogVersion);
+            StateCommandResult batch = _stateCommands!.Execute(new BatchPosterCommand(
+                $"tray-lock-{Guid.NewGuid():N}", source, currentProjection.Revision, reads,
+                currentProjection.Posters.Select(p => p.Poster.PosterId).ToArray(),
+                BatchPosterCommandKind.SetLocked, !currentProjection.Tray.AllPostersLocked, AllPosters: true));
+            LogCommandResult("poster-lock-all", batch);
             return;
         }
-        DesktopUpProjection currentProjection = projection!;
-        PosterDefinition desired = currentProjection.Poster.Poster with
-        {
-            IsCollapsed = !currentProjection.Poster.Poster.IsCollapsed
-        };
-        StateCommandResult result = _stateCommands!.Execute(new PosterStateCommand(
-            $"{SourceToken(source)}-collapse-{Guid.NewGuid():N}",
-            source,
-            PosterStateCommandKind.SetCollapsed,
-            currentProjection.Revision,
-            desired.PosterId,
-            desired));
-        LogCommandResult("poster-collapse", result);
+        // Per-poster center commands are frozen by ControlCenterView, never by this global tray path.
     }
 
     private void ToggleDynamicEffectsPaused(StateCommandSource source)
@@ -887,7 +733,7 @@ public partial class App : Microsoft.UI.Xaml.Application
             source,
             SettingsStateCommandKind.SetDynamicEffectsPaused,
             currentProjection.Revision,
-            desired));
+            desired) { ReadSet = StateReadSet.ForSettings(currentProjection.ControlCenter.Settings.EntityVersion) });
         LogCommandResult("dynamic-effects-pause", result);
     }
 
@@ -946,17 +792,20 @@ public partial class App : Microsoft.UI.Xaml.Application
             TaskScheduler.Default);
     }
 
-    private void ExitApplication()
+    private async void ExitApplication()
     {
         if (Interlocked.Exchange(ref _exiting, 1) != 0)
         {
             return;
         }
         _log?.Write("info", "application.exit_requested");
+        DebugSettings.XamlResourceReferenceFailed -= OnXamlResourceReferenceFailed;
         StopDesktopEnvironmentMonitoring();
-        StopDesktopDiscovery();
-        _poster?.Dispose();
-        _poster = null;
+        _posterSessions?.Dispose();
+        _posterSessions = null;
+        // Cancellation completes on the UI dispatcher before DI/logging and the final ledger close.
+        await Task.WhenAll(_desktopRecoveryTasks.ToArray());
+        _desktopRecoveryTasks.Clear();
         if (_stateCoordinator is not null)
         {
             _stateCoordinator.ProjectionChanged -= OnStateProjectionChanged;
@@ -1004,38 +853,21 @@ public partial class App : Microsoft.UI.Xaml.Application
         if (_desktopEnvironmentWatcher is not null)
         {
             _desktopEnvironmentWatcher.Changed -= OnDesktopEnvironmentChanged;
-            _desktopEnvironmentWatcher.PointerActivationGuarded -=
-                OnPosterPointerActivationGuarded;
-            _desktopEnvironmentWatcher.LayerActivationGuarded -=
-                OnPosterLayerActivationGuarded;
-            _desktopEnvironmentWatcher.ZOrderChangeConstrained -=
-                OnPosterZOrderChangeConstrained;
             _desktopEnvironmentWatcher.Dispose();
             _desktopEnvironmentWatcher = null;
         }
         _desktopEnvironmentWatcherLease?.Dispose();
         _desktopEnvironmentWatcherLease = null;
+        _desktopEnvironmentAnchor?.Close();
+        _desktopEnvironmentAnchor = null;
+        _desktopEnvironmentAnchorLease?.Dispose();
+        _desktopEnvironmentAnchorLease = null;
 
         _pendingDesktopRecoveryKinds = DesktopEnvironmentChangeKind.None;
         _pendingDesktopRecoveryReasons.Clear();
         _desktopEnvironmentCancellation?.Dispose();
         _desktopEnvironmentCancellation = null;
         _log?.Write("info", "desktop_environment.monitoring_stopped");
-    }
-
-    private void StopDesktopDiscovery()
-    {
-        _desktopDiscoveryCancellation?.Cancel();
-        try
-        {
-            _desktopDiscoveryTask?.GetAwaiter().GetResult();
-        }
-        catch (OperationCanceledException)
-        {
-        }
-        _desktopDiscoveryTask = null;
-        _desktopDiscoveryCancellation?.Dispose();
-        _desktopDiscoveryCancellation = null;
     }
 
     private static bool IsProcessElevated()

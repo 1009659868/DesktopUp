@@ -26,23 +26,37 @@ public sealed class SqlitePosterRepository(
 
         for (int attempt = 1; attempt <= 4; attempt++)
         {
-            PosterStateSnapshot? existing = Read(defaultPoster.PosterId);
+            PosterCatalogSnapshot catalog = new SqlitePosterCatalogRepository(store).List();
+            PosterStateSnapshot? existing = catalog.Posters.FirstOrDefault(
+                entry => entry.Poster.PosterId == defaultPoster.PosterId);
             if (existing is not null)
             {
                 return existing;
             }
+            if (catalog.ProfileInitialized)
+            {
+                throw new InvalidOperationException(
+                    "The profile is initialized; a missing default poster must not be recreated.");
+            }
 
-            long expectedRevision = store.ReadHead().Revision;
+            long expectedRevision = catalog.Revision;
             string operationId = $"create-default-poster-{Guid.NewGuid():N}";
             StateCompareAndSwapResult result = store.ExecuteCompareAndSwap(
                 expectedRevision,
                 operationId,
                 (connection, transaction, committedRevision) =>
+                {
+                    if (SqlitePosterCatalogRepository.ReadProfile(connection, transaction).Initialized)
+                    {
+                        throw new InvalidOperationException(
+                            "The profile is initialized; a missing default poster must not be recreated.");
+                    }
                     InsertPoster(
                         connection,
                         transaction,
                         defaultPoster,
-                        committedRevision));
+                        committedRevision);
+                });
             if (result.Succeeded)
             {
                 PosterStateSnapshot? created = Read(defaultPoster.PosterId);
@@ -208,7 +222,8 @@ public sealed class SqlitePosterRepository(
                 layout_parameters_json,
                 template_key,
                 state_revision,
-                updated_utc
+                updated_utc,
+                purpose, is_visible, stack_order, collection_id, theme_instance_id, entity_version
             FROM posters
             WHERE poster_id = $posterId;
             """;
@@ -237,15 +252,23 @@ public sealed class SqlitePosterRepository(
             reader.GetInt64(14) != 0,
             reader.GetString(15),
             reader.GetString(16),
-            reader.GetString(17));
+            reader.GetString(17))
+        {
+            Purpose = reader.GetString(20),
+            IsVisible = reader.GetInt64(21) != 0,
+            StackOrder = reader.GetInt64(22),
+            CollectionId = reader.IsDBNull(23) ? null : reader.GetString(23),
+            ThemeInstanceId = reader.GetString(24)
+        };
         return new PosterStateSnapshot(
             revision,
             reader.GetInt64(18),
             poster,
-            ParseTimestamp(reader.GetString(19)));
+            ParseTimestamp(reader.GetString(19)),
+            reader.GetInt64(25));
     }
 
-    private static void InsertPoster(
+    internal static void InsertPoster(
         SqliteConnection connection,
         SqliteTransaction transaction,
         PosterDefinition poster,
@@ -264,7 +287,8 @@ public sealed class SqlitePosterRepository(
                 normalized_width, normalized_expanded_height,
                 is_locked, is_collapsed, auto_collapse_enabled,
                 layout_kind, layout_parameters_json, template_key,
-                state_revision, created_utc, updated_utc)
+                state_revision, created_utc, updated_utc,
+                purpose, is_visible, stack_order, collection_id, theme_instance_id)
             VALUES (
                 $posterId, $title, $subtitle, $monitorDeviceName,
                 $fallbackXDip, $fallbackYDip,
@@ -273,22 +297,26 @@ public sealed class SqlitePosterRepository(
                 $normalizedWidth, $normalizedExpandedHeight,
                 $isLocked, $isCollapsed, $autoCollapseEnabled,
                 $layoutKind, $layoutParametersJson, $templateKey,
-                $stateRevision, $createdUtc, $updatedUtc);
+                $stateRevision, $createdUtc, $updatedUtc,
+                $purpose, $isVisible, $stackOrder, $collectionId, $themeInstanceId);
             """;
         AddPosterParameters(command, poster, committedRevision, timestamp);
         command.Parameters.AddWithValue("$createdUtc", timestamp);
         if (command.ExecuteNonQuery() != 1)
         {
-            throw new InvalidOperationException("The default poster insert did not affect one row.");
+            throw new InvalidOperationException("The poster insert did not affect one row.");
         }
+        SqlitePosterCatalogRepository.TouchProfile(connection, transaction, committedRevision, true);
     }
 
-    private static void UpdatePoster(
+    internal static void UpdatePoster(
         SqliteConnection connection,
         SqliteTransaction transaction,
         PosterDefinition poster,
         long committedRevision)
     {
+        PosterStateSnapshot previous = ReadPoster(connection, transaction, poster.PosterId)
+            ?? throw new KeyNotFoundException("The poster no longer exists.");
         string timestamp = TimestampNow();
         using SqliteCommand command = connection.CreateCommand();
         command.Transaction = transaction;
@@ -312,6 +340,12 @@ public sealed class SqlitePosterRepository(
                 layout_kind = $layoutKind,
                 layout_parameters_json = $layoutParametersJson,
                 template_key = $templateKey,
+                purpose = $purpose,
+                is_visible = $isVisible,
+                stack_order = $stackOrder,
+                collection_id = $collectionId,
+                theme_instance_id = $themeInstanceId,
+                entity_version = entity_version + 1,
                 state_revision = $stateRevision,
                 updated_utc = $updatedUtc
             WHERE poster_id = $posterId;
@@ -321,6 +355,8 @@ public sealed class SqlitePosterRepository(
         {
             throw new InvalidOperationException("The poster update did not affect one row.");
         }
+        SqlitePosterCatalogRepository.TouchProfile(
+            connection, transaction, committedRevision, previous.Poster.StackOrder != poster.StackOrder);
     }
 
     private static void AddPosterParameters(
@@ -351,6 +387,11 @@ public sealed class SqlitePosterRepository(
         command.Parameters.AddWithValue("$layoutKind", poster.LayoutKind);
         command.Parameters.AddWithValue("$layoutParametersJson", poster.LayoutParametersJson);
         command.Parameters.AddWithValue("$templateKey", poster.TemplateKey);
+        command.Parameters.AddWithValue("$purpose", poster.Purpose);
+        command.Parameters.AddWithValue("$isVisible", poster.IsVisible ? 1 : 0);
+        command.Parameters.AddWithValue("$stackOrder", poster.StackOrder);
+        command.Parameters.AddWithValue("$collectionId", (object?)poster.CollectionId ?? DBNull.Value);
+        command.Parameters.AddWithValue("$themeInstanceId", poster.ThemeInstanceId);
         command.Parameters.AddWithValue("$stateRevision", revision);
         command.Parameters.AddWithValue("$updatedUtc", updatedUtc);
     }
@@ -430,6 +471,7 @@ public sealed class SqliteSettingsRepository(
                             performance_mode = $performanceMode,
                             launch_at_startup_requested = $launchAtStartupRequested,
                             state_revision = $stateRevision,
+                            entity_version = entity_version + 1,
                             updated_utc = $updatedUtc
                         WHERE singleton_id = 1;
                         """;
@@ -525,7 +567,8 @@ public sealed class SqliteSettingsRepository(
                 performance_mode,
                 launch_at_startup_requested,
                 state_revision,
-                updated_utc
+                updated_utc,
+                entity_version
             FROM app_settings
             WHERE singleton_id = 1;
             """;
@@ -542,7 +585,26 @@ public sealed class SqliteSettingsRepository(
             revision,
             reader.GetInt64(3),
             settings,
-            SqlitePosterRepository.ParseTimestamp(reader.GetString(4)));
+            SqlitePosterRepository.ParseTimestamp(reader.GetString(4)),
+            reader.GetInt64(5));
+    }
+
+    internal static void UpdateSettings(SqliteConnection connection, SqliteTransaction transaction,
+        DesktopUpSettings settings, long revision)
+    {
+        using SqliteCommand command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            UPDATE app_settings SET dynamic_effects_paused = $paused, performance_mode = $mode,
+                launch_at_startup_requested = $startup, state_revision = $revision,
+                entity_version = entity_version + 1, updated_utc = $utc WHERE singleton_id = 1;
+            """;
+        command.Parameters.AddWithValue("$paused", settings.DynamicEffectsPaused ? 1 : 0);
+        command.Parameters.AddWithValue("$mode", ToStorage(settings.PerformanceMode));
+        command.Parameters.AddWithValue("$startup", settings.LaunchAtStartupRequested ? 1 : 0);
+        command.Parameters.AddWithValue("$revision", revision);
+        command.Parameters.AddWithValue("$utc", SqlitePosterRepository.TimestampNow());
+        if (command.ExecuteNonQuery() != 1) throw new InvalidDataException("Settings row missing.");
     }
 
     private static string ToStorage(DesktopUpPerformanceMode mode) => mode switch

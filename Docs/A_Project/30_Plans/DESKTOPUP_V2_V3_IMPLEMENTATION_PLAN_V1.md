@@ -1,6 +1,6 @@
 # DesktopUp V2 V3 制作计划 V1
 
-状态：`IN PROGRESS — V3-04 AUTHORITATIVE STATE / V3-04-03 IMPLEMENTED`
+状态：`M04 IN PROGRESS — M04-01 AUTO PASS / MANUAL PENDING`
 
 建立日期：2026-09-03
 
@@ -18,9 +18,17 @@
 2. P0 桌面层和文件安全失败时停止扩展功能，先修根因；
 3. DeskBox 代码可以移植，但每个移植单元必须登记来源、许可证和 DesktopUp 改动；
 4. 自动测试验证合同，真实 Windows 桌面人工门验证窗口、Shell 和视觉；二者不能互相替代；
-5. 先主屏单海报，暂不创建多海报、多屏或混合 DPI 假能力；
+5. 保留主屏单海报回归，正式推进主屏多海报；多屏/混合 DPI 认证仍独立，不以单海报证据冒充多实例支持；
 6. 先功能完整，再做 Native AOT、内存压缩和安装器深化；
 7. 每个阶段关闭时更新计划、模块目录、代码锚点、验证记录和下一阶段交接。
+
+## 2.1 2026-09-07 范围与执行修订
+
+用户正式确认通用桌面内容、多海报、唯一控制中心/托盘、独立主题、热度排版、AI 辅助定制。七份需求已同步；[通用多海报合同](../20_Architecture/GENERAL_CONTENT_MULTI_POSTER_CONTRACT_V1.md) 和 [细化工作流](V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md) 补齐数据、作用域、依赖与逐项出口。最初调整为仅文档，随后 M01 已完成数据合同实现；不把该子集等同于多窗口产品完成。
+
+V3-04-03 R1 用户人工验证通过，保留 97/97 与真实开窗历史证据。V3-04-04 前插入 M01..07：实体/迁移 → 目标命令/投影 → 会话registry → M04中心目标/空间协同/输入 → 参数 → 多实例夹具 → 测量与人工门。M01数据PASS、M02 147/147、M03 163/163与Release/0/1/3实际进程及等待中退出为历史证据。用户已确认基本多海报交互；中心仍只绑定默认别名。本次仅文档补充不可重叠、锁定障碍、条件归位和保尺寸两阶段展开；M04仍PLANNED，不补写完整人工PASS。
+
+先交付可日用收纳版本：V3-05 真内容与 V3-06-01..04 的稳定视口并进，基础 Box 与 V3-09 最小安装/恢复/清理提前进入首个可用包；完整 AI 不阻塞日用交付。下图是能力分组，不再要求 AI 结束才开始打包。完整工作卡、证据和未决裁决见细化工作流。
 
 ## 3. 总阶段图
 
@@ -50,7 +58,7 @@ V3-10 性能、AOT 和 Release 认证
 
 ## 4. V3-00：文档与仓库重置
 
-状态：`COMPLETE — UNCOMMITTED`
+状态：`COMPLETE — HISTORICAL RESET BASELINE`
 
 ### 工作项
 
@@ -239,7 +247,9 @@ V3-02-08/09 共同遵循：恢复任务捕获 `(DesktopShellGeneration, DisplayT
 
 目标：用一个状态权威连接海报、控制中心和托盘，消除 UI 回弹和两端状态不一致。
 
-状态：`IN PROGRESS — V3-04-03 IMPLEMENTED / MANUAL THREE-SURFACE GATE NEXT`
+状态：`M04 IN PROGRESS — M04-01 AUTO PASS / MANUAL PENDING — NEXT M04-02`
+
+2026-09-07 回归已关闭：OutputPath 缺分隔符造成 XBF/PRI 名称错误已修复，DUV3001、真实开窗 smoke 与 97/97 原有证据保留；用户确认人工通过。尚未进入 V3-04-04，先按新方向执行 M01..07。
 
 当前增量（2026-09-04）：
 
@@ -249,7 +259,7 @@ V3-02-08/09 共同遵循：恢复任务捕获 `(DesktopShellGeneration, DisplayT
 - 状态初始化现在位于托盘、控制中心和海报创建之前；损坏数据库保留原文件并中止启动，不以第二份默认状态掩盖失败；
 - 自动证据：Release 0 warning / 0 error，合同测试 81/81；真实启动日志顺序为 `state_store.initialized → tray.created → poster.shown`，退出 `activeResources=0`。
 - V3-04-02：schema v2 建立 Poster/Settings 持久字段、repository snapshot/CAS 和应用服务边界；拖缩完成、锁定、收起已提交同一 global revision，冲突/失败恢复 committed snapshot；
-- V3-04-02 自动证据：Release 0 warning / 0 error，合同测试 87/87；下一门为普通退出/重启恢复几何、锁定和收起。
+- V3-04-02 自动证据：Release 0 warning / 0 error，合同测试 87/87；随后普通退出/重启恢复人工门已通过；本条保留原自动结果。
 - V3-04-03：建立读写分离 command/query 端口、单事务 aggregate snapshot、三端同 revision projection、单调分发、冲突/权限/幂等语义；
 - V3-04-03 自动证据：Release 0 warning / 0 error，合同测试 97/97；真实 v1→v2 迁移、projection 发布、启动/退出和临时文件零残留 smoke 通过。
 
@@ -258,11 +268,16 @@ V3-02-08/09 共同遵循：恢复任务捕获 `(DesktopShellGeneration, DisplayT
 - V3-04-01：建立 SQLite schema、迁移、revision/CAS 和备份；
 - V3-04-02：建立 Poster/Settings repository；
 - V3-04-03：建立 command/query 和三端 projection；
-- V3-04-04：实现控制中心海报预览、位置、锁定、收起和内容参数编辑；
-- V3-04-05：实现托盘显示、暂停动态效果、打开控制中心和退出；
-- V3-04-06：实现最近可用状态与数据库失败回退；
-- V3-04-07：实现控制中心窗口按需释放和重新打开；
-- V3-04-08：实现普通退出、重启和状态恢复。
+- V3-04-M01：PASS，schema v3、独立实体/初始化/版本和目录仓储；[实际合同](../40_Implementation/V3-04/POSTER_CATALOG_SCHEMA_V3.md)；117/117 自动回归，不新增桌面人工门；
+- V3-04-M02：AUTO PASS，目标化命令、三端集合投影、实体读集 CAS/批量事务/schema v4 回执已实现；147/147、Release 和新版隔离实际进程 smoke 通过，受影响人工回归待完成；[实际合同](../40_Implementation/V3-04/TARGETED_COMMAND_PROJECTION_V2.md)。
+- V3-04-M03：AUTO PASS / MANUAL PENDING；会话registry与共享恢复已落地，163/163、Release与0/1/3真实窗口/退出 smoke通过，见 [M03合同](../40_Implementation/V3-04/M03_SESSION_RECOVERY.md)。
+- V3-04-M04：PLANNED，01中心目录/所选ID → 02空间合同/纯夹具 → 03拖缩碰撞 → 04保尺寸先下后上展开 → 05连锁推让/条件归位/异构CAS → 06输入与删除确认 → 07集中核心人工门；见 [空间设计](../20_Architecture/POSTER_SPATIAL_LAYOUT_AND_EXPANSION_V1.md) 与细化工作流 §4.1。锁定邻居不被推；无解不静默缩小或半成功。未被再次调整且归位安全才还原。
+- V3-04-M05..07：PLANNED，参数合同、多实例端到端夹具、测量；不与M04-07重复相同测试，保留各自出口。
+- V3-04-04：M门后复用M04-01目录/选择器，扩充新增/配置克隆/删除、全桌面预览及参数编辑；几何复用M04空间服务，删除复用其确认；不重造列表和另一套状态权威。
+- V3-04-05：复用开窗/暂停/退出，增加托盘新增海报；补数量/可见数/锁定汇总及单张/全部作用域，零海报仍能新增；
+- V3-04-06：最近可用状态/数据库失败回退＋单文件跨主机习惯配置；A 格式/恢复/策略、B 一致快照导出、C 预览确认导入/映射、D 自动与实际跨机验证；内置主题/参数先支持，自定义载荷复用 V3-07-04；
+- V3-04-07：复用窗口释放/重开机制，扩充多实例预览、草稿与订阅资源清理验收；
+- V3-04-08：复用普通退出/恢复，扩充多海报、零海报与局部降级恢复。
 
 ### 出口门
 
@@ -272,6 +287,8 @@ V3-02-08/09 共同遵循：恢复任务捕获 `(DesktopShellGeneration, DisplayT
 - 关闭控制中心不影响海报；
 - 重启恢复位置、尺寸、锁定和收起状态；
 - 数据库损坏不会启动空白或第二份默认状态。
+
+2026-09-07 用户补充门：首次无配置恰好一张默认；已有或导入的有效 0..N 配置按集合恢复，不额外播种。中心/托盘均可新增；中心/海报“...”均可删除且必须提示后果，真实内容不删除。配置文件覆盖海报集合、几何/启动状态及独立主题/排版偏好；跨机先映射/预览/确认，再进入本机唯一权威。详细子项见 [细化工作流 §5.1](V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md#51-v3-04-06-配置迁移细化planned)；属于新增计划，M01 117/117 不证明这些入口和迁移 UI 已实现。
 
 ## 9. V3-05：文件收纳与真实 Item CRUD/启动
 
@@ -286,11 +303,15 @@ V3-02-08/09 共同遵循：恢复任务捕获 `(DesktopShellGeneration, DisplayT
 - V3-05-05：实现图标、显示名、失效状态和后台刷新；
 - V3-05-06：实现启动、在资源管理器中显示和移除 Item；
 - V3-05-07：实现 native drag/drop 与 Windows copy/move/link 语义；
-- V3-05-08：实现 dry-run、recovery journal、执行、验证和补偿；
+- V3-05-08：先实现 dry-run、recovery journal 与失败夹具，再开放 05-07 的实际磁盘执行；验证和补偿不能后补；
 - V3-05-09：实现新建文件/文件夹/快捷方式；
 - V3-05-10：实现重命名、复制、移动、回收站与系统菜单；
 - V3-05-11：实现 watcher 合并、断盘和恢复；
-- V3-05-12：建立孤儿受管目录检查与卸载恢复入口。
+- V3-05-12：建立孤儿受管目录检查与卸载恢复入口；
+- V3-05-13：应用/Shell 命名空间、网络/云与虚拟流能力矩阵及认证；
+- V3-05-14：三种用途的真实收纳竖向场景与日用交付门。
+
+依赖：05-08 的落盘 journal/失败保留是 05-07 实际移动和 05-10 文件变更前置；ShellProxy 在启用第三方扩展前建立，不拖到安装阶段。通用内容不只等于文件路径。
 
 ### 安全 P0 门
 
@@ -307,7 +328,7 @@ V3-02-08/09 共同遵循：恢复任务捕获 `(DesktopShellGeneration, DisplayT
 
 ### 工作项
 
-- V3-06-01：实现 Item viewport 和虚拟化集合；
+- V3-06-01：复用已验证连续 viewport，在 V3-05 接真 Item 时同步接稳定 identity/虚拟化，移除演示 Grid 重建，不重新发明滚动；
 - V3-06-02：实现连续像素裁剪和连续 scroll offset；
 - V3-06-03：实现独立滚动入口，零完整 Item 时仍可滚动；
 - V3-06-04：实现动态列数与稳定 Item identity；
@@ -406,7 +427,7 @@ V3-02-08/09 共同遵循：恢复任务捕获 `(DesktopShellGeneration, DisplayT
 
 ### 工作项
 
-- V3-10-01：冻结 CPU、Working Set、GPU、handle、首帧和交互延迟测量合同；
+- V3-10-01：复用 V3-04-M07 提前建立的 CPU、Working Set、GPU、handle、首帧和延迟测量合同，补完整功能场景；
 - V3-10-02：测量 Debug/Release、海报静态、控制中心打开和文件突发场景；
 - V3-10-03：虚拟化、缓存上限、窗口释放、动画和 watcher 优化；
 - V3-10-04：Native AOT 兼容审计，隔离动态 XAML/主题边界；
@@ -461,4 +482,6 @@ V3-02-08/09 共同遵循：恢复任务捕获 `(DesktopShellGeneration, DisplayT
 
 ## 18. 立即下一步
 
-执行 V3-04-03 人工三端门；通过后进入 V3-04-04，在统一 command/projection 上实现控制中心桌面预览、位置/尺寸编辑和内容参数入口，不允许预览成为第二状态权威。
+本轮已完成M04-01中心列表/稳定目标切换与DeskBox空间来源吸收记录。176/176、最终Release0warning0error、3/0真实会话/中心/退出smoke通过；实际点击因computer-use环境1385未执行，仍需短人工确认。下一开发项为M04-02空间合同/纯求解夹具，再03碰撞、04保尺寸展开、05推让与条件归位；[M04-01合同与启动](../40_Implementation/V3-04/M04_CONTROL_CENTER_SELECTION.md) 给出当前交付边界。下方为本轮实现前的任务来源，不代表仍未实现中心列表。
+
+任务来源：上轮将“中心仅A”定位为默认别名绑定缺口并提前M04-01；本轮已实现该项。M03已有0..N会话和163/163历史证据，本轮增至176/176；未明确报告的Explorer/Win+D核心人工证据仍在M04-07集中补齐。M系列后原04-04继续完善管理/预览，单一权威及既有Host不重写。

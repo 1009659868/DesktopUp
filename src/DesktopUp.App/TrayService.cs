@@ -130,8 +130,10 @@ internal sealed class TrayService(IResourceLedger ledger, IStructuredLog log) : 
         if (_lockItem is not null)
         {
             _lockItem.IsChecked = projection.AllPostersLocked;
-            _lockItem.IsEnabled = true;
+            _lockItem.IsEnabled = projection.PosterCount > 0;
+            _lockItem.Text = projection.LockSummary == PosterLockSummary.Some ? "锁定全部海报（部分已锁定）" : "锁定全部海报";
         }
+        if (_editItem is not null) _editItem.IsEnabled = projection.VisiblePosterCount > 0;
         if (_pauseItem is not null)
         {
             _pauseItem.IsChecked = projection.DynamicEffectsPaused;

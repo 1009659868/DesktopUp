@@ -126,6 +126,7 @@ public sealed class DesktopEnvironmentWatcher : IDisposable
     private readonly uint _taskbarCreatedMessage;
     private readonly SubclassProc _subclassProc;
     private readonly Func<bool> _reassertDesktopBottom;
+    private readonly bool _guardPosterWindow;
     private nint _fallbackBrush;
     private bool _installed;
     private bool _disposed;
@@ -133,7 +134,8 @@ public sealed class DesktopEnvironmentWatcher : IDisposable
 
     public DesktopEnvironmentWatcher(
         nint windowHandle,
-        Func<bool> reassertDesktopBottom)
+        Func<bool> reassertDesktopBottom,
+        bool guardPosterWindow = true)
     {
         if (windowHandle == 0 || !IsWindow(windowHandle))
         {
@@ -149,6 +151,7 @@ public sealed class DesktopEnvironmentWatcher : IDisposable
 
         _windowHandle = windowHandle;
         _reassertDesktopBottom = reassertDesktopBottom;
+        _guardPosterWindow = guardPosterWindow;
         _subclassProc = WindowSubclassProc;
         _fallbackBrush = CreateSolidBrush(PosterFallbackColorRef);
         if (_fallbackBrush == 0)
@@ -189,7 +192,7 @@ public sealed class DesktopEnvironmentWatcher : IDisposable
             _disposed = true;
             ReleaseFallbackBrush();
         }
-        else if (message == WmEraseBackground &&
+        else if (_guardPosterWindow && message == WmEraseBackground &&
             wParam != 0 &&
             _fallbackBrush != 0 &&
             GetClientRect(windowHandle, out NativeRect client))
@@ -197,15 +200,15 @@ public sealed class DesktopEnvironmentWatcher : IDisposable
             _ = FillRect((nint)wParam, ref client, _fallbackBrush);
             return new nint(1);
         }
-        else if (message == DesktopZOrderPolicy.WmWindowPosChanging)
+        else if (_guardPosterWindow && message == DesktopZOrderPolicy.WmWindowPosChanging)
         {
             ConstrainPendingZOrder(lParam);
         }
-        else if (message == DesktopPointerActivationPolicy.WmNcHitTest)
+        else if (_guardPosterWindow && message == DesktopPointerActivationPolicy.WmNcHitTest)
         {
             return new nint(DesktopPointerActivationPolicy.HtTransparent);
         }
-        else if (DesktopPointerActivationPolicy.ShouldSuppress(message))
+        else if (_guardPosterWindow && DesktopPointerActivationPolicy.ShouldSuppress(message))
         {
             (bool restored, string? error) = TryReassertDesktopBottom();
 
@@ -214,7 +217,7 @@ public sealed class DesktopEnvironmentWatcher : IDisposable
                 new DesktopPointerActivationGuardedEventArgs(restored, error));
             return new nint(DesktopPointerActivationPolicy.MaNoActivate);
         }
-        else if (DesktopLayerActivationPolicy.ShouldReassert(message))
+        else if (_guardPosterWindow && DesktopLayerActivationPolicy.ShouldReassert(message))
         {
             (bool restored, string? error) = TryReassertDesktopBottom();
             LayerActivationGuarded?.Invoke(

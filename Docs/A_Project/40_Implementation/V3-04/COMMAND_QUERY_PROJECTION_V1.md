@@ -1,6 +1,8 @@
 # V3-04 Command/Query 与三端 Projection 合同
 
-状态：`IMPLEMENTED FOR V3-04-03 — MANUAL SURFACE GATE PENDING`
+状态：`IMPLEMENTED SINGLE-POSTER BASELINE — USER PASS 2026-09-07`
+
+2026-09-07 M02 后续：本文件作为 V3-04-03 历史实现合同保留。当前生产 command/query 已由 [TARGETED_COMMAND_PROJECTION_V2](TARGETED_COMMAND_PROJECTION_V2.md) 替代，使用集合投影、实体读集及持久回执；本文件的单目标/global-only/内存重放描述不再代表生产新链。
 
 最后更新：2026-09-04
 
@@ -93,3 +95,7 @@ V3-04-03 不宣称：
 - 真实 Item、热度和动态排版。
 
 完整控制中心预览与编辑属于 V3-04-04；其余能力按 V3-04-05 至 V3-06 推进。
+
+## 9. 多海报扩展边界（2026-09-07）
+
+本文记录已经实现并通过的单海报合同，保留其 global-only CAS/单 Poster 事实，不伪改为已实现多实例。新模型采用目标实体版本＋全局提交序列、PostersById、catalog 生命周期与局部变更分发，设计见 [通用多海报合同](../../20_Architecture/GENERAL_CONTENT_MULTI_POSTER_CONTRACT_V1.md)。在 V3-04-M01/02 完成后记录迁移与实际代码合同；不能靠只编辑本文替代实现。

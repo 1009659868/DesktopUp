@@ -4,71 +4,68 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     Title="DesktopUp V3">
-    <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
-        <StackPanel
-            Width="620"
-            HorizontalAlignment="Center"
-            VerticalAlignment="Center"
-            Spacing="12">
-            <TextBlock
-                FontSize="32"
-                FontWeight="SemiBold"
-                Text="DesktopUp V3" />
-            <TextBlock
-                FontSize="16"
-                Text="控制中心、真实海报与托盘读取同一个已提交状态投影。"
-                TextWrapping="Wrap" />
-            <InfoBar
-                x:Name="StateInfoBar"
-                IsOpen="True"
-                IsClosable="False"
-                Severity="Informational"
-                Title="状态正在初始化"
-                Message="等待桌面宿主和 Poster projection。" />
-            <Border
-                Padding="16"
-                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                BorderThickness="1"
-                CornerRadius="8">
-                <StackPanel Spacing="8">
-                    <TextBlock
-                        x:Name="PosterTitleText"
-                        FontSize="22"
-                        FontWeight="SemiBold"
-                        Text="Poster 尚未就绪" />
-                    <TextBlock
-                        x:Name="RevisionText"
-                        Opacity="0.7"
-                        Text="committed revision —" />
-                    <TextBlock
-                        x:Name="PosterDetailText"
-                        Text="等待状态投影。"
-                        TextWrapping="Wrap" />
-                    <TextBlock
-                        x:Name="SettingsDetailText"
-                        Text="设置尚未就绪。"
-                        TextWrapping="Wrap" />
-                    <StackPanel
-                        Orientation="Horizontal"
-                        Spacing="8">
-                        <Button
-                            x:Name="LockButton"
-                            Click="LockButton_Click"
-                            Content="锁定"
-                            IsEnabled="False" />
-                        <Button
-                            x:Name="CollapseButton"
-                            Click="CollapseButton_Click"
-                            Content="收起"
-                            IsEnabled="False" />
-                        <Button
-                            x:Name="PauseButton"
-                            Click="PauseButton_Click"
-                            Content="暂停动态效果"
-                            IsEnabled="False" />
-                    </StackPanel>
-                </StackPanel>
-            </Border>
+    <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}" Padding="24" RowSpacing="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <StackPanel Spacing="6">
+            <TextBlock FontSize="28" FontWeight="SemiBold" Text="DesktopUp V3" />
+            <TextBlock Text="海报共享一个状态库；在左侧选择要管理的海报。" TextWrapping="Wrap" />
         </StackPanel>
+        <Grid Grid.Row="1" ColumnSpacing="20">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="260" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Grid RowSpacing="8">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <TextBlock x:Name="CatalogCountText" Text="海报" FontWeight="SemiBold" />
+                <ListView x:Name="PosterSelector" Grid.Row="1" SelectionMode="Single"
+                          AutomationProperties.AutomationId="PosterSelector"
+                          AutomationProperties.Name="海报列表"
+                          SelectionChanged="PosterSelector_SelectionChanged">
+                    <ListView.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Padding="0,8" Spacing="4" AutomationProperties.Name="{Binding AccessibleName}">
+                                <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                <TextBlock Text="{Binding Summary}" FontSize="12" Opacity="0.7" TextWrapping="Wrap" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
+            </Grid>
+            <ScrollViewer Grid.Column="1" HorizontalScrollBarVisibility="Disabled">
+                <StackPanel Spacing="12">
+                    <InfoBar x:Name="StateInfoBar" IsOpen="True" IsClosable="False"
+                             Severity="Informational" Title="状态正在初始化" Message="等待已提交海报目录。" />
+                    <Border Padding="16" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8">
+                        <StackPanel Spacing="10">
+                            <TextBlock x:Name="PosterTitleText" FontSize="22" FontWeight="SemiBold" Text="请选择海报"
+                                       AutomationProperties.AutomationId="SelectedPosterTitle" TextWrapping="Wrap" />
+                            <TextBlock x:Name="PosterIdentityText" Opacity="0.6" FontSize="11" TextWrapping="Wrap"
+                                       AutomationProperties.AutomationId="SelectedPosterId" />
+                            <TextBlock x:Name="RevisionText" Opacity="0.7" Text="committed revision —" TextWrapping="Wrap" />
+                            <TextBlock x:Name="PosterDetailText" Text="等待状态投影。" TextWrapping="Wrap" />
+                            <TextBlock x:Name="RuntimeDetailText" TextWrapping="Wrap" />
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Button x:Name="LockButton" Click="LockButton_Click" Content="锁定" IsEnabled="False"
+                                        AutomationProperties.AutomationId="LockPoster" />
+                                <Button x:Name="CollapseButton" Click="CollapseButton_Click" Content="收起" IsEnabled="False"
+                                        AutomationProperties.AutomationId="CollapsePoster" />
+                                <Button x:Name="VisibilityButton" Click="VisibilityButton_Click" Content="隐藏" IsEnabled="False"
+                                        AutomationProperties.AutomationId="VisibilityPoster" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                    <TextBlock Text="全局设置（作用于全部海报）" FontWeight="SemiBold" />
+                    <TextBlock x:Name="SettingsDetailText" Text="设置尚未就绪。" TextWrapping="Wrap" />
+                    <Button x:Name="PauseButton" Click="PauseButton_Click" Content="暂停动态效果" IsEnabled="False" />
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
     </Grid>
 </Window>

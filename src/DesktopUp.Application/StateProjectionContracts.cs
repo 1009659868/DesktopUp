@@ -15,7 +15,9 @@ public enum PosterStateCommandKind
     Move = 0,
     Resize = 1,
     SetLocked = 2,
-    SetCollapsed = 3
+    SetCollapsed = 3,
+    SetVisible = 4,
+    Rename = 5
 }
 
 public enum SettingsStateCommandKind
@@ -31,14 +33,21 @@ public sealed record PosterStateCommand(
     PosterStateCommandKind Kind,
     long ExpectedRevision,
     string PosterId,
-    PosterDefinition DesiredState);
+    PosterDefinition DesiredState)
+{
+    // Null retains the old global-CAS contract for compatibility callers only.
+    public StateReadSet? ReadSet { get; init; }
+}
 
 public sealed record SettingsStateCommand(
     string RequestId,
     StateCommandSource Source,
     SettingsStateCommandKind Kind,
     long ExpectedRevision,
-    DesktopUpSettings DesiredState);
+    DesktopUpSettings DesiredState)
+{
+    public StateReadSet? ReadSet { get; init; }
+}
 
 public enum StateCommandStatus
 {
@@ -49,7 +58,9 @@ public enum StateCommandStatus
     PermissionDenied,
     ValidationFailed,
     NotReady,
-    Failed
+    Failed,
+    NotFound,
+    ConfirmationRequired
 }
 
 public sealed record StateCommandResult(
@@ -60,6 +71,9 @@ public sealed record StateCommandResult(
     DesktopUpProjection? Projection,
     string? Error)
 {
+    public long? CommittedRevision { get; init; }
+    public string? ResultPosterId { get; init; }
+    public IReadOnlyList<StateReadConflict> Conflicts { get; init; } = Array.Empty<StateReadConflict>();
     public bool Succeeded => Status is
         StateCommandStatus.Committed or
         StateCommandStatus.NoChange or
@@ -72,30 +86,58 @@ public sealed record PosterSurfaceProjection(
     PosterDefinition Poster,
     bool CanMove,
     bool CanResize,
-    bool CanToggleCollapsed);
+    bool CanToggleCollapsed)
+{
+    public long EntityVersion { get; init; }
+}
 
 public sealed record SettingsProjection(
     long Revision,
     long SettingsRevision,
-    DesktopUpSettings Settings);
+    DesktopUpSettings Settings)
+{
+    public long EntityVersion { get; init; }
+}
 
 public sealed record ControlCenterProjection(
     long Revision,
-    PosterSurfaceProjection Poster,
-    SettingsProjection Settings);
+    PosterSurfaceProjection? Poster,
+    SettingsProjection Settings)
+{
+    public IReadOnlyList<PosterSurfaceProjection> Posters { get; init; } = Array.Empty<PosterSurfaceProjection>();
+    public IReadOnlyDictionary<string, PosterSurfaceProjection> PostersById { get; init; } =
+        new System.Collections.ObjectModel.ReadOnlyDictionary<string, PosterSurfaceProjection>(
+            new Dictionary<string, PosterSurfaceProjection>());
+    // Legacy catalog alias, NOT the control center's UI selection or a command target.
+    public string? SelectedPosterId => Poster?.Poster.PosterId;
+    public long CatalogVersion { get; init; }
+}
+
+public enum PosterLockSummary { Empty, None, Some, All }
 
 public sealed record TrayProjection(
     long Revision,
     int PosterCount,
     bool AllPostersLocked,
     bool DynamicEffectsPaused,
-    string ToolTipText);
+    string ToolTipText)
+{
+    public int VisiblePosterCount { get; init; }
+    public int LockedPosterCount { get; init; }
+    public PosterLockSummary LockSummary { get; init; }
+}
 
 public sealed record DesktopUpProjection(
     long Revision,
-    PosterSurfaceProjection Poster,
+    PosterSurfaceProjection? Poster,
     ControlCenterProjection ControlCenter,
-    TrayProjection Tray);
+    TrayProjection Tray)
+{
+    public IReadOnlyDictionary<string, PosterSurfaceProjection> PostersById => ControlCenter.PostersById;
+    public IReadOnlyList<PosterSurfaceProjection> Posters => ControlCenter.Posters;
+    public long CatalogVersion => ControlCenter.CatalogVersion;
+    public bool ProfileInitialized { get; init; }
+}
 
 public sealed class StateProjectionChangedEventArgs(
     DesktopUpProjection projection,
@@ -105,6 +147,9 @@ public sealed class StateProjectionChangedEventArgs(
     public DesktopUpProjection Projection { get; } = projection;
     public StateCommandSource Source { get; } = source;
     public string RequestId { get; } = requestId;
+    public IReadOnlyList<string> ChangedPosterIds { get; init; } = Array.Empty<string>();
+    public bool SettingsChanged { get; init; }
+    public bool CatalogChanged { get; init; }
 }
 
 public interface IStateProjectionCoordinator
@@ -113,10 +158,16 @@ public interface IStateProjectionCoordinator
 
     DesktopUpProjection EnsureInitialized(PosterDefinition defaultPoster);
     bool TryGetCurrent(out DesktopUpProjection? projection);
+    DesktopUpProjection Refresh();
+    PosterRemovalPreview? PrepareRemoval(string posterId);
 }
 
 public interface IStateCommandService
 {
     StateCommandResult Execute(PosterStateCommand command);
     StateCommandResult Execute(SettingsStateCommand command);
+    StateCommandResult Execute(CreatePosterCommand command);
+    StateCommandResult Execute(ClonePosterCommand command);
+    StateCommandResult Execute(RemovePosterCommand command);
+    StateCommandResult Execute(BatchPosterCommand command);
 }

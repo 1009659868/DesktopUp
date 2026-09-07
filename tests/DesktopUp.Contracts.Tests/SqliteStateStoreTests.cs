@@ -17,7 +17,7 @@ public sealed class SqliteStateStoreTests
 
         Assert.True(first.Succeeded);
         Assert.Equal(StateStoreInitializationStatus.Created, first.Status);
-        Assert.Equal(2, first.Head?.SchemaVersion);
+        Assert.Equal(4, first.Head?.SchemaVersion);
         Assert.Equal(0, first.Head?.Revision);
         Assert.Equal(StateStoreInitializationStatus.Ready, second.Status);
         Assert.Equal(first.Head?.Revision, second.Head?.Revision);
@@ -113,7 +113,7 @@ public sealed class SqliteStateStoreTests
         Assert.True(backup.Succeeded);
         Assert.Equal(1, backup.Revision);
         Assert.True(validation.IsValid);
-        Assert.Equal(2, validation.SchemaVersion);
+        Assert.Equal(4, validation.SchemaVersion);
         Assert.Equal(1, validation.Revision);
         Assert.Empty(Directory.EnumerateFiles(
             fixture.Paths.Backups,
@@ -144,30 +144,15 @@ public sealed class SqliteStateStoreTests
         Assert.True(File.Exists(Path.Combine(
             fixture.Paths.Backups,
             result.PreMigrationBackupFileName!)));
-        Assert.Equal(2, result.Head?.SchemaVersion);
+        Assert.Equal(4, result.Head?.SchemaVersion);
     }
 
     [Fact]
-    public void SchemaV1GetsSourceVersionBackupBeforeMigratingToV2()
+    public void SchemaV1GetsSourceVersionBackupBeforeMigratingToCurrentSchema()
     {
         using var fixture = new StateStoreFixture();
-        using (var current = fixture.CreateStore())
-        {
-            Assert.True(current.Initialize().Succeeded);
-        }
-        using (var connection = new SqliteConnection(
-            $"Data Source={fixture.DatabasePath};Pooling=False"))
-        {
-            connection.Open();
-            using SqliteCommand command = connection.CreateCommand();
-            command.CommandText =
-                "DROP TABLE posters; " +
-                "DROP TABLE app_settings; " +
-                "DELETE FROM schema_migrations WHERE version = 2; " +
-                "UPDATE state_head SET schema_version = 1; " +
-                "PRAGMA user_version=1;";
-            command.ExecuteNonQuery();
-        }
+        fixture.Paths.EnsureCreated();
+        LegacyStateDatabase.Create(fixture.DatabasePath, 1);
 
         using var store = fixture.CreateStore();
         StateStoreInitializationResult result = store.Initialize();
@@ -175,7 +160,7 @@ public sealed class SqliteStateStoreTests
         Assert.True(result.Succeeded, result.Error);
         Assert.Equal(StateStoreInitializationStatus.Migrated, result.Status);
         Assert.Equal(1, result.PreviousSchemaVersion);
-        Assert.Equal(2, result.Head?.SchemaVersion);
+        Assert.Equal(4, result.Head?.SchemaVersion);
         string backupPath = Path.Combine(
             fixture.Paths.Backups,
             result.PreMigrationBackupFileName!);

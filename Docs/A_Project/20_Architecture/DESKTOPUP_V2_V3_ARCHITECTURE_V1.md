@@ -1,12 +1,18 @@
 # DesktopUp V2 V3 技术路线与总体架构 V1
 
-状态：`DRAFT — DESKBOX-BASED FEASIBILITY ARCHITECTURE`
+状态：`DESIGN BASELINE — GENERAL CONTENT / MULTI-POSTER 2026-09-07`
 
 建立日期：2026-09-03
 
 适用分支：`impl/poster-redesign-V3`
 
+## 0. 本次扩展合同
+
+[通用内容与多海报合同](GENERAL_CONTENT_MULTI_POSTER_CONTRACT_V1.md) 规定实例/共享边界、数据关系、实体 CAS 与 global revision、生命周期、原生拖放、主题/热度/AI 目标和 DeskBox 来源；是本架构的细化。M01 目录与 M02 实体读集 CAS/集合投影已落地，见 [M02 实际合同](../40_Implementation/V3-04/TARGETED_COMMAND_PROJECTION_V2.md)；M03 多会话已落地，见 [实际会话恢复合同](../40_Implementation/V3-04/M03_SESSION_RECOVERY.md)，短人工门待确认。下文模块是设计，不代表全部已有实现。旧 V3_CURRENT 图保持为单海报实现快照，不能视为多海报完成图。
+
 ## 1. 目的
+
+2026-09-07 空间补充：[多海报空间协同与边界展开](POSTER_SPATIAL_LAYOUT_AND_EXPANSION_V1.md) 细化正常布局不可重叠、锁定固定障碍、保原尺寸先下后上展开、连锁推让与条件归位。仅新增设计，沿用现有Host、M02状态权威和M03会话；推让走完整障碍读集/异构几何事务，物理提交另设失败恢复，不靠抬层。中心最小列表与稳定选择前置M04-01，原04-04复用并扩完整管理/预览。用户已确认基本多海报交互，未逐项报告的核心人工门仍保留。
 
 本文把 DesktopUp V2 的冻结需求投影为一套可实施、可替换、可验证的 Windows 原生架构。V3 不继承旧 Qt、WebView、QPainter、Qt Quick、旧 WorkerW 探针或 Axiom 原型代码，而以 DeskBox 的成熟实现为主要工程参考。
 
@@ -75,10 +81,11 @@ DesktopUp.exe
 ├─ AppBootstrap / SingleInstance / Lifecycle
 ├─ TraySurface
 ├─ ControlCenterWindow（按需创建/释放）
-├─ PosterCoordinator
-│  └─ PosterWindowCluster
-│     ├─ PosterVisualWindow
-│     └─ PosterInputIslands
+├─ PosterSessionRegistry（PosterId → 0..N 个独立会话）
+│  └─ PosterSession / PosterWindowCluster
+│     ├─ PosterVisualWindow（独立主题/内容/布局）
+│     └─ PosterInputIslands（独立手势/geometry revision）
+├─ DesktopEnvironmentCoordinator（共享 Shell/显示 generation，逐实例恢复）
 ├─ Application Services
 ├─ Domain Models / Policies
 ├─ StateStore + RecoveryJournal
@@ -98,7 +105,7 @@ DesktopUp.exe
 └─ desktopup_native.dll       Rust/C ABI，承载 AOT 困难或必须原生隔离的能力
 ```
 
-首发单海报不拆成常驻 Runtime 与常驻 Control Center 两个大型 UI 进程。控制中心只是同一主进程中的按需窗口；关闭后不影响海报、托盘和核心服务。
+多海报先采用一个主进程＋按需辅助进程，不为每张复制一个完整 Runtime，也不拆出常驻 Control Center 大型 UI 进程。控制中心只是同一主进程中的按需窗口；关闭后不影响海报、托盘和核心服务。
 
 ## 6. 逻辑分层
 
@@ -137,10 +144,10 @@ DesktopUp.exe
 
 ### 7.1 PosterWindowCluster
 
-单海报在业务上是一个 Poster，在物理上允许由一组 HWND 组成：
+每张海报在业务上是一个有稳定 PosterId 的 Poster，在物理上由自己的 HWND cluster 组成；多个 cluster 由 registry 管理：
 
 - `PosterVisualWindow`：绘制背景、标题、卡片和底栏；常态不激活；
-- `PosterInputIslands`：只覆盖标题栏、锁定/收起按钮、Item、滚动区和编辑缩放边；
+- `PosterInputIslands`：只覆盖标题栏、更多/收起按钮、Item、滚动区和编辑缩放边；
 - `PosterWindowClusterCoordinator`：以同一个 geometry revision 原子提交视觉窗口和输入岛位置。
 
 这个扩展是 DesktopUp 相对 DeskBox 的必要差异。DeskBox 的文件格子本身占用完整交互矩形；DesktopUp 要求海报空白仍能框选桌面、显示桌面菜单并操作被覆盖的原生快捷方式，因此不能让一个全矩形 WinUI HWND 吞掉所有输入。
@@ -177,7 +184,7 @@ DesktopUp.exe
 
 ### 7.3 输入策略
 
-- 常态空白：穿透至 Explorer；
+- 常态空白：先检查更低层海报的有效命中，再穿透至 Explorer；不得用 A 的透明整面吞掉 B 的输入；
 - desktop-pinned HWND 的普通鼠标消息使用 `MA_NOACTIVATE`，不能因为点击而进入普通窗口前方；
 - 标题栏：未锁定时拖动，锁定时不移动；
 - Item：单击选择/启动规则由需求矩阵决定；
@@ -204,7 +211,7 @@ DesktopUp.exe
 - 高于海报，参与任务栏/Alt+Tab 的方式由需求决定；
 - 读取与真实海报相同 revision 的 projection；
 - 编辑操作提交 command，不持有第二份可写 Poster；
-- 关闭只释放窗口与可重建 UI，不停止 PosterCoordinator。
+- 关闭只释放窗口与可重建 UI，不停止 PosterSessionRegistry。
 
 ### 8.2 Tray
 
@@ -221,12 +228,13 @@ DesktopUp.exe
 
 视觉卡片不是数据本体；删除卡片不等于删除用户文件。
 
-### 9.2 两种文件集合
+### 9.2 三种集合与能力模型
 
-1. **Mapped Collection**：映射用户已有文件夹，不搬动原文件；
-2. **Managed Collection**：使用 DesktopUp 受管目录，用户明确操作后才复制或移动文件。
+1. **Reference Collection**：混合入口关联，添加不改变源文件；
+2. **Mapped Collection**：映射已有目录，建立映射不搬文件，后续文件操作明确影响该目录；
+3. **Managed Collection**：显式受管目录，用户明确操作后才复制/移动。
 
-两者共用 Item 投影、图标、排序、Watcher 和 Shell 菜单，但文件所有权与删除语义不同，UI 必须清楚标识。
+按类型声明引用/打开/复制/移动/重命名/回收能力；Shell 虚拟对象不伪造物理路径。集合可被多个海报查看，显示顺序和主题按海报独立；文件事实共享更新。删除海报、解除映射与删除实体文件不同。详细数据关系见通用多海报合同。
 
 ### 9.3 文件操作事务
 
@@ -284,7 +292,7 @@ DesktopUp.exe
 
 - 结构化权威状态使用 SQLite；
 - 文件传输恢复日志使用追加式 journal，并与数据库事务通过 operation id 关联；
-- 每次写入携带 expected revision；冲突返回最新 projection，不由 UI 偷偷覆盖；
+- 每次生产写入携带目标实体版本与必要读集；事务推进全局 committed revision；冲突返回同事务 projection，不由 UI 偷偷覆盖。M02 已迁移生产链，global-only 仅保留旧仓储/命令兼容入口；
 - JSON 只允许用于导入/导出、诊断和主题 manifest，不作为第二业务权威。
 
 ### 13.2 投影
@@ -360,7 +368,7 @@ V3 吸收 DeskBox 的窗口原生消息、低频全局拓扑兜底、稳定签�
 
 ## 17. 首发范围与延期
 
-首发只认证主屏单海报。多海报、多显示器、混合 DPI、云同步、主题市场、任意插件、AI 图片重绘和无限权限脚本继续延期。代码可以保留身份和端口扩展点，但不能提前制造无法验证的多实例复杂度。
+当前正式范围是主屏多海报、一个控制中心与一个托盘；单海报证据作为回归而非数量上限。多显示器/混合 DPI 完整认证、云同步、主题市场、任意插件和无限权限脚本仍不自动进入当前交付。多海报需独立实例、主题、内容、持久化和实际窗口门，不以数据数组冒充完成。
 
 ## 18. 架构退出门
 

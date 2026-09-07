@@ -11,13 +11,15 @@ public sealed record PosterStateSnapshot(
     long Revision,
     long PosterRevision,
     PosterDefinition Poster,
-    DateTimeOffset UpdatedAtUtc);
+    DateTimeOffset UpdatedAtUtc,
+    long EntityVersion = 1);
 
 public sealed record SettingsStateSnapshot(
     long Revision,
     long SettingsRevision,
     DesktopUpSettings Settings,
-    DateTimeOffset UpdatedAtUtc);
+    DateTimeOffset UpdatedAtUtc,
+    long EntityVersion = 1);
 
 public sealed record AuthoritativeStateSnapshot(
     long Revision,

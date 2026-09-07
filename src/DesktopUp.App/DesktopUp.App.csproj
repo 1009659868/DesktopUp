@@ -25,4 +25,11 @@
     <ProjectReference Include="..\DesktopUp.Infrastructure\DesktopUp.Infrastructure.csproj" />
     <ProjectReference Include="..\DesktopUp.Windows\DesktopUp.Windows.csproj" />
   </ItemGroup>
+  <!-- WinUI 2.3.6 concatenates OutputPath + XAML filename when preparing XBF/PRI.
+       A CLI -o path without a trailing slash silently creates wrong resource names. -->
+  <Target Name="ValidateWinUiOutputPath" BeforeTargets="PrepareForBuild;Prep_ComputeProcessXamlFiles">
+    <Error Condition="'$(OutputPath)' != '' and !HasTrailingSlash('$(OutputPath)')"
+           Code="DUV3001"
+           Text="WinUI OutputPath must end in a directory separator to preserve XBF resource names. Use scripts/build.ps1 -OutputDirectory or append a slash to dotnet build -o." />
+  </Target>
 </Project>

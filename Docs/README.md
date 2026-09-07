@@ -1,6 +1,6 @@
 # DesktopUp V2 文档入口
 
-状态：`V3-04 AUTHORITATIVE STATE — V3-04-03 THREE-SURFACE PROJECTION IMPLEMENTED`
+状态：`M04-01 AUTO PASS / MANUAL PENDING — NEXT M04-02`
 
 ## 权威顺序
 
@@ -22,6 +22,18 @@
 - 新路线以 DeskBox 的成熟 Windows 桌面窗口、文件收纳与 Shell 交互经验为基线；
 - DesktopUp 独有的透明空白穿透、海报排序、主题平台和 AI 能力仍独立设计。
 
-## 当前阶段
+## 当前产品与阶段
 
-V3-01、V3-02、V3-03 已关闭。V3-04-01/02 的 SQLite、Poster/Settings repository 与恢复门完成；V3-04-03 已建立 command/query、单事务 aggregate snapshot 和 Poster/Control Center/Tray 同 revision projection。Release 为 0 warning / 0 error，合同测试 97/97，schema v1→v2 真实迁移及启动/退出 smoke 通过。当前执行 V3-04-03 人工三端门，通过后进入 V3-04-04 控制中心桌面预览与编辑。当前执行入口见 [ACTIVE_PATH](00_Catalog/ACTIVE_PATH.md)。
+本轮最新：已完成 [DeskBox空间计算吸收记录](A_Project/40_Implementation/V3-04/DESKBOX_SPATIAL_REFERENCE.md) 与 [M04-01中心列表/目标切换](A_Project/40_Implementation/V3-04/M04_CONTROL_CENTER_SELECTION.md)；176/176、Release0警告0错误、最终三张/零张真实进程通过。中心可按稳定ID切目标、锁定/收展/显隐并在关闭重开后保留进程内选择；新增管理/完整预览仍留原04-04。computer-use环境1385导致实际点击未执行，人工门待确认。下一开发项M04-02空间合同；碰撞/展开/推动/归位未接入。
+
+正式关键词：通用桌面内容收纳、多海报、一个控制中心、一个托盘、自定义独立风格化主题、热度排版、AI 辅助定制。游戏图标海报是起点和特色场景，不再限制通用文件/目录/应用/Shell 内容。
+
+V3-01/02/03、V3-04-01/02 保留已完成结论。V3-04-03 R1 托盘修复已获用户人工 PASS；M01 数据门通过。M02 保留147/147历史证据，用户同意进入M03但未补写逐项人工PASS。本轮 M03 163/163，Release 0 warning / 0 error，最终产物0/1/3实际进程及恢复等待中退出 smoke 均通过；短人工门仍待确认。
+
+七份需求、[通用多海报合同](A_Project/20_Architecture/GENERAL_CONTENT_MULTI_POSTER_CONTRACT_V1.md) 与 [逐项细化工作流](A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md) 保持权威。M01 实体/目录与 M02 目标命令/实体读集 CAS/三端集合投影均已落地；[M02 实际合同](A_Project/40_Implementation/V3-04/TARGETED_COMMAND_PROJECTION_V2.md) 说明 schema v4、持久回执和零目录。M03 已实现目录驱动的多个真实海报会话；管理 UI 仍待后续，详见 [M03](A_Project/40_Implementation/V3-04/M03_SESSION_RECOVERY.md)。
+
+用户已确认多海报基本交互；未逐项确认的核心人工门保留，不补写全项PASS。上一轮 [空间协同与展开设计](A_Project/20_Architecture/POSTER_SPATIAL_LAYOUT_AND_EXPANSION_V1.md) 明确锁定固定、条件归位和保原尺寸先下后上；本轮中心缺口已在M04-01实现。后续空间/输入、参数及原04-04完整中心复用现有选择器；真实文件主线紧随，基础发行包不等AI。执行入口见 [ACTIVE_PATH](00_Catalog/ACTIVE_PATH.md)。
+
+V3_CURRENT 可视化保留为当时单海报代码快照，不作为多海报新设计或实现证据。
+
+用户补充已写入 [画像 §32](A_Project/10_Requirements/DESKTOPUP_V2_REQUIREMENTS_PROFILE_V1.md#32-首次启动管理入口与跨主机配置)：首次仅一张默认；中心/托盘新增、中心/海报“...”删除确认；单文件跨主机习惯配置。M02 已补创建/删除命令与版本绑定预览，但按钮/确认弹窗尚未接入；配置导入导出在04-06-A..D，自定义主题载荷复用07-04。

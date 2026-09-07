@@ -1,0 +1,3 @@
+# Migration SHA-256 includes raw-string line endings. Match the released v1/v2
+# LF payloads even when a Windows checkout has core.autocrlf enabled.
+src/DesktopUp.Infrastructure/SqliteStateStore.cs text eol=lf

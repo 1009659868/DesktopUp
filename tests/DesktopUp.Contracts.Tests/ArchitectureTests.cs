@@ -60,7 +60,13 @@ public sealed class ArchitectureTests
         Assert.DoesNotContain("IPosterRepository", surfaces, StringComparison.Ordinal);
         Assert.DoesNotContain("ISettingsRepository", surfaces, StringComparison.Ordinal);
         Assert.DoesNotContain("SqliteConnection", surfaces, StringComparison.Ordinal);
-        Assert.Contains("IStateProjectionCoordinator", surfaces, StringComparison.Ordinal);
+        Assert.Contains("StateProjectionChangedEventArgs", surfaces, StringComparison.Ordinal);
+        Assert.DoesNotContain("EnsureInitialized(", surfaces, StringComparison.Ordinal);
+        string bootstrap = File.ReadAllText(Path.Combine(appDirectory, "App.xaml.cs"));
+        Assert.Contains("IStateProjectionCoordinator", bootstrap, StringComparison.Ordinal);
+        Assert.Contains("PosterSessionRegistry", bootstrap, StringComparison.Ordinal);
+        Assert.DoesNotContain("private PosterVisualWindow? _poster;", bootstrap, StringComparison.Ordinal);
+        Assert.Contains("guardPosterWindow: false", bootstrap, StringComparison.Ordinal);
         Assert.Contains("IStateCommandService", surfaces, StringComparison.Ordinal);
         Assert.Contains("ControlCenterProjection", surfaces, StringComparison.Ordinal);
         Assert.Contains("TrayProjection", surfaces, StringComparison.Ordinal);

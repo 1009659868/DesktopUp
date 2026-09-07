@@ -1,590 +1,195 @@
+using System.Collections.ObjectModel;
+using System.Security.Cryptography;
+using System.Text.Json;
 using DesktopUp.Domain;
 
 namespace DesktopUp.Application;
 
 public sealed class StateProjectionCoordinator(
-    IPosterRepository posterRepository,
-    ISettingsRepository settingsRepository,
-    IStateProjectionRepository projectionRepository,
+    IStateCommandRepository repository,
     IStructuredLog? log = null) : IStateProjectionCoordinator, IStateCommandService
 {
     private readonly object _sync = new();
-    private readonly Dictionary<string, StateCommandResult> _completedRequests =
-        new(StringComparer.Ordinal);
-    private readonly Queue<string> _completedRequestOrder = new();
+    private readonly Queue<StateProjectionChangedEventArgs> _pending = new();
     private DesktopUpProjection? _current;
-    private const int CompletedRequestLimit = 512;
+    private bool _publishing;
 
     public event EventHandler<StateProjectionChangedEventArgs>? ProjectionChanged;
 
     public DesktopUpProjection EnsureInitialized(PosterDefinition defaultPoster)
     {
-        ArgumentNullException.ThrowIfNull(defaultPoster);
-        StateProjectionChangedEventArgs? changed = null;
         DesktopUpProjection projection;
-        lock (_sync)
-        {
-            _ = posterRepository.GetOrCreateDefault(defaultPoster);
-            projection = BuildProjection(
-                projectionRepository.Read(defaultPoster.PosterId));
-            if (_current is null || projection.Revision > _current.Revision)
-            {
-                _current = projection;
-                changed = new StateProjectionChangedEventArgs(
-                    projection,
-                    StateCommandSource.System,
-                    "initialize");
-            }
-            else
-            {
-                projection = _current;
-            }
-        }
+        lock (_sync) projection = AdoptLocked(repository.EnsureInitialized(defaultPoster), StateCommandSource.System, "initialize");
+        DrainEvents();
+        return projection;
+    }
 
-        Publish(changed);
+    public DesktopUpProjection Refresh()
+    {
+        DesktopUpProjection projection;
+        lock (_sync) projection = AdoptLocked(repository.Read(), StateCommandSource.System, "refresh");
+        DrainEvents();
         return projection;
     }
 
     public bool TryGetCurrent(out DesktopUpProjection? projection)
     {
+        lock (_sync) { projection = _current; return projection is not null; }
+    }
+
+    public PosterRemovalPreview? PrepareRemoval(string posterId)
+    {
+        Refresh();
         lock (_sync)
         {
-            projection = _current;
-            return projection is not null;
+            if (_current is null || !_current.PostersById.TryGetValue(posterId, out PosterSurfaceProjection? poster)) return null;
+            return new(posterId, poster.Poster.Title, _current.Revision,
+                StateReadSet.ForPoster(posterId, poster.EntityVersion) with { CatalogVersion = _current.CatalogVersion },
+                _current.Posters.Count == 1, poster.Poster.CollectionId,
+                "仅删除此海报及其展示配置，不删除、移动或清理实际文件。删除最后一张后保留空目录，控制中心和托盘继续运行。");
         }
     }
 
-    public StateCommandResult Execute(PosterStateCommand command)
+    public StateCommandResult Execute(PosterStateCommand command) => Run(
+        command.RequestId, command.Source, command.ExpectedRevision, command.ReadSet,
+        reads => command with { ReadSet = reads }, StateCommandPolicy.Prepare);
+    public StateCommandResult Execute(SettingsStateCommand command) => Run(
+        command.RequestId, command.Source, command.ExpectedRevision, command.ReadSet,
+        reads => command with { ReadSet = reads }, StateCommandPolicy.Prepare);
+    public StateCommandResult Execute(CreatePosterCommand command) => Run(
+        command.RequestId, command.Source, command.ExpectedRevision, command.ReadSet,
+        reads => command with { ReadSet = Required(reads) }, StateCommandPolicy.Prepare);
+    public StateCommandResult Execute(ClonePosterCommand command) => Run(
+        command.RequestId, command.Source, command.ExpectedRevision, command.ReadSet,
+        reads => command with { ReadSet = Required(reads) }, StateCommandPolicy.Prepare);
+    public StateCommandResult Execute(RemovePosterCommand command) => Run(
+        command.RequestId, command.Source, command.ExpectedRevision, command.ReadSet,
+        reads => command with { ReadSet = Required(reads) }, StateCommandPolicy.Prepare);
+    public StateCommandResult Execute(BatchPosterCommand command) => Run(
+        command.RequestId, command.Source, command.ExpectedRevision, command.ReadSet,
+        reads => command with { ReadSet = Required(reads), PosterIds = Array.AsReadOnly(command.PosterIds.Order(StringComparer.Ordinal).ToArray()) },
+        StateCommandPolicy.Prepare);
+
+    private static StateReadSet Required(StateReadSet? reads) => reads ?? throw new ArgumentException("Entity read set is required.");
+
+    private StateCommandResult Run<T>(string requestId, StateCommandSource source, long observedRevision,
+        StateReadSet? readSet, Func<StateReadSet?, T> freeze, Func<T, DesktopStateSnapshot, StateMutationPlan> prepare)
     {
-        ArgumentNullException.ThrowIfNull(command);
-        StateProjectionChangedEventArgs? changed = null;
         StateCommandResult result;
         lock (_sync)
         {
-            if (!TryReplayLocked(command.RequestId, command.ExpectedRevision, out result))
+            try
             {
-                result = ExecutePosterLocked(command, out changed);
-                RememberLocked(result);
-            }
-        }
-
-        Publish(changed);
-        return result;
-    }
-
-    public StateCommandResult Execute(SettingsStateCommand command)
-    {
-        ArgumentNullException.ThrowIfNull(command);
-        StateProjectionChangedEventArgs? changed = null;
-        StateCommandResult result;
-        lock (_sync)
-        {
-            if (!TryReplayLocked(command.RequestId, command.ExpectedRevision, out result))
-            {
-                result = ExecuteSettingsLocked(command, out changed);
-                RememberLocked(result);
-            }
-        }
-
-        Publish(changed);
-        return result;
-    }
-
-    private StateCommandResult ExecutePosterLocked(
-        PosterStateCommand command,
-        out StateProjectionChangedEventArgs? changed)
-    {
-        changed = null;
-        StateCommandResult? rejected = ValidateCommon(
-            command.RequestId,
-            command.Source,
-            command.ExpectedRevision);
-        if (rejected is not null)
-        {
-            return rejected;
-        }
-        if (_current is null)
-        {
-            return NotReady(command.RequestId, command.ExpectedRevision);
-        }
-        if (command.ExpectedRevision != _current.Revision)
-        {
-            return Conflict(command.RequestId, command.ExpectedRevision, _current);
-        }
-        PosterDefinition current = _current.Poster.Poster;
-        if (!string.Equals(command.PosterId, current.PosterId, StringComparison.Ordinal) ||
-            !string.Equals(command.DesiredState.PosterId, current.PosterId, StringComparison.Ordinal))
-        {
-            return Failed(
-                command.RequestId,
-                command.ExpectedRevision,
-                "The command target does not match the projected poster.");
-        }
-        PosterDefinition desired = NormalizePosterMutation(
-            command.Kind,
-            current,
-            command.DesiredState);
-        PosterStateCommand normalizedCommand = command with { DesiredState = desired };
-        if (desired == current)
-        {
-            return NoChange(command.RequestId, command.ExpectedRevision, _current);
-        }
-
-        string? mutationError = ValidatePosterMutation(normalizedCommand, current);
-        if (mutationError is not null)
-        {
-            return new StateCommandResult(
-                StateCommandStatus.PermissionDenied,
-                command.RequestId,
-                command.ExpectedRevision,
-                _current.Revision,
-                _current,
-                mutationError);
-        }
-
-        RepositoryWriteResult<PosterStateSnapshot> write = posterRepository.Save(
-            command.ExpectedRevision,
-            command.RequestId,
-            desired);
-        DesktopUpProjection? committedFallback =
-            write.Succeeded && write.Snapshot is { } posterSnapshot
-                ? BuildProjection(new AuthoritativeStateSnapshot(
-                    posterSnapshot.Revision,
-                    posterSnapshot.PosterRevision,
-                    _current.ControlCenter.Settings.SettingsRevision,
-                    posterSnapshot.Poster,
-                    _current.ControlCenter.Settings.Settings,
-                    posterSnapshot.UpdatedAtUtc,
-                    DateTimeOffset.UtcNow))
-                : null;
-        return CompleteWriteLocked(
-            command.RequestId,
-            command.ExpectedRevision,
-            command.Source,
-            write.Status,
-            write.Error,
-            current.PosterId,
-            committedFallback,
-            out changed);
-    }
-
-    private StateCommandResult ExecuteSettingsLocked(
-        SettingsStateCommand command,
-        out StateProjectionChangedEventArgs? changed)
-    {
-        changed = null;
-        StateCommandResult? rejected = ValidateCommon(
-            command.RequestId,
-            command.Source,
-            command.ExpectedRevision);
-        if (rejected is not null)
-        {
-            return rejected;
-        }
-        if (_current is null)
-        {
-            return NotReady(command.RequestId, command.ExpectedRevision);
-        }
-        if (command.ExpectedRevision != _current.Revision)
-        {
-            return Conflict(command.RequestId, command.ExpectedRevision, _current);
-        }
-        DesktopUpSettings current = _current.ControlCenter.Settings.Settings;
-        if (command.DesiredState == current)
-        {
-            return NoChange(command.RequestId, command.ExpectedRevision, _current);
-        }
-
-        string? mutationError = ValidateSettingsMutation(command, current);
-        if (mutationError is not null)
-        {
-            return new StateCommandResult(
-                StateCommandStatus.PermissionDenied,
-                command.RequestId,
-                command.ExpectedRevision,
-                _current.Revision,
-                _current,
-                mutationError);
-        }
-
-        RepositoryWriteResult<SettingsStateSnapshot> write = settingsRepository.Save(
-            command.ExpectedRevision,
-            command.RequestId,
-            command.DesiredState);
-        DesktopUpProjection? committedFallback =
-            write.Succeeded && write.Snapshot is { } settingsSnapshot
-                ? BuildProjection(new AuthoritativeStateSnapshot(
-                    settingsSnapshot.Revision,
-                    _current.Poster.PosterRevision,
-                    settingsSnapshot.SettingsRevision,
-                    _current.Poster.Poster,
-                    settingsSnapshot.Settings,
-                    DateTimeOffset.UtcNow,
-                    settingsSnapshot.UpdatedAtUtc))
-                : null;
-        return CompleteWriteLocked(
-            command.RequestId,
-            command.ExpectedRevision,
-            command.Source,
-            write.Status,
-            write.Error,
-            _current.Poster.Poster.PosterId,
-            committedFallback,
-            out changed);
-    }
-
-    private StateCommandResult CompleteWriteLocked(
-        string requestId,
-        long expectedRevision,
-        StateCommandSource source,
-        RepositoryWriteStatus repositoryStatus,
-        string? error,
-        string posterId,
-        DesktopUpProjection? committedFallback,
-        out StateProjectionChangedEventArgs? changed)
-    {
-        changed = null;
-        DesktopUpProjection? refreshed = null;
-        try
-        {
-            AuthoritativeStateSnapshot aggregate = projectionRepository.Read(posterId);
-            DesktopUpProjection candidate = BuildProjection(aggregate);
-            if (_current is null || candidate.Revision >= _current.Revision)
-            {
-                refreshed = candidate;
-                if (_current is null || candidate.Revision > _current.Revision)
+                if (string.IsNullOrWhiteSpace(requestId) || requestId.Length > 128 || observedRevision < 0 ||
+                    !Enum.IsDefined(source) || source == StateCommandSource.System)
+                    throw new ArgumentException("Request id, source or observed revision is invalid.");
+                StateReadSet? reads = readSet?.Freeze();
+                if (reads is not null && (reads.Posters.Any(p => string.IsNullOrWhiteSpace(p.Key) || p.Key.Length > 128 || p.Value < 1) ||
+                    reads.SettingsVersion is < 1 || reads.CatalogVersion is < 0))
+                    throw new ArgumentException("Entity read set contains invalid identities or versions.");
+                T frozen = freeze(reads);
+                string hash = Convert.ToHexString(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(new
                 {
-                    _current = candidate;
-                    changed = new StateProjectionChangedEventArgs(
-                        candidate,
-                        source,
-                        requestId);
+                    protocol = "desktopup-state-command-v2", type = typeof(T).Name, command = frozen
+                })));
+                if (_current is null)
+                    result = Failure(StateCommandStatus.NotReady, requestId, observedRevision, "State projection is not initialized.");
+                else
+                {
+                    StateTransactionResult write = repository.Execute(new(requestId, hash, observedRevision, reads), state => prepare(frozen, state));
+                    DesktopUpProjection projection = AdoptLocked(write.Snapshot, source, requestId);
+                    result = new(write.Status, requestId, observedRevision, projection.Revision, projection, write.Error)
+                    {
+                        CommittedRevision = write.CommittedRevision, ResultPosterId = write.ResultPosterId, Conflicts = write.Conflicts
+                    };
                 }
             }
-        }
-        catch (Exception exception)
-        {
-            error = error is null
-                ? exception.Message
-                : $"{error} Projection refresh failed: {exception.Message}";
-        }
-
-        if (refreshed is null && committedFallback is not null)
-        {
-            refreshed = committedFallback;
-            if (_current is null || committedFallback.Revision > _current.Revision)
+            catch (ArgumentException exception)
             {
-                _current = committedFallback;
-                changed = new StateProjectionChangedEventArgs(
-                    committedFallback,
-                    source,
-                    requestId);
+                result = Failure(StateCommandStatus.ValidationFailed, requestId, observedRevision, exception.Message);
+            }
+            catch (Exception exception)
+            {
+                result = Failure(StateCommandStatus.Failed, requestId, observedRevision, exception.Message);
+                SafeLog("error", "state_command.failed", new { requestId, exception.Message });
             }
         }
-
-        DesktopUpProjection? projection = refreshed ?? _current;
-        StateCommandStatus status = repositoryStatus switch
-        {
-            RepositoryWriteStatus.Committed => StateCommandStatus.Committed,
-            RepositoryWriteStatus.Replayed => StateCommandStatus.Replayed,
-            RepositoryWriteStatus.Conflict => StateCommandStatus.Conflict,
-            RepositoryWriteStatus.ValidationFailed => StateCommandStatus.ValidationFailed,
-            _ => StateCommandStatus.Failed
-        };
-        long currentRevision = projection?.Revision ?? -1;
-        log?.Write(
-            status is StateCommandStatus.Committed or StateCommandStatus.Replayed
-                ? "info"
-                : "warning",
-            "state_command.completed",
-            new
-            {
-                requestId,
-                source = source.ToString(),
-                status = status.ToString(),
-                expectedRevision,
-                currentRevision,
-                error
-            });
-        return new StateCommandResult(
-            status,
-            requestId,
-            expectedRevision,
-            currentRevision,
-            projection,
-            error);
+        DrainEvents();
+        return result;
     }
 
-    private StateCommandResult? ValidateCommon(
-        string requestId,
-        StateCommandSource source,
-        long expectedRevision)
+    private StateCommandResult Failure(StateCommandStatus status, string id, long observed, string error) =>
+        new(status, id, observed, _current?.Revision ?? -1, _current, error);
+
+    private DesktopUpProjection AdoptLocked(DesktopStateSnapshot snapshot, StateCommandSource source, string requestId)
     {
-        if (string.IsNullOrWhiteSpace(requestId) || requestId.Length > 256)
+        if (_current is not null && snapshot.Revision <= _current.Revision) return _current;
+        DesktopUpProjection projection = BuildProjection(snapshot);
+        DesktopUpProjection? previous = _current;
+        var changed = projection.PostersById.Keys.Concat(previous?.PostersById.Keys ?? Array.Empty<string>())
+            .Distinct(StringComparer.Ordinal).Where(id => previous is null ||
+                !previous.PostersById.TryGetValue(id, out PosterSurfaceProjection? old) ||
+                !projection.PostersById.TryGetValue(id, out PosterSurfaceProjection? next) || old.EntityVersion != next.EntityVersion)
+            .Order(StringComparer.Ordinal).ToArray();
+        _current = projection;
+        _pending.Enqueue(new(projection, source, requestId)
         {
-            return Failed(requestId ?? string.Empty, expectedRevision, "Request id is invalid.");
-        }
-        if (!Enum.IsDefined(source) || source == StateCommandSource.System)
-        {
-            return Failed(requestId, expectedRevision, "Command source is invalid.");
-        }
-        if (expectedRevision < 0)
-        {
-            return Failed(requestId, expectedRevision, "Expected revision is invalid.");
-        }
-        return null;
-    }
-
-    private bool TryReplayLocked(
-        string requestId,
-        long expectedRevision,
-        out StateCommandResult result)
-    {
-        if (!string.IsNullOrWhiteSpace(requestId) &&
-            _completedRequests.TryGetValue(requestId, out StateCommandResult? previous))
-        {
-            result = previous with
-            {
-                Status = StateCommandStatus.Replayed,
-                ExpectedRevision = expectedRevision,
-                CurrentRevision = _current?.Revision ?? previous.CurrentRevision,
-                Projection = _current ?? previous.Projection
-            };
-            return true;
-        }
-        result = null!;
-        return false;
-    }
-
-    private void RememberLocked(StateCommandResult result)
-    {
-        if (!result.Succeeded ||
-            result.Status == StateCommandStatus.Replayed ||
-            string.IsNullOrWhiteSpace(result.RequestId) ||
-            _completedRequests.ContainsKey(result.RequestId))
-        {
-            return;
-        }
-        _completedRequests.Add(result.RequestId, result);
-        _completedRequestOrder.Enqueue(result.RequestId);
-        while (_completedRequestOrder.Count > CompletedRequestLimit)
-        {
-            string expired = _completedRequestOrder.Dequeue();
-            _completedRequests.Remove(expired);
-        }
-    }
-
-    private static string? ValidatePosterMutation(
-        PosterStateCommand command,
-        PosterDefinition current)
-    {
-        if (!Enum.IsDefined(command.Kind))
-        {
-            return "Poster command kind is invalid.";
-        }
-        if (command.Kind is PosterStateCommandKind.Move or PosterStateCommandKind.Resize)
-        {
-            if (current.IsLocked)
-            {
-                return "The poster is locked.";
-            }
-            if (command.Kind == PosterStateCommandKind.Resize && current.IsCollapsed)
-            {
-                return "A collapsed poster cannot be resized.";
-            }
-            return PreserveNonGeometryFields(current, command.DesiredState)
-                ? null
-                : "A geometry command changed non-geometry fields.";
-        }
-        if (command.Kind == PosterStateCommandKind.SetLocked)
-        {
-            return current with { IsLocked = command.DesiredState.IsLocked } ==
-                command.DesiredState
-                ? null
-                : "A lock command changed unrelated fields.";
-        }
-        return current with
-        {
-            IsCollapsed = command.DesiredState.IsCollapsed,
-            VerticalAnchor = command.DesiredState.VerticalAnchor
-        } ==
-            command.DesiredState
-            ? null
-            : "A collapse command changed unrelated fields.";
-    }
-
-    private static PosterDefinition NormalizePosterMutation(
-        PosterStateCommandKind kind,
-        PosterDefinition current,
-        PosterDefinition desired)
-    {
-        if (kind != PosterStateCommandKind.SetCollapsed ||
-            desired.IsCollapsed == current.IsCollapsed ||
-            current.NormalizedExpandedHeight <= 0)
-        {
-            return desired;
-        }
-
-        double workHeightDip =
-            current.ExpandedHeightDip / current.NormalizedExpandedHeight;
-        if (!double.IsFinite(workHeightDip) || workHeightDip <= 0)
-        {
-            return desired;
-        }
-        double collapsedHeightNormalized = Math.Clamp(
-            PosterFrameGeometryPolicy.CollapsedHeightDip / workHeightDip,
-            0.000001,
-            1);
-        double currentHeightNormalized = current.IsCollapsed
-            ? collapsedHeightNormalized
-            : current.NormalizedExpandedHeight;
-        double targetHeightNormalized = desired.IsCollapsed
-            ? collapsedHeightNormalized
-            : current.NormalizedExpandedHeight;
-        double normalizedTop = current.VerticalAnchor *
-            Math.Max(0, 1 - currentHeightNormalized);
-        double targetRange = Math.Max(0.000001, 1 - targetHeightNormalized);
-        return desired with
-        {
-            VerticalAnchor = Math.Clamp(normalizedTop / targetRange, 0, 1)
-        };
-    }
-
-    private static bool PreserveNonGeometryFields(
-        PosterDefinition current,
-        PosterDefinition desired) =>
-        current with
-        {
-            MonitorDeviceName = desired.MonitorDeviceName,
-            FallbackXDip = desired.FallbackXDip,
-            FallbackYDip = desired.FallbackYDip,
-            WidthDip = desired.WidthDip,
-            ExpandedHeightDip = desired.ExpandedHeightDip,
-            HorizontalAnchor = desired.HorizontalAnchor,
-            VerticalAnchor = desired.VerticalAnchor,
-            NormalizedWidth = desired.NormalizedWidth,
-            NormalizedExpandedHeight = desired.NormalizedExpandedHeight
-        } == desired;
-
-    private static string? ValidateSettingsMutation(
-        SettingsStateCommand command,
-        DesktopUpSettings current)
-    {
-        if (!Enum.IsDefined(command.Kind))
-        {
-            return "Settings command kind is invalid.";
-        }
-        DesktopUpSettings allowed = command.Kind switch
-        {
-            SettingsStateCommandKind.SetDynamicEffectsPaused => current with
-            {
-                DynamicEffectsPaused = command.DesiredState.DynamicEffectsPaused
-            },
-            SettingsStateCommandKind.SetPerformanceMode => current with
-            {
-                PerformanceMode = command.DesiredState.PerformanceMode
-            },
-            _ => current with
-            {
-                LaunchAtStartupRequested = command.DesiredState.LaunchAtStartupRequested
-            }
-        };
-        return allowed == command.DesiredState
-            ? null
-            : "A settings command changed unrelated fields.";
-    }
-
-    private StateCommandResult Failed(
-        string requestId,
-        long expectedRevision,
-        string error) => new(
-            StateCommandStatus.Failed,
-            requestId,
-            expectedRevision,
-            _current?.Revision ?? -1,
-            _current,
-            error);
-
-    private static StateCommandResult NotReady(
-        string requestId,
-        long expectedRevision) => new(
-            StateCommandStatus.NotReady,
-            requestId,
-            expectedRevision,
-            -1,
-            null,
-            "The state projection is not ready.");
-
-    private static StateCommandResult Conflict(
-        string requestId,
-        long expectedRevision,
-        DesktopUpProjection current) => new(
-            StateCommandStatus.Conflict,
-            requestId,
-            expectedRevision,
-            current.Revision,
-            current,
-            "The expected revision is stale.");
-
-    private static StateCommandResult NoChange(
-        string requestId,
-        long expectedRevision,
-        DesktopUpProjection current) => new(
-            StateCommandStatus.NoChange,
-            requestId,
-            expectedRevision,
-            current.Revision,
-            current,
-            null);
-
-    private static DesktopUpProjection BuildProjection(
-        AuthoritativeStateSnapshot state)
-    {
-        var poster = new PosterSurfaceProjection(
-            state.Revision,
-            state.PosterRevision,
-            state.Poster,
-            CanMove: !state.Poster.IsLocked,
-            CanResize: !state.Poster.IsLocked && !state.Poster.IsCollapsed,
-            CanToggleCollapsed: true);
-        var settings = new SettingsProjection(
-            state.Revision,
-            state.SettingsRevision,
-            state.Settings);
-        var control = new ControlCenterProjection(
-            state.Revision,
-            poster,
-            settings);
-        string tooltip = $"DesktopUp · 1 张海报" +
-            (state.Settings.DynamicEffectsPaused ? " · 已暂停" : string.Empty) +
-            (state.Poster.IsLocked ? " · 已锁定" : string.Empty);
-        var tray = new TrayProjection(
-            state.Revision,
-            PosterCount: 1,
-            AllPostersLocked: state.Poster.IsLocked,
-            state.Settings.DynamicEffectsPaused,
-            tooltip);
-        return new DesktopUpProjection(
-            state.Revision,
-            poster,
-            control,
-            tray);
-    }
-
-    private void Publish(StateProjectionChangedEventArgs? changed)
-    {
-        if (changed is null)
-        {
-            return;
-        }
-        log?.Write("info", "state_projection.published", new
-        {
-            changed.Projection.Revision,
-            source = changed.Source.ToString(),
-            changed.RequestId,
-            posterRevision = changed.Projection.Poster.PosterRevision,
-            settingsRevision = changed.Projection.ControlCenter.Settings.SettingsRevision
+            ChangedPosterIds = Array.AsReadOnly(changed),
+            SettingsChanged = previous?.ControlCenter.Settings.EntityVersion != projection.ControlCenter.Settings.EntityVersion,
+            CatalogChanged = previous?.CatalogVersion != projection.CatalogVersion || previous?.ProfileInitialized != projection.ProfileInitialized
         });
-        ProjectionChanged?.Invoke(this, changed);
+        return projection;
+    }
+
+    // FIFO serializes concurrent/re-entrant publications. One faulty subscriber cannot undo a commit or starve another surface.
+    private void DrainEvents()
+    {
+        lock (_sync) { if (_publishing) return; _publishing = true; }
+        while (true)
+        {
+            StateProjectionChangedEventArgs next;
+            lock (_sync)
+            {
+                if (_pending.Count == 0) { _publishing = false; return; }
+                next = _pending.Dequeue();
+            }
+            Delegate[] subscribers = ProjectionChanged?.GetInvocationList() ?? Array.Empty<Delegate>();
+            foreach (EventHandler<StateProjectionChangedEventArgs> subscriber in subscribers)
+            {
+                try { subscriber(this, next); }
+                catch (Exception exception) { SafeLog("error", "state_projection.subscriber_failed", new { next.Projection.Revision, exception.Message }); }
+            }
+            SafeLog("info", "state_projection.published", new { next.Projection.Revision, next.RequestId, next.ChangedPosterIds });
+        }
+    }
+
+    private void SafeLog(string level, string name, object data)
+    {
+        try { log?.Write(level, name, data); } catch { /* Logging is not state authority. */ }
+    }
+
+    private static DesktopUpProjection BuildProjection(DesktopStateSnapshot state)
+    {
+        if (state.Settings.Revision != state.Revision || state.Catalog.Posters.Any(p => p.Revision != state.Revision))
+            throw new InvalidDataException("Projection inputs must come from a single committed revision.");
+        var posters = state.Catalog.Posters.Select(p => new PosterSurfaceProjection(
+            state.Revision, p.PosterRevision, p.Poster, !p.Poster.IsLocked, !p.Poster.IsLocked && !p.Poster.IsCollapsed, true)
+            { EntityVersion = p.EntityVersion }).ToList().AsReadOnly();
+        var byId = new ReadOnlyDictionary<string, PosterSurfaceProjection>(posters.ToDictionary(p => p.Poster.PosterId, StringComparer.Ordinal));
+        // Transitional selection alias, never the identity used to route a target command.
+        PosterSurfaceProjection? selected = byId.GetValueOrDefault(BuiltInStateIdentities.PrimaryPosterId) ?? posters.FirstOrDefault();
+        var settings = new SettingsProjection(state.Revision, state.Settings.SettingsRevision, state.Settings.Settings)
+            { EntityVersion = state.Settings.EntityVersion };
+        var center = new ControlCenterProjection(state.Revision, selected, settings)
+            { Posters = posters, PostersById = byId, CatalogVersion = state.Catalog.CatalogVersion };
+        int locked = posters.Count(p => p.Poster.IsLocked);
+        int visible = posters.Count(p => p.Poster.IsVisible);
+        PosterLockSummary summary = posters.Count == 0 ? PosterLockSummary.Empty : locked == 0 ? PosterLockSummary.None :
+            locked == posters.Count ? PosterLockSummary.All : PosterLockSummary.Some;
+        var tray = new TrayProjection(state.Revision, posters.Count, summary == PosterLockSummary.All,
+            settings.Settings.DynamicEffectsPaused, $"DesktopUp · {posters.Count} 张海报 · {visible} 可见 · {locked} 锁定" +
+                (settings.Settings.DynamicEffectsPaused ? " · 已暂停" : ""))
+            { VisiblePosterCount = visible, LockedPosterCount = locked, LockSummary = summary };
+        return new(state.Revision, selected, center, tray) { ProfileInitialized = state.Catalog.ProfileInitialized };
     }
 }

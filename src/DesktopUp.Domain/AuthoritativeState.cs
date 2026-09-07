@@ -20,7 +20,15 @@ public sealed record PosterDefinition(
     bool AutoCollapseEnabled,
     string LayoutKind,
     string LayoutParametersJson,
-    string TemplateKey);
+    string TemplateKey)
+{
+    public string Purpose { get; init; } = "general";
+    public bool IsVisible { get; init; } = true;
+    public long StackOrder { get; init; }
+    public string? CollectionId { get; init; }
+    // A reserved instance identity, not a loaded theme or executable theme package.
+    public string ThemeInstanceId { get; init; } = $"theme-{PosterId}";
+}
 
 public enum DesktopUpPerformanceMode
 {
@@ -44,7 +52,11 @@ public static class AuthoritativeStateValidationPolicy
             !IsBoundedText(poster.Subtitle, 512) ||
             !IsRequiredText(poster.MonitorDeviceName, 256) ||
             !IsRequiredText(poster.LayoutKind, 64) ||
-            !IsRequiredText(poster.TemplateKey, 128))
+            !IsRequiredText(poster.TemplateKey, 128) ||
+            !IsRequiredText(poster.Purpose, 256) ||
+            !IsRequiredText(poster.ThemeInstanceId, 256) ||
+            (poster.CollectionId is not null && !IsRequiredText(poster.CollectionId, 128)) ||
+            poster.StackOrder < 0)
         {
             return "Poster identity or text fields are invalid.";
         }
