@@ -2,7 +2,11 @@
 
 当前分支：`impl/poster-redesign-V3`
 
-状态：`V3-04-M03 AUTO PASS / SHORT MANUAL PENDING`
+状态：`V3-04-M07 IN PROGRESS — CONTRACT/BUILD PASS；CURRENT-ENVIRONMENT / MANUAL PENDING`
+
+当前[M07测量与安全门](Docs/A_Project/40_Implementation/V3-04/M07_MEASUREMENT_AND_SAFETY.md)：按用户决定直接在当前环境推进，入口兼容Windows PowerShell 5.1/PowerShell 7，权限只记录不拦截。5.1真实三海报/单中心/单托盘启动与干净退出通过，合同411/411；先运行人工入口完成S1～S5，不要求先跑资源矩阵。M07尚未关闭，完整基线待补；M05/M06结论保留，动画与性能优化延期。
+
+历史自动基线：M04-06已接共享输入身份/唯一capture、实际HWND顺序路由及中心/海报共用删除确认；313/313、Release0警告0错误，真实确认框取消/关闭/带框退出与链式77帧回归通过。见 [输入与确认合同](Docs/A_Project/40_Implementation/V3-04/M04_INPUT_CONFIRMATION.md)。旧M04固定验证包不覆盖。
 
 本分支已经移除旧 Qt、Win32 探针、Axiom 试验、生产代码和旧测试集。冻结需求继续保留；新的技术路线以开源 DeskBox 的 C#、WinUI 3、Windows App SDK、原生 Shell 边界和窗口生命周期实践为主要参考，并针对 DesktopUp 的透明海报、内容 Item、活跃度排版、主题热更新与 AI 控制平面进行扩展。V3-01 已建立五层工程、单实例启动意图、当前用户数据目录、结构日志、资源台账、最小托盘与按需控制中心。
 
@@ -46,6 +50,8 @@ M03 已接目录驱动的0..N真实会话：无配置首次一张，既有配置
 smoke 现强制 DataRoot，通过子进程测试环境变量隔离数据库/日志；运行前必须正常退出已有 DesktopUp，避免单实例转发到旧版。普通直接启动仍使用真实用户库并执行版本迁移；本轮没有自动迁移用户实际库。
 
 ## 正式产品方向与下一步
+
+最新执行顺序：M05/M06已完成→M07测量与剩余安全门（当前）→原04-04完整管理入口→V3-05真实Item。下方M03/M04记述为历史安排，不是当前任务。
 
 通用桌面内容收纳、多海报、一个控制中心、一个托盘、自定义独立风格化主题、热度排版、AI 辅助定制。游戏图标海报保留为特色用途，不限制应用、文件、文件夹和 Shell 桌面入口。
 

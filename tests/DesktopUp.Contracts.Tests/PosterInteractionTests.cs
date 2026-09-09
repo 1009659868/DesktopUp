@@ -15,6 +15,7 @@ public sealed class PosterInteractionTests
         7);
 
     [Fact]
+    [Trait("Contract", "LegacyFixedTopToggle-ReplacedByM04SpatialExpansion")]
     public void CollapsePreservesTopLeftWidthAndExpandedHeight()
     {
         PosterFrameGeometry collapsed =

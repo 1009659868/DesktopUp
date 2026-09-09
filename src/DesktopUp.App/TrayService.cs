@@ -116,6 +116,10 @@ internal sealed class TrayService(IResourceLedger ledger, IStructuredLog log) : 
         }
     }
 
+    internal bool VerifyProjection(TrayProjection projection) => _projectionRevision == projection.Revision &&
+        _icon?.IsCreated == true && _lockItem?.IsChecked == projection.AllPostersLocked &&
+        _editItem?.IsEnabled == (projection.VisiblePosterCount > 0);
+
     public void ApplyProjection(TrayProjection projection)
     {
         if (projection.Revision < _projectionRevision)

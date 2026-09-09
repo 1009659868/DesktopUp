@@ -21,6 +21,8 @@ public partial class App : Microsoft.UI.Xaml.Application
     private ControlCenterService? _controlCenter;
     private TrayService? _tray;
     private PosterSessionRegistry? _posterSessions;
+    private PosterSpatialRuntime? _spatialRuntime;
+    private readonly PosterInputRouter _inputRouter = new();
     private bool _controlCenterEnvironmentPending = true;
     private Window? _desktopEnvironmentAnchor;
     private IDisposable? _desktopEnvironmentAnchorLease;
@@ -111,7 +113,8 @@ public partial class App : Microsoft.UI.Xaml.Application
             _log,
             ExecuteControlCenterPosterCommand,
             () => ToggleDynamicEffectsPaused(StateCommandSource.ControlCenter),
-            OnControlCenterSelectionChanged);
+            OnControlCenterSelectionChanged, _stateCoordinator, _stateCommands, _inputRouter,
+            target => _spatialRuntime?.GetEffectiveLayout(target));
         _tray = new TrayService(_ledger, _log);
         _tray.Create(
             ShowControlCenter,
@@ -126,9 +129,15 @@ public partial class App : Microsoft.UI.Xaml.Application
             isElevated = IsProcessElevated(),
             requestedExecutionLevel = "asInvoker"
         });
+        _spatialRuntime = new PosterSpatialRuntime(_stateCoordinator, _stateCommands, _log);
+        _spatialRuntime.EffectiveLayoutChanged += RefreshControlCenterRuntime;
+        _spatialRuntime.RecoveryRequired += () => QueueDesktopRecovery(
+            DesktopEnvironmentChangeKind.DesktopShell | DesktopEnvironmentChangeKind.DisplayTopology,
+            "spatial-physical-recovery", invalidateShell: true);
         _posterSessions = new PosterSessionRegistry(new WinUiPosterSessionFactory(
             _services.GetRequiredService<IDesktopLayerAttachment>(), _stateCommands, _ledger, _log,
-            ShowControlCenter, OnPosterEditingChanged, args => OnDesktopEnvironmentChanged(this, args)), _log);
+            ShowControlCenter, OnPosterEditingChanged, args => OnDesktopEnvironmentChanged(this, args), _spatialRuntime,
+            _inputRouter, request => _controlCenter?.RequestRemoval(request)), _log);
         StartDesktopEnvironmentMonitoring();
         QueueDesktopRecovery(DesktopEnvironmentChangeKind.DesktopShell | DesktopEnvironmentChangeKind.DisplayTopology,
             "startup", invalidateShell: false);
@@ -140,6 +149,56 @@ public partial class App : Microsoft.UI.Xaml.Application
         }
 
         ScheduleSmokeExitIfRequested(_startupIntent.Arguments);
+        string[] smokeFlags = ["--presentation-smoke", "--spatial-smoke", "--input-confirmation-smoke", "--multi-instance-smoke", "--multi-instance-restart"];
+        if (_startupIntent.Arguments.Count(a => smokeFlags.Contains(a, StringComparer.OrdinalIgnoreCase)) > 1)
+        {
+            _log.Write("error", "contract.smoke_refused", new { reason = "one-smoke-per-process" });
+            return;
+        }
+        if (_startupIntent.Arguments.Any(a => a is "--multi-instance-smoke" or "--multi-instance-restart"))
+        {
+            string? testRoot = Environment.GetEnvironmentVariable("DESKTOPUP_V3_TEST_DATA_ROOT");
+            string normalRoot = Path.GetFullPath(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DesktopUp", "V3"));
+            string actual = Path.GetFullPath(_services.GetRequiredService<IUserDataPaths>().Root);
+            if (string.IsNullOrWhiteSpace(testRoot) || actual.Equals(normalRoot, StringComparison.OrdinalIgnoreCase) ||
+                actual.StartsWith(normalRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+                _log.Write("error", "multi_instance.smoke_refused", new { reason = "isolated-profile-required" });
+            else RunMultiInstanceSmoke(_startupIntent.Arguments.Contains("--multi-instance-restart", StringComparer.Ordinal));
+        }
+        if (_startupIntent.Arguments.Contains("--presentation-smoke", StringComparer.OrdinalIgnoreCase))
+        {
+            string? testRoot = Environment.GetEnvironmentVariable("DESKTOPUP_V3_TEST_DATA_ROOT");
+            string normalRoot = Path.GetFullPath(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DesktopUp", "V3"));
+            string actual = Path.GetFullPath(_services.GetRequiredService<IUserDataPaths>().Root);
+            if (string.IsNullOrWhiteSpace(testRoot) || actual.Equals(normalRoot, StringComparison.OrdinalIgnoreCase) ||
+                actual.StartsWith(normalRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) ||
+                _startupIntent.Arguments.Any(a => a is "--spatial-smoke" or "--input-confirmation-smoke"))
+                _log.Write("error", "presentation.smoke_refused", new { reason = "exclusive-isolated-profile-required" });
+            else _spatialRuntime.RunPresentationSmoke(_dispatcher);
+        }
+        if (_startupIntent.Arguments.Contains("--spatial-smoke", StringComparer.OrdinalIgnoreCase))
+        {
+            string? testRoot = Environment.GetEnvironmentVariable("DESKTOPUP_V3_TEST_DATA_ROOT");
+            string normalRoot = Path.GetFullPath(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DesktopUp", "V3"));
+            string actual = Path.GetFullPath(_services.GetRequiredService<IUserDataPaths>().Root);
+            if (string.IsNullOrWhiteSpace(testRoot) || actual.Equals(normalRoot, StringComparison.OrdinalIgnoreCase) ||
+                actual.StartsWith(normalRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+                _log.Write("error", "spatial.smoke_refused", new { reason = "isolated-profile-required" });
+            else _spatialRuntime.RunIsolatedSmoke(_dispatcher, _startupIntent.Arguments
+                .FirstOrDefault(a => a.StartsWith("--expect-expansion=", StringComparison.Ordinal))?.Split('=')[1],
+                _startupIntent.Arguments.Contains("--spatial-smoke-leave-expanded", StringComparer.Ordinal));
+        }
+        if (_startupIntent.Arguments.Contains("--input-confirmation-smoke", StringComparer.OrdinalIgnoreCase))
+        {
+            string? testRoot = Environment.GetEnvironmentVariable("DESKTOPUP_V3_TEST_DATA_ROOT");
+            string normalRoot = Path.GetFullPath(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DesktopUp", "V3"));
+            string actual = Path.GetFullPath(_services.GetRequiredService<IUserDataPaths>().Root);
+            if (string.IsNullOrWhiteSpace(testRoot) || actual.Equals(normalRoot, StringComparison.OrdinalIgnoreCase) ||
+                actual.StartsWith(normalRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+                _log.Write("error", "input_confirmation.smoke_refused", new { reason = "isolated-profile-required" });
+            else _controlCenter.RunIsolatedConfirmationSmoke(_dispatcher,
+                _startupIntent.Arguments.Contains("--exit-with-confirmation", StringComparer.OrdinalIgnoreCase));
+        }
     }
 
     private static ServiceProvider BuildServices()
@@ -301,6 +360,9 @@ public partial class App : Microsoft.UI.Xaml.Application
         }
 
         long request = _desktopRecoveryVersionGate.Signal();
+        _inputRouter.Suspend();
+        _controlCenter?.CancelRemoval("桌面环境正在恢复，删除确认已取消。");
+        _spatialRuntime?.Suspend();
         _posterSessions?.SuspendEnvironment(request);
         _controlCenterEnvironmentPending = true;
         RefreshControlCenterRuntime();
@@ -490,7 +552,14 @@ public partial class App : Microsoft.UI.Xaml.Application
             bool IsCurrentEnvironment() => Volatile.Read(ref _exiting) == 0 &&
                 CaptureCurrentGenerationPair(locator, topologyService, topology) is { } observed &&
                 _desktopRecoveryVersionGate.CanCommit(request, expectedPair, observed);
+            _spatialRuntime?.SetEffectiveTopology(topology);
             bool applied = _posterSessions.Recover(new(shell, topology), request, IsCurrentEnvironment);
+            if (IsCurrentEnvironment())
+            {
+                if (applied) _spatialRuntime?.Resume();
+                // Failed clusters have no published input. Ready peers remain usable.
+                _inputRouter.Resume();
+            }
             if (_desktopRecoveryVersionGate.IsCurrent(request))
             {
                 _controlCenterEnvironmentPending = false;
@@ -654,13 +723,30 @@ public partial class App : Microsoft.UI.Xaml.Application
     private void OnControlCenterSelectionChanged(string? posterId) =>
         _tray?.SetPosterEditing(_posterSessions?.Find(posterId)?.IsEditing == true);
 
-    private void RefreshControlCenterRuntime() =>
+    private void RefreshControlCenterRuntime()
+    {
         _controlCenter?.ApplySessions(_posterSessions?.Sessions ?? Array.Empty<PosterSessionSnapshot>(), _controlCenterEnvironmentPending);
+        if (_stateCoordinator?.TryGetCurrent(out var current) == true && current is not null)
+        {
+            int constrained = current.Posters.Count(p => p.Poster.IsVisible && _spatialRuntime?.GetEffectiveLayout(p)?.IsConstrained == true);
+            _tray?.ApplyProjection(current.Tray with { ToolTipText = current.Tray.ToolTipText +
+                (constrained > 0 ? $" · {constrained} 张空间受限" : "") });
+        }
+    }
 
     private void ExecuteControlCenterPosterCommand(PosterStateCommand command)
     {
         if (Volatile.Read(ref _exiting) != 0 || _stateCommands is null) return;
         // Do not look up the current UI selection here: the displayed command is already targeted.
+        if (command.Kind == PosterStateCommandKind.SetCollapsed && _spatialRuntime is not null)
+        {
+            _spatialRuntime.SetCollapsed(command, result =>
+            {
+                _controlCenter?.ShowCommandResult(result);
+                LogCommandResult("control-center-posture", result);
+            });
+            return;
+        }
         StateCommandResult result = _stateCommands.Execute(command);
         _controlCenter?.ShowCommandResult(result);
         LogCommandResult("control-center-poster", result);
@@ -688,6 +774,7 @@ public partial class App : Microsoft.UI.Xaml.Application
         {
             return;
         }
+        _spatialRuntime?.OnProjection(args);
         _controlCenter?.ApplyProjection(args.Projection.ControlCenter);
         _tray?.ApplyProjection(args.Projection.Tray);
         _posterSessions?.ApplyProjection(args);
@@ -799,6 +886,8 @@ public partial class App : Microsoft.UI.Xaml.Application
             return;
         }
         _log?.Write("info", "application.exit_requested");
+        _inputRouter.Suspend();
+        _controlCenter?.CancelRemoval("application-exit");
         DebugSettings.XamlResourceReferenceFailed -= OnXamlResourceReferenceFailed;
         StopDesktopEnvironmentMonitoring();
         _posterSessions?.Dispose();

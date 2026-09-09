@@ -223,7 +223,8 @@ public sealed class SqlitePosterRepository(
                 template_key,
                 state_revision,
                 updated_utc,
-                purpose, is_visible, stack_order, collection_id, theme_instance_id, entity_version
+                purpose, is_visible, stack_order, collection_id, theme_instance_id, entity_version,
+                layout_generation, last_layout_operation_id
             FROM posters
             WHERE poster_id = $posterId;
             """;
@@ -265,7 +266,7 @@ public sealed class SqlitePosterRepository(
             reader.GetInt64(18),
             poster,
             ParseTimestamp(reader.GetString(19)),
-            reader.GetInt64(25));
+            reader.GetInt64(25)) { LayoutGeneration = reader.GetInt64(26), LastLayoutOperationId = reader.IsDBNull(27) ? null : reader.GetString(27) };
     }
 
     internal static void InsertPoster(
@@ -313,11 +314,14 @@ public sealed class SqlitePosterRepository(
         SqliteConnection connection,
         SqliteTransaction transaction,
         PosterDefinition poster,
-        long committedRevision)
+        long committedRevision,
+        string? layoutOperationId = null,
+        bool forceLayoutGeneration = false)
     {
         PosterStateSnapshot previous = ReadPoster(connection, transaction, poster.PosterId)
             ?? throw new KeyNotFoundException("The poster no longer exists.");
         string timestamp = TimestampNow();
+        bool layoutChanged = forceLayoutGeneration || PosterLayoutGenerationPolicy.Changed(previous.Poster, poster);
         using SqliteCommand command = connection.CreateCommand();
         command.Transaction = transaction;
         command.CommandText =
@@ -346,17 +350,22 @@ public sealed class SqlitePosterRepository(
                 collection_id = $collectionId,
                 theme_instance_id = $themeInstanceId,
                 entity_version = entity_version + 1,
+                layout_generation = layout_generation + $layoutDelta,
+                last_layout_operation_id = CASE WHEN $layoutDelta = 1 THEN $layoutOperation ELSE last_layout_operation_id END,
                 state_revision = $stateRevision,
                 updated_utc = $updatedUtc
             WHERE poster_id = $posterId;
             """;
         AddPosterParameters(command, poster, committedRevision, timestamp);
+        command.Parameters.AddWithValue("$layoutDelta", layoutChanged ? 1 : 0);
+        command.Parameters.AddWithValue("$layoutOperation", (object?)layoutOperationId ?? DBNull.Value);
         if (command.ExecuteNonQuery() != 1)
         {
             throw new InvalidOperationException("The poster update did not affect one row.");
         }
         SqlitePosterCatalogRepository.TouchProfile(
             connection, transaction, committedRevision, previous.Poster.StackOrder != poster.StackOrder);
+        if (layoutChanged) SqliteSpatialProofRepository.Invalidate(connection, transaction, poster.PosterId);
     }
 
     private static void AddPosterParameters(

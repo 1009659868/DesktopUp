@@ -96,6 +96,8 @@ public interface IDesktopLayerAttachment
     bool ApplyPreparedBounds(
         nint windowHandle,
         DesktopPixelRect bounds);
+    // Unsupported adapters fail closed; do not emulate a group with visible sequential moves.
+    bool ApplyPreparedBoundsBatch(IReadOnlyDictionary<nint, DesktopPixelRect> bounds) => false;
     bool Detach(nint windowHandle);
     bool IsAttached(nint windowHandle, DesktopShellHostSnapshot desktopHost);
 }
@@ -215,7 +217,10 @@ public sealed record PosterInputEventArgs(
     int DeltaX,
     int DeltaY,
     long LayoutRevision,
-    int WheelDelta = 0);
+    int WheelDelta = 0)
+{
+    public PosterInputSessionKey? Session { get; init; }
+}
 
 public interface IInputRegionHost : IDisposable
 {

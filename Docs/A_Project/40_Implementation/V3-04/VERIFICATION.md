@@ -1,8 +1,223 @@
 # V3-04 验证记录
 
-状态：`M04-01 AUTO PASS / MANUAL PENDING`
+状态：`M07 IN PROGRESS — CONTRACT/BUILD PASS；CURRENT-ENVIRONMENT / MANUAL PENDING`
 
-最后更新：2026-09-07
+最后更新：2026-09-09
+
+## M07 测量合同与前置安全门（当前，2026-09-09）
+
+详见[M07完整合同/数据/启动说明](M07_MEASUREMENT_AND_SAFETY.md)。本轮自动411/411（新增6），TRX `out/verify/v3-04-m07/results/m07-contract.trx` SHA256 `82E4E52CB956E825275FC5713C922D86B9E8D380E6D29ECC453BF9AD4CA819C1`。Release `out/verify/v3-04-m07/app/`0warning/0error，6指纹见[scripts/m07-build.json](../../../../scripts/m07-build.json)。原4脚本预检记录保留；新5.1启动回归通过，详见下方。
+
+历史：测量工具普通权限CreateProcessWithLogonW失败1385；管理员路径初次4格完成后Ctrl+C停止调度。前4格PID48012/47044/13772/47996有正常退出clean/0，工作集中位159.68～167.42MiB、CPU归一0～0.0482秒/10秒；第5格n1-collapsed-center0-r1中断，无stopped/measurement、旧台账clean=false/7，作为无效证据保留，不算退出PASS。该轮结束时无DesktopUp进程。`out/verify/v3-04-m07/measurements-r1/`环境Elevated=true，**不属于正式普通权限基线**。当时管理员硬门现已按用户要求取消，权限仅记录；0 CPU是计数器精度下无可见增量，不是绝对无CPU活动。
+
+额外只读/无UI验证：六张expanded/collapsed/hidden的CLI隔离生成均revision6、6个独立ID（fixture-six-*），不等同六张窗口或性能通过。后续采样可用stop-after-current停止，避免直接中断进程。所有中断证据原样保留。
+
+完整18格×2资源矩阵待补；当前执行改为先人工、不要求更换权限或PowerShell7.4。Windows PowerShell5.1.26100.8875启动回归PID47912通过：3会话、1中心、1托盘、exit0、无错误、台账clean/0、父环境不变，证据`out/verify/v3-04-m07/launcher-20260909-121424-23a691/result.json`。此前PID46428的测试器退出码null记录保留（程序日志正常），修正提前保留进程句柄后重跑通过。
+
+5.1真实单海报六格采样兼容回归均Valid=true、退出完整，目录`out/verify/v3-04-m07/ps51-launcher-samples-20260909-121448`，仅一次重复，不混为完整36次。合同复跑`m07-ps51.trx`411/411、0skip。权限实际为Elevated=true，只证明当前环境；无GPU/屏幕呈现FPS/鼠标到光子数据。50MiB目标未改。
+
+最新用户确认：上一轮1～2项通过，记S1基础交互/视觉和S2桌面生命周期USER PASS；另报“…”菜单部分选项命中异常，作为独立遗留OPEN，不把S1标为菜单全部通过。S3～S5仍MANUAL PENDING。M04既有G1～G4与收展策略认可保留，M07不关闭。
+
+本次只读诊断：PID48072日志12:27:21.105菜单打开到12:27:28.521关闭期间，底层Item收到4次点击；期间无geometry_committed/state_projection.published/input_stale。代码中的原生输入路由没有活动Popup隔离；但日志缺少鼠标点及接收HWND，尚不能证实具体失败点击发生在菜单矩形内或仅由靠边触发。详见[菜单输入诊断](M07_MENU_INPUT_DIAGNOSIS.md)。本次仅同步反馈和诊断文档，无实现修改/构建/运行App/日常数据变更/commit/push。
+
+追加诊断：用户确认菜单项不高亮，重复点击偶发成功，进入Editing后完成编辑/锁定/中心/删除都不能可靠操作。代码确认Editing添加整面EditSurface并合入原生输入区域；PID48408日志12:48:40.002进入Editing成功，12:49:54.648菜单打开至12:50:00前有13次底层Item响应、无菜单关闭/模式变化/状态发布/几何提交。菜单命中通路与输入岛隔离为高置信度方向，尚无原生接收窗口实测；computer-use初始化两次1385，未执行任何UI动作。只更新诊断文档，既有411项未重跑，不冒充修复PASS。
+
+启动兼容最终回归：PowerShell7.6.5 PID41616与5.1 PID47912均3会话/1中心/1托盘、exit0、clean0；7脚本AST及固定6产物通过。5.1空间计时1/3/6张分别PID42984/37208/43192、2/6/12命令、20/60/120实际提交，全部PASS，见`out/verify/v3-04-m07/spatial-current-env-20260909-121733-7529e4`。这关闭脚本兼容问题与当前环境空间计时子门，不关闭人工或完整资源矩阵。采样单海报工作集中位138.85～165.27MiB、CPU归一最高0.13535秒/10秒，预算差距保留，不据此启动优化。测试结束进程0，git diff --check通过；人工可直接启动。
+
+上一轮收尾记录：收尾检查：25份变更Markdown、257个本地链接、0缺失；git diff --check exit0。资源与时序入口固定6产物预检通过；当前DesktopUp进程0，standard-*普通权限目录0，普通权限矩阵尚未开始。 本轮已按用户最新决定取消权限启动门，当前状态以上方兼容回归及人工待验证为准。
+
+## M06 多实例合同夹具（历史已完成，2026-09-09）
+
+任务范围见[M06合同](M06_MULTI_INSTANCE_FIXTURES.md)。用户确认旧版正常退出，进程检查无DesktopUp后，先补M05参数两轮及空间回归，再执行M06 Exercise/Restart，全部PASS。M05/M06依实际证据关闭；没有强杀旧版或将测试意图转发给旧版。真实进程读回不等同人工鼠标/视觉验收。
+
+| 验证 | 结果/证据 |
+| --- | --- |
+| M06新增合同 | 10项（含start/apply/recover三种故障阶段）通过；共享配置、隐藏参数、确认/CAS、晚到回调、独立恢复和零目录 |
+| 完整回归 | 首轮及2026-09-09复跑均405/405，0skip；out/verify/v3-04-m06/results/m06-contract.trx、m06-resume.trx |
+| 测试SHA256 | 首轮6248A8805E5C3AC06321BF5F330467C739055451B00A93F0EEA341C3D1DCE12A；复跑6C2E5529BB5DD4C38BAC917FFDF8E7AC8403A9D713C84D4DC40B3ED313CE2592 |
+| Release | out/verify/v3-04-m06/app/；0warning/0error |
+| 隔离配置 | out/verify/v3-04-m06/smoke/multi-instance/；初始revision3/三张，完成后A/B两条且仅A显示、C删除；不能再次直接Exercise |
+| Exercise | PID44928，9阶段快照完整；A编辑、B隐藏编辑/重显、C取消/过期/确认删除及晚到命令均通过；单实例短进程PID48160 exit0 |
+| 控制中心/托盘 | Exercise中心顺序关闭重开共创建2次，任一快照仅1个活动中心；托盘全程1次，三端目录/revision与原生/XAML读回一致 |
+| Restart | PID47076，完整PosterDefinition与Exercise final精确一致；2条目录/1张原生海报，1中心/1托盘；隐藏/删除项不复活 |
+| 退出 | 两个M06主进程exit0、无error/critical、台账clean/0；结束后无DesktopUp进程 |
+| 文档/差异检查 | 本次24份变更Markdown、239个本地链接、0缺失；git diff --check exit0（仅既有换行转换提示） |
+| M05尾门 | 固定M05参数PID43944/45260、空间PID45428，全部PASS，详情见下方 |
+
+初次共享数据编译缺少Application命名空间；首轮App夹具误用命令接口读取删除预览，已改查询接口（引起的XAML编译次生错误同时消失）。最终合同/Release通过，未修改生产仓储、空间或注册表行为来掩盖测试失败。
+
+M06最终产物SHA256：
+
+| 产物 | SHA256 |
+| --- | --- |
+| DesktopUp.exe | 958D77CA81E0035094D2A603DFCD3DBBE595D048F303E574B65EF14AB32BB3A0 |
+| DesktopUp.dll | 61BA4BCE0386CA2543115A439F530DDA946F920FF8D5E269D80AA8A66CFF1661 |
+| DesktopUp.Domain.dll | 2C9F447DA4BCA74260784B8741303455B67155669CB1BE0B474071C58AFF2021 |
+| DesktopUp.Application.dll | E27135B685CDCA1EC68BF79D5F5B2C482B4EE4714EADF12FB534075DAD614F40 |
+| DesktopUp.Windows.dll | 0B4445F449483389950A34FCD789F54600A5D3402FB8756A91754AA7C0F1EE8E |
+| DesktopUp.Infrastructure.dll | 01B7E50E767BFB08C494928F038D60C0C9AB9E495FB3B6F1985FAE879EEB6798 |
+
+无commit/push、无旧测试数据覆盖、无日常库或桌面文件修改。局部失败是可重复替身会话证据，不等同Explorer重启；实际菜单/点击/视觉余项保留。M07未开始。
+
+2026-09-09续跑未修改生产代码或替换固定Release。进程日志相对仓库位置及SHA256：
+
+- `out/verify/v3-04-m06/smoke/multi-instance/logs/desktopup.jsonl`：`BB05075E4309C64A238A555894A8722E1D5D4AB70AFA97BD76A188BFE4E23AD9`。
+- `out/verify/v3-04-m05/smoke/three-posters/logs/desktopup.jsonl`：`12B4D33506CF6E91F197785DBC7E9E029ACD7225AB4C505BE0E5EEEF280C2C21`。
+
+上述哈希对应本次结束时日志；后续测试若追加日志不能沿用旧哈希。每项结果按PID限定，不把历史事件算入当前PASS。
+
+## M05 最小内容/主题参数（前轮实现；2026-09-09进程尾门已补齐）
+
+用户明确进入M05，只做真实Item接入必需参数基础；收展策略体验认可、动画延期，M04未逐项确认安全格保留。实现范围见[M05实际合同](M05_PRESENTATION_PARAMETERS.md)。分支impl/poster-redesign-V3，HEAD a6ac6cf＋既有M04 dirty及本轮增量；无commit/push。
+
+| 检查 | 结果/证据 |
+| --- | --- |
+| 新域/应用合同接入、未接UI时旧回归 | 356/356；out/verify/v3-04-m05/results/m05-existing.trx |
+| 接UI与新增参数夹具首轮 | 394/395；m05-first.trx，唯一失败为ArchitectureTests旧断言写死RGB；新39项全通过 |
+| 最终完整合同测试 | 395/395，0skip；m05-final.trx SHA256 B5AADC8F46310CC34B57813758097964999138DF177796FBB75CA516C070AEB0 |
+| 最终Release | out/verify/v3-04-m05/app/，0warning/0error；保留prepared-before-bounds和原层级/捕获实现 |
+| 隔离数据准备 | out/verify/v3-04-m05/smoke/three-posters；SessionFixture创建，初始revision3/三张，未改日常配置 |
+| 参数烟测首次 | PID43944，3张，启动已保存v1数0；提交后revision6，同HWND/外框、独立实例、XAML及非法草稿拒绝全部true |
+| 参数烟测重启 | PID45260，启动已保存v1数3；相同读回全部true，revision仍6，无幂等额外写入 |
+| 空间回归 | PID45428，4次姿态命令、56个原生帧、两次Full展开（有效高480 DIP），几何断言通过 |
+| 三轮退出 | 全部exit0、台账clean/0；M05关闭，不冒充鼠标/视觉PASS |
+| 文档/差异检查 | 本轮结束前23份变更Markdown、220个本地链接、0缺失；git diff --check通过 |
+
+新增39项覆盖默认/边界/非法或重复JSON/未知模板和版本、旧数据保留、大小/深度入口、目标草稿与A/B无关CAS、同实体冲突/重复/NoChange、仓储重开持久化、克隆隔离、参数不夹带几何、目标度量/DPI与有效视口/恢复。深度16为解析器限制；不是所有安全能力都有独立攻击测试。本轮没有添加真实ContentItem或图标提取器，六张卡仍是DEMO ITEMS。
+
+最小真实窗口验证**已通过**：2026-09-09用户正常退出旧R2后，已在同一隔离库依次执行两次（以下保留复现命令）：
+
+```powershell
+& 'G:\A_\Tools\DesktopUp_V2\scripts\smoke-presentation.ps1' `
+  -ExecutablePath 'G:\A_\Tools\DesktopUp_V2\out\verify\v3-04-m05\app\DesktopUp.exe' `
+  -DataRoot 'G:\A_\Tools\DesktopUp_V2\out\verify\v3-04-m05\smoke\three-posters'
+```
+
+第一次改三套独立参数并读回XAML/窗口身份/外框，第二次从已保存参数启动后复验；随后复用`scripts/smoke-spatial.ps1`在这份隔离库回归不同模板的收展，三轮均通过。进程读回不是人工视觉/鼠标PASS；窗口核心视觉安全门继续保留至M07。
+
+最终6产物SHA256：
+
+| 产物 | SHA256 |
+| --- | --- |
+| DesktopUp.exe | 958D77CA81E0035094D2A603DFCD3DBBE595D048F303E574B65EF14AB32BB3A0 |
+| DesktopUp.dll | 0DA2275AC59B66362D76A3203BD22F03BA83D1990F43BDDF1DA9DE15ED40D4DB |
+| DesktopUp.Domain.dll | 2C9F447DA4BCA74260784B8741303455B67155669CB1BE0B474071C58AFF2021 |
+| DesktopUp.Application.dll | E27135B685CDCA1EC68BF79D5F5B2C482B4EE4714EADF12FB534075DAD614F40 |
+| DesktopUp.Windows.dll | 0B4445F449483389950A34FCD789F54600A5D3402FB8756A91754AA7C0F1EE8E |
+| DesktopUp.Infrastructure.dll | 01B7E50E767BFB08C494928F038D60C0C9AB9E495FB3B6F1985FAE879EEB6798 |
+
+## M04-07 R2 向下优先修订（历史）
+
+根因：SpatialExpansionPolicy在最大向下候选失败后，先返回可行的纯上全高候选，绕过下方剩余空隙；旧例子甚至把60..660写成正确终点。本次删除此提前返回，求下方合法容量后再上补足，复用原推让/两段路径/批次和状态CAS。三份需求、空间设计、计划与 [完整策略矩阵](../../20_Architecture/POSTER_SPATIAL_STRATEGY_MATRIX_V1.md) 同步。
+
+- 修订前定向24项：10失败/14通过，证据`out/verify/v3-04-m04-07-r2-down-first/results/down-first-before.trx`。
+- 修订后完整356/356、0跳过；`out/verify/v3-04-m04-07-r2-down-first/results/down-first-final.trx`，SHA256 `024DE5F16233B6F8C22B53554E0424258216F64553231D4981E6B3B6E3890BFA`。
+- 新增9项：下方0/1/140/300像素、四DPI与负工作区原点、可推邻居余量及收起回到锚点；原80组穷举同时验证最大高度与同高最大下扩量。全部连续路径安全检查和R1归位测试继续执行。
+- Release `out/verify/v3-04-m04-07-r2-down-first/app/`，0warning/0error；未改schema、Host层级、输入捕获或真实文件。旧R2包/配置不覆盖。
+
+真实隔离进程（主屏2560×1392工作区、96 DPI），均exit0、资源clean/0；根目录`out/verify/v3-04-m04-07-r2-down-first/smoke/<场景>/`，`logs/desktopup.jsonl`为详细证据。
+
+| 场景 | PID | 已验证结果 |
+| --- | --- | --- |
+| down-first | 16544 | 2次/36帧；A800..860先下扩132，再上扩408，终点392..992、高600；physical读回与共享投影一致，B不动；收起回到800..860 |
+| constrained | 45480 | 2次/28帧；He450 DIP、保存Hp600，刷新/原生读回一致 |
+| blocked | 37488 | 0次/0帧；InsufficientSpace，revision/物理状态不变；重复提示合并 |
+| return-sync | 36364 | 4次/56帧；B收起14帧中13帧与A共同移动，归位专用尾帧0，源/邻居回到合法结果 |
+
+首次smoke被用户正在运行的旧R2 PID32916拦截，未强杀或改其配置；用户确认正常退出后执行上表。人工fixture批量脚本第一次参数拼接错误，在参数校验处退出、未写数据；修正后另建8套全新数据。上述smoke为内置命令/原生读回，不是人工鼠标、动画观感PASS。
+
+新版6产物SHA256（启动脚本固定）：
+
+| 产物 | SHA256 |
+| --- | --- |
+| DesktopUp.exe | 958D77CA81E0035094D2A603DFCD3DBBE595D048F303E574B65EF14AB32BB3A0 |
+| DesktopUp.dll | 75C2C4BB82DC11136850E4D2CB3E7CF9F1800398AF7B2D756CD45467D591846C |
+| DesktopUp.Domain.dll | 92D2F76FB78858BEAF94C6168CDCA603FD71300A3E5C98302F39AA7A48B39F36 |
+| DesktopUp.Application.dll | 34B8C88DB2EBB995C3C6C391D6F05BDF76889637F576F3516ED62DE60D8594E8 |
+| DesktopUp.Windows.dll | F8AC596994670DA230BC4EA1FF523344877FAE3CAD061DED3088E1C562E0E65F |
+| DesktopUp.Infrastructure.dll | 9C7995E1029EA5341843C3F44A5737211A6BC4CB5DC541D7233C17521B67B5D6 |
+
+人工目录`out/manual/v3-04-m04-07-r2-down-first/`；启动参数expand-down-first与历史别名expand-up映射到同一新隔离配置，默认先验本次修正；其余7套供余项复用。G1～G4历史PASS保留，M04仍MANUAL PENDING，不提前进入M05，未commit/push。
+
+收尾检查：9个参数入口（8套数据，expand-up为别名）全部CheckOnly PASS、Launched=false、每次固定6个二进制；脚本语法0错误；22份修改Markdown的205个本地链接0缺失；git diff --check通过，DesktopUp进程0。未执行新一轮人工点击或重启恢复，本次重启背景证据仍引用下方前轮记录，不记为新版重测PASS。
+
+以下R2/347项和纯上进程是前一轮历史，不代表当前策略或当前启动产物。
+
+## M04-07 R2 实现验证
+
+R2-01～03已实现，完整347/347、0跳过，Release0warning0error。结果为out/verify/v3-04-m04-07-r2/results/r2-final-2.trx；合同与失效边界见 [R2实际合同](M04_EXPANSION_R2.md)。新的真实进程明细见下方补充；鼠标、滚动/页脚观感和按钮轻抖仍MANUAL PENDING。
+
+初次全量337通过/1失败为既有ConcurrentFirstRunSeedsTheLegacyDefaultOnlyOnce的SQLite table locked；单测复跑和后续完整347项通过，未更改并发存储代码。R2新夹具先发现旧短海报恢复处理、恢复种子缺失键零尺寸，以及锁定邻居规划顺序问题，修复后新增对应断言；中间TRX与PID46856的恢复失败日志保留，不计PASS。
+
+中间进程40244受限展开450/保存600、2次28帧exit0/资源0；42612保留展开后退出，下一旧构建46856恢复失败。修复后的最终Release重启PID44896通过、2次26帧，重新得到450 DIP有效高度且意图600不变。完整上下候选/不足/归位按最终Release继续验证。
+
+### R2 最终原生回归与指纹
+
+收尾：八套R2人工配置均CheckOnly通过（Launched=false），启动脚本语法0错误；Markdown本地文件链接0缺失，git diff --check通过。所有DesktopUp烟测已退出，无常驻实例；HEAD仍a6ac6cf，未commit/push，旧R1产物/配置保留。
+
+所有以下进程均exit0、资源账本clean/0；均为隔离内置命令及原生读回，不是人工视觉通过。
+
+| 场景 | PID | 结果 |
+| --- | --- | --- |
+| 保留受限展开后重新启动 | 44896 | 2次/26帧；新会话重算450 DIP、保存600 DIP，刷新读回一致 |
+| 向上完整 | 13584 | 2次/34帧，Full600 |
+| 上下组合完整 | 44824 | 2次/36帧，Full600 |
+| 空间不足 | 38996 | 0次布局/0帧，revision与物理场景不变；连续反馈请求只启动1个提示 |
+| 双收起同步归位 | 40248 | 4次/56帧；Full480，R1路径保留 |
+| 三海报链 | 46088 | 6次/68帧；Full480/360/360 |
+
+最终TRX SHA256：8985E3711FCF76E0CD7FE64EB81350CA0266F5DB616A8FA3BB0CA8F080E5830B。
+固定脚本中的六产物SHA256：exe 958D77CA81E0035094D2A603DFCD3DBBE595D048F303E574B65EF14AB32BB3A0；App C8BE02A38435B97400692B878A531C305B9BA14B997C91EEE21435C36064586A；Domain 3B3A21696F7F804323515E8504F83FFB6463773FA3E15AE3CFE9471BBE4727BF；Application 34B8C88DB2EBB995C3C6C391D6F05BDF76889637F576F3516ED62DE60D8594E8；Windows F8AC596994670DA230BC4EA1FF523344877FAE3CAD061DED3088E1C562E0E65F；Infrastructure 9C7995E1029EA5341843C3F44A5737211A6BC4CB5DC541D7233C17521B67B5D6。
+
+## M04-07 R2 策略修订历史（当时非软件验证）
+
+用户确认三档展开回退、完整标题＋一行Item＋必要页脚最小值。本轮同步需求/策略/模块所有权/计划与G7-R2待实现验收，不改代码或软件产物，不运行软件测试/真实窗口；R1的324/324和进程证据不能转记为新策略AUTO PASS。
+
+当前仍使用R1启动包。下一步先按工作流R2-01实现纯候选与度量夹具，再有效投影/反馈/集中回归；G1～G4人工通过保留，未反馈余项仍待确认。本轮不触碰日常数据、测试SQLite和Git提交/推送。
+
+收尾检查：src/tests/scripts共105个文件前后SHA-256一致，无新增/删除代码文件；47份Markdown中的203个本地文件链接0缺失，git diff --check通过；4个策略算例算术核对一致（非软件测试）。分支impl/poster-redesign-V3、HEAD a6ac6cf未变。
+
+## M04-07 R1 同步归位修订
+
+- 用户明确反馈G1～G4人工通过；归位同步调整已确认。G6-R1和G5～G10未自动填PASS。
+- 改前新10项时序/保护测试7失败3通过，`out/verify/v3-04-m04-07-r1/results/return-red.trx`保留；原因是先source全部收起帧再邻居回程帧。初次补丁的C#上下文关键字编译错误已修正，未将失败构建作为产物。
+- 修后完整324/324、0跳过；新增11项含200组混合高度/方向/负原点链场景。逐帧证明同批、无尾帧、单步≤32px、不重叠、最终归位，以及锁定/二次调整/新障碍保持原位、未改子集仍可返回。
+- Release0warning0error，目录`out/verify/v3-04-m04-07-r1/app/`；最终测试`results/m04-07-r1.trx` SHA256 `90CCF006C410B1E8880D27EC4A20CFB44F332253ECB0D80258816BEEDE025EF6`。
+- 真实双收起PID42412：4次收展/56帧，B收起14帧/13个联合帧/0归位尾帧；真实链式PID43036：6次/52帧，首组收起14帧全部联合移动。两者exit0/资源0，没有批次失败。这里是内置命令、原生读回与日志证据，非真实鼠标或视觉PASS。
+- 四套新版人工配置与六产物指纹检查通过，脚本语法0错误，CheckOnly均Launched=false；旧版产物/人工目录未覆盖，当前无进程常驻。无schema/真实文件改动，无commit/push。
+- 下一步见 [集中人工记录表](M04_MANUAL_VALIDATION.md)：先G6-R1同步观感，再G5～G10；全部适用项通过才关闭M04、进入M05参数。
+
+## M04-07 集中人工准备记录（历史）
+
+固定上一轮最终Release，6个项目二进制指纹已验证。三套新夹具interaction/chain/removal均生成revision3/三张海报；人工启动脚本语法0错误、三场景CheckOnly通过（Launched=false）。没有生产改动或重新构建Release。
+
+电脑交互初始化和重置重试失败：CreateProcessWithLogonW1385；没有取得任何窗口截图或执行输入。本轮不补写鼠标/菜单/删除点击/视觉/Win+D/Explorer人工PASS。所有G1～G10结果仍为待反馈，见 [人工记录表](M04_MANUAL_VALIDATION.md)。当前没有运行中的DesktopUp测试实例。
+
+## M04-06 最新实现与验证
+
+313/313 PASS（上一轮288基础新增25）；最终Release0warning0error；无新增schema。输入捕获/几何失效/顺序路由与删除ticket/真实SQLite CAS详见 [M04-06实际合同](M04_INPUT_CONFIRMATION.md)。
+
+最终真实进程：PID19540，三张海报、三个就绪输入cluster、打开确认3次，取消/重复请求/中心关闭重开/带确认退出全部通过，revision保持3、exit0/资源0；PID24776空间回归6次/77帧，exit0/资源0。中间确认构建45548/38228通过，不替代最终产物。保留原始日志。
+
+真实鼠标路由、菜单点击与点击删除、焦点层级、白底/闪烁为M04-07人工门，不以程序化XAML开关/日志冒充通过。没有自动确认删除；没有改用户日常配置/桌面文件，也没有commit/push。
+
+收尾已将逻辑输入失效同步为原生空区域，防旧输入窗吞掉桌面点击；上列19540/24776已在此补强后重新执行。46份Markdown/182个本地链接0缺失，git diff --check通过；测试实例均已退出。
+
+## M04-03..05 最新实现与验证
+
+按顺序完成03碰撞（260/260）、04保尺寸展开（271/271）、05推让归位与v5（最终288/288）。最终Release0warning0error；链式三海报PID24596，6次收展77批次帧，三参与者与归位消费关联明确；普通三海报PID46980，4次56帧；均exit0/资源0。详见 [空间运行合同](M04_SPATIAL_RUNTIME.md)。
+
+初次真实测试发现原生批次标志87与中间高度输入越界，已修复；故障注入发现v5提交前结构校验缺口，已修复。失败原始日志保留。未执行真实鼠标或肉眼闪烁验收，人工归M04-07；M04-01/M03既有人工待确认不代填。
+
+收尾文档检查：45份Markdown中的177个本地链接均可解析，0缺失；git diff --check通过。普通三海报控制中心重复激活回归PID40692：仅创建1个中心、2次显示、共享监听1，exit0/资源0；没有测试实例常驻。
+
+## M04-02 最新实现与验证
+
+空间纯合同与67项新测试已完成；全量243/243，0失败0跳过，完整Release0warning0error。实际代码、命令、TRX/产物SHA-256及首轮编译修正记录见 [M04空间合同](M04_SPATIAL_CONTRACT.md)。
+
+覆盖DPI保守取整/负坐标、接触与正面积相交、连续路径（非仅终点）、8向候选、三种展开、超大/历史重叠明确拒绝、不可变/确定性、归位资格与路径分离、完整障碍实体/目录幻影/环境失效、异构端点信封。500组展开与500条路径性质对照在测试内执行。旧3项固定顶边/夹取测试加Legacy标签，仍执行。
+
+边界：运行Host/WinUI/capture和SQLite migration未修改，新合同未接生产手势；没有运行桌面smoke或人工输入，不能将此次AUTO PASS解释为碰撞/动画/连锁推让/归位已在桌面生效。M04-03接拖缩，04接展开，05接推让/归位。M04-01人工结果仍待确认。本轮无用户数据变更、无commit/push，Git基线a6ac6cf。
 
 ## M04-01 最新实现与验证
 

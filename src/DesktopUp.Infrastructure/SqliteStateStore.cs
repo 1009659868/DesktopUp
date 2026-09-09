@@ -10,7 +10,7 @@ public sealed class SqliteStateStore : IStateStore
 {
     private const int ApplicationId = 0x44555033; // "DUP3"
     private const int BusyTimeoutMilliseconds = 5_000;
-    private const int CurrentSchemaVersion = 4;
+    private const int CurrentSchemaVersion = 5;
     private const string DatabaseFileName = "desktopup.sqlite3";
     private static readonly Migration[] Migrations =
     [
@@ -144,6 +144,27 @@ public sealed class SqliteStateStore : IStateStore
                     (outcome = 'no_change' AND committed_revision IS NULL)),
                 FOREIGN KEY (committed_revision) REFERENCES state_operations(committed_revision)
                     DEFERRABLE INITIALLY DEFERRED
+            ) STRICT;
+            """),
+        new(5, "spatial-layout-causality", """
+            ALTER TABLE posters ADD COLUMN layout_generation INTEGER NOT NULL DEFAULT 0 CHECK (layout_generation >= 0);
+            ALTER TABLE posters ADD COLUMN last_layout_operation_id TEXT NULL;
+            CREATE TABLE spatial_operations (
+                operation_id TEXT PRIMARY KEY NOT NULL,
+                source_poster_id TEXT NOT NULL REFERENCES posters(poster_id) ON DELETE CASCADE,
+                schema_version INTEGER NOT NULL CHECK (schema_version = 1),
+                status TEXT NOT NULL CHECK (status IN ('active', 'consumed', 'invalidated')),
+                body_json TEXT NOT NULL CHECK (json_valid(body_json)),
+                committed_revision INTEGER NOT NULL REFERENCES state_operations(committed_revision) DEFERRABLE INITIALLY DEFERRED
+            ) STRICT;
+            CREATE INDEX spatial_source ON spatial_operations(source_poster_id, status);
+            CREATE TABLE spatial_participants (
+                operation_id TEXT NOT NULL REFERENCES spatial_operations(operation_id) ON DELETE CASCADE,
+                poster_id TEXT NOT NULL,
+                expected_layout_generation INTEGER NOT NULL CHECK (expected_layout_generation >= 1),
+                proof_json TEXT NOT NULL CHECK (json_valid(proof_json)),
+                invalidated_reason TEXT NULL,
+                PRIMARY KEY(operation_id, poster_id)
             ) STRICT;
             """)
     ];
@@ -523,6 +544,7 @@ public sealed class SqliteStateStore : IStateStore
                 VerifyCatalogSchema(connection, transaction);
             }
             if (migration.Version >= 4) VerifyCommandSchema(connection, transaction);
+            if (migration.Version >= 5) VerifySpatialSchema(connection, transaction);
 
             string appliedUtc = DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture);
             using (SqliteCommand ledger = connection.CreateCommand())
@@ -630,12 +652,27 @@ public sealed class SqliteStateStore : IStateStore
             VerifyCatalogSchema(connection, null);
         }
         if (expectedVersion >= 4) VerifyCommandSchema(connection, null);
+        if (expectedVersion >= 5) VerifySpatialSchema(connection, null);
         if (head.SchemaVersion != version)
         {
             throw new InvalidDataException(
                 $"State head schema {head.SchemaVersion} does not match user_version {version}.");
         }
         return head;
+    }
+
+    private static void VerifySpatialSchema(SqliteConnection connection, SqliteTransaction? transaction)
+    {
+        foreach (string sql in new[]
+        {
+            "SELECT layout_generation, last_layout_operation_id FROM posters LIMIT 0;",
+            "SELECT operation_id, source_poster_id, schema_version, status, body_json, committed_revision FROM spatial_operations LIMIT 0;",
+            "SELECT operation_id, poster_id, expected_layout_generation, proof_json, invalidated_reason FROM spatial_participants LIMIT 0;"
+        })
+        {
+            using var shape = connection.CreateCommand(); shape.Transaction = transaction; shape.CommandText = sql;
+            using (shape.ExecuteReader()) { }
+        }
     }
 
     private static void VerifyCommandSchema(SqliteConnection connection, SqliteTransaction? transaction)

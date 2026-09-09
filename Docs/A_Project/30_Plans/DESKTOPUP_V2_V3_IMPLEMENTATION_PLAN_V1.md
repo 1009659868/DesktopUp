@@ -1,6 +1,6 @@
 # DesktopUp V2 V3 制作计划 V1
 
-状态：`M04 IN PROGRESS — M04-01 AUTO PASS / MANUAL PENDING`
+状态：`M07 IN PROGRESS — CONTRACT/BUILD PASS；CURRENT-ENVIRONMENT / MANUAL PENDING`
 
 建立日期：2026-09-03
 
@@ -26,7 +26,7 @@
 
 用户正式确认通用桌面内容、多海报、唯一控制中心/托盘、独立主题、热度排版、AI 辅助定制。七份需求已同步；[通用多海报合同](../20_Architecture/GENERAL_CONTENT_MULTI_POSTER_CONTRACT_V1.md) 和 [细化工作流](V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md) 补齐数据、作用域、依赖与逐项出口。最初调整为仅文档，随后 M01 已完成数据合同实现；不把该子集等同于多窗口产品完成。
 
-V3-04-03 R1 用户人工验证通过，保留 97/97 与真实开窗历史证据。V3-04-04 前插入 M01..07：实体/迁移 → 目标命令/投影 → 会话registry → M04中心目标/空间协同/输入 → 参数 → 多实例夹具 → 测量与人工门。M01数据PASS、M02 147/147、M03 163/163与Release/0/1/3实际进程及等待中退出为历史证据。用户已确认基本多海报交互；中心仍只绑定默认别名。本次仅文档补充不可重叠、锁定障碍、条件归位和保尺寸两阶段展开；M04仍PLANNED，不补写完整人工PASS。
+V3-04-03 R1用户人工验证与M01..03/M04-01历史证据保留。03..05空间已接运行；06共享输入及删除确认现已接入，313/313、Release与真实确认/退出/链式回归通过。M04整体仍IN PROGRESS，下一项07集中人工，不补写未执行的PASS。
 
 先交付可日用收纳版本：V3-05 真内容与 V3-06-01..04 的稳定视口并进，基础 Box 与 V3-09 最小安装/恢复/清理提前进入首个可用包；完整 AI 不阻塞日用交付。下图是能力分组，不再要求 AI 结束才开始打包。完整工作卡、证据和未决裁决见细化工作流。
 
@@ -247,7 +247,7 @@ V3-02-08/09 共同遵循：恢复任务捕获 `(DesktopShellGeneration, DisplayT
 
 目标：用一个状态权威连接海报、控制中心和托盘，消除 UI 回弹和两端状态不一致。
 
-状态：`M04 IN PROGRESS — M04-01 AUTO PASS / MANUAL PENDING — NEXT M04-02`
+状态：`M07 IN PROGRESS — CONTRACT/BUILD PASS；CURRENT-ENVIRONMENT / MANUAL PENDING`
 
 2026-09-07 回归已关闭：OutputPath 缺分隔符造成 XBF/PRI 名称错误已修复，DUV3001、真实开窗 smoke 与 97/97 原有证据保留；用户确认人工通过。尚未进入 V3-04-04，先按新方向执行 M01..07。
 
@@ -271,8 +271,10 @@ V3-02-08/09 共同遵循：恢复任务捕获 `(DesktopShellGeneration, DisplayT
 - V3-04-M01：PASS，schema v3、独立实体/初始化/版本和目录仓储；[实际合同](../40_Implementation/V3-04/POSTER_CATALOG_SCHEMA_V3.md)；117/117 自动回归，不新增桌面人工门；
 - V3-04-M02：AUTO PASS，目标化命令、三端集合投影、实体读集 CAS/批量事务/schema v4 回执已实现；147/147、Release 和新版隔离实际进程 smoke 通过，受影响人工回归待完成；[实际合同](../40_Implementation/V3-04/TARGETED_COMMAND_PROJECTION_V2.md)。
 - V3-04-M03：AUTO PASS / MANUAL PENDING；会话registry与共享恢复已落地，163/163、Release与0/1/3真实窗口/退出 smoke通过，见 [M03合同](../40_Implementation/V3-04/M03_SESSION_RECOVERY.md)。
-- V3-04-M04：PLANNED，01中心目录/所选ID → 02空间合同/纯夹具 → 03拖缩碰撞 → 04保尺寸先下后上展开 → 05连锁推让/条件归位/异构CAS → 06输入与删除确认 → 07集中核心人工门；见 [空间设计](../20_Architecture/POSTER_SPATIAL_LAYOUT_AND_EXPANSION_V1.md) 与细化工作流 §4.1。锁定邻居不被推；无解不静默缩小或半成功。未被再次调整且归位安全才还原。
-- V3-04-M05..07：PLANNED，参数合同、多实例端到端夹具、测量；不与M04-07重复相同测试，保留各自出口。
+- V3-04-M04：MANUAL PENDING / STRATEGY ACCEPTED；G1～G4历史PASS、R2自动356项/真实回归保留，用户认可收展策略体验并明确动画延期/进入M05。未逐项确认安全格留M06/M07集中，不补写全PASS，见[M04记录](../40_Implementation/V3-04/M04_MANUAL_VALIDATION.md)。
+- V3-04-M05：CLOSED / CONTRACT/BUILD/PROCESS PASS；[最小参数合同](../40_Implementation/V3-04/M05_PRESENTATION_PARAMETERS.md)已接入v1声明式JSON、兼容/只读fallback、目标草稿/CAS、独立度量/颜色/标题和中心只读摘要；395/395、Release通过，2026-09-09参数两轮及空间回归均PASS。不做真实文件Item、完整主题编辑器或AI。
+- V3-04-M06：CLOSED / CONTRACT/BUILD/PROCESS PASS；[多实例合同夹具](../40_Implementation/V3-04/M06_MULTI_INSTANCE_FIXTURES.md)共用三用途数据，新增10项，完整复跑405/405；Exercise 9阶段、单实例激活及Restart完整配置读回全通过，exit0/资源0。不重复建设状态权威/空间求解；人工安全余项保留M07。
+- V3-04-M07：IN PROGRESS；[测量与安全合同](../40_Implementation/V3-04/M07_MEASUREMENT_AND_SAFETY.md)已建立，411/411、固定Release、5.1真实启动/正常退出通过。按用户决定取消管理员启动硬门，权限只记录；先S1～S5人工，再收口1/3/6张18格×2资源基线与实际提交计时。当前环境证据不冒充普通用户认证；50MiB目标不改，性能优化与动画延期。
 - V3-04-04：M门后复用M04-01目录/选择器，扩充新增/配置克隆/删除、全桌面预览及参数编辑；几何复用M04空间服务，删除复用其确认；不重造列表和另一套状态权威。
 - V3-04-05：复用开窗/暂停/退出，增加托盘新增海报；补数量/可见数/锁定汇总及单张/全部作用域，零海报仍能新增；
 - V3-04-06：最近可用状态/数据库失败回退＋单文件跨主机习惯配置；A 格式/恢复/策略、B 一致快照导出、C 预览确认导入/映射、D 自动与实际跨机验证；内置主题/参数先支持，自定义载荷复用 V3-07-04；
@@ -482,6 +484,12 @@ V3-02-08/09 共同遵循：恢复任务捕获 `(DesktopShellGeneration, DisplayT
 
 ## 18. 立即下一步
 
-本轮已完成M04-01中心列表/稳定目标切换与DeskBox空间来源吸收记录。176/176、最终Release0warning0error、3/0真实会话/中心/退出smoke通过；实际点击因computer-use环境1385未执行，仍需短人工确认。下一开发项为M04-02空间合同/纯求解夹具，再03碰撞、04保尺寸展开、05推让与条件归位；[M04-01合同与启动](../40_Implementation/V3-04/M04_CONTROL_CENTER_SELECTION.md) 给出当前交付边界。下方为本轮实现前的任务来源，不代表仍未实现中心列表。
+2026-09-09最新（优先于下方历史）：M07启动脚本已适配Windows PowerShell5.1及当前权限；取消原7.4/非管理员启动限制，不改系统UAC。5.1三海报、单中心/托盘启动与exit0/clean0通过，合同411/411；单海报六场景采样兼容回归通过，完整36次仍待补。当前先人工S1～S5，不强制先测量；M07不提前关闭、不改变50MiB预算。旧4探索样本及中断证据保留，无schema/生产逻辑/commit/push变更。
+
+M06完成历史：M05参数×2/空间尾门与M06 Exercise/Restart全部通过，完整合同405/405；结论保留，不因新测量权限限制撤销已有合同证据，也不将旧管理员进程读回冒充新普通权限基线。
+
+M04-06历史自动基线：313/313、Release0warning0error，真实三张输入就绪/确认开关及退出、链式6次/77帧回归通过，见 [输入与确认合同](../40_Implementation/V3-04/M04_INPUT_CONFIRMATION.md)。这些结果不代替M04-07人工PASS。
+
+M04-01阶段历史：本轮已完成M04-01中心列表/稳定目标切换与DeskBox空间来源吸收记录。176/176、最终Release0warning0error、3/0真实会话/中心/退出smoke通过；实际点击因computer-use环境1385未执行，仍需短人工确认。下一开发项为M04-02空间合同/纯求解夹具，再03碰撞、04保尺寸展开、05推让与条件归位；[M04-01合同与启动](../40_Implementation/V3-04/M04_CONTROL_CENTER_SELECTION.md) 给出当前交付边界。下方为本轮实现前的任务来源，不代表仍未实现中心列表。
 
 任务来源：上轮将“中心仅A”定位为默认别名绑定缺口并提前M04-01；本轮已实现该项。M03已有0..N会话和163/163历史证据，本轮增至176/176；未明确报告的Explorer/Win+D核心人工证据仍在M04-07集中补齐。M系列后原04-04继续完善管理/预览，单一权威及既有Host不重写。

@@ -97,7 +97,7 @@ CreatePoster 的入口是控制中心和托盘；RemovePoster 的入口是控制
 
 [空间协同与展开合同](POSTER_SPATIAL_LAYOUT_AND_EXPANSION_V1.md) 承接 RP-SP-01..07：锁定者是固定障碍；展开保留原尺寸，按可用空间向下、贴底向上或先下后上；可推让合法邻居，源收起后未再调整者安全条件归位。主动协调变更不违反实体独立性，但只能改变列明的受影响几何；无可行解保留原状态并解释。
 
-推让不是多个单海报命令循环调用：完整读集包括未移动障碍和目录版本，异构几何在同事务提交至一个 committed revision，沿用现有仓储/回执；物理多窗口仍需预备、批量提交、读回和失败恢复，不能伪称跨数据库/渲染原子。旧固定顶边和自动压缩高度策略被新条件规则取代；历史测试保留为旧基线并新增对应反例。
+推让不是多个单海报命令循环调用：完整读集包括未移动障碍和目录版本，异构几何在同事务提交至一个 committed revision，沿用现有仓储/回执；物理多窗口仍需预备、批量提交、读回和失败恢复，不能伪称跨数据库/渲染原子。09-08允许完整尺寸候选失败后的临时受限高度，必须区别持久尺寸意图与版本化有效投影，并满足内容最小高度；不能恢复旧的无条件自动压缩/写回高度行为。策略见 [空间设计§5.1～5.4](POSTER_SPATIAL_LAYOUT_AND_EXPANSION_V1.md#51-三档裁决与候选顺序r2)，代码尚待接入。
 
 最小中心列表和 SelectedPosterId 前置到 M04-01；现有中心只读 projection.Poster 默认别名是已确认的实现缺口，并非目录丢失。完整管理/预览仍在原04-04复用该入口。
 
@@ -133,7 +133,7 @@ AIChangePlan 明确 targets、expected entity versions、允许操作、diff、�
 | src/DeskBox/Services/ManagedStoragePathService.cs | 可预测的初始受管根路径、显式迁移建议、可移动盘/云风险 | 不照搬 DeskBox 用户目录；程序/缓存/用户内容分离，用户选址与断盘恢复 | V3-05-03/12、V3-09 |
 | 既有 V3-02/03 provenance ledger | layer、drag/resize、窗口生命周期的已研究来源 | 保留已通过代码与基线；新增多 cluster 证据，不重做技术选型 | V3-04-M03/04 |
 | WidgetSnapCalculator、WidgetCoordinatedMoveCalculator、WidgetManager.CoordinatedMove、WidgetWindowBase.CoordinatedMove | 纯吸附、组限界、批量预备/移动/保存、锁定过滤 | 组平移不等于硬碰撞连锁推让；详见空间设计§3，补扫掠与完整CAS | M04-02/03/05 |
-| WidgetCompactExpansionCalculator、DirectionPolicy、WidgetWindowBase.Collapse | 候选锚点、严格尺寸拒绝、插值 | 不复制Auto缩小和RaiseForExpandedState抬层；新增先下后上轨迹/归位因果 | M04-04/05 |
+| WidgetCompactExpansionCalculator、DirectionPolicy、WidgetWindowBase.Collapse | 候选锚点、严格尺寸拒绝、插值 | 不复制其Auto默认值/持久行为与RaiseForExpandedState抬层；按新合同做有最小阈值的临时高度、保存/有效尺寸分离及方向回退/归位因果 | M04-04/05及07 R2 |
 
 实际移植前补读取来源文件/依赖/测试，登记精确 commit、移植片段、许可证、修改点和新增用例。不以 DeskBox 的测试结果当成本项目 PASS；此次未复制源码。
 

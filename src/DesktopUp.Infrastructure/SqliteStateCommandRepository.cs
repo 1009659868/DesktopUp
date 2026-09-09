@@ -68,7 +68,8 @@ public sealed class SqliteStateCommandRepository(SqliteStateStore store) : IStat
         {
             committedRevision = checked(before.Revision + 1);
             foreach (PosterDefinition poster in plan.Updates)
-                SqlitePosterRepository.UpdatePoster(connection, transaction, poster, committedRevision.Value);
+                SqlitePosterRepository.UpdatePoster(connection, transaction, poster, committedRevision.Value,
+                    request.RequestId, plan.TouchLayoutIds.Contains(poster.PosterId));
             foreach (PosterDefinition poster in plan.Creates)
                 SqlitePosterRepository.InsertPoster(connection, transaction, poster, committedRevision.Value);
             foreach (string id in plan.Removes)
@@ -82,6 +83,7 @@ public sealed class SqliteStateCommandRepository(SqliteStateStore store) : IStat
             }
             if (plan.Settings is { } settings)
                 SqliteSettingsRepository.UpdateSettings(connection, transaction, settings, committedRevision.Value);
+            SqliteSpatialProofRepository.Apply(connection, transaction, plan.NewSpatialProof, plan.ConsumeSpatialOperationId, committedRevision.Value);
             AdvanceHead(connection, transaction, before.Revision, request.RequestId);
         }
         using (SqliteCommand receipt = connection.CreateCommand())
@@ -107,7 +109,8 @@ public sealed class SqliteStateCommandRepository(SqliteStateStore store) : IStat
 
     private static DesktopStateSnapshot ReadSnapshot(SqliteConnection connection, SqliteTransaction transaction) =>
         new(SqlitePosterCatalogRepository.ReadCatalog(connection, transaction),
-            SqliteSettingsRepository.ReadSettings(connection, transaction));
+            SqliteSettingsRepository.ReadSettings(connection, transaction))
+            { SpatialOperations = SqliteSpatialProofRepository.Read(connection, transaction) };
 
     private static IReadOnlyList<StateReadConflict> CheckReadSet(DesktopStateSnapshot state, StateTransactionRequest request)
     {

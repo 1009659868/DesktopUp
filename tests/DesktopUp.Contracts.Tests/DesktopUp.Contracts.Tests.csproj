@@ -18,5 +18,8 @@
   </ItemGroup>
   <ItemGroup>
     <Using Include="Xunit" />
+    <Compile Include="../Shared/MultiPosterFixtureData.cs" Link="MultiPosterFixtureData.cs" />
+    <Compile Include="../Shared/MeasurementFixtureData.cs" Link="MeasurementFixtureData.cs" />
+    <Compile Include="../../scripts/MeasurementMath.cs" Link="MeasurementMath.cs" />
   </ItemGroup>
 </Project>

@@ -59,6 +59,7 @@ internal static class DesktopZOrderPolicy
     internal const uint WmWindowPosChanging = 0x0046;
     internal const uint SwpNoZOrder = 0x0004;
     internal const uint SwpNoActivate = 0x0010;
+    internal const uint SpatialBatchFlags = SwpNoZOrder | SwpNoActivate | 0x0100 /* NOCOPYBITS */ | 0x0200 /* NOOWNERZORDER */;
     internal static readonly nint HwndBottom = new(1);
 
     public static bool ShouldConstrain(uint flags, nint requestedInsertAfter) =>

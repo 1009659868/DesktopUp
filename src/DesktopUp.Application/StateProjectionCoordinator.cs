@@ -52,7 +52,8 @@ public sealed class StateProjectionCoordinator(
 
     public StateCommandResult Execute(PosterStateCommand command) => Run(
         command.RequestId, command.Source, command.ExpectedRevision, command.ReadSet,
-        reads => command with { ReadSet = reads }, StateCommandPolicy.Prepare);
+        reads => command with { ReadSet = reads, SpatialGesture = command.SpatialGesture is { } gesture
+            ? gesture with { Path = Array.AsReadOnly(gesture.Path.ToArray()) } : null }, StateCommandPolicy.Prepare);
     public StateCommandResult Execute(SettingsStateCommand command) => Run(
         command.RequestId, command.Source, command.ExpectedRevision, command.ReadSet,
         reads => command with { ReadSet = reads }, StateCommandPolicy.Prepare);
@@ -174,7 +175,7 @@ public sealed class StateProjectionCoordinator(
             throw new InvalidDataException("Projection inputs must come from a single committed revision.");
         var posters = state.Catalog.Posters.Select(p => new PosterSurfaceProjection(
             state.Revision, p.PosterRevision, p.Poster, !p.Poster.IsLocked, !p.Poster.IsLocked && !p.Poster.IsCollapsed, true)
-            { EntityVersion = p.EntityVersion }).ToList().AsReadOnly();
+            { EntityVersion = p.EntityVersion, LayoutGeneration = p.LayoutGeneration, LastLayoutOperationId = p.LastLayoutOperationId }).ToList().AsReadOnly();
         var byId = new ReadOnlyDictionary<string, PosterSurfaceProjection>(posters.ToDictionary(p => p.Poster.PosterId, StringComparer.Ordinal));
         // Transitional selection alias, never the identity used to route a target command.
         PosterSurfaceProjection? selected = byId.GetValueOrDefault(BuiltInStateIdentities.PrimaryPosterId) ?? posters.FirstOrDefault();
@@ -190,6 +191,6 @@ public sealed class StateProjectionCoordinator(
             settings.Settings.DynamicEffectsPaused, $"DesktopUp · {posters.Count} 张海报 · {visible} 可见 · {locked} 锁定" +
                 (settings.Settings.DynamicEffectsPaused ? " · 已暂停" : ""))
             { VisiblePosterCount = visible, LockedPosterCount = locked, LockSummary = summary };
-        return new(state.Revision, selected, center, tray) { ProfileInitialized = state.Catalog.ProfileInitialized };
+        return new(state.Revision, selected, center, tray) { ProfileInitialized = state.Catalog.ProfileInitialized, SpatialOperations = state.SpatialOperations };
     }
 }

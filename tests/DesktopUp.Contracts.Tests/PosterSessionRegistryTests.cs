@@ -5,7 +5,7 @@ using Microsoft.Data.Sqlite;
 
 namespace DesktopUp.Contracts.Tests;
 
-public sealed class PosterSessionRegistryTests
+public sealed partial class PosterSessionRegistryTests
 {
     [Theory]
     [InlineData(0)]
@@ -241,6 +241,7 @@ public sealed class PosterSessionRegistryTests
     {
         public List<FakeSession> Created { get; } = new();
         public HashSet<string> FailStart { get; } = new();
+        public HashSet<string> FailApply { get; } = new();
         public Action<FakeSession>? OnStart { get; set; }
         public FakeSession For(string id) => Created.Last(s => s.PosterId == id);
         public IPosterSession Create(string id, long epoch)
@@ -268,7 +269,7 @@ public sealed class PosterSessionRegistryTests
             factory.OnStart?.Invoke(this);
             return !factory.FailStart.Contains(id);
         }
-        public bool ApplyProjection(StateProjectionChangedEventArgs e) { Projection = e.Projection.PostersById[id]; return true; }
+        public bool ApplyProjection(StateProjectionChangedEventArgs e) { Projection = e.Projection.PostersById[id]; return !factory.FailApply.Contains(id); }
         public bool Recover(PosterSessionEnvironment e, long request)
         {
             Recoveries++;
@@ -287,14 +288,21 @@ public sealed class PosterSessionRegistryTests
     {
         private readonly string _root = Path.Combine(Path.GetTempPath(), "DesktopUp.V3.Sessions.Tests", Id());
         private readonly SqliteStateStore _store;
-        public Fixture()
+        public Fixture(bool multiInstance = false, bool unknownSecond = false)
         {
             Paths = new UserDataPaths(_root);
             _store = new(Paths); Assert.True(_store.Initialize().Succeeded);
             Coordinator = new(new SqliteStateCommandRepository(_store));
             Registry = new(Factory, new FakeLog());
             Coordinator.ProjectionChanged += (_, args) => Registry.ApplyProjection(args);
-            Registry.ApplyProjection(Change(Coordinator.EnsureInitialized(Configuration())));
+            Registry.ApplyProjection(Change(Coordinator.EnsureInitialized(multiInstance ? DesktopUp.Testing.MultiPosterFixtureData.Create(0) : Configuration())));
+            if (multiInstance)
+                for (int index = 1; index < 3; index++)
+                {
+                    var configuration = DesktopUp.Testing.MultiPosterFixtureData.Create(index);
+                    if (unknownSecond && index == 1) configuration = configuration with { LayoutParametersJson = "{\"schemaVersion\":99,\"future\":true}" };
+                    Add(configuration);
+                }
         }
         public UserDataPaths Paths { get; }
         public Factory Factory { get; } = new();
@@ -303,9 +311,11 @@ public sealed class PosterSessionRegistryTests
         public DesktopUpProjection Current { get { Assert.True(Coordinator.TryGetCurrent(out var p)); return p!; } }
         public bool Recover(long generation = 1) => Registry.Recover(Environment(generation), generation, () => true);
         public string Add(string title)
+            => Add(Configuration() with { Title = title });
+        public string Add(PosterDefinition configuration)
         {
             var result = Coordinator.Execute(new CreatePosterCommand(Id(), StateCommandSource.ControlCenter, Current.Revision,
-                StateReadSet.ForCatalog(Current.CatalogVersion), Configuration() with { Title = title }));
+                StateReadSet.ForCatalog(Current.CatalogVersion), configuration));
             Assert.True(result.Succeeded, result.Error); return result.ResultPosterId!;
         }
         public void Remove(string id)
@@ -317,6 +327,12 @@ public sealed class PosterSessionRegistryTests
         public StateCommandResult Set(string id, Func<PosterDefinition, PosterDefinition> mutate, PosterStateCommandKind kind) =>
             Coordinator.Execute(new PosterStateCommand(Id(), StateCommandSource.ControlCenter, kind, Current.Revision, id,
                 mutate(Current.PostersById[id].Poster)) { ReadSet = StateReadSet.ForPoster(id, Current.PostersById[id].EntityVersion) });
+        public DesktopUpProjection Reopen()
+        {
+            using var reopened = new SqliteStateStore(Paths);
+            Assert.True(reopened.Initialize().Succeeded);
+            return new StateProjectionCoordinator(new SqliteStateCommandRepository(reopened)).EnsureInitialized(DesktopUp.Testing.MultiPosterFixtureData.Create(0));
+        }
         public void Dispose()
         {
             Registry.Dispose(); _store.Dispose(); SqliteConnection.ClearAllPools();

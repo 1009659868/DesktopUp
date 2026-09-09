@@ -17,7 +17,8 @@ public enum PosterStateCommandKind
     SetLocked = 2,
     SetCollapsed = 3,
     SetVisible = 4,
-    Rename = 5
+    Rename = 5,
+    SetPresentation = 6
 }
 
 public enum SettingsStateCommandKind
@@ -37,6 +38,8 @@ public sealed record PosterStateCommand(
 {
     // Null retains the old global-CAS contract for compatibility callers only.
     public StateReadSet? ReadSet { get; init; }
+    public SpatialGestureCommit? SpatialGesture { get; init; }
+    public SpatialPostureCommit? SpatialPosture { get; init; }
 }
 
 public sealed record SettingsStateCommand(
@@ -60,7 +63,8 @@ public enum StateCommandStatus
     NotReady,
     Failed,
     NotFound,
-    ConfirmationRequired
+    ConfirmationRequired,
+    InsufficientSpace
 }
 
 public sealed record StateCommandResult(
@@ -89,6 +93,9 @@ public sealed record PosterSurfaceProjection(
     bool CanToggleCollapsed)
 {
     public long EntityVersion { get; init; }
+    public long LayoutGeneration { get; init; }
+    public string? LastLayoutOperationId { get; init; }
+    public ResolvedPosterPresentation Presentation => PosterPresentationPolicy.Resolve(Poster);
 }
 
 public sealed record SettingsProjection(
@@ -135,6 +142,7 @@ public sealed record DesktopUpProjection(
 {
     public IReadOnlyDictionary<string, PosterSurfaceProjection> PostersById => ControlCenter.PostersById;
     public IReadOnlyList<PosterSurfaceProjection> Posters => ControlCenter.Posters;
+    public IReadOnlyList<SpatialOperationProof> SpatialOperations { get; init; } = Array.Empty<SpatialOperationProof>();
     public long CatalogVersion => ControlCenter.CatalogVersion;
     public bool ProfileInitialized { get; init; }
 }

@@ -1,4 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup><OutputType>Exe</OutputType></PropertyGroup>
   <ItemGroup><ProjectReference Include="../../src/DesktopUp.Infrastructure/DesktopUp.Infrastructure.csproj" /></ItemGroup>
+  <ItemGroup><Compile Include="../Shared/MultiPosterFixtureData.cs" Link="MultiPosterFixtureData.cs" /></ItemGroup>
+  <ItemGroup><Compile Include="../Shared/MeasurementFixtureData.cs" Link="MeasurementFixtureData.cs" /></ItemGroup>
 </Project>

@@ -21,6 +21,7 @@ internal interface IDesktopWindowApi
         int height,
         int cornerRadius);
     bool ApplyPreparedBounds(nint windowHandle, DesktopPixelRect bounds);
+    bool ApplyPreparedBoundsBatch(IReadOnlyDictionary<nint, DesktopPixelRect> bounds) => false;
     void RemoveDwmBorder(nint windowHandle);
     int GetLastError();
 }
@@ -235,6 +236,15 @@ public sealed class DesktopLayerAttachment : IDesktopLayerAttachment
         }
     }
 
+    public bool ApplyPreparedBoundsBatch(IReadOnlyDictionary<nint, DesktopPixelRect> bounds)
+    {
+        lock (_gate)
+        {
+            return bounds.Count > 0 && bounds.All(p => p.Value.IsUsable && _original.ContainsKey(p.Key) && _windows.IsWindow(p.Key)) &&
+                _windows.ApplyPreparedBoundsBatch(bounds);
+        }
+    }
+
     public bool Detach(nint windowHandle)
     {
         lock (_gate)
@@ -427,6 +437,22 @@ internal sealed class DesktopWindowNativeApi : IDesktopWindowApi
             SwpNoCopyBits |
             SwpDeferErase);
 
+    public bool ApplyPreparedBoundsBatch(IReadOnlyDictionary<nint, DesktopPixelRect> bounds)
+    {
+        nint batch = BeginDeferWindowPos(bounds.Count);
+        if (batch == 0) return false;
+        foreach (var entry in bounds)
+        {
+            var frame = entry.Value;
+            batch = DeferWindowPos(batch, entry.Key, 0, frame.X, frame.Y, frame.Width, frame.Height,
+                // DeferWindowPos has a narrower documented flag set than SetWindowPos.
+                // SWP_DEFERERASE (0x2000) makes this batch fail with ERROR_INVALID_PARAMETER.
+                DesktopZOrderPolicy.SpatialBatchFlags);
+            if (batch == 0) return false;
+        }
+        return EndDeferWindowPos(batch);
+    }
+
     public void RemoveDwmBorder(nint windowHandle)
     {
         int cornerPreference = DwmwcpDoNotRound;
@@ -448,6 +474,14 @@ internal sealed class DesktopWindowNativeApi : IDesktopWindowApi
     [DllImport("user32.dll", EntryPoint = "IsWindow", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool IsWindowNative(nint windowHandle);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern nint BeginDeferWindowPos(int count);
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern nint DeferWindowPos(nint batch, nint window, nint after, int x, int y, int width, int height, uint flags);
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool EndDeferWindowPos(nint batch);
 
     [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW", SetLastError = true)]
     private static extern nint GetWindowLongPtr(nint windowHandle, int index);

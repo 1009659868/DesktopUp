@@ -12,8 +12,20 @@ internal static class StateCommandPolicy
             return Invalid("Target entity version is required.");
         PosterDefinition? current = Find(state, command.PosterId);
         if (current is null) return Missing();
+        if (command.Kind == PosterStateCommandKind.SetPresentation)
+        {
+            if (command.Source != StateCommandSource.ControlCenter) return Denied();
+            if (command.ReadSet is null || command.SpatialGesture is not null || command.SpatialPosture is not null)
+                return Invalid("Presentation edit requires entity CAS and cannot contain a spatial gesture.");
+            if (PosterPresentationPolicy.ValidateEdit(current, command.DesiredState) is { } error) return Invalid(error);
+        }
+        if (command.SpatialPosture is not null) return SpatialPostureCommitPolicy.Prepare(command, state);
+        string? spatialError = SpatialGestureCommitPolicy.Validate(command, state);
+        if (spatialError is not null) return Invalid(spatialError);
         PosterDefinition desired = NormalizeCollapse(command.Kind, current, command.DesiredState);
-        if (desired == current) return new() { ResultPosterId = current.PosterId };
+        if (desired == current) return command.SpatialGesture?.HasUserAdjusted == true
+            ? new() { Updates = new[] { current }, TouchLayoutIds = new[] { current.PosterId }, ResultPosterId = current.PosterId }
+            : new() { ResultPosterId = current.PosterId };
         if (command.Kind is PosterStateCommandKind.Move or PosterStateCommandKind.Resize &&
             (current.IsLocked || (command.Kind == PosterStateCommandKind.Resize && current.IsCollapsed)))
             return StateMutationPlan.Reject(StateCommandStatus.PermissionDenied, "Locked/collapsed poster does not allow this geometry operation.");
@@ -31,6 +43,8 @@ internal static class StateCommandPolicy
             PosterStateCommandKind.SetCollapsed => current with { IsCollapsed = desired.IsCollapsed, VerticalAnchor = desired.VerticalAnchor },
             PosterStateCommandKind.SetVisible => current with { IsVisible = desired.IsVisible },
             PosterStateCommandKind.Rename => current with { Title = desired.Title },
+            PosterStateCommandKind.SetPresentation => current with { Title = desired.Title, Subtitle = desired.Subtitle,
+                TemplateKey = desired.TemplateKey, LayoutParametersJson = desired.LayoutParametersJson },
             _ => current
         };
         if (desired != allowed) return Invalid("The command changed unrelated fields.");
@@ -120,7 +134,8 @@ internal static class StateCommandPolicy
     private static StateMutationPlan Missing() => StateMutationPlan.Reject(StateCommandStatus.NotFound, "Poster no longer exists.");
     private static StateMutationPlan Denied() => StateMutationPlan.Reject(StateCommandStatus.PermissionDenied, "Command is not available from this surface.");
 
-    // Preserve the proven V3-04-03 geometry contract: collapse keeps the top edge fixed.
+    // Legacy V3-04-03 path, retained until M04-04 connects the spatial expansion plan.
+    // Fixed-top normalization is NOT the new boundary-expansion product contract.
     private static PosterDefinition NormalizeCollapse(PosterStateCommandKind kind, PosterDefinition current, PosterDefinition desired)
     {
         if (kind != PosterStateCommandKind.SetCollapsed || desired.IsCollapsed == current.IsCollapsed || current.NormalizedExpandedHeight <= 0)

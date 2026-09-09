@@ -205,6 +205,24 @@ public sealed class DesktopLayerAttachmentTests
         Assert.True(attachment.IsAttached(100, nextGeneration));
     }
 
+    [Fact]
+    public void BatchValidatesEveryParticipantBeforeNativeCommitAndNeverFallsBackToSequentialMoves()
+    {
+        Assert.Equal(0x0314u, DesktopZOrderPolicy.SpatialBatchFlags);
+        Assert.Equal(0u, DesktopZOrderPolicy.SpatialBatchFlags & 0x2000u); // Unsupported by DeferWindowPos.
+        var windows = new FakeDesktopWindowApi();
+        var attachment = new DesktopLayerAttachment(windows, new FakeExplorerDesktopApi());
+        Assert.True(attachment.Attach(100, Host).Succeeded);
+        var frames = new Dictionary<nint, DesktopPixelRect> { [100] = new(0, 0, 300, 300), [101] = new(0, 300, 300, 300) };
+        Assert.False(attachment.ApplyPreparedBoundsBatch(frames)); Assert.Equal(0, windows.BatchCount);
+        Assert.True(attachment.Attach(101, Host).Succeeded);
+        Assert.True(attachment.ApplyPreparedBoundsBatch(frames)); Assert.Equal(1, windows.BatchCount);
+        windows.FailBatch = true;
+        Assert.False(attachment.ApplyPreparedBoundsBatch(frames)); Assert.Equal(2, windows.BatchCount);
+        Assert.Equal(0, windows.PreparedBoundsApplyCount);
+        Assert.False(attachment.ApplyPreparedBoundsBatch(new Dictionary<nint, DesktopPixelRect>()));
+    }
+
     private sealed class FakeExplorerDesktopApi : IExplorerDesktopApi
     {
         public bool Valid { get; set; } = true;
@@ -231,6 +249,10 @@ public sealed class DesktopLayerAttachmentTests
         public int PreparedBoundsApplyCount { get; private set; }
         public (int Width, int Height, int Radius) LastRoundedRegion { get; private set; }
         public DesktopPixelRect LastPreparedBounds { get; private set; }
+        public int BatchCount { get; private set; }
+        public bool FailBatch { get; set; }
+        public bool ApplyPreparedBoundsBatch(IReadOnlyDictionary<nint, DesktopPixelRect> bounds)
+        { BatchCount++; return !FailBatch; }
 
         public bool IsWindow(nint windowHandle) => windowHandle != 0;
         public nint GetOwner(nint windowHandle) => Owner;

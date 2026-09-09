@@ -25,6 +25,7 @@ public sealed record StateReadConflict(string Kind, string Id, long Expected, lo
 public sealed record DesktopStateSnapshot(PosterCatalogSnapshot Catalog, SettingsStateSnapshot Settings)
 {
     public long Revision => Catalog.Revision;
+    public IReadOnlyList<SpatialOperationProof> SpatialOperations { get; init; } = Array.Empty<SpatialOperationProof>();
 }
 
 public sealed record CreatePosterCommand(
@@ -58,6 +59,9 @@ public sealed record StateMutationPlan
     public string? ResultPosterId { get; init; }
     public StateCommandStatus? Rejection { get; init; }
     public string? Error { get; init; }
+    public IReadOnlyList<string> TouchLayoutIds { get; init; } = Array.Empty<string>();
+    public SpatialOperationProof? NewSpatialProof { get; init; }
+    public string? ConsumeSpatialOperationId { get; init; }
     public bool HasChanges => Updates.Count + Creates.Count + Removes.Count > 0 || Settings is not null;
     public static StateMutationPlan Reject(StateCommandStatus status, string error) =>
         new() { Rejection = status, Error = error };

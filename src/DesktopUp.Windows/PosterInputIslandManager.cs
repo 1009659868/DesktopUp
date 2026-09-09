@@ -51,6 +51,11 @@ public sealed class PosterInputIslandManager : IInputRegionHost
     private readonly IResourceLedger _ledger;
     private readonly IStructuredLog _log;
     private readonly Func<bool> _reassertClusterBottom;
+    private readonly PosterInputRouter _router;
+    private readonly PosterInputSessionKey _session;
+    private readonly nint _visualHandle;
+    private PosterInputCapture? _capture;
+    private bool _routingSuspended;
     private PosterInputLayoutSnapshot? _layout;
     private PosterInputRegion? _pressedRegion;
     private DesktopPixelRect _frame;
@@ -65,7 +70,8 @@ public sealed class PosterInputIslandManager : IInputRegionHost
         IDesktopLayerAttachment attachment,
         IResourceLedger ledger,
         IStructuredLog log,
-        Func<bool> reassertClusterBottom)
+        Func<bool> reassertClusterBottom,
+        PosterInputRouter router, PosterInputSessionKey session, nint visualHandle)
     {
         ArgumentNullException.ThrowIfNull(attachment);
         ArgumentNullException.ThrowIfNull(ledger);
@@ -75,6 +81,10 @@ public sealed class PosterInputIslandManager : IInputRegionHost
         _ledger = ledger;
         _log = log;
         _reassertClusterBottom = reassertClusterBottom;
+        _router = router;
+        _session = session;
+        _visualHandle = visualHandle;
+        _router.Register(session);
     }
 
     public nint WindowHandle { get; private set; }
@@ -82,6 +92,28 @@ public sealed class PosterInputIslandManager : IInputRegionHost
     public long AppliedLayoutRevision => _layout?.Revision ?? 0;
 
     public event EventHandler<PosterInputEventArgs>? Input;
+
+    // Reuse the existing capture-cancel path for stale spatial/environment work.
+    public void CancelPointerGesture() => EndPointerGesture(cancelled: true);
+
+    public void SuspendRouting()
+    {
+        EndPointerGesture(cancelled: true);
+        DisableRoutingNative();
+    }
+
+    private void DisableRoutingNative()
+    {
+        _router.Invalidate(_session);
+        _routingSuspended = true;
+        if (_disposed || WindowHandle == 0) return;
+        nint empty = CreateRectRgn(0, 0, 0, 0);
+        if (empty != 0 && SetWindowRgn(WindowHandle, empty, redraw: false) != 0) return;
+        if (empty != 0) _ = DeleteObject(empty);
+        // A zero-alpha layered window also stops intercepting pointer input.
+        bool transparent = SetLayeredWindowAttributes(WindowHandle, 0, 0, LwaAlpha);
+        _log.Write(transparent ? "warning" : "error", "poster.input_suspend_region_failed", new { transparent });
+    }
 
     public bool Create(
         DesktopShellHostSnapshot desktopHost,
@@ -179,8 +211,6 @@ public sealed class PosterInputIslandManager : IInputRegionHost
             return false;
         }
 
-        _frame = frame;
-        _layout = layout;
         bool moved = SetWindowPos(
             WindowHandle,
             0,
@@ -192,11 +222,21 @@ public sealed class PosterInputIslandManager : IInputRegionHost
         if (!moved || SetWindowRgn(WindowHandle, region, redraw: true) == 0)
         {
             _ = DeleteObject(region);
+            DisableRoutingNative();
             return false;
         }
 
         // A successful SetWindowRgn transfers region ownership to Windows.
-        return true;
+        _frame = frame;
+        _layout = layout;
+        if ((!_routingSuspended || SetLayeredWindowAttributes(WindowHandle, 0, 1, LwaAlpha)) &&
+            _router.Publish(_session, frame, layout))
+        {
+            _routingSuspended = false;
+            return true;
+        }
+        DisableRoutingNative();
+        return false;
     }
 
     public bool Reattach(DesktopShellHostSnapshot desktopHost)
@@ -297,21 +337,24 @@ public sealed class PosterInputIslandManager : IInputRegionHost
 
     private void BeginPointerGesture(nint lParam)
     {
-        PosterInputRegion? target = HitTest(GetSignedLowWord(lParam), GetSignedHighWord(lParam));
-        if (target is null)
-        {
-            return;
-        }
+        if (!GetCursorPos(out NativePoint point) || ResolveRoute(point) is not { } route) return;
+        route.Owner.BeginResolvedGesture(route.Hit, point);
+    }
 
-        _pressedRegion = target;
-        _pressFrame = _frame;
+    private void BeginResolvedGesture(PosterInputHit hit, NativePoint point)
+    {
+        if (_disposed || _pressedRegion is not null || (_capture = _router.Begin(hit)) is null) return;
+        _pressedRegion = hit.Region;
+        _pressFrame = hit.Frame;
         _gestureMoved = false;
-        _ = GetCursorPos(out _pressCursor);
+        _pressCursor = point;
         _ = SetCapture(WindowHandle);
+        if (GetCapture() != WindowHandle) EndPointerGesture(cancelled: true);
     }
 
     private void ContinuePointerGesture()
     {
+        if (_pressedRegion is not null && !_router.Owns(_capture)) { EndPointerGesture(cancelled: true); return; }
         if (_pressedRegion is not { } target || !IsGestureTarget(target.Kind) ||
             !GetCursorPos(out NativePoint cursor))
         {
@@ -340,17 +383,16 @@ public sealed class PosterInputIslandManager : IInputRegionHost
             X = GetSignedLowWord(lParam),
             Y = GetSignedHighWord(lParam)
         };
-        if (!ScreenToClient(WindowHandle, ref point) ||
-            HitTest(point.X, point.Y) is not { } target ||
-            target.Kind is not (PosterInputTargetKind.Item or
+        if (ResolveRoute(point) is not { } route ||
+            route.Hit.Region.Kind is not (PosterInputTargetKind.Item or
                 PosterInputTargetKind.ItemScroll))
         {
             return;
         }
 
-        RaiseInput(
+        route.Owner.RaiseInput(
             PosterInputEventKind.Scrolled,
-            target,
+            route.Hit.Region,
             0,
             0,
             unchecked((short)((long)wParam >> 16)));
@@ -363,13 +405,18 @@ public sealed class PosterInputIslandManager : IInputRegionHost
             return;
         }
 
+        bool owns = _router.Owns(_capture);
+        bool cursorAvailable = GetCursorPos(out NativePoint cursor);
+        cancelled |= !owns || !cursorAvailable || (!_gestureMoved &&
+            (_capture is null || !_router.CanInvoke(_capture, cursor.X, cursor.Y)));
         _pressedRegion = null;
+        _router.End(_capture);
+        _capture = null;
         if (releaseCapture && GetCapture() == WindowHandle)
         {
             _ = ReleaseCapture();
         }
 
-        _ = GetCursorPos(out NativePoint cursor);
         int deltaX = cursor.X - _pressCursor.X;
         int deltaY = cursor.Y - _pressCursor.Y;
         PosterInputEventKind eventKind = cancelled
@@ -396,7 +443,23 @@ public sealed class PosterInputIslandManager : IInputRegionHost
                 deltaX,
                 deltaY,
                 _layout?.Revision ?? 0,
-                wheelDelta));
+                wheelDelta) { Session = _session });
+
+    private (PosterInputIslandManager Owner, PosterInputHit Hit)? ResolveRoute(NativePoint point)
+    {
+        PosterInputIslandManager[] candidates;
+        lock (Instances) candidates = Instances.Values.Where(i => !i._disposed && ReferenceEquals(i._router, _router)).ToArray();
+        var visuals = candidates.ToDictionary(i => i._visualHandle);
+        var order = new List<PosterInputSessionKey>();
+        var seen = new HashSet<nint>();
+        // Inspect order only. Never reorder clusters to resolve an input ambiguity.
+        for (nint hwnd = GetTopWindow(0); hwnd != 0 && seen.Count < 4096 && seen.Add(hwnd); hwnd = GetWindow(hwnd, 2))
+            if (visuals.TryGetValue(hwnd, out var owner) && IsWindowVisible(hwnd) && IsWindowVisible(owner.WindowHandle))
+                order.Add(owner._session);
+        var hit = _router.Resolve(point.X, point.Y, order);
+        var receiver = hit is null ? null : candidates.FirstOrDefault(i => i._session == hit.Session);
+        return receiver is null || hit is null ? null : (receiver, hit);
+    }
 
     private PosterInputRegion? HitTest(int x, int y)
     {
@@ -418,9 +481,9 @@ public sealed class PosterInputIslandManager : IInputRegionHost
 
     private bool SetPointerCursor()
     {
-        if (!GetCursorPos(out NativePoint point) ||
-            !ScreenToClient(WindowHandle, ref point) ||
-            HitTest(point.X, point.Y) is not { } target)
+        if (!GetCursorPos(out NativePoint point)) return false;
+        PosterInputRegion? resolved = _router.Owns(_capture) ? _pressedRegion : ResolveRoute(point)?.Hit.Region;
+        if (resolved is not { } target)
         {
             return false;
         }
@@ -590,6 +653,8 @@ public sealed class PosterInputIslandManager : IInputRegionHost
             return;
         }
         _disposed = true;
+        _router.Remove(_session);
+        _capture = null;
         Input = null;
         _pressedRegion = null;
 
@@ -685,6 +750,14 @@ public sealed class PosterInputIslandManager : IInputRegionHost
         public string ClassName;
         public nint SmallIcon;
     }
+
+    [DllImport("user32.dll")]
+    private static extern nint GetTopWindow(nint parent);
+    [DllImport("user32.dll")]
+    private static extern nint GetWindow(nint window, uint command);
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool IsWindowVisible(nint window);
 
     [DllImport("kernel32.dll", EntryPoint = "GetModuleHandleW", CharSet = CharSet.Unicode, SetLastError = true)]
     private static extern nint GetModuleHandle(string? moduleName);

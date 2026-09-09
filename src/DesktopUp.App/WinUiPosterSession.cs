@@ -6,14 +6,16 @@ namespace DesktopUp;
 internal sealed class WinUiPosterSessionFactory(
     IDesktopLayerAttachment attachment, IStateCommandService commands, IResourceLedger ledger,
     IStructuredLog log, Action showControlCenter, Action<string, bool> editingChanged,
-    Action<DesktopEnvironmentChangedEventArgs> environmentChanged) : IPosterSessionFactory
+    Action<DesktopEnvironmentChangedEventArgs> environmentChanged, PosterSpatialRuntime spatial,
+    PosterInputRouter inputRouter, Action<PosterRemovalRequest> requestRemoval) : IPosterSessionFactory
 {
     public IPosterSession Create(string posterId, long epoch)
     {
         var scopedLedger = new PosterSessionLedger(ledger, posterId, epoch);
         var scopedLog = new PosterSessionLog(log, posterId, epoch);
         return new WinUiPosterSession(posterId,
-            new PosterVisualWindow(attachment, commands, scopedLedger, scopedLog, showControlCenter,
+            new PosterVisualWindow(attachment, commands, scopedLedger, scopedLog, spatial,
+                inputRouter, new(posterId, epoch), requestRemoval, showControlCenter,
                 editing => editingChanged(posterId, editing)), scopedLedger, scopedLog, environmentChanged);
     }
 }
@@ -37,6 +39,7 @@ internal sealed class WinUiPosterSession(string posterId, PosterVisualWindow vis
         _lifetime = lifetime;
         _environment = environment;
         if (!visual.Show(environment.Shell, environment.Displays, projection)) return false;
+        visual.RegisterSpatialSurface();
         _watcher = new DesktopEnvironmentWatcher(WindowHandle, ReassertBottom);
         _watcher.Changed += OnEnvironmentChanged;
         _watcher.PointerActivationGuarded += OnPointerGuarded;
@@ -52,7 +55,9 @@ internal sealed class WinUiPosterSession(string posterId, PosterVisualWindow vis
     {
         if (_disposed || _lifetime.IsCancellationRequested) return false;
         _environment = environment;
-        return visual.Recover(environment.Shell, environment.Displays, request);
+        bool recovered = visual.Recover(environment.Shell, environment.Displays, request);
+        if (!recovered) visual.SuspendInput();
+        return recovered;
     }
     public bool IsAttached(DesktopShellHostSnapshot shell) => !_disposed && visual.IsAttached(shell);
     public bool SetEditing(bool editing) => !_disposed && !_lifetime.IsCancellationRequested && visual.SetEditing(editing);

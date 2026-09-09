@@ -2,12 +2,14 @@ using DesktopUp.Application;
 
 namespace DesktopUp;
 
-internal sealed class ControlCenterService(
+internal sealed partial class ControlCenterService(
     IResourceLedger ledger,
     IStructuredLog log,
     Action<PosterStateCommand> posterCommand,
     Action toggleDynamicEffectsPaused,
-    Action<string?> selectionChanged) : IDisposable
+    Action<string?> selectionChanged,
+    IStateProjectionCoordinator state, IStateCommandService commands, PosterInputRouter inputRouter,
+    Func<PosterSurfaceProjection, EffectivePosterLayout?> effectiveLayout) : IDisposable
 {
     private ControlCenterWindow? _window;
     private IDisposable? _lease;
@@ -16,10 +18,15 @@ internal sealed class ControlCenterService(
     private IReadOnlyList<PosterSessionSnapshot> _sessions = Array.Empty<PosterSessionSnapshot>();
     private bool _environmentPending = true;
     private string? _commandError;
+    private readonly PosterRemovalConfirmation _removal = new();
+    private bool _removalShowing;
+    private bool _disposed;
+    private IDisposable? _removalLease;
     public string? SelectedPosterId => _selection.SelectedPosterId;
 
     public void Show()
     {
+        if (_disposed) return;
         ControlCenterWindow? pendingWindow = null;
         string stage = "activate-existing";
         try
@@ -30,7 +37,7 @@ internal sealed class ControlCenterService(
                 pendingWindow = new ControlCenterWindow(
                     SelectPoster,
                     posterCommand,
-                    toggleDynamicEffectsPaused);
+                    toggleDynamicEffectsPaused, RequestRemoval, effectiveLayout);
                 stage = "load-xaml";
                 pendingWindow.InitializeView();
                 stage = "apply-projection";
@@ -89,6 +96,8 @@ internal sealed class ControlCenterService(
         if (!_selection.ApplyProjection(projection)) return;
         _projection = projection;
         _commandError = null;
+        if (_removal.Pending is not null && !_removal.IsCurrent(projection))
+            CancelRemoval("海报或目录已变化，删除确认已取消；请查看最新状态后重试。");
         Present();
         if (previousSelection != SelectedPosterId) selectionChanged(SelectedPosterId);
     }
@@ -142,6 +151,7 @@ internal sealed class ControlCenterService(
 
     private void OnClosed(object sender, Microsoft.UI.Xaml.WindowEventArgs args)
     {
+        CancelRemoval("控制中心已关闭，未删除海报。");
         if (_window is not null)
         {
             _window.Closed -= OnClosed;
@@ -154,6 +164,8 @@ internal sealed class ControlCenterService(
 
     public void Dispose()
     {
+        _disposed = true;
+        CancelRemoval("application-exit");
         if (_window is not null)
         {
             _window.Closed -= OnClosed;
@@ -163,5 +175,67 @@ internal sealed class ControlCenterService(
         _lease?.Dispose();
         _lease = null;
         _projection = null;
+    }
+
+    public void CancelRemoval(string reason)
+    {
+        if (_removal.Pending is null) return;
+        _removal.Cancel();
+        _window?.CancelRemovalDialog();
+        _removalLease?.Dispose();
+        _removalLease = null;
+        _commandError = reason;
+        log.Write("info", "poster.removal_cancelled", new { reason });
+    }
+
+    public async void RequestRemoval(PosterRemovalRequest request)
+    {
+        if (_disposed || _removalShowing) return;
+        bool OriginCurrent() => request.Origin is not { } key || inputRouter.IsCurrent(key, request.OriginLayoutRevision);
+        _removalShowing = true;
+        IDisposable? dialogLease = null;
+        try
+        {
+            if (!OriginCurrent()) return;
+            var preview = state.PrepareRemoval(request.PosterId);
+            if (preview is null || _removal.Begin(request, preview) is not { } ticket)
+            {
+                _commandError = "目标已变化或不存在；未删除任何海报，请重试。";
+                Present();
+                return;
+            }
+            Show();
+            await Task.Yield();
+            if (_disposed || _removal.Pending?.Id != ticket.Id || _window is null) return;
+            dialogLease = ledger.Acquire("dialog.poster-removal", request.PosterId);
+            _removalLease = dialogLease;
+            log.Write("info", "poster.removal_confirmation_opened", new { ticket.Id, request.PosterId, request.EntityVersion, preview.IsLastPoster });
+            bool confirmed = await _window.ShowRemovalDialogAsync(ticket);
+            if (_disposed || !OriginCurrent()) { _removal.Cancel(); return; }
+            // Refresh before completion; projection updates invalidate a stale target/catalog ticket.
+            state.Refresh();
+            if (_removal.Complete(ticket.Id, confirmed) is { } command)
+            {
+                var result = commands.Execute(command);
+                ShowCommandResult(result);
+                log.Write(result.Succeeded ? "info" : "warning", "poster.removal_completed",
+                    new { command.PosterId, command.RequestId, Status = result.Status.ToString(), result.Error });
+            }
+            else log.Write("info", "poster.removal_confirmation_dismissed", new { request.PosterId, confirmed });
+        }
+        catch (Exception exception)
+        {
+            _removal.Cancel();
+            _commandError = "删除确认未完成，未自动重试；请检查当前目录后重试。";
+            log.Write("error", "poster.removal_confirmation_failed", new { exception.Message, exception.HResult });
+            if (!_disposed) Present();
+        }
+        finally
+        {
+            _removal.Cancel();
+            dialogLease?.Dispose();
+            if (ReferenceEquals(_removalLease, dialogLease)) _removalLease = null;
+            _removalShowing = false;
+        }
     }
 }

@@ -12,7 +12,11 @@ public sealed record PosterStateSnapshot(
     long PosterRevision,
     PosterDefinition Poster,
     DateTimeOffset UpdatedAtUtc,
-    long EntityVersion = 1);
+    long EntityVersion = 1)
+{
+    public long LayoutGeneration { get; init; }
+    public string? LastLayoutOperationId { get; init; }
+}
 
 public sealed record SettingsStateSnapshot(
     long Revision,

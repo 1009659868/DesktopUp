@@ -51,6 +51,8 @@
                             <TextBlock x:Name="RevisionText" Opacity="0.7" Text="committed revision —" TextWrapping="Wrap" />
                             <TextBlock x:Name="PosterDetailText" Text="等待状态投影。" TextWrapping="Wrap" />
                             <TextBlock x:Name="RuntimeDetailText" TextWrapping="Wrap" />
+                            <TextBlock x:Name="PresentationDetailText" TextWrapping="Wrap" Opacity="0.75"
+                                       AutomationProperties.AutomationId="PresentationParameters" />
                             <StackPanel Orientation="Horizontal" Spacing="8">
                                 <Button x:Name="LockButton" Click="LockButton_Click" Content="锁定" IsEnabled="False"
                                         AutomationProperties.AutomationId="LockPoster" />
@@ -58,6 +60,8 @@
                                         AutomationProperties.AutomationId="CollapsePoster" />
                                 <Button x:Name="VisibilityButton" Click="VisibilityButton_Click" Content="隐藏" IsEnabled="False"
                                         AutomationProperties.AutomationId="VisibilityPoster" />
+                                <Button x:Name="RemoveButton" Click="RemoveButton_Click" Content="删除海报…" IsEnabled="False"
+                                        AutomationProperties.AutomationId="RemovePoster" />
                             </StackPanel>
                         </StackPanel>
                     </Border>

@@ -135,6 +135,7 @@ public sealed class DisplayTopologyTests
     }
 
     [Fact]
+    [Trait("Contract", "LegacyClampProjection-NotSpatialRecoveryAcceptance")]
     public void GeometryPreservesRightBottomAnchorAndClampsToWorkArea()
     {
         var rightBottom = new PosterPlacementState(420, 240, 1, 1);

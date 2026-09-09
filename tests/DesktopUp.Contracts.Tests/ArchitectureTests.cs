@@ -119,7 +119,7 @@ public sealed class ArchitectureTests
             "DesktopUp.Windows",
             "DesktopLayerAttachment.cs"));
 
-        Assert.Contains("Background = Brush(245, 33, 36, 42)", poster, StringComparison.Ordinal);
+        Assert.Contains("Background = ColorBrush(_presentation.Parameters.Theme.Background, 245)", poster, StringComparison.Ordinal);
         Assert.Contains("attachment.ApplyPreparedBounds", poster, StringComparison.Ordinal);
         Assert.Contains("WmEraseBackground", watcher, StringComparison.Ordinal);
         Assert.Contains("FillRect", watcher, StringComparison.Ordinal);

@@ -190,6 +190,7 @@ public sealed class StateProjectionCoordinatorTests
     }
 
     [Fact]
+    [Trait("Contract", "LegacyFixedTopCommand-ReplacedByM04SpatialExpansion")]
     public void CollapseAndExpandKeepTheSameNormalizedTop()
     {
         using var fixture = new ProjectionFixture();

@@ -12,17 +12,23 @@
 | --- | --- | --- | --- |
 | A07 | PosterSessionRegistry | PosterId → Session；List/Create/Close/Dispose，晚到回调校验 session generation | V3-04-M03 |
 | A08 | DesktopEnvironmentCoordinator | 唯一环境发现/恢复调度，逐实例结果；不保存单张业务状态 | V3-04-M03 |
-| A09 | PosterSpatialCoordinator（设计职责） | 完整占位/障碍读集、候选推让、条件归位因果、异构几何CAS与呈现协调；纯求解放Domain，复用现有命令权威 | V3-04-M04-02..05 |
+| A09 | PosterSpatialCoordinator（由PosterSpatialRuntime承接） | 完整占位/障碍读集、候选推让、条件归位因果、异构几何CAS与呈现协调；纯求解放Domain，复用现有命令权威 | V3-04-M04-02..05 |
 | B13 | PosterStackCoordinator | 正常布局无重叠；保留异常重叠命中防御和cluster顺序；不得以抬层消除碰撞或盖住普通程序 | V3-04-M04-06 |
 | D11 | PosterCatalogApplicationService | Create/CloneConfig/Rename/Remove/List，profile 初始化与零实例 | V3-04-M01/02 |
 | D12 | ScopedCommandCoordinator | Entity/ReadSet CAS、全局提交序列、批量状态事务和 NotFound | V3-04-M02 |
 | D13 | PortableProfileApplicationService（设计） | 一致快照导出、解析/依赖映射/影响预览、确认后按目标版本导入；不形成第二权威 | V3-04-06；主题载荷复用 V3-07-04 |
 | E14 | ContentCapabilities | 文件/应用/Shell/虚拟流能力和 DropIntent；不越权搬运 | V3-05-01/07/13 |
-| E15 | PosterThemeParameterContract | 每实例 schema/默认/单位/范围/版本；不强制固定 NIGHT OPS 字段 | V3-04-M05、V3-07 |
+| E15 | PosterThemeParameterContract（M05最小实现已接入） | Domain/PosterPresentationPolicy解析v1参数/旧兼容/安全fallback，Application/PosterPresentationDraft与SetPresentation复用实体CAS；每实例Presentation.Metrics供renderer/输入/展开/恢复，不强制固定NIGHT OPS；完整manifest/主题加载仍V3-07 | V3-04-M05、V3-07 |
 | F13 | CollectionSubscriptionHub | 共享来源 watcher 引用计数、取消、事件合并，更新多个关联视图 | V3-05-11 |
 | D07/D08 扩展 | Existing Theme/AI Services | 共享服务但每次计划带目标 IDs/实体版本，实例覆盖与草稿独立 | V3-07/08 |
 
 已实现状态以代码锚点为准。App/PosterVisualWindow 中尚集中存在的协调和演示逻辑，在对应项逐步提取；模块目录不把计划中的类当作现有代码。
+
+M05实际边界见[参数合同](../40_Implementation/V3-04/M05_PRESENTATION_PARAMETERS.md)：几何、内容参数与主题实例身份分离；外框缩放不改iconSize/字号，参数提交不擅自移动外框。只读中心摘要已接，完整编辑器后续复用同一草稿/提交口。
+
+M06为[多实例合同夹具](../40_Implementation/V3-04/M06_MULTI_INSTANCE_FIXTURES.md)，复用上述模块而非新增产品服务；测试专用共享数据、可重复故障注入及显式隔离App探针，不进入日常启动路径。2026-09-09完整405项复跑、固定Release的实际Exercise/Restart及M05参数/空间尾门均已通过；人工安全余项保留至下一项M07。
+
+当前[M07](../40_Implementation/V3-04/M07_MEASUREMENT_AND_SAFETY.md)是外部测量/安全门，不新增生产服务或状态权威：测试专用1/3/6配置、外部采样、仅隔离smoke启用的提交计时和短人工入口。411/411/Release通过；入口已适配5.1和当前环境；权限仅记录，先人工再收口测量。完整矩阵及人工仍待补，不以脚本启动通过宣布性能达标。
 
 ## 1. 目的
 
@@ -202,6 +208,7 @@ F06/F07/F08/F11 可先用 C# 适配器，遇到 AOT、COM 稳定性或第三方�
 | --- | --- | --- | --- |
 | Poster 业务状态 | D01 | F01 SQLite | 只发命令 |
 | FrameGeometry | D01 | F01 SQLite | 编辑预览后提交 |
+| EffectiveExpansion（R2已接入） | SpatialExpansionPolicy＋EffectivePosterLayouts＋PosterSpatialRuntime | 会话内可重建，无新持久字段；不得覆盖FrameGeometry意图 | 中心/海报同源有效Bounds及受限说明；托盘同源数量；独立InsufficientSpace结果 |
 | Item/Collection | D03/D04 | F01 SQLite | 只发命令 |
 | 文件传输执行状态 | D05 | F02 journal + F01 结果 | 观察/取消 |
 | 活跃度原始统计 | D03 | F01 SQLite | 只读 |
@@ -238,7 +245,7 @@ Bootstrap → 所有组合根
 | --- | --- | --- |
 | B01/B02/B07/B12 | `Services/WidgetLayerService.cs`、相关 layer/recovery tests | 高；保留已验证 cluster，扩展按 PosterId 管理多个实例 |
 | B03/B05/B09/B10 | `Views/WidgetWindowBase.*`、Win32Helper、显示器策略 | 高；去除无关 Widget 类型 |
-| B11 | `WidgetWindowBase.Collapse.cs`、`WidgetCompact*` policies | 中高；只保留点击收起与顶部锚定核心 |
+| B11 | `WidgetWindowBase.Collapse.cs`、`WidgetCompact*` policies | 中高；复用尺寸意图/可行性分离；完整尺寸方向回退后按R2最小高度临时展开，不照搬抬层或自动缩小持久尺寸 |
 | A01–A06/C05 | App 启动、Tray、bounded scheduler、runtime policy | 中高；重新命名并删去无关服务 |
 | D04/D05/F02 | Desktop organization、managed storage、recovery store/transaction | 高；必须符合 DesktopUp recovery ledger |
 | F04–F11 | FileService、FolderWatcher、NativeDrop、Shortcut、Shell tests | 高；逐能力移植并保留许可证 |
@@ -248,6 +255,10 @@ Bootstrap → 所有组合根
 | B06 | DeskBox 完整矩形交互不足以满足透明空白穿透 | 新建并优先探针 |
 
 ## 14. 首批冻结端口
+
+M04-06增量：Application的PosterInputRouter/PosterRemovalConfirmation承接共享路由及单次确认；Windows只提供实际HWND顺序和原生输入，App绑定独立会话并在唯一中心承载确认。旧状态命令/CAS/Host沿用，无新schema。313/313及实际确认/退出/链式回归通过，见 [输入确认合同](../40_Implementation/V3-04/M04_INPUT_CONFIRMATION.md)。
+
+M04-03..05增量：Domain求解→Application手势/收展事务合同→App的PosterSpatialRuntime共享协调→Windows整批移动视觉/输入岛；既有命令权威/宿主保护保留。Infrastructure追加v5布局代次/因果表。288/288及真实三海报空间smoke通过，见 [空间运行合同](../40_Implementation/V3-04/M04_SPATIAL_RUNTIME.md)。M04-02纯计算证据保留在其阶段合同，不再代表当前运行边界。
 
 V3-01/02 首先冻结以下接口，避免窗口代码再次侵入业务层：
 
