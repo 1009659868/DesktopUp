@@ -1,6 +1,8 @@
 using DesktopUp.Application;
 using DesktopUp.Domain;
 using Microsoft.UI.Dispatching;
+using Microsoft.UI.Xaml.Media;
+using System.Diagnostics;
 
 namespace DesktopUp;
 
@@ -34,9 +36,10 @@ internal sealed partial class PosterSpatialRuntime
         { completed(commands.Execute(request)); return; }
         int compactHeight = Math.Max(1, (int)Math.Round(PosterFrameGeometryPolicy.CollapsedHeightDip * scene!.Environment.DpiY / 96d));
         var source = scene.Posters.Single(p => p.PosterId == request.PosterId);
-        var proof = request.DesiredState.IsCollapsed ? projection.SpatialOperations.FirstOrDefault(p => p.ExpandedSource.PosterId == request.PosterId) : null;
-        var expansion = !request.DesiredState.IsCollapsed
-            ? SpatialExpansionPolicy.Plan(scene, request.PosterId, compactHeight, request.RequestId, target.Presentation.Metrics) : null;
+        var continuous = SpatialContinuitySolver.Plan(scene, request.PosterId, request.DesiredState.IsCollapsed,
+            compactHeight, request.RequestId, target.Presentation.Metrics, projection.SpatialContinuities.FirstOrDefault(s =>
+                s.Environment.WorkspaceId == scene.Environment.WorkspaceId));
+        var expansion = !request.DesiredState.IsCollapsed ? continuous : null;
         if (expansion?.Outcome == SpatialExpansionOutcome.InsufficientSpace)
         {
             if (request.Source != StateCommandSource.System) owner.ShowInsufficientSpaceFeedback();
@@ -45,30 +48,44 @@ internal sealed partial class PosterSpatialRuntime
                 with { Status = StateCommandStatus.InsufficientSpace });
             return;
         }
-        var group = expansion?.Group ?? SpatialPushSolver.Plan(scene, request.PosterId, true, compactHeight, request.RequestId, proof);
+        var group = continuous.Group;
         var plan = group.Plan;
         if (!plan.Succeeded)
         { completed(Failure(request, "收展未执行（不是普通空间不足）：" + string.Join(", ", plan.Issues.Select(i => i.Reason)))); return; }
+        SpatialAnimationSchedule schedule;
+        try { schedule = SpatialAnimationSchedule.Create(scene, group.Frames, animationOptions); }
+        catch (ArgumentException exception)
+        { completed(Failure(request, "动画轨迹未提交：" + exception.Message)); return; }
         var final = plan.Changes.FirstOrDefault(p => p.PosterId == request.PosterId)?.After ?? source.Bounds;
         var desired = SpatialGestureCommitPolicy.Capture(target.Poster, final, scene.Environment, target.Poster.ExpandedHeightDip)
             with { IsCollapsed = request.DesiredState.IsCollapsed };
         var reads = new StateReadSet(projection.Posters.ToDictionary(p => p.Poster.PosterId, p => p.EntityVersion),
             CatalogVersion: projection.CatalogVersion).Freeze();
         var command = request with { ExpectedRevision = projection.Revision, DesiredState = desired, ReadSet = reads,
-            SpatialPosture = new(scene, desired.IsCollapsed, compactHeight, null) { AllowPush = true, ReturnOperationId = proof?.OperationId,
+            SpatialPosture = new(scene, desired.IsCollapsed, compactHeight, null) { AllowPush = true, UseContinuity = true,
                 ContentMetrics = target.Presentation.Metrics } };
         var timer = owner.SpatialDispatcher.CreateTimer();
-        timer.Interval = TimeSpan.FromMilliseconds(16);
+        timer.Interval = TimeSpan.FromMilliseconds(100); // Cancellation/stall watchdog, never an animation clock.
         timer.IsRepeating = true;
         var participants = plan.Changes.Select(p => _windows[p.PosterId]).ToArray();
-        var run = new PostureRun(owner, command, scene, group.Frames, participants, timer, completed) { Changes = plan.Changes };
+        var run = new PostureRun(owner, command, scene, schedule, animationOptions, participants, timer, completed) { Changes = plan.Changes };
         _posture = run;
-        timer.Tick += AdvancePosture;
+        timer.Tick += WatchPosture;
+        run.RenderingHandler = (_, _) =>
+        {
+            try { AdvancePosture(run); }
+            catch (Exception exception)
+            {
+                log.Write("error", "spatial.animation_failed", new { run.Command.RequestId, exception.Message });
+                CancelPosture("animation-exception");
+            }
+        };
         foreach (var window in participants) window.BeginPosturePreview(command.RequestId, window == owner);
         log.Write("info", "spatial.posture_started", new { command.RequestId, command.PosterId,
             participants = participants.Select(p => p.PosterId), frames = run.Frames.Count, group.ConsumeOperationId,
+            keyframes = group.Frames.Count, animation = animationOptions, nominalDurationMs = schedule.NominalDurationMs,
             collapsed = desired.IsCollapsed,
-            outcome = expansion?.Outcome.ToString(), preferredHeight = source.ExpandedHeight,
+            model = "continuity-v1", outcome = expansion?.Outcome.ToString(), preferredHeight = source.ExpandedHeight,
             effectiveHeight = final.Height, minimumHeight = expansion?.MinimumHeight,
             initialBounds = source.Bounds, finalBounds = final,
             downGrowth = expansion is null ? (long?)null : final.Bottom - source.Bounds.Bottom,
@@ -76,28 +93,41 @@ internal sealed partial class PosterSpatialRuntime
             simultaneousFrames = run.Frames.Count(f => f.Changes.Any(c => c.PosterId == command.PosterId) &&
                 f.Changes.Any(c => c.PosterId != command.PosterId)),
             returnOnlyFrames = run.Frames.Count(f => f.Changes.All(c => c.PosterId != command.PosterId)) });
+        run.Clock.Start();
+        CompositionTarget.Rendering += run.RenderingHandler;
         timer.Start();
     }
 
-    private void AdvancePosture(DispatcherQueueTimer timer, object args)
+    private void WatchPosture(DispatcherQueueTimer timer, object args)
     {
         if (_posture is not { } run || !ReferenceEquals(run.Timer, timer)) return;
+        if (run.Clock.Elapsed.TotalMilliseconds > Math.Min(120000, 5000 + run.Schedule.NominalDurationMs + run.Frames.Count * 100d))
+        { CancelPosture("rendering-stalled"); return; }
         if (!TrySnapshot(run.Owner, out var scene, out var current) || scene!.Environment != run.Initial.Environment || !run.ReadsCurrent(current!))
         { CancelPosture("environment-or-read-set-stale"); return; }
-        if (run.Index < run.Frames.Count)
+    }
+
+    private void AdvancePosture(PostureRun run)
+    {
+        if (!ReferenceEquals(_posture, run)) return;
+        if (!TrySnapshot(run.Owner, out var scene, out var current) || scene!.Environment != run.Initial.Environment || !run.ReadsCurrent(current!))
+        { CancelPosture("environment-or-read-set-stale"); return; }
+        if (!run.Cursor.Complete)
         {
+            if (!run.Cursor.TryTake(run.Clock.Elapsed.TotalMilliseconds, out var frame)) return;
             long probeStart = _measurePostureFrames ? System.Diagnostics.Stopwatch.GetTimestamp() : 0;
-            var frame = run.Frames[run.Index++];
-            var prepared = frame.Changes.Select(p => _windows[p.PosterId].PrepareSpatialFrame(Pixels(p.To))).ToArray();
+            var prepared = frame!.Changes.Select(p => _windows[p.PosterId].PrepareSpatialFrame(Pixels(p.To))).ToArray();
             bool applied = prepared.All(p => p is not null) && run.Owner.CommitSpatialFrames(prepared.Select(p => p!).ToArray());
-            if (_measurePostureFrames) log.Write("info", "spatial.probe_frame", new { run.Command.RequestId, index = run.Index,
+            if (_measurePostureFrames) log.Write("info", "spatial.probe_frame", new { run.Command.RequestId, index = run.Cursor.Index,
                 applied, qpc = System.Diagnostics.Stopwatch.GetTimestamp(), frequency = System.Diagnostics.Stopwatch.Frequency,
+                maximumEdgeDelta = frame.Changes.Select(c => SpatialAnimationSchedule.EdgeDistance(c.From, c.To)).DefaultIfEmpty().Max(),
+                elapsedMs = run.Clock.Elapsed.TotalMilliseconds,
                 prepareAndCommitMs = System.Diagnostics.Stopwatch.GetElapsedTime(probeStart).TotalMilliseconds });
             if (!applied)
                 CancelPosture("native-batch-failed");
             return;
         }
-        timer.Stop();
+        run.Timer.Stop();
         StateCommandResult result = commands.Execute(run.Command);
         if (_posture != run) return;
         FinishPosture(run, result);
@@ -112,7 +142,9 @@ internal sealed partial class PosterSpatialRuntime
 
     private void FinishPosture(PostureRun run, StateCommandResult result)
     {
-        run.Timer.Stop(); run.Timer.Tick -= AdvancePosture;
+        run.Timer.Stop(); run.Timer.Tick -= WatchPosture;
+        CompositionTarget.Rendering -= run.RenderingHandler;
+        run.Clock.Stop();
         if (result.Succeeded && result.Projection is { } projection)
             foreach (var change in run.Changes)
                 if (projection.PostersById.TryGetValue(change.PosterId, out var target))
@@ -139,16 +171,20 @@ internal sealed partial class PosterSpatialRuntime
     }
 
     private sealed class PostureRun(PosterVisualWindow owner, PosterStateCommand command, SpatialSnapshot initial,
-        IReadOnlyList<SpatialBatchFrame> frames, IReadOnlyList<PosterVisualWindow> participants, DispatcherQueueTimer timer, Action<StateCommandResult> completed)
+        SpatialAnimationSchedule schedule, PosterAnimationOptions options, IReadOnlyList<PosterVisualWindow> participants,
+        DispatcherQueueTimer timer, Action<StateCommandResult> completed)
     {
         public PosterVisualWindow Owner { get; } = owner;
         public PosterStateCommand Command { get; } = command;
         public SpatialSnapshot Initial { get; } = initial;
-        public IReadOnlyList<SpatialBatchFrame> Frames { get; } = frames;
+        public SpatialAnimationSchedule Schedule { get; } = schedule;
+        public IReadOnlyList<SpatialBatchFrame> Frames => Schedule.Frames;
+        public SpatialAnimationCursor Cursor { get; } = new(schedule, options);
+        public Stopwatch Clock { get; } = new();
+        public EventHandler<object>? RenderingHandler { get; set; }
         public IReadOnlyList<PosterVisualWindow> Participants { get; } = participants;
         public DispatcherQueueTimer Timer { get; } = timer;
         public Action<StateCommandResult> Completed { get; } = completed;
-        public int Index { get; set; }
         public IReadOnlyList<SpatialChange> Changes { get; init; } = [];
         public bool ReadsCurrent(DesktopUpProjection p) => p.CatalogVersion == Command.ReadSet!.CatalogVersion &&
             p.Posters.Count == Command.ReadSet.Posters.Count && Command.ReadSet.Posters.All(pair =>

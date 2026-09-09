@@ -32,4 +32,7 @@
            Code="DUV3001"
            Text="WinUI OutputPath must end in a directory separator to preserve XBF resource names. Use scripts/build.ps1 -OutputDirectory or append a slash to dotnet build -o." />
   </Target>
+  <ItemGroup>
+    <Content Include="../../config/poster-animation.json" Link="config/poster-animation.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

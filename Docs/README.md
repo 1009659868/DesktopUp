@@ -2,7 +2,9 @@
 
 状态：`V3-04-M07 IN PROGRESS — CONTRACT/BUILD PASS；CURRENT-ENVIRONMENT / MANUAL PENDING`
 
-当前[M07测量与安全门](A_Project/40_Implementation/V3-04/M07_MEASUREMENT_AND_SAFETY.md)：按用户决定直接在当前环境推进，入口兼容Windows PowerShell 5.1/PowerShell 7，权限只记录不拦截。5.1真实三海报/单中心/单托盘启动与干净退出通过，合同411/411；先运行人工入口完成S1～S5，不要求先跑资源矩阵。M07尚未关闭，完整基线待补；M05/M06结论保留，动画与性能优化延期。
+2026-09-09当前：[动画呈现R1](A_Project/40_Implementation/V3-04/M07_ANIMATION_R1.md)已按用户新授权实现；启动JSON可调像素步长、帧间隔、目标时长，暂不热更新。完整488/488，默认与自定义参数原生回归及动画中退出通过；屏幕留缝/顺畅度仍待人工。新入口`scripts/start-m07-animation.ps1`，参数见[配置说明](../config/README.md)。下段连续模型记录为前一门；其“动画润色不在本轮”已由本次专项授权补充，M07其他门不因此关闭。
+
+当前[M07测量与安全门](A_Project/40_Implementation/V3-04/M07_MEASUREMENT_AND_SAFETY.md)中新增的[连续空间补强](A_Project/40_Implementation/V3-04/M07_SPATIAL_CONTINUITY.md)已完成合同、23类矩阵、纯模型及生产同事务接入：完整461/461、Release0警告0错误、原生8命令/80批次帧与退出资源0。用户原“…”菜单故障人工已通过；当前等待新连续收展鼠标/观感确认。入口兼容PowerShell5.1，不限制当前权限；M07剩余安全门、完整1/3/6资源基线仍保留，M05/M06结论不撤销，动画润色和性能优化不在本轮。
 
 M04-06历史输入/确认证据见 [本项合同](A_Project/40_Implementation/V3-04/M04_INPUT_CONFIRMATION.md)：313/313及三海报确认/退出与空间回归通过；当前R2产物和人工结果以上方入口为准。
 

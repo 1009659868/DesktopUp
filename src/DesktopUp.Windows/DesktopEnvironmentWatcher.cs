@@ -187,6 +187,8 @@ public sealed class DesktopEnvironmentWatcher : IDisposable
         nuint subclassId,
         nuint referenceData)
     {
+        if (_guardPosterWindow)
+            MenuInputDiagnostics.Observe(windowHandle, message, lParam, "visual-guard");
         if (message == WmNcDestroy)
         {
             _installed = false;
@@ -203,7 +205,7 @@ public sealed class DesktopEnvironmentWatcher : IDisposable
         }
         else if (_guardPosterWindow && message == DesktopZOrderPolicy.WmWindowPosChanging)
         {
-            ConstrainPendingZOrder(lParam);
+            if (!DesktopMenuInteraction.PreserveSurfaceZOrder(windowHandle, lParam)) ConstrainPendingZOrder(lParam);
         }
         else if (_guardPosterWindow && message == DesktopPointerActivationPolicy.WmNcHitTest)
         {
@@ -293,6 +295,9 @@ public sealed class DesktopEnvironmentWatcher : IDisposable
 
     private (bool Restored, string? Error) TryReassertDesktopBottom()
     {
+        // The shared menu lease keeps the already desktop-bound owner in place.
+        // Moving an owner to bottom here also moves its owned WinUI Popup.
+        if (DesktopMenuInteraction.ProtectsSurface(_windowHandle)) return (true, null);
         if (_layerRepairInProgress)
         {
             return (true, null);

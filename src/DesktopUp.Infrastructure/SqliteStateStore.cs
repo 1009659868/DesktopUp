@@ -10,7 +10,7 @@ public sealed class SqliteStateStore : IStateStore
 {
     private const int ApplicationId = 0x44555033; // "DUP3"
     private const int BusyTimeoutMilliseconds = 5_000;
-    private const int CurrentSchemaVersion = 5;
+    private const int CurrentSchemaVersion = 6;
     private const string DatabaseFileName = "desktopup.sqlite3";
     private static readonly Migration[] Migrations =
     [
@@ -165,6 +165,17 @@ public sealed class SqliteStateStore : IStateStore
                 proof_json TEXT NOT NULL CHECK (json_valid(proof_json)),
                 invalidated_reason TEXT NULL,
                 PRIMARY KEY(operation_id, poster_id)
+            ) STRICT;
+            """),
+        new(
+            6,
+            "spatial-continuity",
+            """
+            CREATE TABLE spatial_continuity (
+                workspace_id TEXT PRIMARY KEY NOT NULL,
+                schema_version INTEGER NOT NULL CHECK (schema_version = 1),
+                body_json TEXT NOT NULL CHECK (json_valid(body_json)),
+                committed_revision INTEGER NOT NULL REFERENCES state_operations(committed_revision) DEFERRABLE INITIALLY DEFERRED
             ) STRICT;
             """)
     ];
@@ -545,6 +556,7 @@ public sealed class SqliteStateStore : IStateStore
             }
             if (migration.Version >= 4) VerifyCommandSchema(connection, transaction);
             if (migration.Version >= 5) VerifySpatialSchema(connection, transaction);
+            if (migration.Version >= 6) VerifyContinuitySchema(connection, transaction);
 
             string appliedUtc = DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture);
             using (SqliteCommand ledger = connection.CreateCommand())
@@ -653,6 +665,7 @@ public sealed class SqliteStateStore : IStateStore
         }
         if (expectedVersion >= 4) VerifyCommandSchema(connection, null);
         if (expectedVersion >= 5) VerifySpatialSchema(connection, null);
+        if (expectedVersion >= 6) VerifyContinuitySchema(connection, null);
         if (head.SchemaVersion != version)
         {
             throw new InvalidDataException(
@@ -673,6 +686,13 @@ public sealed class SqliteStateStore : IStateStore
             using var shape = connection.CreateCommand(); shape.Transaction = transaction; shape.CommandText = sql;
             using (shape.ExecuteReader()) { }
         }
+    }
+
+    private static void VerifyContinuitySchema(SqliteConnection connection, SqliteTransaction? transaction)
+    {
+        using var command = connection.CreateCommand(); command.Transaction = transaction;
+        command.CommandText = "SELECT workspace_id, schema_version, body_json, committed_revision FROM spatial_continuity LIMIT 0;";
+        using (command.ExecuteReader()) { }
     }
 
     private static void VerifyCommandSchema(SqliteConnection connection, SqliteTransaction? transaction)

@@ -4,6 +4,14 @@ using DesktopUp.Infrastructure;
 using System.Text.Json;
 using DesktopUp.Testing;
 
+// Read-only validation shares the production parser; no fixture/database is created in this mode.
+if (args.Length == 2 && args[0] == "--validate-animation-config")
+{
+    try { Console.WriteLine(JsonSerializer.Serialize(PosterAnimationConfiguration.Read(Path.GetFullPath(args[1]), true))); }
+    catch (Exception exception) { Console.Error.WriteLine(exception.Message); Environment.ExitCode = 2; }
+    return;
+}
+
 if (args.Length is < 2 or > 3 || !int.TryParse(args[1], out int count) || count is < 0 or > 6 ||
     args.Length == 3 && args[2] is not ("--measure-expanded" or "--measure-collapsed" or "--measure-hidden" or "--multi-instance" or "--spatial-chain" or "--spatial-chain-r2" or "--compact-pair" or "--r2-up" or "--r2-mixed" or "--r2-constrained" or "--r2-blocked"))
     throw new ArgumentException("Usage: DesktopUp.SessionFixture <NEW isolated directory> <0..3> [--multi-instance|--spatial-chain|--compact-pair|--r2-...] or <1|3|6> --measure-expanded|collapsed|hidden");

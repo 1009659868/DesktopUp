@@ -8,6 +8,10 @@
 
 ## 1. 当前状态与本轮交付
 
+当前专项：[M07动画R1](../40_Implementation/V3-04/M07_ANIMATION_R1.md)响应用户新增授权，接入启动JSON像素/帧节奏参数和呈现顺序优化；488/488，两组参数原生回归与动画中退出通过。下一动作为视觉人工，不改已认可空间模型，不把此项扩大为控制中心热更新或整套性能优化。之后仍回M07剩余门收口。
+
+2026-09-09最新补强：[连续空间行为合同](../20_Architecture/POSTER_SPATIAL_CONTINUITY_CONTRACT_V1.md)→[23类连续矩阵](../20_Architecture/POSTER_SPATIAL_CONTINUITY_MATRIX_V1.md)→纯模型→生产同revision接入已按顺序推进；最终461/461、原生8命令/80批次帧通过。[实施记录](../40_Implementation/V3-04/M07_SPATIAL_CONTINUITY.md)登记反例和完整证据。当前交用户验证两种嵌套关闭顺序；不能完整归位就不动，禁止部分回收。M07仍OPEN，不跳过剩余安全/基线而提前开启真实内容。下段411项为M07初建历史。
+
 当前[M07测量与安全门](../40_Implementation/V3-04/M07_MEASUREMENT_AND_SAFETY.md)已建立合同、1/3/6隔离配置、18格×2采样和空间批次计时。411/411、固定Release及PowerShell5.1真实启动/退出通过。用户已决定在当前环境推进：取消管理员启动硬门，权限只记录；先S1～S5人工，资源矩阵另行收口，不重复全量DPI/安装或动画评审。
 
 M06完成历史：2026-09-09用户正常退出旧版后，[M06多实例合同夹具](../40_Implementation/V3-04/M06_MULTI_INSTANCE_FIXTURES.md)已补齐真实Exercise/Restart：9阶段快照、单实例短进程、完整重启配置对照和退出资源0均通过，完整合同405/405。M05参数两轮/空间尾门通过；M05/M06关闭。下面M05段为基础范围说明，不是当前下一项。

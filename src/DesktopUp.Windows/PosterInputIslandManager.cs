@@ -90,14 +90,24 @@ public sealed class PosterInputIslandManager : IInputRegionHost
     public nint WindowHandle { get; private set; }
 
     public long AppliedLayoutRevision => _layout?.Revision ?? 0;
+    public bool IsNativeInputTransparent => new NativeDesktopMenuPlatform().IsInputTransparent(WindowHandle);
 
     public event EventHandler<PosterInputEventArgs>? Input;
+
+    public static DesktopMenuSurface[] MenuSurfaces(PosterInputRouter router)
+    {
+        lock (Instances)
+            return Instances.Values.Where(i => !i._disposed && ReferenceEquals(i._router, router))
+                .Select(i => new DesktopMenuSurface(i._visualHandle, i.WindowHandle,
+                    i.CancelPointerGesture, i._reassertClusterBottom)).ToArray();
+    }
 
     // Reuse the existing capture-cancel path for stale spatial/environment work.
     public void CancelPointerGesture() => EndPointerGesture(cancelled: true);
 
     public void SuspendRouting()
     {
+        DesktopMenuInteraction.CancelForSurface(WindowHandle);
         EndPointerGesture(cancelled: true);
         DisableRoutingNative();
     }
@@ -121,6 +131,7 @@ public sealed class PosterInputIslandManager : IInputRegionHost
         PosterInputLayoutSnapshot layout)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
+        DesktopMenuInteraction.CancelActive();
         if (WindowHandle != 0)
         {
             return ApplyLayout(frame, layout) && Reattach(desktopHost);
@@ -199,6 +210,7 @@ public sealed class PosterInputIslandManager : IInputRegionHost
         DesktopPixelRect frame,
         PosterInputLayoutSnapshot layout)
     {
+        DesktopMenuInteraction.CancelForSurface(WindowHandle);
         if (_disposed || WindowHandle == 0 ||
             !ValidateFrameAndLayout(frame, layout))
         {
@@ -251,6 +263,7 @@ public sealed class PosterInputIslandManager : IInputRegionHost
             return true;
         }
 
+        DesktopMenuInteraction.CancelForSurface(WindowHandle);
         DesktopLayerAttachResult result = _attachment.Attach(
             WindowHandle,
             desktopHost,
@@ -281,13 +294,14 @@ public sealed class PosterInputIslandManager : IInputRegionHost
         nuint wParam,
         nint lParam)
     {
+        MenuInputDiagnostics.Observe(windowHandle, message, lParam, "input-island");
         switch (message)
         {
             case WmMouseActivate:
-                _ = _reassertClusterBottom();
+                if (!DesktopMenuInteraction.ProtectsSurface(windowHandle)) _ = _reassertClusterBottom();
                 return new nint(MaNoActivate);
             case WmWindowPosChanging:
-                ConstrainZOrder(lParam);
+                if (!DesktopMenuInteraction.PreserveSurfaceZOrder(windowHandle, lParam)) ConstrainZOrder(lParam);
                 break;
             case WmLButtonDown:
                 BeginPointerGesture(lParam);
@@ -344,6 +358,12 @@ public sealed class PosterInputIslandManager : IInputRegionHost
     private void BeginResolvedGesture(PosterInputHit hit, NativePoint point)
     {
         if (_disposed || _pressedRegion is not null || (_capture = _router.Begin(hit)) is null) return;
+        if (MenuInputDiagnostics.Collecting) MenuInputDiagnostics.Route(WindowHandle, new
+        {
+            phase = "capture-begin", hit.Session, hit.LayoutRevision, hit.Frame,
+            target = hit.Region.Kind.ToString(), hit.Region.Index, hit.Region.Bounds,
+            screenX = point.X, screenY = point.Y
+        });
         _pressedRegion = hit.Region;
         _pressFrame = hit.Frame;
         _gestureMoved = false;
@@ -424,6 +444,11 @@ public sealed class PosterInputIslandManager : IInputRegionHost
             : _gestureMoved
                 ? PosterInputEventKind.GestureCompleted
                 : PosterInputEventKind.Invoked;
+        if (MenuInputDiagnostics.Collecting) MenuInputDiagnostics.Route(WindowHandle, new
+        {
+            phase = "dispatch", session = _session, kind = eventKind.ToString(), target = target.Kind.ToString(),
+            target.Index, target.Bounds, cancelled, owns, screenX = cursor.X, screenY = cursor.Y
+        });
         RaiseInput(eventKind, target, deltaX, deltaY);
         _gestureMoved = false;
     }
@@ -447,6 +472,9 @@ public sealed class PosterInputIslandManager : IInputRegionHost
 
     private (PosterInputIslandManager Owner, PosterInputHit Hit)? ResolveRoute(NativePoint point)
     {
+        // Defense against a queued pre-menu message. Native transparency supplies actual
+        // Popup delivery; merely dropping this route would not fix hover.
+        if (DesktopMenuInteraction.BlocksInput(WindowHandle)) return null;
         PosterInputIslandManager[] candidates;
         lock (Instances) candidates = Instances.Values.Where(i => !i._disposed && ReferenceEquals(i._router, _router)).ToArray();
         var visuals = candidates.ToDictionary(i => i._visualHandle);
@@ -652,6 +680,7 @@ public sealed class PosterInputIslandManager : IInputRegionHost
         {
             return;
         }
+        DesktopMenuInteraction.CancelForSurface(WindowHandle);
         _disposed = true;
         _router.Remove(_session);
         _capture = null;

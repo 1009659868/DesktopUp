@@ -8,6 +8,8 @@
 
 许可证：`GPL-3.0-only`
 
+2026-09-09追加：V3-04 M07菜单R1已继续吸收`ContentWidgetWindow.Commands.cs:973`成对Begin/End与`WidgetWindowBase.Interaction.cs`菜单期间延后恢复的生命周期意图；没有复制临时TOPMOST pulse。跨海报输入岛让位、Popup单独桌面内排序与回滚是本项目补强，源码/证据见[M07 R1](../V3-04/M07_MENU_REPAIR_R1.md)。下表R4的单独ShowAt/Closed恢复是历史，不足以覆盖本项目split input场景。
+
 | DeskBox 锚点 | DesktopUp 用途 | V3 处理 |
 | --- | --- | --- |
 | `src/DeskBox/Views/WidgetWindowBase.Interaction.cs` | pointer capture、屏幕坐标 delta、每帧只消费最新 drag/resize sample、结束前 flush、结束后一次保存、capture lost 清理 | 已吸收最新采样约 16 ms 合并、最终帧刷新和单次 geometry commit；DesktopUp 改由原生稀疏 InputIsland 持有 capture，visual HWND 不直接接收背景输入 |

@@ -7,7 +7,8 @@ function Start-DesktopUpFixtureProcess {
         [Parameter(Mandatory)][string]$ExecutablePath,
         [Parameter(Mandatory)][string]$DataRoot,
         [string]$Arguments = '',
-        [ValidateSet('Hidden','Normal')][string]$WindowStyle = 'Hidden'
+        [ValidateSet('Hidden','Normal')][string]$WindowStyle = 'Hidden',
+        [switch]$MenuDiagnostics
     )
     $taskStart = New-Object System.Diagnostics.ProcessStartInfo
     $taskStart.FileName = $ExecutablePath
@@ -16,6 +17,7 @@ function Start-DesktopUpFixtureProcess {
     $taskStart.Arguments = $Arguments
     $taskStart.WindowStyle = [System.Diagnostics.ProcessWindowStyle]$WindowStyle
     $taskStart.EnvironmentVariables['DESKTOPUP_V3_TEST_DATA_ROOT'] = $DataRoot
+    $taskStart.EnvironmentVariables['DESKTOPUP_V3_MENU_DIAGNOSTICS'] = $(if ($MenuDiagnostics) { '1' } else { '0' })
     # No RunAs/UAC change and no parent environment mutation.
     $taskStarted = [System.Diagnostics.Process]::Start($taskStart)
     if ($null -eq $taskStarted) { throw 'DesktopUp process creation returned no process.' }

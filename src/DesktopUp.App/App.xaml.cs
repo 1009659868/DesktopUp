@@ -68,6 +68,22 @@ public partial class App : Microsoft.UI.Xaml.Application
         _services = BuildServices();
         _log = _services.GetRequiredService<IStructuredLog>();
         _ledger = _services.GetRequiredService<IResourceLedger>();
+        PosterAnimationOptions animationOptions;
+        try
+        {
+            var flags = _startupIntent.Arguments.Where(a => a.StartsWith("--animation-config=", StringComparison.OrdinalIgnoreCase)).ToArray();
+            if (flags.Length > 1) throw new ArgumentException("Specify --animation-config only once.");
+            string userPath = Path.Combine(_services.GetRequiredService<IUserDataPaths>().Root, "poster-animation.json");
+            string configPath = flags.Length == 1 ? Path.GetFullPath(flags[0]["--animation-config=".Length..]) :
+                File.Exists(userPath) ? userPath : Path.Combine(AppContext.BaseDirectory, "config", "poster-animation.json");
+            animationOptions = PosterAnimationConfiguration.Read(configPath, required: flags.Length == 1);
+            _log.Write("info", "configuration.posture_animation", new { path = configPath, options = animationOptions, startupOnly = true });
+        }
+        catch (Exception exception) when (exception is ArgumentException or IOException or UnauthorizedAccessException or System.Text.Json.JsonException)
+        {
+            _log.Write("critical", "configuration.posture_animation_invalid", new { exception.Message });
+            ExitApplication(); return;
+        }
         StateStoreInitializationResult stateInitialization =
             _services.GetRequiredService<IStateStore>().Initialize();
         if (!stateInitialization.Succeeded)
@@ -129,7 +145,7 @@ public partial class App : Microsoft.UI.Xaml.Application
             isElevated = IsProcessElevated(),
             requestedExecutionLevel = "asInvoker"
         });
-        _spatialRuntime = new PosterSpatialRuntime(_stateCoordinator, _stateCommands, _log);
+        _spatialRuntime = new PosterSpatialRuntime(_stateCoordinator, _stateCommands, _log, animationOptions);
         _spatialRuntime.EffectiveLayoutChanged += RefreshControlCenterRuntime;
         _spatialRuntime.RecoveryRequired += () => QueueDesktopRecovery(
             DesktopEnvironmentChangeKind.DesktopShell | DesktopEnvironmentChangeKind.DisplayTopology,
@@ -149,7 +165,7 @@ public partial class App : Microsoft.UI.Xaml.Application
         }
 
         ScheduleSmokeExitIfRequested(_startupIntent.Arguments);
-        string[] smokeFlags = ["--presentation-smoke", "--spatial-smoke", "--input-confirmation-smoke", "--multi-instance-smoke", "--multi-instance-restart"];
+        string[] smokeFlags = ["--continuity-smoke", "--continuity-arrange", "--menu-smoke", "--presentation-smoke", "--spatial-smoke", "--input-confirmation-smoke", "--multi-instance-smoke", "--multi-instance-restart"];
         if (_startupIntent.Arguments.Count(a => smokeFlags.Contains(a, StringComparer.OrdinalIgnoreCase)) > 1)
         {
             _log.Write("error", "contract.smoke_refused", new { reason = "one-smoke-per-process" });
@@ -164,6 +180,26 @@ public partial class App : Microsoft.UI.Xaml.Application
                 actual.StartsWith(normalRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
                 _log.Write("error", "multi_instance.smoke_refused", new { reason = "isolated-profile-required" });
             else RunMultiInstanceSmoke(_startupIntent.Arguments.Contains("--multi-instance-restart", StringComparer.Ordinal));
+        }
+        if (_startupIntent.Arguments.Any(a => a is "--continuity-smoke" or "--continuity-arrange"))
+        {
+            string? testRoot = Environment.GetEnvironmentVariable("DESKTOPUP_V3_TEST_DATA_ROOT");
+            string normalRoot = Path.GetFullPath(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DesktopUp", "V3"));
+            string actual = Path.GetFullPath(_services.GetRequiredService<IUserDataPaths>().Root);
+            if (string.IsNullOrWhiteSpace(testRoot) || actual.Equals(normalRoot, StringComparison.OrdinalIgnoreCase) ||
+                actual.StartsWith(normalRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+                _log.Write("error", "continuity.smoke_refused", new { reason = "isolated-profile-required" });
+            else _spatialRuntime.RunContinuitySmoke(_dispatcher, _startupIntent.Arguments.Contains("--continuity-arrange", StringComparer.Ordinal));
+        }
+        if (_startupIntent.Arguments.Contains("--menu-smoke", StringComparer.OrdinalIgnoreCase))
+        {
+            string? testRoot = Environment.GetEnvironmentVariable("DESKTOPUP_V3_TEST_DATA_ROOT");
+            string normalRoot = Path.GetFullPath(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DesktopUp", "V3"));
+            string actual = Path.GetFullPath(_services.GetRequiredService<IUserDataPaths>().Root);
+            if (string.IsNullOrWhiteSpace(testRoot) || actual.Equals(normalRoot, StringComparison.OrdinalIgnoreCase) ||
+                actual.StartsWith(normalRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+                _log.Write("error", "menu.smoke_refused", new { reason = "isolated-profile-required" });
+            else _spatialRuntime.RunMenuSmoke(_dispatcher);
         }
         if (_startupIntent.Arguments.Contains("--presentation-smoke", StringComparer.OrdinalIgnoreCase))
         {

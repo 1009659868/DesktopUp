@@ -84,6 +84,8 @@ public sealed class SqliteStateCommandRepository(SqliteStateStore store) : IStat
             if (plan.Settings is { } settings)
                 SqliteSettingsRepository.UpdateSettings(connection, transaction, settings, committedRevision.Value);
             SqliteSpatialProofRepository.Apply(connection, transaction, plan.NewSpatialProof, plan.ConsumeSpatialOperationId, committedRevision.Value);
+            if (plan.NewContinuity is { } continuity)
+                SqliteSpatialContinuityRepository.Write(connection, transaction, continuity, committedRevision.Value);
             AdvanceHead(connection, transaction, before.Revision, request.RequestId);
         }
         using (SqliteCommand receipt = connection.CreateCommand())
@@ -110,7 +112,8 @@ public sealed class SqliteStateCommandRepository(SqliteStateStore store) : IStat
     private static DesktopStateSnapshot ReadSnapshot(SqliteConnection connection, SqliteTransaction transaction) =>
         new(SqlitePosterCatalogRepository.ReadCatalog(connection, transaction),
             SqliteSettingsRepository.ReadSettings(connection, transaction))
-            { SpatialOperations = SqliteSpatialProofRepository.Read(connection, transaction) };
+            { SpatialOperations = SqliteSpatialProofRepository.Read(connection, transaction),
+                SpatialContinuities = SqliteSpatialContinuityRepository.Read(connection, transaction) };
 
     private static IReadOnlyList<StateReadConflict> CheckReadSet(DesktopStateSnapshot state, StateTransactionRequest request)
     {
@@ -160,6 +163,10 @@ public sealed class SqliteStateCommandRepository(SqliteStateStore store) : IStat
         if (reads is not null && (plan.Creates.Count + plan.Removes.Count > 0 ||
             plan.Updates.Any(p => existing[p.PosterId].Poster.StackOrder != p.StackOrder)) && reads.CatalogVersion is null)
             return "Catalog mutation requires the catalog version.";
+        if (plan.NewContinuity is { } continuity && (reads?.CatalogVersion != before.Catalog.CatalogVersion ||
+            !reads.Posters.Keys.ToHashSet(StringComparer.Ordinal).SetEquals(existing.Keys) ||
+            continuity.Nodes.Any(n => !existing.ContainsKey(n.Expected.PosterId)) || plan.Updates.Count == 0))
+            return "Continuity requires a complete catalog read set and a spatial entity mutation.";
         if (plan.Settings is { } settings)
         {
             if (reads is not null && reads.SettingsVersion is null) return "Settings version missing from read set.";

@@ -4,6 +4,54 @@
 
 最后更新：2026-09-09
 
+## Git同步前复验
+
+本轮按用户授权准备当前分支检查点，未修改业务实现。完整488/488、0失败0跳过，结果`out/verify/git-sync-20260909/sync-20260909.trx`；Windows PowerShell5.1动画入口CheckOnly通过。空白检查通过，未发现常见私钥/访问令牌标记；运行输出位于被忽略的out目录。人工视觉门保持PENDING，不以Git同步代替验收。
+
+## 动画R1（当前优先）
+
+详见[M07_ANIMATION_R1](M07_ANIMATION_R1.md)。新增27项，完整488/488/0skip，`out/verify/v3-04-m07-animation/results/animation-full.trx`；Release App/fixture均0警告0错误。PS5.1实际读取默认/自定义JSON与含空格路径通过。
+
+- PID32568、`20260909-174355-0bfa4a`：默认12px/16ms/240ms，8命令、240实际/计划帧，最大变化10px、0归位尾帧、无警告错误、exit0/clean/资源0。
+- PID40764、`20260909-174617-d08b4a`：6px/8ms/320ms/linear，8命令、400实际/计划帧、最大变化6px，同样无尾帧/警告错误并干净退出。
+- PID47036、`exit-during-5200b8`：首次动画19帧时按限时正常退出；surface-disposed取消，exit0/clean/资源0。原8步探针的surface-removed/未完成是该中断场景预期，不冒充8步通过。
+- 无真实逐帧屏幕采样证据；用户留缝/顺畅度验收PENDING。原连续性和菜单R1指纹/入口保持，未覆盖旧包、修改日常数据或commit/push。
+
+## 连续空间模型最终验证（当前优先）
+
+- 用户选择：新障碍导致无法完整归位时原位不动，禁止部分回收。合同/23类矩阵、域模型与同事务生产接入见[M07连续性记录](M07_SPATIAL_CONTINUITY.md)。
+- 完整461/461，0失败0跳过；TRX `out/verify/v3-04-m07-continuity/results/continuity-full-final.trx`，其中新增21域/7存储测试。连续序列包含分支合流、反向、人工介入、160种子混合宽度及seed85/143反例；这不是穷尽数学证明。
+- 最终App与独立fixture Release均0警告0错误；23项指纹见[scripts清单](../../../../scripts/m07-continuity-build.json)。Windows PS5.1实际预检/Smoke通过。
+- 最终原生PID42012，目录`out/manual/v3-04-m07-continuity/20260909-165704-6f3bbb`：8命令、80计划/实际成功帧、0仅归位尾帧；4次收起分别3/2/2/3个参与者同步；两种关闭顺序回初始位置；正常退出exit0、clean=true、资源0。
+- schema v6迁移/备份/回滚/请求重放/实体完整读集CAS及元数据一致性有独立测试；旧v5指纹保持，旧菜单R1 fixture独立且实际生成版本5，未改用户日常库。
+- 人工PID47704，`20260909-165927-2d9b3b`，日志fixture_ready=true；C/B/A就绪。真实鼠标/动画观感待反馈，不能用原生帧回调代替屏幕呈现/人工PASS。M07剩余安全门与完整资源矩阵仍OPEN，无commit/push。
+
+下节诊断时“未改代码/未修复”等是历史记录；当前实现及待验边界以上节为准。
+
+## 最新人工反馈与嵌套收展诊断
+
+用户确认菜单“…”交互正常：原菜单交互故障 MANUAL PASS。最终自动原生6场景仍未完整执行，其余M07门不代填PASS。新增[嵌套收展归位问题](M07_NESTED_POSTURE_RETURN_DIAGNOSIS.md)仍OPEN：PID44940日志1855/1873/1891及对应成功结果确认C展开→B展开→C收起时仅C参与；归位资格要求目标完整记录等于历史TargetAfter，B姿态改变/A后继被推均失效。根因是条件归位合同未分离姿态与位移关系。本轮无代码修改、构建或新自动测试；433/433仍是上一轮菜单修复证据，不是本问题修复PASS。下节保留反馈前验证历史。
+
+## 菜单修复R1（最新，实现/合同通过，真实命中待验证）
+
+用户授权后已接共享临时菜单交互、全部输入岛让位、Popup桌面内层级及成对清理，保留旧宿主/透明视觉/版本校验。新增13项，首轮与最终均433/433/0skip；最终App独立Release0警告0错误，PS5.1新入口预检通过，原M07六指纹不变。指纹、代码、来源与命令见[R1记录](M07_MENU_REPAIR_R1.md)。
+
+两次中间原生运行PID44128/23332在20260909-145404-b8c44c及145709-e5af52：Popup层级与三输入岛透明位读回通过，但15点均被外部窗口0xD0C74遮挡，整项不算PASS；均application.stopped/clean=true/资源0。最终产物完整原生6场景与真实鼠标仍待桌面区域露出后验证，M07保持OPEN，不把代码实现当人工完成。本轮未commit/push、未触碰日常配置/桌面文件。
+
+## 菜单真实失败取证（最新，根因已确认、未修复）
+
+用户截图反馈 B 的“图标＋进入”无效、“编辑”附近可交互。PID18716，日志 `out/manual/v3-04-m07-menu-diagnostic/20260909-141423-b14013/logs/desktopup.jsonl`：1734/1736行实收 `(2196,90)` 的WM_LBUTTONDOWN/UP于B输入HWND `0x40E10`；1738/1739行实际派发Item1/GHOST SIGNAL。菜单版本仍current=true，无菜单guard拒绝；1826行 `(2234,90)` 则实际产生菜单PointerEntered。卡片右缘x2232与滚动输入带左缘x2248说明约16像素可交互空隙，不是文字控件被拆分。
+
+同一失败记录Z序：C输入440/视觉441、B输入446、B Popup447、B视觉452，确认本海报输入岛抢菜单命中及邻海报遮挡。独立C样本362/364行有菜单PointerPressed/edit accepted=true，C Editing的392行Popup在前、菜单左部可hover，故不能把Editing本身当必然故障。原AutomationPeer字段不符合本样本屏幕框，结论改用原生窗口与实际Pointer局部/屏幕坐标交叉验证；不把观测字段偏移误判为产品坐标根因。
+
+根因、完整行号/trace、保留边界与拟定修复范围见[诊断](M07_MENU_INPUT_DIAGNOSIS.md)。本轮只有只读检查与文档更新；未实施修复、未操控App、未重建或重跑测试，420/420仍是前轮诊断边界证据。M07 OPEN，不再标为“尚无实际失败点”，也不冒充修复或退出清理PASS。未commit/push。
+
+## 菜单根因取证准备（以下为历史，未修复）
+
+修复前基线11e7f1a已同步远程；本轮按用户要求加隔离观测日志，未调整命中、层级、窗口样式或MenuCurrent判断。最终420/420、0skip（`out/verify/v3-04-m07-menu-diagnostic/results/m07-menu-diagnostic-final.trx`），独立App/SessionFixture Release0warning/0error，Windows PowerShell5.1 `start-m07-menu-diagnostic.ps1 -CheckOnly`通过，旧M07六指纹一致。首次诊断编译出现lambda下划线参数与discard类型冲突，已改诊断参数名并重建；不属于产品缺陷修复。
+
+computer-use初始化及reset重试仍1385，未做UI操作；原PID48408尚在运行，未强杀/并开诊断版。实际启动、菜单矩形/消息采样、失败点和退出清理仍待执行。新脚本和9项边界测试不能替代真实输入证据；根因未确认，M07保持OPEN。步骤、指纹、信息最小化与条件性修复矩阵见[诊断最新节](M07_MENU_INPUT_DIAGNOSIS.md)。本轮仅本地修改，未再次commit/push。
+
 ## M07 测量合同与前置安全门（当前，2026-09-09）
 
 详见[M07完整合同/数据/启动说明](M07_MEASUREMENT_AND_SAFETY.md)。本轮自动411/411（新增6），TRX `out/verify/v3-04-m07/results/m07-contract.trx` SHA256 `82E4E52CB956E825275FC5713C922D86B9E8D380E6D29ECC453BF9AD4CA819C1`。Release `out/verify/v3-04-m07/app/`0warning/0error，6指纹见[scripts/m07-build.json](../../../../scripts/m07-build.json)。原4脚本预检记录保留；新5.1启动回归通过，详见下方。

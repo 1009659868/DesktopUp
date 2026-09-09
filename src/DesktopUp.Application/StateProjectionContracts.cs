@@ -143,6 +143,7 @@ public sealed record DesktopUpProjection(
     public IReadOnlyDictionary<string, PosterSurfaceProjection> PostersById => ControlCenter.PostersById;
     public IReadOnlyList<PosterSurfaceProjection> Posters => ControlCenter.Posters;
     public IReadOnlyList<SpatialOperationProof> SpatialOperations { get; init; } = Array.Empty<SpatialOperationProof>();
+    public IReadOnlyList<SpatialContinuityState> SpatialContinuities { get; init; } = Array.Empty<SpatialContinuityState>();
     public long CatalogVersion => ControlCenter.CatalogVersion;
     public bool ProfileInitialized { get; init; }
 }

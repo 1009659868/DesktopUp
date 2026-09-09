@@ -4,7 +4,8 @@ using DesktopUp.Domain;
 namespace DesktopUp;
 
 // Physical readback/gesture lease only. Committed state remains in StateProjectionCoordinator.
-internal sealed partial class PosterSpatialRuntime(IStateProjectionCoordinator state, IStateCommandService commands, IStructuredLog log)
+internal sealed partial class PosterSpatialRuntime(IStateProjectionCoordinator state, IStateCommandService commands, IStructuredLog log,
+    PosterAnimationOptions animationOptions)
 {
     private readonly Dictionary<string, PosterVisualWindow> _windows = new(StringComparer.Ordinal);
     private readonly Guid _runtimeId = Guid.NewGuid();
@@ -15,6 +16,7 @@ internal sealed partial class PosterSpatialRuntime(IStateProjectionCoordinator s
     public void Register(PosterVisualWindow window) => _windows[window.PosterId!] = window;
     public void Remove(PosterVisualWindow window)
     {
+        _continuityProbeStop?.Invoke();
         if (_posture?.Participants.Contains(window) == true) CancelPosture("surface-disposed");
         if (ReferenceEquals(_owner, window)) End(window);
         if (window.PosterId is { } id && _windows.GetValueOrDefault(id) == window) _windows.Remove(id);

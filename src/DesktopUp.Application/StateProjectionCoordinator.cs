@@ -191,6 +191,7 @@ public sealed class StateProjectionCoordinator(
             settings.Settings.DynamicEffectsPaused, $"DesktopUp · {posters.Count} 张海报 · {visible} 可见 · {locked} 锁定" +
                 (settings.Settings.DynamicEffectsPaused ? " · 已暂停" : ""))
             { VisiblePosterCount = visible, LockedPosterCount = locked, LockSummary = summary };
-        return new(state.Revision, selected, center, tray) { ProfileInitialized = state.Catalog.ProfileInitialized, SpatialOperations = state.SpatialOperations };
+        return new(state.Revision, selected, center, tray) { ProfileInitialized = state.Catalog.ProfileInitialized,
+            SpatialOperations = state.SpatialOperations, SpatialContinuities = state.SpatialContinuities };
     }
 }

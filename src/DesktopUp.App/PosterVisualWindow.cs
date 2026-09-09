@@ -47,6 +47,8 @@ internal sealed partial class PosterVisualWindow(
     private TextBlock? _moreGlyph;
     private TextBlock? _modeLabel;
     private MenuFlyout? _posterMenu;
+    private MenuInputDiagnostic? _menuDiagnostic;
+    private DesktopMenuInteraction? _menuInteraction;
     private nint _windowHandle;
     private IDisposable? _windowLease;
     private PosterInputIslandManager? _inputIsland;
@@ -79,6 +81,7 @@ internal sealed partial class PosterVisualWindow(
     public void RegisterSpatialSurface() => spatial.Register(this);
     public void SuspendInput()
     {
+        _menuInteraction?.Cancel();
         _posterMenu?.Hide();
         _posterMenu = null;
         _inputIsland?.SuspendRouting();
@@ -99,12 +102,15 @@ internal sealed partial class PosterVisualWindow(
     public PreparedSpatialFrame? PrepareSpatialFrame(DesktopPixelRect frame)
     {
         if (_disposed || _window is null || _inputIsland is null || !frame.IsUsable) return null;
-        RebuildItemGrid(FrameWidthDip(frame)); UpdateItemScrollState(frame);
         var input = BuildInputLayout(frame);
-        return ApplyVisualRegion(_windowHandle, frame) ? new(this, frame, input) : null;
+        // Preparation must not clip or resize a live surface before its peers move.
+        return new(this, frame, input);
     }
     public bool CommitSpatialFrames(IReadOnlyList<PreparedSpatialFrame> frames)
     {
+        var layouts = new List<(FrameworkElement Root, double Width, double Height)>();
+        try
+        {
         var windows = new Dictionary<nint, DesktopPixelRect>();
         foreach (var frame in frames)
         {
@@ -112,6 +118,25 @@ internal sealed partial class PosterVisualWindow(
             if (owner._disposed || owner._inputIsland is null) return false;
             windows.Add(owner._windowHandle, frame.Bounds);
             windows.Add(owner._inputIsland.WindowHandle, frame.Bounds);
+        }
+        // This runs from the render callback for animated batches. Arrange the XAML content
+        // for the SAME bounds before moving HWNDs; don't wait for a later WM_SIZE layout pass.
+        foreach (var frame in frames)
+        {
+            var owner = frame.Owner;
+            if (owner._window?.Content is not FrameworkElement root || owner._monitor is null) return false;
+            layouts.Add((root, root.Width, root.Height));
+            owner.RebuildItemGrid(owner.FrameWidthDip(frame.Bounds)); owner.UpdateItemScrollState(frame.Bounds);
+            double width = frame.Bounds.Width / owner._monitor.ScaleX, height = frame.Bounds.Height / owner._monitor.ScaleY;
+            root.Width = width; root.Height = height;
+            root.Measure(new global::Windows.Foundation.Size(width, height));
+            root.Arrange(new global::Windows.Foundation.Rect(0, 0, width, height));
+            root.UpdateLayout();
+            if (Math.Abs(root.ActualWidth - width) > .5 || Math.Abs(root.ActualHeight - height) > .5)
+            {
+                log.Write("warning", "spatial.xaml_layout_mismatch", new { owner.PosterId, width, height, root.ActualWidth, root.ActualHeight });
+                return false;
+            }
         }
         bool applied = attachment.ApplyPreparedBoundsBatch(windows);
         bool nativeApplied = applied;
@@ -122,17 +147,27 @@ internal sealed partial class PosterVisualWindow(
             var owner = frame.Owner;
             bool matches = owner._window is not null && HasExpectedBounds(owner._window, frame.Bounds);
             applied &= matches;
+            // Native clipping follows the WHOLE position batch, never the per-owner prepare loop.
+            bool regionApplied = matches && owner.ApplyVisualRegion(owner._windowHandle, frame.Bounds);
+            applied &= regionApplied;
             if (matches) owner._bounds = frame.Bounds;
             bool inputApplied = matches && owner._inputIsland is not null && owner._inputIsland.ApplyLayout(frame.Bounds, frame.Input);
             applied &= inputApplied;
-            if (!nativeApplied || !matches || !inputApplied) log.Write("warning", "spatial.batch_readback_failed", new
+            if (!nativeApplied || !matches || !inputApplied || !regionApplied) log.Write("warning", "spatial.batch_readback_failed", new
             {
-                owner.PosterId, nativeApplied, matches, inputApplied, expected = frame.Bounds,
+                owner.PosterId, nativeApplied, matches, inputApplied, regionApplied, expected = frame.Bounds,
                 appPosition = owner._window?.AppWindow.Position, appSize = owner._window?.AppWindow.Size,
                 nativeError = System.Runtime.InteropServices.Marshal.GetLastPInvokeError()
             });
         }
         return applied;
+        }
+        finally
+        {
+            // Return to normal stretch layout; drag/resize and later theme projections must not
+            // inherit a fixed root size from an animation. Native bounds now match this layout.
+            foreach (var layout in layouts) { layout.Root.Width = layout.Width; layout.Root.Height = layout.Height; }
+        }
     }
     public PreparedSpatialFrame? PreparePostureRestore()
     {
@@ -480,6 +515,7 @@ internal sealed partial class PosterVisualWindow(
             return false;
         }
 
+        if (DesktopMenuInteraction.ProtectsSurface(_windowHandle)) return IsAttached(desktopHost);
         return _inputIsland.ReassertDesktopBottom(desktopHost) &&
             attachment.ReassertDesktopBottom(_windowHandle, desktopHost);
     }
@@ -1350,14 +1386,21 @@ internal sealed partial class PosterVisualWindow(
         _posterMenu?.Hide();
         long menuLayout = _inputIsland.AppliedLayoutRevision;
         long menuEntity = _posterEntityVersion;
-        bool MenuCurrent() => !_disposed && _posterEntityVersion == menuEntity && inputRouter.IsCurrent(inputSession, menuLayout);
+        MenuInputDiagnostic? diagnostic = null;
+        DesktopMenuInteraction? interaction = null;
+        bool MenuCurrent(string command)
+        {
+            bool accepted = !_disposed && _posterEntityVersion == menuEntity && inputRouter.IsCurrent(inputSession, menuLayout);
+            diagnostic?.Guard(command, accepted, menuEntity, menuLayout);
+            return accepted;
+        }
         var flyout = new MenuFlyout();
         var lockItem = StyleMenuItem(new MenuFlyoutItem
         {
             Text = _geometry.IsLocked ? "解除锁定" : "锁定",
             Icon = new FontIcon { Glyph = "\uE72E" }
         });
-        lockItem.Click += (_, _) => { if (MenuCurrent()) ToggleLocked("more-menu"); };
+        lockItem.Click += (_, _) => { if (MenuCurrent("lock")) ToggleLocked("more-menu"); };
         flyout.Items.Add(lockItem);
 
         var editItem = StyleMenuItem(new MenuFlyoutItem
@@ -1365,7 +1408,7 @@ internal sealed partial class PosterVisualWindow(
             Text = _mode == PosterOperatingMode.Editing ? "完成编辑" : "进入编辑",
             Icon = new FontIcon { Glyph = "\uE70F" }
         });
-        editItem.Click += (_, _) => { if (MenuCurrent()) _ = SetEditing(_mode != PosterOperatingMode.Editing); };
+        editItem.Click += (_, _) => { if (MenuCurrent("edit")) _ = SetEditing(_mode != PosterOperatingMode.Editing); };
         flyout.Items.Add(editItem);
         flyout.Items.Add(new MenuFlyoutSeparator());
 
@@ -1394,7 +1437,7 @@ internal sealed partial class PosterVisualWindow(
             Icon = new FontIcon { Glyph = "\uE713" },
             IsEnabled = showControlCenter is not null
         });
-        controlCenterItem.Click += (_, _) => { if (MenuCurrent()) showControlCenter?.Invoke(); };
+        controlCenterItem.Click += (_, _) => { if (MenuCurrent("control-center")) showControlCenter?.Invoke(); };
         flyout.Items.Add(controlCenterItem);
 
         var removeItem = StyleMenuItem(new MenuFlyoutItem
@@ -1403,18 +1446,33 @@ internal sealed partial class PosterVisualWindow(
         });
         removeItem.Click += (_, _) =>
         {
-            if (!MenuCurrent()) return;
+            if (!MenuCurrent("remove-click")) return;
             var request = new PosterRemovalRequest(inputSession.PosterId, menuEntity,
                 StateCommandSource.Poster, inputSession, menuLayout);
             flyout.Hide();
-            _ = _window?.DispatcherQueue.TryEnqueue(() => { if (MenuCurrent()) requestRemoval(request); });
+            _ = _window?.DispatcherQueue.TryEnqueue(() => { if (MenuCurrent("remove-dispatch")) requestRemoval(request); });
         };
         flyout.Items.Add(new MenuFlyoutSeparator());
         flyout.Items.Add(removeItem);
 
         _posterMenu = flyout;
+        _menuDiagnostic?.Dispose();
+        _menuDiagnostic = MenuInputDiagnostics.Enabled ? MenuInputDiagnostic.TryCreate(flyout, _window.DispatcherQueue, log,
+            () => new { PosterId, inputSession.Epoch, mode = _mode.ToString(), _posterEntityVersion,
+                menuEntity, menuLayout, appliedLayout = _inputIsland?.AppliedLayoutRevision,
+                current = !_disposed && _posterEntityVersion == menuEntity && inputRouter.IsCurrent(inputSession, menuLayout),
+                frame = _bounds, visual = $"0x{_windowHandle:X}", island = $"0x{_inputIsland?.WindowHandle:X}" }) : null;
+        diagnostic = _menuDiagnostic;
+        flyout.Opened += (_, _) =>
+        {
+            if (ReferenceEquals(_posterMenu, flyout)) _ = interaction?.ActivatePopup();
+        };
         flyout.Closed += (_, _) =>
         {
+            interaction?.Dispose();
+            if (ReferenceEquals(_menuInteraction, interaction)) _menuInteraction = null;
+            diagnostic?.Dispose();
+            if (ReferenceEquals(_menuDiagnostic, diagnostic)) _menuDiagnostic = null;
             if (ReferenceEquals(_posterMenu, flyout))
             {
                 _posterMenu = null;
@@ -1431,6 +1489,10 @@ internal sealed partial class PosterVisualWindow(
 
         try
         {
+            interaction = DesktopMenuInteraction.Begin(_windowHandle,
+                PosterInputIslandManager.MenuSurfaces(inputRouter), () => flyout.Hide(),
+                action => { _ = _window?.DispatcherQueue.TryEnqueue(() => action()); }, ledger, log);
+            _menuInteraction = interaction;
             flyout.ShowAt(_moreGlyph);
             log.Write("info", "poster.more_menu_opened", new
             {
@@ -1440,6 +1502,10 @@ internal sealed partial class PosterVisualWindow(
         }
         catch (Exception exception)
         {
+            interaction?.Cancel();
+            if (ReferenceEquals(_menuInteraction, interaction)) _menuInteraction = null;
+            diagnostic?.Dispose();
+            if (ReferenceEquals(_menuDiagnostic, diagnostic)) _menuDiagnostic = null;
             _posterMenu = null;
             _ = ReassertCurrentClusterBottom();
             log.Write("warning", "poster.more_menu_failed", new
@@ -1943,6 +2009,8 @@ internal sealed partial class PosterVisualWindow(
 
     private void ClearVisualReferences()
     {
+        _menuInteraction?.Cancel();
+        _menuInteraction = null;
         MenuFlyout? menu = _posterMenu;
         _posterMenu = null;
         menu?.Hide();
@@ -1957,6 +2025,10 @@ internal sealed partial class PosterVisualWindow(
 
     public void Dispose()
     {
+        _menuInteraction?.Cancel();
+        _menuInteraction = null;
+        _menuDiagnostic?.Dispose();
+        _menuDiagnostic = null;
         StopExpansionFeedback();
         spatial.Remove(this);
         _spatialGesture?.Cancel();
