@@ -22,6 +22,9 @@ internal interface IDesktopWindowApi
         int cornerRadius);
     bool ApplyPreparedBounds(nint windowHandle, DesktopPixelRect bounds);
     bool ApplyPreparedBoundsBatch(IReadOnlyDictionary<nint, DesktopPixelRect> bounds) => false;
+    bool ApplyPreparedBoundsBatch(IReadOnlyDictionary<nint, DesktopPixelRect> bounds, IReadOnlyDictionary<nint, uint> flags) => false;
+    bool RequestFrameRedraw(nint windowHandle) => false;
+    bool VerifyVisualSurface(nint window, DesktopPixelRect surface, DesktopPixelRect visible) => false;
     void RemoveDwmBorder(nint windowHandle);
     int GetLastError();
 }
@@ -245,6 +248,41 @@ public sealed class DesktopLayerAttachment : IDesktopLayerAttachment
         }
     }
 
+    public bool ApplyPreparedBoundsBatch(IReadOnlyDictionary<nint, DesktopPixelRect> bounds, DesktopFramePhase phase)
+    {
+        if (phase == DesktopFramePhase.Regular) return ApplyPreparedBoundsBatch(bounds);
+        lock (_gate)
+        {
+            if (!Enum.IsDefined(phase) || bounds.Count == 0 ||
+                bounds.Any(p => !p.Value.IsUsable || !_original.ContainsKey(p.Key) || !_windows.IsWindow(p.Key))) return false;
+            var flags = bounds.Keys.ToDictionary(h => h, h =>
+                DesktopPresentationFlags.Resolve(phase, _inputTransparentWindows.Contains(h)));
+            return _windows.ApplyPreparedBoundsBatch(bounds, flags);
+        }
+    }
+
+    // After final layout, the whole HWND batch, HRGN and input restoration. Not a GPU fence.
+    public bool CompletePreparedVisualFrame(IReadOnlyCollection<nint> windows)
+    {
+        lock (_gate)
+        {
+            if (windows.Count == 0 || windows.Any(h => !_original.ContainsKey(h) ||
+                !_inputTransparentWindows.Contains(h) || !_windows.IsWindow(h))) return false;
+            bool applied = true;
+            foreach (var window in windows) applied &= _windows.RequestFrameRedraw(window);
+            return applied;
+        }
+    }
+
+    public bool VerifyVisualSurface(nint window, DesktopPixelRect surface, DesktopPixelRect visible)
+    {
+        lock (_gate)
+        {
+            return _original.ContainsKey(window) && _inputTransparentWindows.Contains(window) &&
+                _windows.IsWindow(window) && _windows.VerifyVisualSurface(window, surface, visible);
+        }
+    }
+
     public bool Detach(nint windowHandle)
     {
         lock (_gate)
@@ -440,6 +478,14 @@ internal sealed class DesktopWindowNativeApi : IDesktopWindowApi
     public bool ApplyPreparedBoundsBatch(IReadOnlyDictionary<nint, DesktopPixelRect> bounds)
     {
         nint batch = BeginDeferWindowPos(bounds.Count);
+        return ApplyBatch(batch, bounds, bounds.Keys.ToDictionary(h => h, _ => DesktopZOrderPolicy.SpatialBatchFlags));
+    }
+
+    public bool ApplyPreparedBoundsBatch(IReadOnlyDictionary<nint, DesktopPixelRect> bounds, IReadOnlyDictionary<nint, uint> flags)
+        => ApplyBatch(BeginDeferWindowPos(bounds.Count), bounds, flags);
+
+    private static bool ApplyBatch(nint batch, IReadOnlyDictionary<nint, DesktopPixelRect> bounds, IReadOnlyDictionary<nint, uint> flags)
+    {
         if (batch == 0) return false;
         foreach (var entry in bounds)
         {
@@ -447,11 +493,44 @@ internal sealed class DesktopWindowNativeApi : IDesktopWindowApi
             batch = DeferWindowPos(batch, entry.Key, 0, frame.X, frame.Y, frame.Width, frame.Height,
                 // DeferWindowPos has a narrower documented flag set than SetWindowPos.
                 // SWP_DEFERERASE (0x2000) makes this batch fail with ERROR_INVALID_PARAMETER.
-                DesktopZOrderPolicy.SpatialBatchFlags);
+                flags[entry.Key]);
             if (batch == 0) return false;
         }
         return EndDeferWindowPos(batch);
     }
+
+    public bool RequestFrameRedraw(nint windowHandle) => RedrawWindow(windowHandle, 0, 0,
+        0x0001 /* INVALIDATE */ | 0x0080 /* ALLCHILDREN */ | 0x0100 /* UPDATENOW */);
+
+    public bool VerifyVisualSurface(nint window, DesktopPixelRect surface, DesktopPixelRect visible)
+    {
+        if (!surface.IsUsable || !visible.IsUsable || surface.X != visible.X || surface.Y != visible.Y ||
+            surface.Width < visible.Width || surface.Height < visible.Height ||
+            !GetWindowRect(window, out var native) || native.Left != surface.X || native.Top != surface.Y ||
+            native.Right - native.Left != surface.Width || native.Bottom - native.Top != surface.Height ||
+            !GetClientRect(window, out var client) || client.Right != surface.Width || client.Bottom != surface.Height) return false;
+        nint region = CreateRectRgn(0, 0, 0, 0);
+        if (region == 0) return false;
+        try
+        {
+            return GetWindowRgn(window, region) != 0 && GetRgnBox(region, out var clip) != 0 &&
+                clip.Left == 0 && clip.Top == 0 && clip.Right == visible.Width && clip.Bottom == visible.Height;
+        }
+        finally { _ = DeleteObject(region); }
+    }
+
+    [StructLayout(LayoutKind.Sequential)] private struct SurfaceRect { public int Left, Top, Right, Bottom; }
+    [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetWindowRect(nint window, out SurfaceRect rect);
+    [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetClientRect(nint window, out SurfaceRect rect);
+    [DllImport("user32.dll")] private static extern int GetWindowRgn(nint window, nint region);
+    [DllImport("gdi32.dll")] private static extern nint CreateRectRgn(int left, int top, int right, int bottom);
+    [DllImport("gdi32.dll")] private static extern int GetRgnBox(nint region, out SurfaceRect rect);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool RedrawWindow(nint window, nint updateRect, nint updateRegion, uint flags);
 
     public void RemoveDwmBorder(nint windowHandle)
     {

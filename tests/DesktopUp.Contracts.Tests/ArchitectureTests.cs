@@ -100,7 +100,7 @@ public sealed class ArchitectureTests
     }
 
     [Fact]
-    public void PosterResizePaintsBeforeADeferredNoCopyBoundsCommit()
+    public void PosterResizeKeepsBackdropAndDeferredBoundsCommitContracts()
     {
         string root = FindRepositoryRoot();
         string poster = File.ReadAllText(Path.Combine(
@@ -119,12 +119,48 @@ public sealed class ArchitectureTests
             "DesktopUp.Windows",
             "DesktopLayerAttachment.cs"));
 
-        Assert.Contains("Background = ColorBrush(_presentation.Parameters.Theme.Background, 245)", poster, StringComparison.Ordinal);
+        Assert.Contains("ApplyWindowBackdrop(window)", poster, StringComparison.Ordinal);
         Assert.Contains("attachment.ApplyPreparedBounds", poster, StringComparison.Ordinal);
         Assert.Contains("WmEraseBackground", watcher, StringComparison.Ordinal);
         Assert.Contains("FillRect", watcher, StringComparison.Ordinal);
         Assert.Contains("SwpNoCopyBits", attachment, StringComparison.Ordinal);
         Assert.Contains("SwpDeferErase", attachment, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void PosterFillIsWindowScopedAndUpdatedWithPresentation()
+    {
+        string root = FindRepositoryRoot();
+        string backdrop = File.ReadAllText(Path.Combine(root, "src/DesktopUp.App/PosterVisualWindow.Backdrop.cs"));
+        string visual = File.ReadAllText(Path.Combine(root, "src/DesktopUp.App/PosterVisualWindow.cs"));
+        string presentation = File.ReadAllText(Path.Combine(root, "src/DesktopUp.App/PosterVisualWindow.Presentation.cs"));
+        Assert.Contains("new WinUIEx.TransparentTintBackdrop(color)", backdrop);
+        Assert.DoesNotContain("static WinUIEx.TransparentTintBackdrop", backdrop);
+        Assert.Contains("_windowBackdrop.TintColor = color", backdrop);
+        Assert.Contains("ColorBrush(_presentation.Parameters.Theme.Background, 245)", backdrop);
+        Assert.Contains("window.SystemBackdrop = _windowBackdrop", backdrop);
+        Assert.Contains("Background = new SolidColorBrush(Colors.Transparent)", visual);
+        Assert.DoesNotContain("Background = ColorBrush(_presentation.Parameters.Theme.Background, 245)", visual);
+        Assert.Contains("ApplyWindowBackdrop(_window)", presentation);
+        Assert.Contains("VerifyWindowBackdrop()", presentation);
+    }
+
+    [Fact]
+    public void BackdropOwnsEraseWhileActiveAndDisconnectsBeforeWindowClose()
+    {
+        string root = FindRepositoryRoot();
+        string backdrop = File.ReadAllText(Path.Combine(root, "src/DesktopUp.App/PosterVisualWindow.Backdrop.cs"));
+        string visual = File.ReadAllText(Path.Combine(root, "src/DesktopUp.App/PosterVisualWindow.cs"));
+        string watcher = File.ReadAllText(Path.Combine(root, "src/DesktopUp.Windows/DesktopEnvironmentWatcher.cs"));
+        string session = File.ReadAllText(Path.Combine(root, "src/DesktopUp.App/WinUiPosterSession.cs"));
+        Assert.Contains("compositionOwnsBackground: () => visual.HasWindowBackdrop", session);
+        Assert.Contains("_compositionOwnsBackground?.Invoke() != true", watcher);
+        Assert.Contains("return DefSubclassProc", watcher);
+        Assert.Contains("_window.SystemBackdrop = null", backdrop);
+        Assert.Contains("_windowBackdrop = null", backdrop);
+        string dispose = visual.Split("public void Dispose()")[1];
+        Assert.True(dispose.IndexOf("Cleanup(ReleaseWindowBackdrop)", StringComparison.Ordinal) <
+                    dispose.IndexOf("_window.Close()", StringComparison.Ordinal));
     }
 
     private static string FindRepositoryRoot()

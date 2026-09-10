@@ -1,6 +1,10 @@
 # M07 动画呈现与启动配置 R1
 
+> 历史记录：本页命令、PID、测试数和“当前/待验”均属于当时轮次，不再是活动入口。R1/R2/R3未解决白条，诊断轮不是修复。最终用户确认、清理及稳定入口见 [R4](M07_ANIMATION_R4.md)；已移除脚本/源码本地保留于 out/archive/presentation-cleanup-20260910，不再推荐执行本页旧命令。
+
 日期：2026-09-09。状态：IMPLEMENTED / CONTRACT & NATIVE PASS / VISUAL MANUAL PENDING；M07整体仍OPEN。
+
+2026-09-10后续：用户认可顺畅度，但展开10px白条FAIL；已接[窗口背景R2修订](M07_ANIMATION_R2.md)，当前复测入口改为`scripts/start-m07-animation-r2.ps1`。本文R1产物和证据保持历史，不用于验R2。
 
 ## 用户反馈与边界
 

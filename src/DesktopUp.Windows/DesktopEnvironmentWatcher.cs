@@ -128,6 +128,7 @@ public sealed class DesktopEnvironmentWatcher : IDisposable
     private readonly SubclassProc _subclassProc;
     private readonly Func<bool> _reassertDesktopBottom;
     private readonly bool _guardPosterWindow;
+    private readonly Func<bool>? _compositionOwnsBackground;
     private nint _fallbackBrush;
     private bool _installed;
     private bool _disposed;
@@ -136,7 +137,8 @@ public sealed class DesktopEnvironmentWatcher : IDisposable
     public DesktopEnvironmentWatcher(
         nint windowHandle,
         Func<bool> reassertDesktopBottom,
-        bool guardPosterWindow = true)
+        bool guardPosterWindow = true,
+        Func<bool>? compositionOwnsBackground = null)
     {
         if (windowHandle == 0 || !IsWindow(windowHandle))
         {
@@ -153,6 +155,7 @@ public sealed class DesktopEnvironmentWatcher : IDisposable
         _windowHandle = windowHandle;
         _reassertDesktopBottom = reassertDesktopBottom;
         _guardPosterWindow = guardPosterWindow;
+        _compositionOwnsBackground = compositionOwnsBackground;
         _subclassProc = WindowSubclassProc;
         _fallbackBrush = CreateSolidBrush(PosterFallbackColorRef);
         if (_fallbackBrush == 0)
@@ -196,6 +199,7 @@ public sealed class DesktopEnvironmentWatcher : IDisposable
             ReleaseFallbackBrush();
         }
         else if (_guardPosterWindow && message == WmEraseBackground &&
+            _compositionOwnsBackground?.Invoke() != true &&
             wParam != 0 &&
             _fallbackBrush != 0 &&
             GetClientRect(windowHandle, out NativeRect client))

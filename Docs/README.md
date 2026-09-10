@@ -1,47 +1,30 @@
 # DesktopUp V2 文档入口
 
-状态：`V3-04-M07 IN PROGRESS — CONTRACT/BUILD PASS；CURRENT-ENVIRONMENT / MANUAL PENDING`
+最后更新：2026-09-10。当前分支：`impl/poster-redesign-V3`。
+当前阶段：**V3-04-M07 仍在收口**；本次动画白条 R4 已获用户画面确认。不是整个 M07、跨 DPI 或长期稳定性认证。
 
-2026-09-09当前：[动画呈现R1](A_Project/40_Implementation/V3-04/M07_ANIMATION_R1.md)已按用户新授权实现；启动JSON可调像素步长、帧间隔、目标时长，暂不热更新。完整488/488，默认与自定义参数原生回归及动画中退出通过；屏幕留缝/顺畅度仍待人工。新入口`scripts/start-m07-animation.ps1`，参数见[配置说明](../config/README.md)。下段连续模型记录为前一门；其“动画润色不在本轮”已由本次专项授权补充，M07其他门不因此关闭。
+## 当前入口
 
-当前[M07测量与安全门](A_Project/40_Implementation/V3-04/M07_MEASUREMENT_AND_SAFETY.md)中新增的[连续空间补强](A_Project/40_Implementation/V3-04/M07_SPATIAL_CONTINUITY.md)已完成合同、23类矩阵、纯模型及生产同事务接入：完整461/461、Release0警告0错误、原生8命令/80批次帧与退出资源0。用户原“…”菜单故障人工已通过；当前等待新连续收展鼠标/观感确认。入口兼容PowerShell5.1，不限制当前权限；M07剩余安全门、完整1/3/6资源基线仍保留，M05/M06结论不撤销，动画润色和性能优化不在本轮。
-
-M04-06历史输入/确认证据见 [本项合同](A_Project/40_Implementation/V3-04/M04_INPUT_CONFIRMATION.md)：313/313及三海报确认/退出与空间回归通过；当前R2产物和人工结果以上方入口为准。
+- [当前执行路径](00_Catalog/ACTIVE_PATH.md)：A → B → C 与最近步骤。
+- [当前交接](A_Project/40_Implementation/V3-04/HANDOFF.md)、[代码锚点](A_Project/40_Implementation/V3-04/CODE_ANCHORS.md)、[验证日志](A_Project/40_Implementation/V3-04/VERIFICATION.md)。
+- [白条修复与清理证据](A_Project/40_Implementation/V3-04/M07_ANIMATION_R4.md)；[同类问题排查方法](A_Project/20_Architecture/PRESENTATION_DIAGNOSIS_PLAYBOOK_V1.md)。
+- 稳定动画入口：`scripts/start-m07-animation.ps1`；[启动配置](../config/README.md)。R2/R3/独立诊断入口已退出活动目录，不再推荐旧包验新功能。
 
 ## 权威顺序
 
-1. 用户最新明确决定；
-2. [七份冻结需求](00_Catalog/REQUIREMENTS_INDEX.md)；
-3. [V3 技术路线与总体架构](A_Project/20_Architecture/DESKTOPUP_V2_V3_ARCHITECTURE_V1.md)；
-4. [V3 模块分类与端口目录](A_Project/20_Architecture/DESKTOPUP_V2_V3_MODULE_CATALOG_V1.md)；
-5. [V3 制作计划](A_Project/30_Plans/DESKTOPUP_V2_V3_IMPLEMENTATION_PLAN_V1.md)；
-6. [V3-04 实现记录](A_Project/40_Implementation/V3-04/VERIFICATION.md)；
-7. 后续每阶段产生的实现合同、验证记录和交接材料。
+1. 用户最新明确决定。
+2. [七份冻结需求](00_Catalog/REQUIREMENTS_INDEX.md)。
+3. [总体架构](A_Project/20_Architecture/DESKTOPUP_V2_V3_ARCHITECTURE_V1.md)、[模块目录](A_Project/20_Architecture/DESKTOPUP_V2_V3_MODULE_CATALOG_V1.md)。
+4. [V3 制作计划](A_Project/30_Plans/DESKTOPUP_V2_V3_IMPLEMENTATION_PLAN_V1.md)、[细化工作流](A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md)。
+5. 对应阶段的实现合同、验证和交接；历史失败记录不能覆盖当前状态。
 
-需求定义“必须得到什么行为”，架构定义“当前探索分支准备如何实现”，计划定义“按什么顺序交付与验证”。发生冲突时，下层文档不能覆盖上层文档。
+## 产品与边界
 
-## V3 重置结果
+正式方向：通用桌面内容收纳、多海报、一个控制中心、一个托盘、独立风格主题、热度排版、AI 辅助定制。游戏图标海报是特色起点，不限制通用文件/目录/应用/Shell 内容。
+技术路线沿用 DeskBox 的 Windows 原生经验与 WinUI；不恢复旧 Qt/WebView/Axiom 试验。当前六卡仍是 DEMO ITEMS，未实现真实文件收纳。
 
-- 保留 `Docs/A_Project/10_Requirements/` 下的完整需求画像、六份配套权威/支持文档和一致性审计；
-- 删除旧 Qt、QPainter、Qt Quick、Win32 Host、Axiom 原型及测试证据；
-- 删除旧技术选型和旧生产架构，避免它们继续作为默认实现；
-- 新路线以 DeskBox 的成熟 Windows 桌面窗口、文件收纳与 Shell 交互经验为基线；
-- DesktopUp 独有的透明空白穿透、海报排序、主题平台和 AI 能力仍独立设计。
+V3-01/02/03、V3-04-01/02/03及 M01～M06 已有分项证据；未逐项确认的人工余项集中在 [M07](A_Project/40_Implementation/V3-04/M07_MEASUREMENT_AND_SAFETY.md)，不补填全 PASS。
+最近顺序：M07 剩余安全/测量 → 原 V3-04-04 完整中心管理 → 04-05 托盘 → 04-06 配置/恢复及 04-07/08 生命周期 → V3-05 真实内容安全闭环。
 
-## 当前产品与阶段
-
-2026-09-09当前：M05/M06关闭；M07已修正为当前环境可运行，先做S1～S5人工安全门，再收口测量证据/缺口。权限不再阻塞本轮，不等于普通用户环境已获认证。M07通过后再原04-04管理与V3-05真实Item。以下为阶段历史，不代表当前下一项。
-
-M04-01阶段历史：本轮最新：已完成 [DeskBox空间计算吸收记录](A_Project/40_Implementation/V3-04/DESKBOX_SPATIAL_REFERENCE.md) 与 [M04-01中心列表/目标切换](A_Project/40_Implementation/V3-04/M04_CONTROL_CENTER_SELECTION.md)；176/176、Release0警告0错误、最终三张/零张真实进程通过。中心可按稳定ID切目标、锁定/收展/显隐并在关闭重开后保留进程内选择；新增管理/完整预览仍留原04-04。computer-use环境1385导致实际点击未执行，人工门待确认。下一开发项M04-02空间合同；碰撞/展开/推动/归位未接入。
-
-正式关键词：通用桌面内容收纳、多海报、一个控制中心、一个托盘、自定义独立风格化主题、热度排版、AI 辅助定制。游戏图标海报是起点和特色场景，不再限制通用文件/目录/应用/Shell 内容。
-
-V3-01/02/03、V3-04-01/02 保留已完成结论。V3-04-03 R1 托盘修复已获用户人工 PASS；M01 数据门通过。M02 保留147/147历史证据，用户同意进入M03但未补写逐项人工PASS。本轮 M03 163/163，Release 0 warning / 0 error，最终产物0/1/3实际进程及恢复等待中退出 smoke 均通过；短人工门仍待确认。
-
-七份需求、[通用多海报合同](A_Project/20_Architecture/GENERAL_CONTENT_MULTI_POSTER_CONTRACT_V1.md) 与 [逐项细化工作流](A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md) 保持权威。M01 实体/目录与 M02 目标命令/实体读集 CAS/三端集合投影均已落地；[M02 实际合同](A_Project/40_Implementation/V3-04/TARGETED_COMMAND_PROJECTION_V2.md) 说明 schema v4、持久回执和零目录。M03 已实现目录驱动的多个真实海报会话；管理 UI 仍待后续，详见 [M03](A_Project/40_Implementation/V3-04/M03_SESSION_RECOVERY.md)。
-
-用户已确认多海报基本交互；未逐项确认的核心人工门保留，不补写全项PASS。上一轮 [空间协同与展开设计](A_Project/20_Architecture/POSTER_SPATIAL_LAYOUT_AND_EXPANSION_V1.md) 明确锁定固定、条件归位和保原尺寸先下后上；本轮中心缺口已在M04-01实现。后续空间/输入、参数及原04-04完整中心复用现有选择器；真实文件主线紧随，基础发行包不等AI。执行入口见 [ACTIVE_PATH](00_Catalog/ACTIVE_PATH.md)。
-
-V3_CURRENT 可视化保留为当时单海报代码快照，不作为多海报新设计或实现证据。
-
-用户补充已写入 [画像 §32](A_Project/10_Requirements/DESKTOPUP_V2_REQUIREMENTS_PROFILE_V1.md#32-首次启动管理入口与跨主机配置)：首次仅一张默认；中心/托盘新增、中心/海报“...”删除确认；单文件跨主机习惯配置。M02 已补创建/删除命令与版本绑定预览，M04-06现已接中心/海报删除按钮与共用确认；新增/导入导出入口仍按后续计划；配置导入导出在04-06-A..D，自定义主题载荷复用07-04。
+需求保留：空配置首次仅一张默认海报；中心/托盘新增，中心/海报菜单删除并确认后果；单文件跨机习惯配置。配置迁移按 04-06-A..D，自定义素材按 07-04，不以内部 SQLite 备份冒充便携配置。
+历史 V3_CURRENT 可视化是当时单海报实现快照，不是多海报当前实现证明。

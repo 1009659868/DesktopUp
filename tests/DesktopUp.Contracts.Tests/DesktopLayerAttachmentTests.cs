@@ -223,6 +223,36 @@ public sealed class DesktopLayerAttachmentTests
         Assert.False(attachment.ApplyPreparedBoundsBatch(new Dictionary<nint, DesktopPixelRect>()));
     }
 
+    [Fact]
+    public void PresentationPhasesOnlySuppressVisualsAndFinalRedrawValidatesTheWholeSet()
+    {
+        var windows = new FakeDesktopWindowApi();
+        var attachment = new DesktopLayerAttachment(windows, new FakeExplorerDesktopApi());
+        Assert.True(attachment.Attach(100, Host, inputTransparent: true).Succeeded);
+        Assert.True(attachment.Attach(101, Host).Succeeded);
+        var frames = new Dictionary<nint, DesktopPixelRect> { [100] = new(0, 0, 300, 200), [101] = new(0, 0, 300, 200) };
+        Assert.True(attachment.ApplyPreparedBoundsBatch(frames, DesktopFramePhase.Animation));
+        Assert.Equal(0x031du, windows.LastBatchFlags![100]);
+        Assert.Equal(0x0314u, windows.LastBatchFlags[101]);
+        Assert.True(attachment.ApplyPreparedBoundsBatch(frames, DesktopFramePhase.FinalRestore));
+        Assert.Equal(0x0214u, windows.LastBatchFlags[100]);
+        Assert.Equal(0x0314u, windows.LastBatchFlags[101]);
+        Assert.True(attachment.ApplyPreparedBoundsBatch(frames, DesktopFramePhase.SurfacePreparation));
+        Assert.Equal(0x0214u, windows.LastBatchFlags[100]);
+        Assert.Equal(0x0314u, windows.LastBatchFlags[101]);
+        Assert.False(attachment.CompletePreparedVisualFrame([100, 101]));
+        Assert.Empty(windows.Redrawn);
+        Assert.False(attachment.CompletePreparedVisualFrame([100, 999]));
+        Assert.True(attachment.CompletePreparedVisualFrame([100]));
+        Assert.Equal(new nint[] { 100 }, windows.Redrawn);
+        windows.FailBatch = true;
+        Assert.False(attachment.ApplyPreparedBoundsBatch(frames, DesktopFramePhase.Animation));
+        Assert.Equal(0, windows.PreparedBoundsApplyCount);
+        Assert.False(attachment.ApplyPreparedBoundsBatch(frames, (DesktopFramePhase)99));
+        windows.FailRedraw = true;
+        Assert.False(attachment.CompletePreparedVisualFrame([100]));
+    }
+
     private sealed class FakeExplorerDesktopApi : IExplorerDesktopApi
     {
         public bool Valid { get; set; } = true;
@@ -251,6 +281,12 @@ public sealed class DesktopLayerAttachmentTests
         public DesktopPixelRect LastPreparedBounds { get; private set; }
         public int BatchCount { get; private set; }
         public bool FailBatch { get; set; }
+        public bool FailRedraw { get; set; }
+        public IReadOnlyDictionary<nint, uint>? LastBatchFlags { get; private set; }
+        public List<nint> Redrawn { get; } = [];
+        public bool ApplyPreparedBoundsBatch(IReadOnlyDictionary<nint, DesktopPixelRect> bounds, IReadOnlyDictionary<nint, uint> flags)
+        { LastBatchFlags = flags; BatchCount++; return !FailBatch; }
+        public bool RequestFrameRedraw(nint windowHandle) { Redrawn.Add(windowHandle); return !FailRedraw; }
         public bool ApplyPreparedBoundsBatch(IReadOnlyDictionary<nint, DesktopPixelRect> bounds)
         { BatchCount++; return !FailBatch; }
 

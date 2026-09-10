@@ -89,13 +89,14 @@ internal sealed partial class PosterVisualWindow(
     }
     public DispatcherQueue SpatialDispatcher => _window!.DispatcherQueue;
 
-    public void BeginPosturePreview(string requestId, bool revealContents = true)
+    public void BeginPosturePreview(string requestId, DesktopPixelRect expandedBounds, bool revealContents = true)
     {
         CancelScheduledGestureFrame();
         _inputIsland?.CancelPointerGesture();
         _activeCommandRequestId = requestId;
         if (revealContents) _geometry = _geometry with { IsCollapsed = false };
         UpdateVisualState();
+        BeginTransitionLayout(requestId, expandedBounds);
     }
     public bool PresentPostureFrame(DesktopPixelRect frame) => !_disposed && ApplyFrame(frame);
     internal sealed record PreparedSpatialFrame(PosterVisualWindow Owner, DesktopPixelRect Bounds, PosterInputLayoutSnapshot Input);
@@ -106,7 +107,7 @@ internal sealed partial class PosterVisualWindow(
         // Preparation must not clip or resize a live surface before its peers move.
         return new(this, frame, input);
     }
-    public bool CommitSpatialFrames(IReadOnlyList<PreparedSpatialFrame> frames)
+    public bool CommitSpatialFrames(IReadOnlyList<PreparedSpatialFrame> frames, DesktopFramePhase phase = DesktopFramePhase.Regular)
     {
         var layouts = new List<(FrameworkElement Root, double Width, double Height)>();
         try
@@ -116,15 +117,25 @@ internal sealed partial class PosterVisualWindow(
         {
             var owner = frame.Owner;
             if (owner._disposed || owner._inputIsland is null) return false;
-            windows.Add(owner._windowHandle, frame.Bounds);
+            windows.Add(owner._windowHandle, phase is DesktopFramePhase.Animation or DesktopFramePhase.SurfacePreparation
+                ? owner.PreparedSurfaceBounds(frame.Bounds) : frame.Bounds);
             windows.Add(owner._inputIsland.WindowHandle, frame.Bounds);
         }
-        // This runs from the render callback for animated batches. Arrange the XAML content
-        // for the SAME bounds before moving HWNDs; don't wait for a later WM_SIZE layout pass.
+        // Animated visual HWNDs keep their preallocated size. Only their visible HRGN and
+        // input HWND use the current logical size; regular/final frames restore equality.
         foreach (var frame in frames)
         {
             var owner = frame.Owner;
             if (owner._window?.Content is not FrameworkElement root || owner._monitor is null) return false;
+            if (phase is DesktopFramePhase.Animation or DesktopFramePhase.SurfacePreparation)
+            {
+                if (phase == DesktopFramePhase.Animation && !owner.VerifyTransitionSurfaceReady()) return false;
+                // Never enlarge a surface until the OLD visible region is verified in place.
+                if (phase == DesktopFramePhase.SurfacePreparation &&
+                    !attachment.VerifyVisualSurface(owner._windowHandle, owner._bounds, owner._bounds)) return false;
+                if (!owner.ApplyTransitionViewport(frame.Bounds)) return false;
+                continue;
+            }
             layouts.Add((root, root.Width, root.Height));
             owner.RebuildItemGrid(owner.FrameWidthDip(frame.Bounds)); owner.UpdateItemScrollState(frame.Bounds);
             double width = frame.Bounds.Width / owner._monitor.ScaleX, height = frame.Bounds.Height / owner._monitor.ScaleY;
@@ -138,28 +149,35 @@ internal sealed partial class PosterVisualWindow(
                 return false;
             }
         }
-        bool applied = attachment.ApplyPreparedBoundsBatch(windows);
+        bool applied = attachment.ApplyPreparedBoundsBatch(windows, phase);
         bool nativeApplied = applied;
         // Always read every participant after a partial native failure. Recovery then uses the
         // single committed projection, not whichever windows happened to move first.
         foreach (var frame in frames)
         {
             var owner = frame.Owner;
-            bool matches = owner._window is not null && HasExpectedBounds(owner._window, frame.Bounds);
+            bool matches = owner._window is not null && HasExpectedBounds(owner._window, windows[owner._windowHandle]);
             applied &= matches;
             // Native clipping follows the WHOLE position batch, never the per-owner prepare loop.
-            bool regionApplied = matches && owner.ApplyVisualRegion(owner._windowHandle, frame.Bounds);
+            bool regionApplied = matches && owner.ApplyVisualRegion(owner._windowHandle, frame.Bounds, force: phase == DesktopFramePhase.FinalRestore);
             applied &= regionApplied;
             if (matches) owner._bounds = frame.Bounds;
+            if (matches && phase == DesktopFramePhase.SurfacePreparation && owner._transitionLayout is { } lease)
+                lease.NativePrepared = true;
+            bool surfaceApplied = matches && attachment.VerifyVisualSurface(owner._windowHandle, windows[owner._windowHandle], frame.Bounds);
+            applied &= surfaceApplied;
             bool inputApplied = matches && owner._inputIsland is not null && owner._inputIsland.ApplyLayout(frame.Bounds, frame.Input);
             applied &= inputApplied;
-            if (!nativeApplied || !matches || !inputApplied || !regionApplied) log.Write("warning", "spatial.batch_readback_failed", new
+            if (!nativeApplied || !matches || !inputApplied || !regionApplied || !surfaceApplied) log.Write("warning", "spatial.batch_readback_failed", new
             {
-                owner.PosterId, nativeApplied, matches, inputApplied, regionApplied, expected = frame.Bounds,
+                owner.PosterId, nativeApplied, matches, inputApplied, regionApplied, surfaceApplied, expected = frame.Bounds,
+                expectedSurface = windows[owner._windowHandle],
                 appPosition = owner._window?.AppWindow.Position, appSize = owner._window?.AppWindow.Size,
                 nativeError = System.Runtime.InteropServices.Marshal.GetLastPInvokeError()
             });
         }
+        if (phase == DesktopFramePhase.FinalRestore)
+            applied &= attachment.CompletePreparedVisualFrame(frames.Select(f => f.Owner._windowHandle).ToArray());
         return applied;
         }
         finally
@@ -171,6 +189,7 @@ internal sealed partial class PosterVisualWindow(
     }
     public PreparedSpatialFrame? PreparePostureRestore()
     {
+        RestoreTransitionLayout();
         _activeCommandRequestId = null;
         if (_disposed || _monitor is null || !spatial.TryGetProjection(out var current) ||
             current?.PostersById.GetValueOrDefault(PosterId ?? "") is not { } target || !AdoptPosterProjection(target, _monitor, applyFrame: false)) return null;
@@ -181,7 +200,7 @@ internal sealed partial class PosterVisualWindow(
     {
         environment = null; poster = null; entityVersion = _posterEntityVersion;
         if (_disposed || _window is null || _monitor is null || _authoritativePoster is null ||
-            CurrentGenerationPair is not { } generations || !HasExpectedBounds(_window, _bounds)) return false;
+            CurrentGenerationPair is not { } generations || !HasExpectedBounds(_window, CurrentNativeBounds(_bounds))) return false;
         environment = new(_monitor.DeviceName, PosterSpatialRuntime.Rect(_monitor.WorkArea), _monitor.DpiX, _monitor.DpiY,
             generations.DisplayTopologyGeneration, generations.DesktopShellGeneration, runtimeId);
         spatial.TryGetProjection(out var projection);
@@ -1269,6 +1288,7 @@ internal sealed partial class PosterVisualWindow(
             ExtendsContentIntoTitleBar = false,
             Content = CreateContent()
         };
+        ApplyWindowBackdrop(window);
         window.AppWindow.IsShownInSwitchers = false;
         window.AppWindow.SetPresenter(AppWindowPresenterKind.Overlapped);
         if (window.AppWindow.Presenter is OverlappedPresenter presenter)
@@ -1285,10 +1305,9 @@ internal sealed partial class PosterVisualWindow(
     {
         var root = new Grid
         {
-            // The native HRGN owns the outer transparency. Keep the WinUI root
-            // painted so a newly exposed resize strip never falls through to
-            // the HWND class/default background while composition catches up.
-            Background = ColorBrush(_presentation.Parameters.Theme.Background, 245)
+            // The HWND-sized SystemBackdrop owns the fill, including newly exposed resize
+            // pixels. Painting it again here would double the theme opacity and lag XAML size.
+            Background = new SolidColorBrush(Colors.Transparent)
         };
         _surface = new Border
         {
@@ -1299,7 +1318,7 @@ internal sealed partial class PosterVisualWindow(
         };
         root.Children.Add(_surface);
 
-        var structure = new Grid();
+        var structure = _contentStructure = new Grid();
         structure.RowDefinitions.Add(new RowDefinition { Height = new GridLength(HeaderHeightDip) });
         structure.RowDefinitions.Add(new RowDefinition { Height = new GridLength(MetaHeightDip) });
         structure.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
@@ -1310,7 +1329,7 @@ internal sealed partial class PosterVisualWindow(
         Grid.SetRow(header, 0);
         structure.Children.Add(header);
 
-        StackPanel meta = CreateMeta();
+        StackPanel meta = _metaPanel = CreateMeta();
         meta.Visibility = MetaHeightDip == 0 ? Visibility.Collapsed : Visibility.Visible;
         Grid.SetRow(meta, 1);
         structure.Children.Add(meta);
@@ -1334,7 +1353,7 @@ internal sealed partial class PosterVisualWindow(
         Grid.SetRow(_itemsScrollViewer, 2);
         structure.Children.Add(_itemsScrollViewer);
 
-        Grid footer = CreateFooter();
+        Grid footer = _footer = CreateFooter();
         Grid.SetRow(footer, 3);
         structure.Children.Add(footer);
         RebuildItemGrid(_geometry.WidthDip);
@@ -1758,6 +1777,13 @@ internal sealed partial class PosterVisualWindow(
         {
             return;
         }
+        if (_contentStructure is { } structure)
+        {
+            structure.RowDefinitions[1].Height = new GridLength(_geometry.IsCollapsed ? 0 : MetaHeightDip);
+            structure.RowDefinitions[3].Height = new GridLength(_geometry.IsCollapsed ? 0 : FooterHeightDip);
+        }
+        if (_metaPanel is not null) _metaPanel.Visibility = _geometry.IsCollapsed || MetaHeightDip == 0 ? Visibility.Collapsed : Visibility.Visible;
+        if (_footer is not null) _footer.Visibility = _geometry.IsCollapsed ? Visibility.Collapsed : Visibility.Visible;
         if (_itemsGrid is not null)
         {
             _itemsGrid.Visibility = _geometry.IsCollapsed
@@ -2009,6 +2035,8 @@ internal sealed partial class PosterVisualWindow(
 
     private void ClearVisualReferences()
     {
+        RestoreTransitionLayout();
+        _contentStructure = null; _metaPanel = null; _footer = null;
         _menuInteraction?.Cancel();
         _menuInteraction = null;
         MenuFlyout? menu = _posterMenu;
@@ -2053,6 +2081,7 @@ internal sealed partial class PosterVisualWindow(
         }
         if (_window is not null)
         {
+            Cleanup(ReleaseWindowBackdrop);
             Cleanup(() => { _ = attachment.Detach(_windowHandle); });
             Cleanup(() =>
             {

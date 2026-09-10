@@ -40,7 +40,8 @@ internal sealed class WinUiPosterSession(string posterId, PosterVisualWindow vis
         _environment = environment;
         if (!visual.Show(environment.Shell, environment.Displays, projection)) return false;
         visual.RegisterSpatialSurface();
-        _watcher = new DesktopEnvironmentWatcher(WindowHandle, ReassertBottom);
+        _watcher = new DesktopEnvironmentWatcher(WindowHandle, ReassertBottom,
+            compositionOwnsBackground: () => visual.HasWindowBackdrop);
         _watcher.Changed += OnEnvironmentChanged;
         _watcher.PointerActivationGuarded += OnPointerGuarded;
         _watcher.LayerActivationGuarded += OnLayerGuarded;

@@ -1,34 +1,21 @@
 # V3 通用内容与多海报细化工作流 V1
 
-状态：M07 IN PROGRESS；CONTRACT/BUILD PASS；CURRENT-ENVIRONMENT / MANUAL PENDING；M05/M06完成结论保留
-日期：2026-09-09
-总计划：[V3 制作计划](DESKTOPUP_V2_V3_IMPLEMENTATION_PLAN_V1.md)
-设计输入：[通用多海报合同](../20_Architecture/GENERAL_CONTENT_MULTI_POSTER_CONTRACT_V1.md)
-需求权威：[七份需求](../../00_Catalog/REQUIREMENTS_INDEX.md)
+日期：2026-09-10。状态：M07 IN PROGRESS；R4 白条用户确认；M05/M06完成结论保留。
+总计划：[V3 制作计划](DESKTOPUP_V2_V3_IMPLEMENTATION_PLAN_V1.md)；设计：[通用多海报合同](../20_Architecture/GENERAL_CONTENT_MULTI_POSTER_CONTRACT_V1.md)；需求：[七份需求](../../00_Catalog/REQUIREMENTS_INDEX.md)。
 
-## 1. 当前状态与本轮交付
+## 1. 当前状态与最近交付
 
-当前专项：[M07动画R1](../40_Implementation/V3-04/M07_ANIMATION_R1.md)响应用户新增授权，接入启动JSON像素/帧节奏参数和呈现顺序优化；488/488，两组参数原生回归与动画中退出通过。下一动作为视觉人工，不改已认可空间模型，不把此项扩大为控制中心热更新或整套性能优化。之后仍回M07剩余门收口。
+[R4及清理记录](../40_Implementation/V3-04/M07_ANIMATION_R4.md)登记本次白条确认和回归；[排查方法](../20_Architecture/PRESENTATION_DIAGNOSIS_PLAYBOOK_V1.md)固定证据优先流程。
+菜单原故障、连续收展体验及本次白条已获用户认可；不把宽泛认可补成所有安全格 PASS。空间策略、统一 revision/CAS、输入岛与恢复通道保留，六卡仍为 DEMO ITEMS。
 
-2026-09-09最新补强：[连续空间行为合同](../20_Architecture/POSTER_SPATIAL_CONTINUITY_CONTRACT_V1.md)→[23类连续矩阵](../20_Architecture/POSTER_SPATIAL_CONTINUITY_MATRIX_V1.md)→纯模型→生产同revision接入已按顺序推进；最终461/461、原生8命令/80批次帧通过。[实施记录](../40_Implementation/V3-04/M07_SPATIAL_CONTINUITY.md)登记反例和完整证据。当前交用户验证两种嵌套关闭顺序；不能完整归位就不动，禁止部分回收。M07仍OPEN，不跳过剩余安全/基线而提前开启真实内容。下段411项为M07初建历史。
+最近执行：
+1. M07-02/03/04：人工/采样入口先绑定稳定产物，再补 S3 安全余项、S4 确认失效、S5 删除至零/重启和完整36次资源样本；预算差距单列。
+2. 原 V3-04-04：完整中心预览、海报管理与几何/参数编辑，复用目标选择、空间服务和草稿/CAS。
+3. V3-04-05：托盘新增、数量/状态和全局操作。
+4. V3-04-06-A..D：便携配置/恢复；04-07/08生命周期收口后 V3-05-01真实内容合同。
 
-当前[M07测量与安全门](../40_Implementation/V3-04/M07_MEASUREMENT_AND_SAFETY.md)已建立合同、1/3/6隔离配置、18格×2采样和空间批次计时。411/411、固定Release及PowerShell5.1真实启动/退出通过。用户已决定在当前环境推进：取消管理员启动硬门，权限只记录；先S1～S5人工，资源矩阵另行收口，不重复全量DPI/安装或动画评审。
-
-M06完成历史：2026-09-09用户正常退出旧版后，[M06多实例合同夹具](../40_Implementation/V3-04/M06_MULTI_INSTANCE_FIXTURES.md)已补齐真实Exercise/Restart：9阶段快照、单实例短进程、完整重启配置对照和退出资源0均通过，完整合同405/405。M05参数两轮/空间尾门通过；M05/M06关闭。下面M05段为基础范围说明，不是当前下一项。
-
-用户已认可当前收展策略体验，明确动画打磨延期并进入[M05最小参数合同](../40_Implementation/V3-04/M05_PRESENTATION_PARAMETERS.md)。参数、草稿/CAS、逐海报度量和只读中心摘要已实现，395/395、Release及隔离窗口烟测通过。M04 G1～G4历史PASS与策略体验反馈保留，未逐项确认的删除/恢复等人工安全门留M07集中，M06程序化PASS不补写M04整体PASS。
-
-历史自动基线：M04-06共享输入路由/唯一捕获及共用删除确认已实现；313/313、Release0warning0error和真实三海报确认/退出/空间回归通过。见 [输入确认合同](../40_Implementation/V3-04/M04_INPUT_CONFIRMATION.md)。当前07已部分获用户确认，未确认余项按上方入口继续。
-
-- V3-01/02/03 的既有单海报基础保留；V3-04-01/02 已完成；V3-04-03 R1 用户已确认人工验证通过。
-- 历史 M01 交付 schema v3、多海报实体/目录仓储和兼容迁移夹具；未迁移用户真实数据库或操作桌面文件。
-- 后续 M02 已实现目标命令、读集 CAS、schema v4 回执、集合投影与批量事务；147/147、Release 0 warning / 0 error、隔离新版 smoke 通过。受影响人工交互回归待确认，状态不提升为 PASS。
-- M01 历史完整合同测试 117/117（新增 20 项目录用例），完整 Release 0 warning / 0 error；97/97 与实际开窗为先前单海报证据。
-- M03注册表/共享恢复已实现，163/163、Release、0/1/3及等待中退出smoke为历史证据；用户确认基本交互，剩余明确核心人工结果在M04-07补齐。不补写M02/M03逐项人工PASS。M系列仍为原04-04前置，不另开全项目重构。
-
-2026-09-07 后续需求补充：首次无配置只建一张默认海报；中心/托盘新增，中心/海报“...”删除并提示后果；单文件跨主机习惯配置。M01 117/117 为历史数据证据，不能当作这些 UI/导入导出能力已通过。
-
-用户确认多海报可交互并提出中心仅A、不可重叠/推让/保尺寸展开。M04-01中心和M04-02合同已完成自动验证；03..05现已接运行。M03未逐项报告的Explorer/Win+D仍在M04-07集中补证，不补写全项PASS。
+当前动画入口 `scripts/start-m07-animation.ps1`（PS5.1）；配置仅启动读取，不新增中心热更新。当前权限可运行，权限仅记录，不作为启动硬门；多屏/DPI、GPU呈现FPS和长期稳定性仍是独立证据范围。
+下方任务卡保留依赖/验收要求；历史数值和“当时待人工”不撤销后续专项用户反馈，M07安全矩阵是剩余人工的归并入口。
 
 ## 2. 可交付里程碑与优先级
 

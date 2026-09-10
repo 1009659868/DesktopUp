@@ -98,9 +98,15 @@ public interface IDesktopLayerAttachment
         DesktopPixelRect bounds);
     // Unsupported adapters fail closed; do not emulate a group with visible sequential moves.
     bool ApplyPreparedBoundsBatch(IReadOnlyDictionary<nint, DesktopPixelRect> bounds) => false;
+    bool ApplyPreparedBoundsBatch(IReadOnlyDictionary<nint, DesktopPixelRect> bounds, DesktopFramePhase phase) =>
+        phase == DesktopFramePhase.Regular && ApplyPreparedBoundsBatch(bounds);
+    bool CompletePreparedVisualFrame(IReadOnlyCollection<nint> windows) => false;
+    bool VerifyVisualSurface(nint window, DesktopPixelRect surface, DesktopPixelRect visible) => false;
     bool Detach(nint windowHandle);
     bool IsAttached(nint windowHandle, DesktopShellHostSnapshot desktopHost);
 }
+
+public enum DesktopFramePhase { Regular, Animation, FinalRestore, SurfacePreparation }
 
 public readonly record struct DesktopPixelRect(
     int X,

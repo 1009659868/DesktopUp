@@ -1,14 +1,10 @@
 # DesktopUp V2 V3 制作计划 V1
 
-状态：`M07 IN PROGRESS — CONTRACT/BUILD PASS；CURRENT-ENVIRONMENT / MANUAL PENDING`
-
-建立日期：2026-09-03
-
-适用分支：`impl/poster-redesign-V3`
-
-当前专项（2026-09-09）：用户另授权[动画R1与启动配置](../40_Implementation/V3-04/M07_ANIMATION_R1.md)，不是再次改空间策略。完整488项、两组参数原生及中途退出通过；屏幕顺畅度/留缝待人工。控制中心热更新暂不纳入本阶段。
-
-2026-09-09当前补强：[M07连续空间模型](../40_Implementation/V3-04/M07_SPATIAL_CONTINUITY.md)已依次完成行为合同、连续操作矩阵、纯验证及生产接入自动门；461/461，真实8命令/80批次帧。鼠标/动画观感待验；旧菜单原故障人工PASS保留。该补强不关闭M07剩余安全门和资源基线；下一主线仍为M07收口→04-04管理入口→V3-05真实内容，而非动画润色或重选框架。
+最后检查：2026-09-10。适用分支：`impl/poster-redesign-V3`。
+状态：M07 IN PROGRESS；白条专项 R4 USER CONFIRMED，M05/M06已完成结论保留。
+当前 [修复/清理记录](../40_Implementation/V3-04/M07_ANIMATION_R4.md) 与 [排查方法](../20_Architecture/PRESENTATION_DIAGNOSIS_PLAYBOOK_V1.md) 已收口本次故障。稳定入口 `scripts/start-m07-animation.ps1`。
+最近顺序：M07 剩余安全与18格×2测量 → 原04-04中心管理 → 04-05托盘 → 04-06配置/恢复及04-07/08生命周期 → V3-05真实内容。不是跳过前置直接接文件。
+各历史子项的自动/人工证据按专项记录追溯；旧“当前/待验”描述不覆盖本页最新状态。
 
 ## 1. 总目标
 

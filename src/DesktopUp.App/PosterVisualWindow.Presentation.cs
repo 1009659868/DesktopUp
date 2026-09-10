@@ -24,11 +24,13 @@ internal sealed partial class PosterVisualWindow
         _renderedTitle = _authoritativePoster?.Title;
         _renderedSubtitle = _authoritativePoster?.Subtitle;
         if (!changed || _window is null) return;
+        RestoreTransitionLayout();
         _posterMenu?.Hide();
         StopExpansionFeedback();
         _itemColumnCount = -1;
         // Replace only this instance's XAML tree on an explicit presentation revision.
         // No window/host replacement, no global Application.Resources, no outer geometry write.
+        ApplyWindowBackdrop(_window);
         _window.Content = CreateContent();
         _window.Title = "DesktopUp V3 · " + _renderedTitle;
         log.Write(next.IsFallback ? "warning" : "info", "poster.presentation_applied", new
@@ -49,9 +51,8 @@ internal sealed partial class PosterVisualWindow
         var expected = target.Presentation;
         if (_presentation != expected || _renderedTitle != target.Poster.Title ||
             _window?.Title != "DesktopUp V3 · " + target.Poster.Title ||
-            _window.Content is not Grid root || root.Background is not SolidColorBrush background ||
-            background.Color != ColorBrush(expected.Parameters.Theme.Background, 245).Color ||
-            _surface?.Child is not Grid structure || structure.RowDefinitions[1].Height.Value != expected.MetaHeightDip ||
+            !VerifyWindowBackdrop() ||
+            _surface?.Child is not Grid structure || structure.RowDefinitions[1].Height.Value != (target.Poster.IsCollapsed ? 0 : expected.MetaHeightDip) ||
             _itemsGrid is null || _itemsGrid.Children.Count != Items.Length ||
             _itemsGrid.RowSpacing != ContentParameters.GapDip || _itemsGrid.ColumnSpacing != ContentParameters.GapDip ||
             _itemColumnCount != PosterPresentationPolicy.ResolveColumns(FrameWidthDip(_bounds), expected.Parameters.Content)) return false;

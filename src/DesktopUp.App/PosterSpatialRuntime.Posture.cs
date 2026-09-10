@@ -80,7 +80,25 @@ internal sealed partial class PosterSpatialRuntime
                 CancelPosture("animation-exception");
             }
         };
-        foreach (var window in participants) window.BeginPosturePreview(command.RequestId, window == owner);
+        try
+        {
+            foreach (var window in participants)
+            {
+                var change = plan.Changes.Single(c => c.PosterId == window.PosterId);
+                var before = scene.Posters.Single(p => p.PosterId == window.PosterId).Bounds;
+                var expanded = change.After.Height > before.Height ? change.After : before;
+                window.BeginPosturePreview(command.RequestId, Pixels(expanded), window == owner);
+            }
+            var surfaces = participants.Select(p => p.PrepareSpatialFrame(Pixels(scene.Posters.Single(s => s.PosterId == p.PosterId).Bounds))).ToArray();
+            if (surfaces.Any(p => p is null) || !owner.CommitSpatialFrames(surfaces.Select(p => p!).ToArray(), DesktopFramePhase.SurfacePreparation))
+                throw new InvalidOperationException("Clipped native surface preparation failed.");
+        }
+        catch (Exception exception)
+        {
+            log.Write("error", "spatial.transition_prepare_failed", new { command.RequestId, exception.Message });
+            CancelPosture("content-preparation-failed");
+            return;
+        }
         log.Write("info", "spatial.posture_started", new { command.RequestId, command.PosterId,
             participants = participants.Select(p => p.PosterId), frames = run.Frames.Count, group.ConsumeOperationId,
             keyframes = group.Frames.Count, animation = animationOptions, nominalDurationMs = schedule.NominalDurationMs,
@@ -114,12 +132,28 @@ internal sealed partial class PosterSpatialRuntime
         { CancelPosture("environment-or-read-set-stale"); return; }
         if (!run.Cursor.Complete)
         {
-            if (!run.Cursor.TryTake(run.Clock.Elapsed.TotalMilliseconds, out var frame)) return;
+            if (run.AnimationOriginMs is null)
+            {
+                // Let the real HWND/WinUI size update finish behind the unchanged visible HRGN.
+                // Consecutive callbacks are a preparation gate, not a claim of GPU presentation.
+                run.ReadyCallbacks = run.Participants.All(p => p.VerifyTransitionSurfaceReady()) ? run.ReadyCallbacks + 1 : 0;
+                if (run.ReadyCallbacks < 2) return;
+                run.AnimationOriginMs = run.Clock.Elapsed.TotalMilliseconds;
+                log.Write("info", "spatial.surfaces_ready", new { run.Command.RequestId, run.ReadyCallbacks, preparationMs = run.AnimationOriginMs });
+                return;
+            }
+            if (!run.Cursor.TryTake(run.Clock.Elapsed.TotalMilliseconds - run.AnimationOriginMs.Value, out var frame)) return;
             long probeStart = _measurePostureFrames ? System.Diagnostics.Stopwatch.GetTimestamp() : 0;
             var prepared = frame!.Changes.Select(p => _windows[p.PosterId].PrepareSpatialFrame(Pixels(p.To))).ToArray();
-            bool applied = prepared.All(p => p is not null) && run.Owner.CommitSpatialFrames(prepared.Select(p => p!).ToArray());
+            bool applied = prepared.All(p => p is not null) && run.Owner.CommitSpatialFrames(prepared.Select(p => p!).ToArray(), DesktopFramePhase.Animation);
+            // A live window backdrop is a separate check from HWND/XAML geometry. This does
+            // not claim to measure presented pixels; it prevents a silent return to XAML-only fill.
+            bool? backdropsReady = _measurePostureFrames
+                ? prepared.All(p => p is not null && p.Owner.VerifyWindowBackdrop()) : null;
             if (_measurePostureFrames) log.Write("info", "spatial.probe_frame", new { run.Command.RequestId, index = run.Cursor.Index,
-                applied, qpc = System.Diagnostics.Stopwatch.GetTimestamp(), frequency = System.Diagnostics.Stopwatch.Frequency,
+                applied, backdropsReady, layoutsStable = prepared.All(p => p is not null && p.Owner.VerifyTransitionLayout(true)),
+                surfacesCoverVisible = prepared.All(p => p is not null && p.Owner.VerifyTransitionSurfaceReady()),
+                qpc = System.Diagnostics.Stopwatch.GetTimestamp(), frequency = System.Diagnostics.Stopwatch.Frequency,
                 maximumEdgeDelta = frame.Changes.Select(c => SpatialAnimationSchedule.EdgeDistance(c.From, c.To)).DefaultIfEmpty().Max(),
                 elapsedMs = run.Clock.Elapsed.TotalMilliseconds,
                 prepareAndCommitMs = System.Diagnostics.Stopwatch.GetElapsedTime(probeStart).TotalMilliseconds });
@@ -149,9 +183,34 @@ internal sealed partial class PosterSpatialRuntime
             foreach (var change in run.Changes)
                 if (projection.PostersById.TryGetValue(change.PosterId, out var target))
                     _effective.Set(target, change.After, run.Initial.Environment);
-        var restorations = run.Participants.Where(p => p.WindowHandle != 0).Select(p => p.PreparePostureRestore()).ToArray();
-        bool restored = restorations.Length == 0 || restorations.All(p => p is not null) &&
-            run.Owner.CommitSpatialFrames(restorations.Select(p => p!).ToArray());
+        var restorations = new List<PosterVisualWindow.PreparedSpatialFrame>();
+        bool restored = true;
+        foreach (var participant in run.Participants)
+        {
+            try
+            {
+                var frame = participant.PreparePostureRestore();
+                if (frame is not null) restorations.Add(frame);
+                else if (participant.WindowHandle != 0) restored = false;
+            }
+            catch (Exception exception)
+            {
+                restored = false;
+                log.Write("error", "spatial.transition_restore_failed", new { participant.PosterId, exception.Message });
+            }
+        }
+        try
+        {
+            if (restorations.Count > 0) restored &= run.Owner.CommitSpatialFrames(restorations, DesktopFramePhase.FinalRestore);
+        }
+        catch (Exception exception)
+        {
+            restored = false;
+            log.Write("error", "spatial.transition_final_commit_failed", new { exception.Message });
+        }
+        bool layoutsReleased = run.Participants.Where(p => p.WindowHandle != 0).All(p => p.VerifyTransitionLayout(false));
+        restored &= layoutsReleased;
+        log.Write(restored ? "info" : "warning", "spatial.presentation_restored", new { run.Command.RequestId, restored, layoutsReleased });
         _posture = null;
         EffectiveLayoutChanged?.Invoke();
         if (!restored)
@@ -181,6 +240,8 @@ internal sealed partial class PosterSpatialRuntime
         public IReadOnlyList<SpatialBatchFrame> Frames => Schedule.Frames;
         public SpatialAnimationCursor Cursor { get; } = new(schedule, options);
         public Stopwatch Clock { get; } = new();
+        public int ReadyCallbacks { get; set; }
+        public double? AnimationOriginMs { get; set; }
         public EventHandler<object>? RenderingHandler { get; set; }
         public IReadOnlyList<PosterVisualWindow> Participants { get; } = participants;
         public DispatcherQueueTimer Timer { get; } = timer;

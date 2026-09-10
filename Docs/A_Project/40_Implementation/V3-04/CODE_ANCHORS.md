@@ -1,35 +1,27 @@
 # V3-04 代码锚点
 
-状态：`M07 IN PROGRESS — CONTRACT/BUILD PASS；CURRENT-ENVIRONMENT / MANUAL PENDING`
+日期：2026-09-10。本页先列当前实现；下方既有阶段条目作为历史代码索引，不覆盖 [HANDOFF](HANDOFF.md)。
 
-## M07 当前锚点
+## 当前呈现与动画
 
-- 当前[动画R1](M07_ANIMATION_R1.md)：[PosterAnimationOptions](../../../../src/DesktopUp.Application/PosterAnimationOptions.cs)、[SpatialAnimationSchedule](../../../../src/DesktopUp.Application/SpatialAnimationSchedule.cs)定义启动节奏、已接受路径细分/同边插值、预算与不跳帧的时钟；连续域模型不改。
-- [配置读取](../../../../src/DesktopUp.Infrastructure/PosterAnimationConfiguration.cs)、App启动加载、[参数文件](../../../../config/poster-animation.json)和[说明](../../../../config/README.md)：启动一次、严格校验、无热更新/新schema。
-- PosterSpatialRuntime.Posture使用Rendering＋退出成对解绑，timer仅看门狗；PosterVisualWindow准备无可见副作用、提交阶段预布局、整体坐标批次后才改HRGN、finally恢复伸展布局模式。
-- [动画测试](../../../../tests/DesktopUp.Contracts.Tests/SpatialAnimationTests.cs)、[配置测试](../../../../tests/DesktopUp.Contracts.Tests/PosterAnimationConfigurationTests.cs)、[PS5.1入口](../../../../scripts/start-m07-animation.ps1)：完整488/488，两组原生参数回归/中途退出见当前记录；屏幕观感未代填PASS。
+- `Application/PosterTransitionSurface.cs`：逻辑可见几何/临时容量分离，受限有效高度不写回首选高度；`PosterTransitionSurfaceTests.cs`覆盖嵌套顺序/步长/上扩/越界。
+- `Application/PosterTransitionViewport.cs`：视口/底栏的连续裁切；对应纯测试保留。
+- `App/PosterVisualWindow.Transition.cs`：整段内容租约，准备容量、根实际覆盖验证、视口变化与完整树/Clip恢复。
+- `App/PosterVisualWindow.cs`：SurfacePreparation / Animation / FinalRestore 分阶段提交；动画视觉固定容量，输入当前大小；收起 meta/footer 行隐藏，空间快照只用可见几何。
+- `App/PosterSpatialRuntime.Posture.cs`：共享 Rendering 时钟、双回调就绪门、批次更新与失败恢复；`spatial.surfaces_ready`、`spatial.presentation_restored`保留。不是 GPU fence。
+- `Windows/DesktopPresentationFlags.cs`：只对已登记视觉窗口应用 NOSIZE/NOREDRAW，输入/桌面层级不改。
+- `Windows/DesktopLayerAttachment.cs`：实际窗口/客户区/HRGN容量读回、最终重绘；`DesktopLayerAttachmentTests.cs`验证标志隔离与失败回传。
+- `App/PosterVisualWindow.Backdrop.cs`、`Presentation.cs`、`WinUiPosterSession.cs`与`Windows/DesktopEnvironmentWatcher.cs`：独立窗口背景、主题更新、擦底归属和成对解除。背景检查不等于像素呈现证明。
+- `scripts/start-m07-animation.ps1` + `m07-animation-build.json`：唯一当前动画入口/24项指纹；`config/poster-animation.json`仅启动配置。
+- 临时 PresentationDiagnostic partial/API/菜单/重绘测试与 R2/R3/R4 分叉入口已移出活动目录；本地 out/archive 可恢复，源码不再依赖它们。
 
-- [连续空间合同](../../20_Architecture/POSTER_SPATIAL_CONTINUITY_CONTRACT_V1.md)、[23类矩阵](../../20_Architecture/POSTER_SPATIAL_CONTINUITY_MATRIX_V1.md)、[实施/验证](M07_SPATIAL_CONTINUITY.md)：当前461项和最终原生证据，人工待确认；下方旧诊断“尚未改代码”为历史。
-- [SpatialContinuitySolver](../../../../src/DesktopUp.Domain/SpatialContinuitySolver.cs)：有界锚点/自身上扩偏移/关联范围、完整目标和安全子集、归一化同步进度、每段扫掠；复用旧展开/收起策略。
-- [SpatialPostureCommit](../../../../src/DesktopUp.Application/SpatialPostureCommit.cs)：UseContinuity生产入口、完整目录CAS、事务内重算和布局代次强制更新；ScopedStateContracts/StateProjectionContracts/StateProjectionCoordinator携带同revision元数据。
-- [SqliteSpatialContinuityRepository](../../../../src/DesktopUp.Infrastructure/SqliteSpatialContinuityRepository.cs)及SqliteStateStore/SqliteStateCommandRepository：追加v6、不改v1～v5，同事务读写元数据/实体/回执。
-- [PosterSpatialRuntime.Posture](../../../../src/DesktopUp.App/PosterSpatialRuntime.Posture.cs)：原生产收展路径接模型，保留Host/输入/批次/有效高度/恢复。[ContinuitySmoke](../../../../src/DesktopUp.App/PosterSpatialRuntime.ContinuitySmoke.cs)仅显式隔离CLI运行8命令或人工排列，正常启动不开启。
-- [域测试](../../../../tests/DesktopUp.Contracts.Tests/SpatialContinuityTests.cs)、[存储测试](../../../../tests/DesktopUp.Contracts.Tests/SpatialContinuityIntegrationTests.cs)：21+7项含长序列、seed85/143及迁移失败；完整461/461。
-- [入口](../../../../scripts/start-m07-continuity.ps1)、[23项指纹](../../../../scripts/m07-continuity-build.json)：PS5.1、全新隔离配置、固定新包、拒绝并开；原菜单R1入口改用其独立schema5 fixture以保留回归兼容。
+## M07 其余当前锚点
 
-- 最新：[嵌套收展归位诊断](M07_NESTED_POSTURE_RETURN_DIAGNOSIS.md)。`Domain/PosterSpatialSolver.cs`的`SpatialReturnPolicy.CheckEligibility`以完整记录相等判资格，`SpatialPushSolver.FindReturnTargets`过滤后用历史完整Bounds作为归位终点；`PosterLayoutGenerationPolicy`将收展计入代次，`Infrastructure/SqliteSpatialProofRepository`负责失效/消费。用户菜单原故障已人工PASS；本空间缺口仅确认原因，尚未改代码。
-
-- [菜单修复R1](M07_MENU_REPAIR_R1.md)：`Windows/DesktopMenuInteraction.cs`共享菜单租约/输入位恢复/层级策略，`NativeDesktopMenuPlatform.cs`只处理本UI线程的Popup；InputIsland/visual guard与MenuFlyout生命周期接入。`DesktopMenuInteractionTests.cs`13项新增，完整433/433；`PosterSpatialRuntime.MenuSmoke.cs`为隔离真实Popup查询，`scripts/start-m07-menu-repair.ps1`为PS5.1固定产物入口。最终原生/人工待验证，不改变M07 OPEN。
-
-- [隔离菜单取证](M07_MENU_INPUT_DIAGNOSIS.md)：`MenuInputDiagnostic.cs`读菜单观测矩形/指针与guard，`Windows/MenuInputDiagnostics.cs`读本进程窗口及现有WndProc/路由消息；默认关闭，无新命中策略。诊断420/420/独立Release通过；本轮PID18716已取得B真实失败和C成功对照。注意AutomationPeer的screenBounds字段在本样本不可靠，应与原生Popup及Pointer坐标交叉核对，不能用标签直接推断DPI错位。
-- 菜单已确认缺口：`PosterVisualWindow.cs:475`只恢复输入/视觉二元组，`:1063`构建卡片和右侧滚动条输入区，`:1344`的MenuFlyout生命周期未建立共享输入保护；`PosterInputIslandManager.cs:287/:460/:593`的激活保护、海报路由和Z序约束均未纳入Popup。实测B输入在Popup前、相邻C也在前；修复未实施，M07仍OPEN。
-
-- [M07合同与人工矩阵](M07_MEASUREMENT_AND_SAFETY.md)：18格×2同环境基线、单核/整机CPU口径、工作集与私有提交区分、原生提交不等于呈现FPS、S1～S5集中安全门。
-- [外部采样](../../../../scripts/measure-m07.ps1)、[固定入口](../../../../scripts/start-m07-measurement.ps1)、[统计数学](../../../../scripts/MeasurementMath.cs)：500ms外部读进程，8～18秒稳态窗口、完整性检查、实际权限记录；不因管理员权限拒绝启动，输出原始JSON，不改正常App轮询。
-- [MeasurementFixtureData](../../../../tests/Shared/MeasurementFixtureData.cs)、SessionFixture的`--measure-expanded/collapsed/hidden`：仅测试1/3/6配置，既有生成模式仍0..3；[MeasurementContractTests](../../../../tests/DesktopUp.Contracts.Tests/MeasurementContractTests.cs)新增6项，完整411/411。
-- `PosterSpatialRuntime.Smoke.cs/.Posture.cs`：显式隔离smoke开计时，记录`spatial.probe_frame`实际提交成功/序号/QPC/耗时，以及`spatial.probe_command_completed`调用到回调；[时序脚本](../../../../scripts/measure-m07-spatial.ps1)验证计划/实际帧数，不假设每个计划帧都呈现。
-- [人工入口](../../../../scripts/start-m07-manual.ps1)与[6产物指纹](../../../../scripts/m07-build.json)：4个隔离配置、当前5.1兼容、已有进程拒绝、数据不重建；5.1真实启动/退出已通过，未代填鼠标/视觉PASS。
-- [共享启动器](../../../../scripts/Start-DesktopUpFixtureProcess.ps1)：ProcessStartInfo子进程环境，兼容5.1/7、不修改父进程环境或系统权限；[启动回归](../../../../scripts/test-m07-launcher.ps1)检查7脚本AST、统计兼容、入口指纹及真实三海报/单中心/托盘/正常退出。
+- 连续空间合同/模型/SQLite v6与同批推让归位见 [M07_SPATIAL_CONTINUITY](M07_SPATIAL_CONTINUITY.md)；`PosterSpatialRuntime.ContinuitySmoke.cs`保留8命令生产通道回归，删除其额外重绘实验。
+- 菜单共享租约与输入让位见 [M07_MENU_REPAIR_R1](M07_MENU_REPAIR_R1.md)，`DesktopMenuInteraction.cs`/`NativeDesktopMenuPlatform.cs`；旧菜单取证为历史，不代表仍未修复。
+- [M07安全/测量合同](M07_MEASUREMENT_AND_SAFETY.md)：`measure-m07.ps1`、`MeasurementMath.cs`、`MeasurementFixtureData.cs`与测量合同测试。
+- M07人工/测量历史入口仍固定其当时包，执行剩余门前需重绑本次稳定包；不得拿旧包认证最新呈现。
+- 证据：[R4](M07_ANIMATION_R4.md)、[VERIFICATION](VERIFICATION.md)；方法：[呈现诊断](../../20_Architecture/PRESENTATION_DIAGNOSIS_PLAYBOOK_V1.md)。
 
 ## M06 当前代码锚点
 

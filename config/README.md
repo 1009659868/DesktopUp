@@ -1,5 +1,7 @@
 # 启动动画配置
 
+当前唯一动画入口为`scripts/start-m07-animation.ps1`，固定清理后的R4稳定包；格式与默认参数不变。
+
 `poster-animation.json`只控制海报收起/展开及同批推让/归位的呈现，不决定碰撞目标、归位资格、首选尺寸或主题；不进入SQLite committed revision。本阶段没有控制中心编辑、文件监听或热更新，修改后必须正常退出并重新启动。
 
 ## 参数
