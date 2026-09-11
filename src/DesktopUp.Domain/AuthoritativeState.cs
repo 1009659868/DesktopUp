@@ -22,6 +22,7 @@ public sealed record PosterDefinition(
     string LayoutParametersJson,
     string TemplateKey)
 {
+    public int AutoCollapseDelaySeconds { get; init; } = PosterAutoPosturePolicy.DefaultDelaySeconds;
     public string Purpose { get; init; } = "general";
     public bool IsVisible { get; init; } = true;
     public long StackOrder { get; init; }
@@ -47,6 +48,8 @@ public static class AuthoritativeStateValidationPolicy
     public static string? Validate(PosterDefinition poster)
     {
         ArgumentNullException.ThrowIfNull(poster);
+        if (PosterAutoPosturePolicy.ValidateDelay(poster.AutoCollapseDelaySeconds) is { } delayError)
+            return delayError;
         if (!IsRequiredText(poster.PosterId, 128) ||
             !IsRequiredText(poster.Title, 256) ||
             !IsBoundedText(poster.Subtitle, 512) ||

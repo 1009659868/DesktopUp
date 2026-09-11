@@ -23,6 +23,12 @@ internal sealed partial class ControlCenterService(
     private bool _disposed;
     private IDisposable? _removalLease;
     public string? SelectedPosterId => _selection.SelectedPosterId;
+    // Includes async show/dismiss: cancelling the ticket is not proof the dialog has closed.
+    public bool IsRemovalInteractionActive => _removalShowing;
+    public event Action? RemovalInteractionChanged;
+    public bool IsSettingsInteractionActive => _window?.IsSettingsInteractionActive == true;
+    public event Action? SettingsInteractionChanged;
+    private void OnSettingsInteractionChanged() => SettingsInteractionChanged?.Invoke();
 
     public void Show()
     {
@@ -52,6 +58,7 @@ internal sealed partial class ControlCenterService(
                 _window = pendingWindow;
                 pendingWindow = null;
                 _window.Closed += OnClosed;
+                _window.SettingsInteractionChanged += OnSettingsInteractionChanged;
                 log.Write("info", "control_center.created");
             }
             else
@@ -112,6 +119,8 @@ internal sealed partial class ControlCenterService(
     public void ShowCommandResult(StateCommandResult result)
     {
         if (result.Projection is not null) ApplyProjection(result.Projection.ControlCenter);
+        if (_window?.CompleteAutoPosture(result) == true) return;
+        if (result.RequestId.StartsWith("controlcenter-auto-", StringComparison.Ordinal)) return;
         if (!result.Succeeded)
         {
             _commandError = $"{result.Status}：{result.Error ?? "目标已变化，请查看最新状态后重试。"}";
@@ -155,8 +164,10 @@ internal sealed partial class ControlCenterService(
         if (_window is not null)
         {
             _window.Closed -= OnClosed;
+            _window.SettingsInteractionChanged -= OnSettingsInteractionChanged;
         }
         _window = null;
+        SettingsInteractionChanged?.Invoke();
         _lease?.Dispose();
         _lease = null;
         log.Write("info", "control_center.closed");
@@ -169,6 +180,7 @@ internal sealed partial class ControlCenterService(
         if (_window is not null)
         {
             _window.Closed -= OnClosed;
+            _window.SettingsInteractionChanged -= OnSettingsInteractionChanged;
             _window.Close();
             _window = null;
         }
@@ -193,6 +205,7 @@ internal sealed partial class ControlCenterService(
         if (_disposed || _removalShowing) return;
         bool OriginCurrent() => request.Origin is not { } key || inputRouter.IsCurrent(key, request.OriginLayoutRevision);
         _removalShowing = true;
+        RemovalInteractionChanged?.Invoke();
         IDisposable? dialogLease = null;
         try
         {
@@ -236,6 +249,7 @@ internal sealed partial class ControlCenterService(
             dialogLease?.Dispose();
             if (ReferenceEquals(_removalLease, dialogLease)) _removalLease = null;
             _removalShowing = false;
+            RemovalInteractionChanged?.Invoke();
         }
     }
 }

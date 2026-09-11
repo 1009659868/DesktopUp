@@ -15,6 +15,20 @@ public sealed class PosterInputRouter
     public int Count => _surfaces.Count;
     public int ReadyCount => _suspended ? 0 : _surfaces.Values.Count(s => s.Layout is not null);
 
+    // A wake-up hint only. Observers must re-read native ownership and current geometry;
+    // routed events neither assert hover nor extend the input region into transparent holes.
+    public event Action? PointerActivity;
+    public bool HasPointerObservers => PointerActivity is not null;
+    public Exception? NotifyPointerActivity(PosterInputSessionKey key, long revision)
+    {
+        try { if (IsCurrent(key, revision)) PointerActivity?.Invoke(); }
+        catch (Exception error) { return error; } // a passive observer cannot break active input
+        return null;
+    }
+    public PosterInputSurfaceSnapshot? ReadSurface(PosterInputSessionKey key) => !_suspended &&
+        _surfaces.TryGetValue(key.PosterId, out var s) && s.Key == key && s.Layout is { } layout
+            ? new(key, s.Frame, layout) : null;
+
     public void Register(PosterInputSessionKey key)
     {
         if (string.IsNullOrWhiteSpace(key.PosterId) || key.Epoch < 1) throw new ArgumentException("Invalid input identity.");
@@ -52,7 +66,7 @@ public sealed class PosterInputRouter
         {
             if (!_surfaces.TryGetValue(key.PosterId, out var s) || s.Key != key || s.Layout is not { } layout) continue;
             int x = screenX - s.Frame.X, y = screenY - s.Frame.Y;
-            if (!InsideRoundedFrame(x, y, layout)) continue;
+            if (!PosterInputGeometry.InsideRoundedFrame(x, y, layout)) continue;
             foreach (var r in layout.Regions)
                 if (Contains(r.Bounds, x, y)) return new(key, layout.Revision, s.Frame, r);
         }
@@ -86,7 +100,29 @@ public sealed class PosterInputRouter
     public void Suspend() { _suspended = true; Capture = null; }
     public void Resume() => _suspended = false;
     private static bool Contains(DesktopPixelRect r, int x, int y) => x >= r.X && y >= r.Y && x < r.Right && y < r.Bottom;
-    private static bool InsideRoundedFrame(int x, int y, PosterInputLayoutSnapshot layout)
+}
+
+public sealed record PosterInputSurfaceSnapshot(PosterInputSessionKey Session, DesktopPixelRect Frame,
+    PosterInputLayoutSnapshot Layout);
+
+// Shared by active routing and passive observation. No second set of title/edge constants.
+public static class PosterInputGeometry
+{
+    public static bool Contains(PosterInputSurfaceSnapshot surface, PointerScreenPoint point) =>
+        InsideRoundedFrame(point.X - surface.Frame.X, point.Y - surface.Frame.Y, surface.Layout);
+
+    public static bool IsExpansionZone(PosterInputSurfaceSnapshot surface, PointerScreenPoint point)
+    {
+        if (!Contains(surface, point)) return false;
+        int x = point.X - surface.Frame.X, y = point.Y - surface.Frame.Y;
+        // Same ordered regions as actual routing; buttons and resize edges precede TitleBar.
+        foreach (var region in surface.Layout.Regions)
+            if (x >= region.Bounds.X && y >= region.Bounds.Y && x < region.Bounds.Right && y < region.Bounds.Bottom)
+                return region.Kind == PosterInputTargetKind.TitleBar;
+        return false;
+    }
+
+    public static bool InsideRoundedFrame(int x, int y, PosterInputLayoutSnapshot layout)
     {
         if (x < 0 || y < 0 || x >= layout.FrameWidth || y >= layout.FrameHeight) return false;
         double radius = Math.Min(layout.OuterCornerRadius, Math.Min(layout.FrameWidth, layout.FrameHeight) / 2d);

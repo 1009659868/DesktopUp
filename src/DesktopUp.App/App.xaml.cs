@@ -147,6 +147,7 @@ public partial class App : Microsoft.UI.Xaml.Application
         });
         _spatialRuntime = new PosterSpatialRuntime(_stateCoordinator, _stateCommands, _log, animationOptions);
         _spatialRuntime.EffectiveLayoutChanged += RefreshControlCenterRuntime;
+        StartAutoPosture();
         _spatialRuntime.RecoveryRequired += () => QueueDesktopRecovery(
             DesktopEnvironmentChangeKind.DesktopShell | DesktopEnvironmentChangeKind.DisplayTopology,
             "spatial-physical-recovery", invalidateShell: true);
@@ -165,11 +166,44 @@ public partial class App : Microsoft.UI.Xaml.Application
         }
 
         ScheduleSmokeExitIfRequested(_startupIntent.Arguments);
-        string[] smokeFlags = ["--continuity-smoke", "--continuity-arrange", "--menu-smoke", "--presentation-smoke", "--spatial-smoke", "--input-confirmation-smoke", "--multi-instance-smoke", "--multi-instance-restart"];
+        string[] smokeFlags = ["--auto-measurement", "--auto-lifetime-smoke", "--auto-settings-smoke", "--auto-posture-smoke", "--continuity-smoke", "--continuity-arrange", "--menu-smoke", "--presentation-smoke", "--spatial-smoke", "--input-confirmation-smoke", "--multi-instance-smoke", "--multi-instance-restart"];
         if (_startupIntent.Arguments.Count(a => smokeFlags.Contains(a, StringComparer.OrdinalIgnoreCase)) > 1)
         {
             _log.Write("error", "contract.smoke_refused", new { reason = "one-smoke-per-process" });
             return;
+        }
+        if (_startupIntent.Arguments.Any(a => a is "--auto-posture-smoke" or "--auto-settings-smoke" or "--auto-lifetime-smoke" or "--auto-measurement"))
+        {
+            string? testRoot = Environment.GetEnvironmentVariable("DESKTOPUP_V3_TEST_DATA_ROOT");
+            string normalRoot = Path.GetFullPath(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DesktopUp", "V3"));
+            string actual = Path.GetFullPath(_services.GetRequiredService<IUserDataPaths>().Root);
+            if (string.IsNullOrWhiteSpace(testRoot) || actual.Equals(normalRoot, StringComparison.OrdinalIgnoreCase) ||
+                actual.StartsWith(normalRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+                _log.Write("error", "auto_posture.smoke_refused", new { reason = "isolated-profile-required" });
+            else if (_startupIntent.Arguments.Contains("--auto-measurement", StringComparer.Ordinal))
+            {
+                var modes = _startupIntent.Arguments.Where(a => a.StartsWith("--measurement-mode=", StringComparison.Ordinal)).ToArray();
+                string mode = modes.Length == 1 ? modes[0]["--measurement-mode=".Length..] : "";
+                if (mode is not ("off-expanded" or "on-expanded" or "off-collapsed" or "on-collapsed" or "off-trigger" or "on-trigger"))
+                {
+                    _log.Write("error", "auto_measurement.refused", new { reason = "invalid-mode" });
+                    ExitApplication();
+                }
+                else RunAutoMeasurement(mode);
+            }
+            else if (_startupIntent.Arguments.Contains("--auto-lifetime-smoke", StringComparer.Ordinal))
+            {
+                var modes = _startupIntent.Arguments.Where(a => a.StartsWith("--lifetime-mode=", StringComparison.Ordinal)).ToArray();
+                string mode = modes.Length == 0 ? "exercise" : modes[0]["--lifetime-mode=".Length..];
+                if (modes.Length > 1 || mode is not ("exercise" or "enabled-exit" or "restart"))
+                {
+                    _log.Write("error", "auto_lifetime.smoke_refused", new { reason = "invalid-mode" });
+                    ExitApplication();
+                }
+                else RunAutoLifetimeSmoke(mode);
+            }
+            else if (_startupIntent.Arguments.Contains("--auto-settings-smoke", StringComparer.Ordinal)) RunAutoSettingsSmoke(actual);
+            else RunAutoPostureSmoke();
         }
         if (_startupIntent.Arguments.Any(a => a is "--multi-instance-smoke" or "--multi-instance-restart"))
         {
@@ -282,6 +316,9 @@ public partial class App : Microsoft.UI.Xaml.Application
         _desktopEnvironmentWatcher = new DesktopEnvironmentWatcher(
             WinRT.Interop.WindowNative.GetWindowHandle(_desktopEnvironmentAnchor), () => true, guardPosterWindow: false);
         _desktopEnvironmentWatcher.Changed += OnDesktopEnvironmentChanged;
+        _desktopEnvironmentWatcher.LifecycleChanged += OnSystemLifecycleChanged;
+        _log?.Write(_desktopEnvironmentWatcher.SessionNotificationsRegistered ? "info" : "warning", "system_lifecycle.registration",
+            new { registered = _desktopEnvironmentWatcher.SessionNotificationsRegistered, error = _desktopEnvironmentWatcher.SessionNotificationError });
         _desktopEnvironmentWatcherLease = _ledger.Acquire(
             "watcher.desktop-environment",
             "native-window-subclass");
@@ -317,6 +354,8 @@ public partial class App : Microsoft.UI.Xaml.Application
     }
     private void DesktopHealthTimer_Tick(DispatcherQueueTimer sender, object args)
     {
+        _desktopEnvironmentWatcher?.TryRegisterSessionNotifications();
+        if (_systemLifecycle.IsSuspended) return;
         if (Volatile.Read(ref _exiting) != 0 ||
             _services is null ||
             _posterSessions is null)
@@ -396,6 +435,7 @@ public partial class App : Microsoft.UI.Xaml.Application
         }
 
         long request = _desktopRecoveryVersionGate.Signal();
+        SuspendAutoPosture();
         _inputRouter.Suspend();
         _controlCenter?.CancelRemoval("桌面环境正在恢复，删除确认已取消。");
         _spatialRuntime?.Suspend();
@@ -404,6 +444,7 @@ public partial class App : Microsoft.UI.Xaml.Application
         RefreshControlCenterRuntime();
         _pendingDesktopRecoveryKinds |= kind;
         _pendingDesktopRecoveryReasons.Add(reason);
+        if (_systemLifecycle.IsSuspended) return; // No display/health event can resume a locked/sleeping session.
         if (invalidateShell &&
             (kind & DesktopEnvironmentChangeKind.DesktopShell) != 0)
         {
@@ -439,7 +480,7 @@ public partial class App : Microsoft.UI.Xaml.Application
         if (Volatile.Read(ref _exiting) != 0 ||
             _services is null ||
             _posterSessions is null ||
-            _desktopEnvironmentCancellation is null)
+            _desktopEnvironmentCancellation is null || _systemLifecycle.IsSuspended)
         {
             return;
         }
@@ -586,6 +627,7 @@ public partial class App : Microsoft.UI.Xaml.Application
                 current = _stateCoordinator.EnsureInitialized(PosterVisualWindow.CreateInitialDefault(primaryMonitor));
             ApplyStateProjection(new StateProjectionChangedEventArgs(current, StateCommandSource.System, $"sessions-recovery-{request}"));
             bool IsCurrentEnvironment() => Volatile.Read(ref _exiting) == 0 &&
+                !_systemLifecycle.IsSuspended &&
                 CaptureCurrentGenerationPair(locator, topologyService, topology) is { } observed &&
                 _desktopRecoveryVersionGate.CanCommit(request, expectedPair, observed);
             _spatialRuntime?.SetEffectiveTopology(topology);
@@ -595,6 +637,8 @@ public partial class App : Microsoft.UI.Xaml.Application
                 if (applied) _spatialRuntime?.Resume();
                 // Failed clusters have no published input. Ready peers remain usable.
                 _inputRouter.Resume();
+                _autoReady = applied;
+                ObserveAutoPosture();
             }
             if (_desktopRecoveryVersionGate.IsCurrent(request))
             {
@@ -752,6 +796,7 @@ public partial class App : Microsoft.UI.Xaml.Application
 
     private void OnPosterEditingChanged(string posterId, bool editing)
     {
+        ObserveAutoPosture();
         if (_controlCenter?.SelectedPosterId == posterId)
             _tray?.SetPosterEditing(editing);
     }
@@ -783,6 +828,8 @@ public partial class App : Microsoft.UI.Xaml.Application
             });
             return;
         }
+        if (command.Kind is PosterStateCommandKind.Move or PosterStateCommandKind.Resize)
+            _spatialRuntime?.BeforeManualIntent(command.PosterId);
         StateCommandResult result = _stateCommands.Execute(command);
         _controlCenter?.ShowCommandResult(result);
         LogCommandResult("control-center-poster", result);
@@ -811,11 +858,13 @@ public partial class App : Microsoft.UI.Xaml.Application
             return;
         }
         _spatialRuntime?.OnProjection(args);
+        _autoEvidence.Apply(args);
         _controlCenter?.ApplyProjection(args.Projection.ControlCenter);
         _tray?.ApplyProjection(args.Projection.Tray);
         _posterSessions?.ApplyProjection(args);
         RefreshControlCenterRuntime();
         OnControlCenterSelectionChanged(_controlCenter?.SelectedPosterId);
+        ObserveAutoPosture();
     }
 
     private void TogglePosterLocked(StateCommandSource source)
@@ -922,6 +971,7 @@ public partial class App : Microsoft.UI.Xaml.Application
             return;
         }
         _log?.Write("info", "application.exit_requested");
+        StopAutoPosture();
         _inputRouter.Suspend();
         _controlCenter?.CancelRemoval("application-exit");
         DebugSettings.XamlResourceReferenceFailed -= OnXamlResourceReferenceFailed;
@@ -978,6 +1028,7 @@ public partial class App : Microsoft.UI.Xaml.Application
         if (_desktopEnvironmentWatcher is not null)
         {
             _desktopEnvironmentWatcher.Changed -= OnDesktopEnvironmentChanged;
+            _desktopEnvironmentWatcher.LifecycleChanged -= OnSystemLifecycleChanged;
             _desktopEnvironmentWatcher.Dispose();
             _desktopEnvironmentWatcher = null;
         }

@@ -1,6 +1,7 @@
-#requires -Version 7.4
+#requires -Version 5.1
 param([Parameter(Mandatory)][string]$ExecutablePath, [Parameter(Mandatory)][string]$DataRoot, [switch]$ExitWithDialog)
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'Start-DesktopUpFixtureProcess.ps1')
 $exe = (Resolve-Path -LiteralPath $ExecutablePath).Path
 $isolatedRoot = [IO.Path]::GetFullPath($DataRoot)
 $normalRoot = [IO.Path]::GetFullPath((Join-Path $env:LOCALAPPDATA 'DesktopUp\V3'))
@@ -10,7 +11,7 @@ if ($isolatedRoot.TrimEnd('\') -eq $normalRoot -or $isolatedRoot.StartsWith($nor
 if (Get-Process -Name DesktopUp -ErrorAction SilentlyContinue) { throw 'Close the existing DesktopUp normally before testing.' }
 $probeArguments = @('--input-confirmation-smoke','--show-control-center','--exit-after-ms=20000')
 if ($ExitWithDialog) { $probeArguments += '--exit-with-confirmation' }
-$probe = Start-Process -FilePath $exe -ArgumentList $probeArguments -WindowStyle Hidden -PassThru -Environment @{ DESKTOPUP_V3_TEST_DATA_ROOT = $isolatedRoot }
+$probe = Start-DesktopUpFixtureProcess -ExecutablePath $exe -DataRoot $isolatedRoot -Arguments ($probeArguments -join ' ') -WindowStyle Hidden
 if (-not $probe.WaitForExit(25000)) { throw "Input confirmation smoke did not exit: PID $($probe.Id)." }
 $probe.Refresh()
 $events = @(Get-Content -LiteralPath (Join-Path $isolatedRoot 'logs\desktopup.jsonl') | ConvertFrom-Json | Where-Object { $_.processId -eq $probe.Id })

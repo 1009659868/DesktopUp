@@ -17,7 +17,9 @@ internal static class LegacyStateDatabase
         // Extracted from git baseline a6ac6cf's scoped-command-receipts SQL before v5.
         "C0B674A2928ABF8B02407FD42B6885971FAF78EB936BAA95B4106C6F4E12237B",
         // Independently read from the retained M07 menu R1 Infrastructure assembly before v6.
-        "655220756EA7D7718A07F5489E68F5096AD11693A36E9EF03F8823DC693F91B4"
+        "655220756EA7D7718A07F5489E68F5096AD11693A36E9EF03F8823DC693F91B4",
+        // Extracted independently from committed 53ebdb6 SQL before introducing v7.
+        "D5FBCD000A17312F50BC7CDEFBC0B3516B0B2C8D9AB8C83C5B8CFE17F31B3B1D"
     ];
 
     public static void Create(string path, int version)

@@ -21,5 +21,6 @@
     <Compile Include="../Shared/MultiPosterFixtureData.cs" Link="MultiPosterFixtureData.cs" />
     <Compile Include="../Shared/MeasurementFixtureData.cs" Link="MeasurementFixtureData.cs" />
     <Compile Include="../../scripts/MeasurementMath.cs" Link="MeasurementMath.cs" />
+    <Compile Include="../../scripts/M08MeasurementRules.cs" Link="M08MeasurementRules.cs" />
   </ItemGroup>
 </Project>

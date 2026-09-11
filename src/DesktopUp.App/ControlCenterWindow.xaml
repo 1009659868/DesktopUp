@@ -65,6 +65,30 @@
                             </StackPanel>
                         </StackPanel>
                     </Border>
+                    <Border Padding="16" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8">
+                        <StackPanel Spacing="10">
+                            <TextBlock x:Name="AutoPostureHeading" Text="自动收展 · 仅所选海报" FontWeight="SemiBold" />
+                            <ToggleSwitch x:Name="AutoPostureSwitch" Header="指针进入时展开，离开后收起"
+                                          OnContent="开启" OffContent="关闭" IsEnabled="False" Toggled="AutoPosture_Changed"
+                                          AutomationProperties.AutomationId="AutoPostureEnabled" />
+                            <TextBox x:Name="AutoPostureDelay" Header="离开后收起的延迟（秒）" PlaceholderText="1～300"
+                                     MaxLength="10" MaxWidth="260" HorizontalAlignment="Left" IsEnabled="False"
+                                     TextChanging="AutoPostureDelay_Changing" TextChanged="AutoPostureDelay_Changed"
+                                     AutomationProperties.AutomationId="AutoPostureDelay" />
+                            <TextBlock Text="默认关闭，延迟为 1～300 的整数秒数，默认 3 秒；不是动画时长。"
+                                       TextWrapping="Wrap" Opacity="0.7" />
+                            <TextBlock Text="修改后需应用；切换海报或关闭窗口会丢弃未应用的修改。编辑期间暂停自动收展。"
+                                       TextWrapping="Wrap" Opacity="0.7" />
+                            <InfoBar x:Name="AutoPostureInfo" IsOpen="True" IsClosable="False"
+                                     AutomationProperties.AutomationId="AutoPostureNotice" />
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Button x:Name="AutoPostureApply" Content="应用" IsEnabled="False" Click="AutoPostureApply_Click"
+                                        AutomationProperties.AutomationId="ApplyAutoPosture" />
+                                <Button x:Name="AutoPostureCancel" Content="取消" IsEnabled="False" Click="AutoPostureCancel_Click"
+                                        AutomationProperties.AutomationId="CancelAutoPosture" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
                     <TextBlock Text="全局设置（作用于全部海报）" FontWeight="SemiBold" />
                     <TextBlock x:Name="SettingsDetailText" Text="设置尚未就绪。" TextWrapping="Wrap" />
                     <Button x:Name="PauseButton" Click="PauseButton_Click" Content="暂停动态效果" IsEnabled="False" />

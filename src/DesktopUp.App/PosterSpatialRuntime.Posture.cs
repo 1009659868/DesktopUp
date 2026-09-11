@@ -24,16 +24,17 @@ internal sealed partial class PosterSpatialRuntime
 
     public void SetCollapsed(PosterStateCommand request, Action<StateCommandResult> completed)
     {
+        if (request.Source != StateCommandSource.System) BeforeManualIntent(request.PosterId, request.DesiredState.IsCollapsed);
         if (_posture is not null || _owner is not null || !_windows.TryGetValue(request.PosterId, out var owner) ||
             !TrySnapshot(owner, out var scene, out var projection))
         { completed(Failure(request, "空间环境尚未就绪或另一个拖缩/收展正在进行。")); return; }
         var target = projection!.PostersById[request.PosterId];
         if (request.ReadSet?.Posters.GetValueOrDefault(request.PosterId) != target.EntityVersion)
-        { completed(Failure(request, "海报状态已变化，请重试。")); return; }
+        { completed(Failure(request, "海报状态已变化，请重试。") with { Status = StateCommandStatus.Conflict }); return; }
         if (request.DesiredState != (target.Poster with { IsCollapsed = request.DesiredState.IsCollapsed }))
         { completed(Failure(request, "收展命令不能同时修改其他参数。")); return; }
         if (request.DesiredState.IsCollapsed == target.Poster.IsCollapsed)
-        { completed(commands.Execute(request)); return; }
+        { completed(CommitPosture(request)); return; }
         int compactHeight = Math.Max(1, (int)Math.Round(PosterFrameGeometryPolicy.CollapsedHeightDip * scene!.Environment.DpiY / 96d));
         var source = scene.Posters.Single(p => p.PosterId == request.PosterId);
         var continuous = SpatialContinuitySolver.Plan(scene, request.PosterId, request.DesiredState.IsCollapsed,
@@ -162,16 +163,16 @@ internal sealed partial class PosterSpatialRuntime
             return;
         }
         run.Timer.Stop();
-        StateCommandResult result = commands.Execute(run.Command);
+        StateCommandResult result = CommitPosture(run.Command);
         if (_posture != run) return;
         FinishPosture(run, result);
     }
 
-    private void CancelPosture(string reason)
+    private void CancelPosture(string reason, StateCommandStatus status = StateCommandStatus.Failed)
     {
         if (_posture is not { } run) return;
         log.Write("warning", "spatial.posture_cancelled", new { run.Command.RequestId, reason });
-        FinishPosture(run, Failure(run.Command, "收展已取消并恢复权威布局：" + reason));
+        FinishPosture(run, Failure(run.Command, "收展已取消并恢复权威布局：" + reason) with { Status = status });
     }
 
     private void FinishPosture(PostureRun run, StateCommandResult result)

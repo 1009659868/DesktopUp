@@ -3,6 +3,7 @@ param(
  [Parameter(Mandatory)][string]$ExecutablePath,
  [Parameter(Mandatory)][string]$FixtureExecutablePath,
  [Parameter(Mandatory)][string]$OutputRoot,
+ [string]$AnimationConfig,
  [ValidateSet(1,3,6)][int[]]$Counts = @(1,3,6),
  [ValidateRange(1,3)][int]$Repeats = 2,
  # Retained for older callers; elevation is now recorded, never a launch gate.
@@ -21,7 +22,16 @@ if (-not ('DesktopUpMeasurementMath' -as [type])) { Add-Type -Path (Join-Path $P
 $taskIdentity = [Security.Principal.WindowsIdentity]::GetCurrent()
 $taskElevated = ([Security.Principal.WindowsPrincipal]::new($taskIdentity)).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 $taskIdentity.Dispose()
+if ([string]::IsNullOrWhiteSpace($AnimationConfig)) { $AnimationConfig=Join-Path (Split-Path -Parent $PSScriptRoot) 'config\poster-animation.json' }
+$taskConfig=(Get-Item -LiteralPath $AnimationConfig).FullName
+& $taskFixture --validate-animation-config $taskConfig | Out-Null
+if ($LASTEXITCODE -ne 0) { throw 'Invalid animation configuration; no measurement started.' }
 $null = New-Item -ItemType Directory -Path $taskRoot
+$taskFrozenConfig=Join-Path $taskRoot 'poster-animation.json'
+Copy-Item -LiteralPath $taskConfig -Destination $taskFrozenConfig
+$taskConfigHash=(Get-FileHash -LiteralPath $taskFrozenConfig).Hash
+$taskInitialDisplay=$null
+Write-Output "MEASUREMENT START: $taskRoot"
 $taskCpu = @(Get-CimInstance Win32_Processor | Select-Object Name,NumberOfCores,NumberOfLogicalProcessors)
 $taskSystem = Get-CimInstance Win32_ComputerSystem
 $taskOs = Get-CimInstance Win32_OperatingSystem
@@ -29,7 +39,9 @@ $taskEnvironment = [ordered]@{
  SchemaVersion=1; StartedUtc=[DateTimeOffset]::UtcNow; Os=$taskOs.Caption; OsBuild=$taskOs.BuildNumber;
  Cpu=$taskCpu; LogicalProcessors=[Environment]::ProcessorCount; PhysicalMemoryMiB=$taskSystem.TotalPhysicalMemory/1MB;
  Elevated=$taskElevated; EvidenceScope='current-environment'; EligibleForStandardUserBaseline=(-not $taskElevated); CollectorRuntime=[Environment]::Version.ToString(); PowerShell=$PSVersionTable.PSVersion.ToString();
- Build=(Get-FileHash -LiteralPath (@('DesktopUp.exe','DesktopUp.dll','DesktopUp.Domain.dll','DesktopUp.Application.dll','DesktopUp.Windows.dll','DesktopUp.Infrastructure.dll') | ForEach-Object { Join-Path (Split-Path $taskExe) $_ }) | Select-Object Path,Hash);
+ Build=(Get-FileHash -LiteralPath (@('DesktopUp.exe','DesktopUp.dll','DesktopUp.Domain.dll','DesktopUp.Application.dll','DesktopUp.Windows.dll','DesktopUp.Infrastructure.dll','DesktopUp.pri','WinUIEx.dll') | ForEach-Object { Join-Path (Split-Path $taskExe) $_ }) | Select-Object Path,Hash);
+ FixtureBuild=(Get-FileHash -LiteralPath (@('DesktopUp.SessionFixture.exe','DesktopUp.SessionFixture.dll','DesktopUp.Domain.dll','DesktopUp.Application.dll','DesktopUp.Infrastructure.dll') | ForEach-Object { Join-Path (Split-Path $taskFixture) $_ }) | Select-Object Path,Hash);
+ AnimationConfigHash=$taskConfigHash; AnimationConfig=(Get-Content -LiteralPath $taskFrozenConfig -Raw | ConvertFrom-Json);
  Contract=@{ WarmupFromLaunchMs=8000; WindowEndMs=18000; IntervalMs=500; MinimumSamples=19; Repeats=$Repeats; Quantile='nearest-rank';
    Cpu='delta TotalProcessorTime / measured monotonic wall time; single-core and total-machine both reported';
    Memory='WorkingSet64 resident pages; PrivateMemorySize64 private committed bytes, not private working set';
@@ -40,11 +52,15 @@ $taskResults = [Collections.Generic.List[object]]::new()
 foreach ($taskCount in $Counts) { foreach ($taskPosture in @('expanded','collapsed','hidden')) { foreach ($taskCenter in @($false,$true)) { for ($taskRepeat=1; $taskRepeat -le $Repeats; $taskRepeat++) {
  if (Test-Path -LiteralPath (Join-Path $taskRoot 'stop-after-current')) { Write-Output 'STOPPED after current case; partial evidence retained.'; return }
  if (Get-Process -Name DesktopUp -ErrorAction SilentlyContinue) { throw 'Unexpected live DesktopUp before next sample.' }
+ foreach ($taskPin in @($taskEnvironment.Build) + @($taskEnvironment.FixtureBuild)) {
+  if ((Get-FileHash -LiteralPath $taskPin.Path).Hash -ne $taskPin.Hash) { throw 'Measured artifact changed during this run.' }
+ }
+ if ((Get-FileHash -LiteralPath $taskFrozenConfig).Hash -ne $taskConfigHash) { throw 'Frozen measurement configuration changed.' }
  $taskCase = "n$taskCount-$taskPosture-center$([int]$taskCenter)-r$taskRepeat"
  $taskData = Join-Path $taskRoot $taskCase
  & $taskFixture $taskData $taskCount "--measure-$taskPosture" | Out-Null
  if ($LASTEXITCODE -ne 0) { throw "Fixture failed: $taskCase" }
- $taskArguments = @('--exit-after-ms=20000')
+ $taskArguments = @('--exit-after-ms=20000', ('--animation-config="' + $taskFrozenConfig + '"'))
  if ($taskCenter) { $taskArguments += '--show-control-center' }
  $taskWatch = [Diagnostics.Stopwatch]::StartNew()
  $taskLaunchUtc = [DateTimeOffset]::UtcNow
@@ -82,6 +98,10 @@ foreach ($taskCount in $Counts) { foreach ($taskPosture in @('expanded','collaps
  $taskValid = $taskProbe.ExitCode -eq 0 -and $taskErrors.Count -eq 0 -and $taskLedger.clean -and @($taskLedger.resources).Count -eq 0 -and
   $taskReady.Count -eq $taskExpectedVisible -and $taskShown.Count -eq $taskExpectedVisible -and $taskCenters.Count -eq [int]$taskCenter -and
   $taskTrays.Count -eq 1 -and $taskEnvironmentReady.Count -eq 1 -and $null -ne $taskReadyMs -and $taskReadyMs -lt 8000 -and $taskPoints.Count -ge 19 -and $taskOverlaps -eq 0
+ $taskDisplay=@($taskEvents | Where-Object eventName -eq 'display_topology.stable' | ForEach-Object { $_.data.Signature })
+ if ($null -eq $taskInitialDisplay -and $taskDisplay.Count -eq 1) { $taskInitialDisplay=$taskDisplay[0] }
+ $taskDisplayStable=$taskDisplay.Count -eq 1 -and $null -ne $taskInitialDisplay -and $taskDisplay[0] -ceq $taskInitialDisplay
+ $taskValid=$taskValid -and $taskDisplayStable
  $taskSummary = $null
  if ($taskPoints.Count -ge 2) {
   $taskSpan = $taskPoints[-1].ElapsedMs-$taskPoints[0].ElapsedMs
@@ -94,13 +114,18 @@ foreach ($taskCount in $Counts) { foreach ($taskPosture in @('expanded','collaps
    WorkingSetP95MiB=[DesktopUpMeasurementMath]::Quantile([double[]]$taskPoints.WorkingSetMiB,.95);
    WorkingSetMaxMiB=($taskPoints.WorkingSetMiB | Measure-Object -Maximum).Maximum;
    PrivateCommitMedianMiB=[DesktopUpMeasurementMath]::Quantile([double[]]$taskPoints.PrivateCommitMiB,.5);
+   PrivateCommitP95MiB=[DesktopUpMeasurementMath]::Quantile([double[]]$taskPoints.PrivateCommitMiB,.95);
+   PrivateCommitMaxMiB=($taskPoints.PrivateCommitMiB | Measure-Object -Maximum).Maximum;
+   ThreadsMedian=[DesktopUpMeasurementMath]::Quantile([double[]]$taskPoints.Threads,.5);
+   ThreadsP95=[DesktopUpMeasurementMath]::Quantile([double[]]$taskPoints.Threads,.95);
+   HandlesP95=[DesktopUpMeasurementMath]::Quantile([double[]]$taskPoints.Handles,.95);
    HandlesMedian=[DesktopUpMeasurementMath]::Quantile([double[]]$taskPoints.Handles,.5);
    HandlesMax=($taskPoints.Handles | Measure-Object -Maximum).Maximum; ThreadsMax=($taskPoints.Threads | Measure-Object -Maximum).Maximum;
    LaunchToAllSessionsAndEnvironmentReadyMs=$taskReadyMs }
  }
  $taskReport = [ordered]@{ Case=$taskCase; Valid=$taskValid; Elevated=$taskElevated; EvidenceScope='current-environment'; EligibleForStandardUserBaseline=(-not $taskElevated); Count=$taskCount; Posture=$taskPosture; CenterOpen=$taskCenter; Repeat=$taskRepeat;
   ProcessId=$taskProbe.Id; ExitCode=$taskProbe.ExitCode; Summary=$taskSummary; WarningEvents=$taskWarnings; Errors=$taskErrors;
-  Overlaps=$taskOverlaps; ResourcesAfterExit=@($taskLedger.resources).Count; Samples=$taskSamples.ToArray();
+  Overlaps=$taskOverlaps; DisplayStable=$taskDisplayStable; ResourcesAfterExit=@($taskLedger.resources).Count; Samples=$taskSamples.ToArray();
   Display=@($taskEvents | Where-Object eventName -eq 'display_topology.stable' | ForEach-Object data);
   PosterBounds=@($taskShown.data.bounds); LogHash=(Get-FileHash -LiteralPath (Join-Path $taskData 'logs\desktopup.jsonl')).Hash }
  $taskReport | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath (Join-Path $taskData 'measurement.json') -Encoding utf8

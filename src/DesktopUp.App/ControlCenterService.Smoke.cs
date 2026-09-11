@@ -8,6 +8,7 @@ internal sealed partial class ControlCenterService
     internal bool VerifyProjection(DesktopUpProjection expected) => _projection?.Revision == expected.Revision &&
         _window?.VerifyProjection(expected) == true;
     internal void CloseForContractProbe() => _window?.Close();
+    internal ControlCenterWindow? SettingsWindowForContractProbe => _window;
 
     // Explicit isolated CLI fixture only. Exercises real XAML show/cancel/close, never auto-confirms deletion.
     public void RunIsolatedConfirmationSmoke(DispatcherQueue dispatcher, bool exitWithDialog = false)

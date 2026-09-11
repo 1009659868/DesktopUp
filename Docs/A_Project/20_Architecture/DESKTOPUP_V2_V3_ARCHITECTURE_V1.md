@@ -1,6 +1,6 @@
 # DesktopUp V2 V3 技术路线与总体架构 V1
 
-状态：`DESIGN BASELINE — GENERAL CONTENT / MULTI-POSTER 2026-09-07`
+状态：`DESIGN BASELINE — GENERAL CONTENT / MULTI-POSTER`；文档归属检查：2026-09-11
 
 建立日期：2026-09-03
 
@@ -8,11 +8,13 @@
 
 ## 0. 本次扩展合同
 
-[通用内容与多海报合同](GENERAL_CONTENT_MULTI_POSTER_CONTRACT_V1.md) 规定实例/共享边界、数据关系、实体 CAS 与 global revision、生命周期、原生拖放、主题/热度/AI 目标和 DeskBox 来源；是本架构的细化。M01 目录与 M02 实体读集 CAS/集合投影已落地，见 [M02 实际合同](../40_Implementation/V3-04/TARGETED_COMMAND_PROJECTION_V2.md)；M03 多会话已落地，见 [实际会话恢复合同](../40_Implementation/V3-04/M03_SESSION_RECOVERY.md)，短人工门待确认。下文模块是设计，不代表全部已有实现。旧 V3_CURRENT 图保持为单海报实现快照，不能视为多海报完成图。
+2026-09-11必要补项设计：[M08自动收展计划](../30_Plans/V3_04_M08_AUTO_POSTURE_PLAN.md)在现有会话之上补逐海报纯交互模型、被动指针观察和共享截止时间调度；复用空间运行器，不新增状态权威、窗口层或空间求解器。当前已实现Application纯模型及[设置/迁移](../40_Implementation/V3-04/M08_AUTO_POSTURE_SETTINGS.md)，以及[M08-03观察适配器](../40_Implementation/V3-04/M08_POINTER_OBSERVATION.md)；[M08-04](../40_Implementation/V3-04/M08_SHARED_SCHEDULER.md)已接共享观察/截止调度和受限System姿态提交，沿用committed revision/CAS与R4恢复。[M08-05](../40_Implementation/V3-04/M08_CONTROL_CENTER_SETTINGS.md)已接窗口内目标草稿、开关/秒数和应用/取消，仍复用同一实体CAS；[M08-06](../40_Implementation/V3-04/M08_LIFECYCLE_REGRESSION.md)已补共享系统通知与多原因暂停，复用原恢复并使旧计时/回调失效；实际鼠标视觉/增量资源门及最终自动环境复测仍待补，不把运行通道接通等同于完整产品可用。
+
+[通用内容与多海报合同](GENERAL_CONTENT_MULTI_POSTER_CONTRACT_V1.md) 规定实例/共享边界、数据关系、实体 CAS 与 global revision、生命周期、原生拖放、主题/热度/AI 目标和 DeskBox 来源；是本架构的细化。M01 目录与 M02 实体读集 CAS/集合投影已落地，见 [M02 实际合同](../40_Implementation/V3-04/TARGETED_COMMAND_PROJECTION_V2.md)；M03 多会话已落地，见[实际会话恢复合同](../40_Implementation/V3-04/M03_SESSION_RECOVERY.md)。验收范围与未认证环境以C层[交接](../40_Implementation/V3-04/HANDOFF.md)为准，不在架构正文维护滚动待办。下文模块是设计，不代表全部已有实现。旧 V3_CURRENT 图保持为单海报实现快照，不能视为多海报完成图。
 
 ## 1. 目的
 
-2026-09-07 空间补充：[多海报空间协同与边界展开](POSTER_SPATIAL_LAYOUT_AND_EXPANSION_V1.md) 细化正常布局不可重叠、锁定固定障碍、保原尺寸先下后上展开、连锁推让与条件归位。仅新增设计，沿用现有Host、M02状态权威和M03会话；推让走完整障碍读集/异构几何事务，物理提交另设失败恢复，不靠抬层。中心最小列表与稳定选择前置M04-01，原04-04复用并扩完整管理/预览。用户已确认基本多海报交互，未逐项报告的核心人工门仍保留。
+历史设计来源（2026-09-07，不是当前实施状态）：[多海报空间协同与边界展开](POSTER_SPATIAL_LAYOUT_AND_EXPANSION_V1.md) 细化正常布局不可重叠、锁定固定障碍、保原尺寸先下后上展开、连锁推让与条件归位。当时为新增设计，后续M04与连续空间实现已接入；沿用现有Host、M02状态权威和M03会话；推让走完整障碍读集/异构几何事务，物理提交另设失败恢复，不靠抬层。中心最小列表与稳定选择前置M04-01，原04-04复用并扩完整管理/预览。用户已确认基本多海报交互，未逐项报告的核心人工门仍保留。
 
 本文把 DesktopUp V2 的冻结需求投影为一套可实施、可替换、可验证的 Windows 原生架构。V3 不继承旧 Qt、WebView、QPainter、Qt Quick、旧 WorkerW 探针或 Axiom 原型代码，而以 DeskBox 的成熟实现为主要工程参考。
 

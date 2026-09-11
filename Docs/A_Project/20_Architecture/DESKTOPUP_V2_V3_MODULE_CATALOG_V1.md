@@ -1,6 +1,6 @@
 # DesktopUp V2 V3 模块分类与端口目录 V1
 
-状态：`DESIGN BASELINE — MULTI-POSTER PORTS UPDATED 2026-09-07`
+状态：`DESIGN BASELINE — MODULE RESPONSIBILITIES ALIGNED 2026-09-11`
 
 建立日期：2026-09-03
 
@@ -26,9 +26,9 @@
 
 M05实际边界见[参数合同](../40_Implementation/V3-04/M05_PRESENTATION_PARAMETERS.md)：几何、内容参数与主题实例身份分离；外框缩放不改iconSize/字号，参数提交不擅自移动外框。只读中心摘要已接，完整编辑器后续复用同一草稿/提交口。
 
-M06为[多实例合同夹具](../40_Implementation/V3-04/M06_MULTI_INSTANCE_FIXTURES.md)，复用上述模块而非新增产品服务；测试专用共享数据、可重复故障注入及显式隔离App探针，不进入日常启动路径。2026-09-09完整405项复跑、固定Release的实际Exercise/Restart及M05参数/空间尾门均已通过；人工安全余项保留至下一项M07。
+M06为[多实例合同夹具](../40_Implementation/V3-04/M06_MULTI_INSTANCE_FIXTURES.md)，复用上述模块而非新增产品服务；测试专用共享数据、故障注入及隔离App探针不进入日常启动路径。该阶段自动/进程证据保留，后续集中人工与资源证据已归入M07，不再把M07列为待启动任务。
 
-当前[M07](../40_Implementation/V3-04/M07_MEASUREMENT_AND_SAFETY.md)是外部测量/安全门，不新增生产服务或状态权威：测试专用1/3/6配置、外部采样、仅隔离smoke启用的提交计时和短人工入口。411/411/Release通过；入口已适配5.1和当前环境；权限仅记录，先人工再收口测量。完整矩阵及人工仍待补，不以脚本启动通过宣布性能达标。
+M07是外部测量/安全门，不新增生产服务或状态权威；当前已[收口](../40_Implementation/V3-04/M07_CLOSEOUT.md)，资源预算差距和未认证环境仍保留。具体计数、产物、人工结论只引用C层证据，本模块目录不重复维护滚动测试数字或下一步指令。M08已增加Application纯行为模型及逐海报设置/迁移合同，原生观察及生产共享调度/空间事务已接，最小设置UI已由M08-05接入，M08-06已补共享系统通知/多原因暂停及隔离生命周期回归，完整体验门与最终自动环境复测仍待补，现有空间、输入和恢复通道继续复用。
 
 ## 1. 目的
 
@@ -86,10 +86,12 @@ DeskBox 对应经验：单实例、启动到托盘、桌面图标宿主稳定后
 | B08 | `WindowGeometryTransaction` | 原子准备和提交外框、输入岛、裁剪与视觉 revision | `IGeometryCommitter` | V3-03 |
 | B09 | `DisplayTopologyService` | 显示器身份、工作区、DPI、归一化锚点和稳定窗口 | `IDisplayEnvironment` | V3-02 |
 | B10 | `PointerGestureSession` | 拖动/缩放 capture、帧节流、取消、完成和回滚 | `IGestureSession` | V3-03 |
-| B11 | `CollapseStateMachine` | expanded/collapsed bounds、顶部锚点、动画与持久化 | `ICollapseController` | V3-03 |
+| B11 | `CollapseStateMachine` / `AutoPostureModel` | expanded/collapsed bounds、边界锚点、动画与持久化；M08纯模型提供自动资格/保护/仲裁/取消协议；已有按需观察及AutoPostureScheduler共享调度，复用空间运行器 | `ICollapseController`；新增AutoPostureFrame/State/Step纯输入输出 | V3-03；M08-01～06模型/观察/调度/设置/生命周期接线；完整验收后续 |
 | B12 | `DesktopRecoveryCoordinator` | Explorer 重建、Win+D、桌面刷新、会话/电源恢复 | `IDesktopRecovery` | V3-02/03 |
 
 关键规则：B 类只管理窗口和输入，不读取 Item 排名、不解释主题包、不执行文件移动。
+
+2026-09-11 [M08边界](../30_Plans/V3_04_M08_AUTO_POSTURE_PLAN.md)：自动行为纯模型及调度属于Application，Windows仅提供被动指针/保护信号，App组合共享服务并复用空间运行器；配置沿用Domain/Repository/Command/Projection，现有中心只补最小开关/秒数入口。当前已实现AutoPostureModel，以及Domain秒数/schema7/SetAutoPosture/草稿/投影，见[设置合同](../40_Implementation/V3-04/M08_AUTO_POSTURE_SETTINGS.md)；[M08-03](../40_Implementation/V3-04/M08_POINTER_OBSERVATION.md)已实现PosterPointerTracker、PassivePosterPointerObserver及App当前会话采集端口，[M08-04](../40_Implementation/V3-04/M08_SHARED_SCHEDULER.md)已接AutoPostureScheduler/AutoPostureEvidence、App共享计时及IAutomaticPostureCommitter，[M08-05](../40_Implementation/V3-04/M08_CONTROL_CENTER_SETTINGS.md)已接ControlCenterAutoPostureEditor与真实控件，latest/basis分离并复用CAS；[M08-06](../40_Implementation/V3-04/M08_LIFECYCLE_REGRESSION.md)已接SystemLifecycleGate、共享WTS/电源分类与原恢复版本门；完整体验及输入桌面环境复测待补，不宣称整个M08已完成。
 
 ### 4.1 V3-02 恢复职责补强
 

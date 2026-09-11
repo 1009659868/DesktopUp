@@ -25,6 +25,8 @@ internal interface IDesktopMenuNative
 public sealed class DesktopMenuInteraction : IDisposable
 {
     [ThreadStatic] private static DesktopMenuInteraction? s_active;
+    [ThreadStatic] private static Action? s_activityChanged;
+    public static event Action ActivityChanged { add => s_activityChanged += value; remove => s_activityChanged -= value; }
     private readonly IDesktopMenuNative _native;
     private readonly DesktopMenuSurface[] _surfaces;
     private readonly Dictionary<nint, bool> _originalTransparency = [];
@@ -64,6 +66,7 @@ public sealed class DesktopMenuInteraction : IDisposable
             // Finish any old capture before freezing the pair order and exposing the Popup.
             foreach (var surface in surfaces) surface.CancelCapture();
             s_active = session;
+            session.NotifyActivity();
             session._lease = ledger.Acquire("interaction.poster-menu", "shared-desktop-popup");
             foreach (var surface in surfaces)
             {
@@ -79,6 +82,7 @@ public sealed class DesktopMenuInteraction : IDisposable
         catch { session.Dispose(); throw; }
     }
 
+    public static bool IsActive => s_active is not null;
     public static bool BlocksInput(nint input) => s_active?._originalTransparency.ContainsKey(input) == true;
     public static bool ProtectsSurface(nint window) => s_active?._windows.Contains(window) == true;
     public static void CancelActive() => s_active?.Cancel();
@@ -214,6 +218,14 @@ public sealed class DesktopMenuInteraction : IDisposable
             Cleanup(() => { if (_native.Exists(surface.Visual) && _native.Exists(surface.Input)) restored &= surface.RestoreLayer(); });
         Cleanup(() => _lease?.Dispose());
         _log.Write(restored ? "info" : "error", "poster.menu_interaction_released", new { restored, surfaces = _surfaces.Length });
+        NotifyActivity();
+    }
+
+    private void NotifyActivity()
+    {
+        foreach (Action subscriber in s_activityChanged?.GetInvocationList() ?? [])
+            try { subscriber(); }
+            catch (Exception exception) { _log.Write("error", "poster.menu_observer_failed", new { exception.Message }); }
     }
 
     [StructLayout(LayoutKind.Sequential)]

@@ -1,10 +1,12 @@
 # DesktopUp V2 V3 制作计划 V1
 
-最后检查：2026-09-10。适用分支：`impl/poster-redesign-V3`。
-状态：M07 IN PROGRESS；白条专项 R4 USER CONFIRMED，M05/M06已完成结论保留。
+2026-09-11最新：[M07收口](../40_Implementation/V3-04/M07_CLOSEOUT.md)测量/安全及交接完成，用户已决定功能欠项处置，M07-01..04 PASS。[预算差距](../40_Implementation/V3-04/M07_RESOURCE_BASELINE_20260910.md)保留。完整减少动效/手动连点队列仅[按需登记](ON_DEMAND_OPTIMIZATIONS.md)；[M08计划](V3_04_M08_AUTO_POSTURE_PLAN.md)的01～05分项PASS，手动抑制规则已确认，生产共享调度/空间通道已接，最小设置UI已通过合同/真实控件门；[M08-06](../40_Implementation/V3-04/M08_LIFECYCLE_REGRESSION.md)生命周期实现/已执行回归通过；最终自动环境与受影响视觉门OPEN；用户已要求进入[M08-07](../40_Implementation/V3-04/M08_EXPERIENCE_AND_RESOURCE_GATE.md)，工具就绪、人工/资源待验，仍未关闭M08。
+
+最后检查：2026-09-11（文档对齐，主线未改）。适用分支：`impl/poster-redesign-V3`。
+状态：M07 PASS；M08 IN PROGRESS，01～05分项PASS、TBD-017已解决，M08-06已实现/已执行回归通过，最终自动环境与受影响视觉门OPEN；R4及M05/M06既有结论保留。
 当前 [修复/清理记录](../40_Implementation/V3-04/M07_ANIMATION_R4.md) 与 [排查方法](../20_Architecture/PRESENTATION_DIAGNOSIS_PLAYBOOK_V1.md) 已收口本次故障。稳定入口 `scripts/start-m07-animation.ps1`。
-最近顺序：M07 剩余安全与18格×2测量 → 原04-04中心管理 → 04-05托盘 → 04-06配置/恢复及04-07/08生命周期 → V3-05真实内容。不是跳过前置直接接文件。
-各历史子项的自动/人工证据按专项记录追溯；旧“当前/待验”描述不覆盖本页最新状态。
+最近顺序：M08自动收展最小闭环 → 原04-04基础预览/必要管理 → 04-05托盘 → 04-06配置/恢复及04-07/08生命周期 → V3-05真实内容。先稳定闭环，不直接跳到文件操作，不扩张外观/画布范围。
+本总计划维护阶段目标和依赖；子项当前状态归[细化工作流§4](V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md#4-v3-04-m多海报与参数基础前置)，交接仅摘要，验证日志保留当时事实。历史状态不自动成为当前待办，也不因上层收口自动补成全范围PASS。
 
 ## 1. 总目标
 
@@ -26,7 +28,7 @@
 
 用户正式确认通用桌面内容、多海报、唯一控制中心/托盘、独立主题、热度排版、AI 辅助定制。七份需求已同步；[通用多海报合同](../20_Architecture/GENERAL_CONTENT_MULTI_POSTER_CONTRACT_V1.md) 和 [细化工作流](V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md) 补齐数据、作用域、依赖与逐项出口。最初调整为仅文档，随后 M01 已完成数据合同实现；不把该子集等同于多窗口产品完成。
 
-V3-04-03 R1用户人工验证与M01..03/M04-01历史证据保留。03..05空间已接运行；06共享输入及删除确认现已接入，313/313、Release与真实确认/退出/链式回归通过。M04整体仍IN PROGRESS，下一项07集中人工，不补写未执行的PASS。
+历史增量：V3-04-03 R1及M01..03/M04-01证据保留；M04-03..06空间/输入接入时已有313/313和实际进程证据。当时未完成的集中安全项，现由M07记录逐项结论；不再将M04-03..05列为待实现或指示回到旧R2包补验。当前M08-06已实现/已执行回归通过，最终自动环境与受影响视觉门OPEN，未覆盖的环境认证单列。
 
 先交付可日用收纳版本：V3-05 真内容与 V3-06-01..04 的稳定视口并进，基础 Box 与 V3-09 最小安装/恢复/清理提前进入首个可用包；完整 AI 不阻塞日用交付。下图是能力分组，不再要求 AI 结束才开始打包。完整工作卡、证据和未决裁决见细化工作流。
 
@@ -247,11 +249,11 @@ V3-02-08/09 共同遵循：恢复任务捕获 `(DesktopShellGeneration, DisplayT
 
 目标：用一个状态权威连接海报、控制中心和托盘，消除 UI 回弹和两端状态不一致。
 
-状态：`M07 IN PROGRESS — CONTRACT/BUILD PASS；CURRENT-ENVIRONMENT / MANUAL PENDING`
+状态：`M07-01..04 PASS；M08 IN PROGRESS（01～05分项PASS，06实现/余门OPEN）`
 
-2026-09-07 回归已关闭：OutputPath 缺分隔符造成 XBF/PRI 名称错误已修复，DUV3001、真实开窗 smoke 与 97/97 原有证据保留；用户确认人工通过。尚未进入 V3-04-04，先按新方向执行 M01..07。
+2026-09-07 回归已关闭：OutputPath 缺分隔符造成 XBF/PRI 名称错误已修复，DUV3001、真实开窗 smoke 与 97/97 原有证据保留；用户确认人工通过。尚未进入V3-04-04；M01..07后的最新必要补项为M08自动收展，先按其任务卡执行。
 
-当前增量（2026-09-04）：
+历史实现证据（2026-09-04，以下计数仅适用于对应版本）：
 
 - V3-04-01：引入 `Microsoft.Data.Sqlite 10.0.11`，建立独立 `IStateStore` 端口与 Infrastructure adapter；
 - schema v1 建立 migration ledger、单例 state head 和 operation idempotency journal；每次提交按 expected revision 执行 SQLite 事务 CAS；
@@ -269,13 +271,14 @@ V3-02-08/09 共同遵循：恢复任务捕获 `(DesktopShellGeneration, DisplayT
 - V3-04-02：建立 Poster/Settings repository；
 - V3-04-03：建立 command/query 和三端 projection；
 - V3-04-M01：PASS，schema v3、独立实体/初始化/版本和目录仓储；[实际合同](../40_Implementation/V3-04/POSTER_CATALOG_SCHEMA_V3.md)；117/117 自动回归，不新增桌面人工门；
-- V3-04-M02：AUTO PASS，目标化命令、三端集合投影、实体读集 CAS/批量事务/schema v4 回执已实现；147/147、Release 和新版隔离实际进程 smoke 通过，受影响人工回归待完成；[实际合同](../40_Implementation/V3-04/TARGETED_COMMAND_PROJECTION_V2.md)。
-- V3-04-M03：AUTO PASS / MANUAL PENDING；会话registry与共享恢复已落地，163/163、Release与0/1/3真实窗口/退出 smoke通过，见 [M03合同](../40_Implementation/V3-04/M03_SESSION_RECOVERY.md)。
-- V3-04-M04：MANUAL PENDING / STRATEGY ACCEPTED；G1～G4历史PASS、R2自动356项/真实回归保留，用户认可收展策略体验并明确动画延期/进入M05。未逐项确认安全格留M06/M07集中，不补写全PASS，见[M04记录](../40_Implementation/V3-04/M04_MANUAL_VALIDATION.md)。
+- V3-04-M02：AUTO PASS，目标化命令、三端集合投影、实体读集CAS/批量事务已实现；147/147为[该阶段证据](../40_Implementation/V3-04/TARGETED_COMMAND_PROJECTION_V2.md)。后续当前版本交互/确认/退出范围见M07，不把旧待人工标签当新待办。
+- V3-04-M03：AUTO PASS；会话registry与共享恢复已落地，[M03合同](../40_Implementation/V3-04/M03_SESSION_RECOVERY.md)保留163/163及0/1/3进程证据。M07已覆盖所列普通重启/零目录/交互安全，不由此推定多实例Explorer重建、多屏或混合DPI全部人工通过。
+- V3-04-M04：AUTO PASS，目录选择、拖缩碰撞、保尺寸展开、连续推让/归位与多海报输入均已接入；M07所列主屏空间/输入安全已PASS。G1～G4、R2及[M04记录](../40_Implementation/V3-04/M04_MANUAL_VALIDATION.md)保留为对应版本证据，不再安排重复实现或旧包集中人工；非M07覆盖的认证不补PASS。
 - V3-04-M05：CLOSED / CONTRACT/BUILD/PROCESS PASS；[最小参数合同](../40_Implementation/V3-04/M05_PRESENTATION_PARAMETERS.md)已接入v1声明式JSON、兼容/只读fallback、目标草稿/CAS、独立度量/颜色/标题和中心只读摘要；395/395、Release通过，2026-09-09参数两轮及空间回归均PASS。不做真实文件Item、完整主题编辑器或AI。
-- V3-04-M06：CLOSED / CONTRACT/BUILD/PROCESS PASS；[多实例合同夹具](../40_Implementation/V3-04/M06_MULTI_INSTANCE_FIXTURES.md)共用三用途数据，新增10项，完整复跑405/405；Exercise 9阶段、单实例激活及Restart完整配置读回全通过，exit0/资源0。不重复建设状态权威/空间求解；人工安全余项保留M07。
-- V3-04-M07：IN PROGRESS；[测量与安全合同](../40_Implementation/V3-04/M07_MEASUREMENT_AND_SAFETY.md)已建立，411/411、固定Release、5.1真实启动/正常退出通过。按用户决定取消管理员启动硬门，权限只记录；先S1～S5人工，再收口1/3/6张18格×2资源基线与实际提交计时。当前环境证据不冒充普通用户认证；50MiB目标不改，性能优化与动画延期。
-- V3-04-04：M门后复用M04-01目录/选择器，扩充新增/配置克隆/删除、全桌面预览及参数编辑；几何复用M04空间服务，删除复用其确认；不重造列表和另一套状态权威。
+- V3-04-M06：CLOSED / CONTRACT/BUILD/PROCESS PASS；[多实例合同夹具](../40_Implementation/V3-04/M06_MULTI_INSTANCE_FIXTURES.md)共用三用途数据，新增10项，完整复跑405/405；Exercise 9阶段、单实例激活及Restart完整配置读回全通过，exit0/资源0。不重复建设状态权威/空间求解；当时的人工安全余项现已在M07按范围归并。
+- V3-04-M07：PASS；[收口记录](../40_Implementation/V3-04/M07_CLOSEOUT.md)508/508、24项稳定绑定、5.1启动、36/36资源、1/3/6空间及7项自动安全、S1～S5人工与同库零目录重启齐。用户已决定F03/F06按需记录、F07必要先做，04交接关闭；不是三个功能已实现。权限只记录，内存差距交V3-10且不改预算。
+- V3-04-M08：IN PROGRESS；[自动收展最小闭环](V3_04_M08_AUTO_POSTURE_PLAN.md)七项：纯模型、设置迁移、指针/交互保护、调度接线、最小中心设置、生命周期回归、人工/增量资源门。01～05分项PASS，TBD-017已解决，06..07尚未实施；子项状态见细化工作流。默认OFF，逐海报1～300秒/默认3秒；复用既有空间/CAS/R4通道。无新动画引擎或手动连点队列。
+- V3-04-04：M08门后复用M04-01目录/选择器，补用户可用的新增/配置克隆/重命名/删除、基础全桌面预览及参数编辑；几何复用M04空间服务，删除复用确认；不重造列表/状态权威或额外增加复杂画布产品。
 - V3-04-05：复用开窗/暂停/退出，增加托盘新增海报；补数量/可见数/锁定汇总及单张/全部作用域，零海报仍能新增；
 - V3-04-06：最近可用状态/数据库失败回退＋单文件跨主机习惯配置；A 格式/恢复/策略、B 一致快照导出、C 预览确认导入/映射、D 自动与实际跨机验证；内置主题/参数先支持，自定义载荷复用 V3-07-04；
 - V3-04-07：复用窗口释放/重开机制，扩充多实例预览、草稿与订阅资源清理验收；
@@ -295,6 +298,8 @@ V3-02-08/09 共同遵循：恢复任务捕获 `(DesktopShellGeneration, DisplayT
 ## 9. V3-05：文件收纳与真实 Item CRUD/启动
 
 目标：实现 DesktopUp 作为桌面整理工具的核心内容能力，替换六个演示 Item。
+
+2026-09-10推进约束：先以05-01/04/05/06及06-01..04形成非破坏性添加/引用、真实图标、打开/定位/移除引用、重启保持的纵向闭环，再扩展磁盘执行。Mapped/Managed及完整Shell能力仍保留原任务，不把“移除引用”冒充删除源文件或物理收纳；05-08账本/补偿安全门仍先于05-07真实执行。详见[M08之后的安全路径](V3_04_M08_AUTO_POSTURE_PLAN.md#7-完成标准与后续最短安全路径)。
 
 ### 工作项
 
@@ -484,7 +489,7 @@ V3-02-08/09 共同遵循：恢复任务捕获 `(DesktopShellGeneration, DisplayT
 
 ## 18. 立即下一步
 
-2026-09-09最新（优先于下方历史）：M07启动脚本已适配Windows PowerShell5.1及当前权限；取消原7.4/非管理员启动限制，不改系统UAC。5.1三海报、单中心/托盘启动与exit0/clean0通过，合同411/411；单海报六场景采样兼容回归通过，完整36次仍待补。当前先人工S1～S5，不强制先测量；M07不提前关闭、不改变50MiB预算。旧4探索样本及中断证据保留，无schema/生产逻辑/commit/push变更。
+2026-09-11当前：M07已关闭；M08-01～05及[设置入口](../40_Implementation/V3-04/M08_CONTROL_CENTER_SETTINGS.md)分项PASS，TBD-017已确认，M08-06已实现/已执行回归通过，最终自动环境与受影响视觉门OPEN。生产自动通道已接，M07稳定App未替换；F03/F06按需登记而非完成。零目录同库重启0张/revision19证据保留，不重复验收。权限不阻止启动，50MiB预算不改；未commit/push。以下旧阶段证据按其当时版本保留。
 
 M06完成历史：M05参数×2/空间尾门与M06 Exercise/Restart全部通过，完整合同405/405；结论保留，不因新测量权限限制撤销已有合同证据，也不将旧管理员进程读回冒充新普通权限基线。
 

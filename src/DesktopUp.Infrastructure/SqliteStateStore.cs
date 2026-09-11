@@ -10,7 +10,7 @@ public sealed class SqliteStateStore : IStateStore
 {
     private const int ApplicationId = 0x44555033; // "DUP3"
     private const int BusyTimeoutMilliseconds = 5_000;
-    private const int CurrentSchemaVersion = 6;
+    private const int CurrentSchemaVersion = 7;
     private const string DatabaseFileName = "desktopup.sqlite3";
     private static readonly Migration[] Migrations =
     [
@@ -177,6 +177,13 @@ public sealed class SqliteStateStore : IStateStore
                 body_json TEXT NOT NULL CHECK (json_valid(body_json)),
                 committed_revision INTEGER NOT NULL REFERENCES state_operations(committed_revision) DEFERRABLE INITIALLY DEFERRED
             ) STRICT;
+            """),
+        new(
+            7,
+            "poster-auto-posture-settings",
+            """
+            ALTER TABLE posters ADD COLUMN auto_collapse_delay_seconds INTEGER NOT NULL DEFAULT 3
+                CHECK (auto_collapse_delay_seconds BETWEEN 1 AND 300);
             """)
     ];
 
@@ -557,6 +564,7 @@ public sealed class SqliteStateStore : IStateStore
             if (migration.Version >= 4) VerifyCommandSchema(connection, transaction);
             if (migration.Version >= 5) VerifySpatialSchema(connection, transaction);
             if (migration.Version >= 6) VerifyContinuitySchema(connection, transaction);
+            if (migration.Version >= 7) VerifyAutoPostureSchema(connection, transaction);
 
             string appliedUtc = DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture);
             using (SqliteCommand ledger = connection.CreateCommand())
@@ -666,12 +674,28 @@ public sealed class SqliteStateStore : IStateStore
         if (expectedVersion >= 4) VerifyCommandSchema(connection, null);
         if (expectedVersion >= 5) VerifySpatialSchema(connection, null);
         if (expectedVersion >= 6) VerifyContinuitySchema(connection, null);
+        if (expectedVersion >= 7) VerifyAutoPostureSchema(connection, null);
         if (head.SchemaVersion != version)
         {
             throw new InvalidDataException(
                 $"State head schema {head.SchemaVersion} does not match user_version {version}.");
         }
         return head;
+    }
+
+    private static void VerifyAutoPostureSchema(SqliteConnection connection, SqliteTransaction? transaction)
+    {
+        using var shape = connection.CreateCommand(); shape.Transaction = transaction;
+        shape.CommandText = "SELECT type, [notnull], dflt_value FROM pragma_table_info('posters') WHERE name = 'auto_collapse_delay_seconds';";
+        using (var reader = shape.ExecuteReader())
+            if (!reader.Read() || reader.GetString(0) != "INTEGER" || reader.GetInt64(1) != 1 || reader.GetString(2) != "3")
+                throw new InvalidDataException("Invalid auto-posture delay column.");
+        shape.CommandText = """
+            SELECT COUNT(*) FROM posters WHERE typeof(auto_collapse_delay_seconds) != 'integer'
+                OR auto_collapse_delay_seconds NOT BETWEEN 1 AND 300;
+            """;
+        if (Convert.ToInt64(shape.ExecuteScalar(), CultureInfo.InvariantCulture) != 0)
+            throw new InvalidDataException("Invalid persisted auto-posture delay.");
     }
 
     private static void VerifySpatialSchema(SqliteConnection connection, SqliteTransaction? transaction)

@@ -1,6 +1,6 @@
 #requires -Version 5.1
 param([Parameter(Mandatory)][string]$ExecutablePath, [Parameter(Mandatory)][string]$DataRoot,
-    [ValidateSet('Full','Constrained','InsufficientSpace')][string]$ExpectedExpansion, [switch]$LeaveExpanded)
+    [ValidateSet('Full','Constrained','InsufficientSpace')][string]$ExpectedExpansion, [switch]$LeaveExpanded, [string]$AnimationConfig)
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'Start-DesktopUpFixtureProcess.ps1')
 $exe = (Resolve-Path -LiteralPath $ExecutablePath).Path
@@ -13,6 +13,7 @@ if (Get-Process -Name DesktopUp -ErrorAction SilentlyContinue) { throw 'Close th
 $taskArguments = @('--spatial-smoke','--show-control-center','--exit-after-ms=20000')
 if ($ExpectedExpansion) { $taskArguments += "--expect-expansion=$ExpectedExpansion" }
 if ($LeaveExpanded) { $taskArguments += '--spatial-smoke-leave-expanded' }
+if ($AnimationConfig) { $taskArguments += '--animation-config="' + (Get-Item -LiteralPath $AnimationConfig).FullName + '"' }
 $probe = Start-DesktopUpFixtureProcess -ExecutablePath $exe -DataRoot $isolatedRoot -Arguments ($taskArguments -join ' ')
 if (-not $probe.WaitForExit(25000)) { throw "Spatial smoke did not exit: PID $($probe.Id)." }
 $probe.Refresh()

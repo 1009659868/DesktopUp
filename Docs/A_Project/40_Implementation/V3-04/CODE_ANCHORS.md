@@ -1,6 +1,97 @@
 # V3-04 代码锚点
 
-日期：2026-09-10。本页先列当前实现；下方既有阶段条目作为历史代码索引，不覆盖 [HANDOFF](HANDOFF.md)。
+## 2026-09-11 M08-07 R2：组合前置与外部点击独立修订（当前）
+
+- `Application/ExpansionDragModel.cs`、`ExpansionDragModelTests.cs`：组合生命周期、捕获token/代次、已呈现高度及整组扫掠帧结构门；28项通过，尚无App调用或CAS入口。`StructuralSafetyIsNotProofThatNeighborMotionIsAuthorized`明确纯几何不能代替因果/权限证明。
+- `Windows/PassivePosterPointerObserver.cs`：原始按键/capture的实际海报归属及释放前保留；auto关闭的邻居仍保护，前台遮挡/无关桌面点击不阻塞，零需求/环境/移除失效。`PassivePosterPointerOwnershipTests.cs`9项；修改前4/4失败、最终全880/880。
+- [组合合同](M08_EXPANSION_DRAG_CONTRACT.md)及[R2分线证据](M08_INPUT_ARBITRATION_R2.md)：V2-TBD-018边界待确认，生产组合接线OPEN；独立App构建通过但未替换R1人工包。
+
+## 2026-09-11 M08-07 R2：输入仲裁诊断（历史，无生产修改）
+
+- `Application/AutoPostureModel.cs`：Observe保护分支→Inactive/ClearWork清空离开截止；Windows原始保护尚无交互归属区分。
+- `Windows/PosterInputIslandManager.cs`：BeginResolvedGesture缓存按下帧；5px后才发GesturePreview。`App/PosterSpatialRuntime.cs`的Begin先取消自动事务，后比较恢复后Bounds与pressFrame；`PosterVisualWindow.CancelSpatialGesture`在尚无gesture时不记录拒绝详情。
+- [R2证据与方案](M08_INPUT_ARBITRATION_R2.md)：未改代码/未新增测试结果；R1普通点击已人工通过，拟议200ms标题停留尚待确认。
+
+## 2026-09-11 M08-07 R1：动画中普通点击（此前交付锚点，现两项人工PASS）
+
+- `Application/AutoPostureModel.cs`：PointerCapture与PointerButton为InFlight准入专用保护，所有新请求仍受全部保护；明确手动/菜单/恢复取消保持。
+- `Windows/NativeDesktopPointerPlatform.cs`、`PassivePosterPointerObserver.cs`：原生与路由按下capture不再冒充真实Gesture；输入岛阈值/命中未改。
+- `Application/AutoPostureScheduler.cs`：失效点稀疏记录保护/代次，不记录坐标轨迹。
+- `AutoPostureInFlightInputTests.cs`及原有模型/观察/调度测试：完整843/843；旧模型4/4复现失败。独立25项R1包绑定，PS5.1预检及6次隔离进程PASS，人工PID25524待反馈，见[R1](M08_ANIMATION_INPUT_R1.md)。
+
+## 2026-09-11 M08-07 验证工具（初始产物记录；当前状态见上）
+
+- `scripts/Get-M08Build.ps1`/`m08-build.json`：25项当前验证包绑定；`start-m08-manual.ps1`保持分场景同库，不带测试动作。
+- `App/App.AutoMeasurement.cs`/`App.xaml.cs`：只在隔离数据/单探针旗标下运行，OFF程序化对照、ON真实调度；Ready/QPC阶段、稀疏采集次数、revision、timer/恢复校验。日常路径不创建测量timer。
+- `scripts/measure-m08.ps1`：同包1/3/6、OFF/ON、3负载、双轮交叉次序采样；QPC区间、M07统计口径及无效样本拒绝。
+- `scripts/M08MeasurementRules.cs`/`M08MeasurementRulesTests.cs`：共享计数合同30项；`M08InputProbe.cs`/`Test-M08NativeEnvironment.ps1`仅只读前置。
+- `test-m08-tools.ps1`：PS5.1语法/入口/正常退出与同库重启。全798/798；人工与有效外采0/36仍待反馈，见[07合同](M08_EXPERIENCE_AND_RESOURCE_GATE.md)。
+
+## 2026-09-11 M08-06 生命周期（该阶段证据；余门OPEN）
+
+- `Application/SystemLifecycleGate.cs`：休眠/锁定/断连独立原因，部分解除不恢复，恢复重新建立基线。
+- `Windows/DesktopLifecycleSignals.cs` / `DesktopEnvironmentWatcher.cs`：原生电源/WTS分类、当前session过滤、共享注册/重试/释放，远程连接/断开使用官方3/4。
+- `App/App.SystemLifecycle.cs` / `App.xaml.cs`：统一暂停使旧自动/恢复代次失效，显示/健康/旧异步结果不得越过系统暂停；复用原恢复/空间/事务。
+- `SystemLifecycleTests.cs`：新增32项消息/多原因/旧回调/0/1/3/6连续生命周期；全768/768。
+- `App/App.AutoLifetimeSmoke.cs` / `scripts/smoke-auto-lifetime.ps1`：只允许隔离数据的本地HWND通知、显隐/删除、启用退出/重启，PS5.1；不是实际系统锁屏或鼠标模拟。
+- Release0警告0错误；13个成功隔离进程exit0/clean0；最终自动仍Unavailable/error5，详见[本项合同](M08_LIFECYCLE_REGRESSION.md)。
+
+## 2026-09-11 M08-05 控制中心设置（该阶段证据）
+
+- `Application/ControlCenterAutoPostureEditor.cs`：窗口会话草稿、原文校验、latest/basis分离、目标CAS、pending/requestId及取消；复用`PosterAutoPostureDraft`，无新增状态权威。
+- `App/ControlCenterWindow.xaml`/`ControlCenterWindow.AutoPosture.cs`：逐海报开关、秒数、应用/取消、过期/错误提示；TextChanging只更新纯草稿，TextChanged更新视觉；提交前重验实际控件。
+- `App/ControlCenterService.cs`：关联回执、关闭/目标切换释放、SettingsInteractionChanged；`App.AutoPosture.cs`/`App.PassivePointer.cs`复用共享Editing保护，不改空间求解和输入岛。
+- `ControlCenterAutoPostureEditorTests.cs`新增27项；`ArchitectureTests.cs`纳入新UI partial。`App.AutoSettingsSmoke.cs`/`ControlCenterWindow.SettingsSmoke.cs`及`scripts/smoke-auto-settings.ps1`仅供隔离真实XAML测试。
+- 全736/736、Release0警告0错误，最终控件PID43568/49852 PASS；最终自动回归输入桌面不可读仍需复测，详见[M08-05合同](M08_CONTROL_CENTER_SETTINGS.md)。
+
+## 2026-09-11 M08-04 共享调度/空间接线（该阶段证据）
+
+- `Application/AutoPostureScheduler.cs`：原生观察与延后效果分离、一次出队重验、共享单航班、精确完成/取消、零需求停timer；`AutoPostureEvidence.cs`区分用户意图与独立空间变化。
+- `Application/AutoPostureModel.cs`补可选ManualCollapseExitVersion，保留标题移动前的手动抑制证据；旧规则不改。
+- `Application/AutomaticPostureCommit.cs`与`StateProjectionCoordinator.ExecuteAutomaticPosture`是受限System姿态事务口；普通Execute仍拒绝System。
+- `App/App.AutoPosture.cs`/`App.PassivePointer.cs`接唯一计时器、输入/菜单唤醒、当前会话/环境、投影和退出；`PosterSpatialRuntime.Automatic.cs`复用既有空间/R4/CAS/恢复回执，手动优先且无新手动队列。
+- `Windows/DesktopMenuInteraction.ActivityChanged`、`App/ControlCenterService.RemovalInteractionChanged`成对通知保护；不改输入区域、菜单层级或窗口样式。
+- `App.AutoPostureSmoke.cs`与`scripts/smoke-auto-posture.ps1`仅限隔离配置，真实原生计时/动画中关闭/资源归零；不移动鼠标。新增38、全709及最终PID43140证据见[M08-04合同](M08_SHARED_SCHEDULER.md)。
+
+以下锚点为对应阶段事实；“未接循环”等限定当时版本，不覆盖上方当前实现。
+
+## 2026-09-11 M08-03 观察适配器/保护（未启动生产循环）
+
+- `Application/PosterInputRouter.cs`的ReadSurface/PointerActivity及PosterInputGeometry复用原命中几何；事件有session/layout版本门，回调失败不破坏主动输入。
+- `Application/PosterPointerObservation.cs`维护只读标准presence/保护与真实跨界证据；不将窗口移动、解除遮挡或恢复当鼠标进入，不保存轨迹。
+- `Windows/PassivePosterPointerObserver.cs`、`NativeDesktopPointerPlatform.cs`：一次全体采样、精确原生根/桌面身份/遮挡与输入范围读回；无timer/hook/状态写入。`DesktopMenuInteraction.IsActive`及已有router.Capture提供共享保护。
+- `Windows/PosterInputIslandManager.cs`按订阅需求TME_LEAVE，转发移动/离开等唤醒提示，观察故障不干扰原处理；没有改输入区域/样式/层级。
+- `App/PosterVisualWindow.Pointer.cs`、`PosterSpatialRuntime.Pointer.cs`、`App.PassivePointer.cs`当前会话采集读口；`ControlCenterService.IsRemovalInteractionActive`覆盖确认异步结束。M08-04负责真正订阅/调度，不把端口存在当运行完成。
+- 三份`PassivePosterPointer*Tests.cs`新增52项；完整671/671及屏幕外真实HWND/Release证据见[M08-03合同](M08_POINTER_OBSERVATION.md)。
+
+## 2026-09-11 M08-02 设置与迁移（未接自动运行器）
+
+- `Domain/AuthoritativeState.cs`新增AutoCollapseDelaySeconds，`PosterAutoPosturePolicy.cs`统一3秒默认/1～300校验；无全局设置或计时器持久化。
+- `Application/StateProjectionContracts.cs`、`StateCommandPolicy.cs`、`PosterAutoPostureDraft.cs`：SetAutoPosture追加编号、目标CAS/白名单、绑定实体草稿、同revision投影；`AutoPosturePolicy.From`复用实体字段。
+- `Application/StateRequestFingerprint.cs`、`StateProjectionCoordinator.cs`、`Infrastructure/SqlitePosterCatalogRepository.cs`：仅请求指纹省略默认3秒，保留旧v6回执；非默认秒数参与指纹，普通序列化不省略字段。
+- `Infrastructure/SqliteStateStore.cs`追加schema7及列/数据验证；`SqliteStateRepositories.cs`完整读取/插入/更新。v1..6固定指纹保留。
+- `AutoPostureSettingsTests.cs`、`AutoPostureSettingsMigrationTests.cs`：数据/CAS/投影、旧库/备份/回滚/重放和旧仓储验证；[完整证据](M08_AUTO_POSTURE_SETTINGS.md)。
+
+## M08-01 纯模型（合同已冻结）
+
+- [Application/AutoPostureModel](../../../../src/DesktopUp.Application/AutoPostureModel.cs)：策略/观察/不可变状态、全目录版本门、真实边界证据、保护/候选仲裁、请求与取消精确回执；无HWND、真实计时器或持久化。
+- `tests/DesktopUp.Contracts.Tests/AutoPostureModelTests.cs`、`AutoPostureLifetimeTests.cs`、`AutoPostureSequenceTests.cs`：虚拟时钟/保护/失败/恢复/长序列，复用现有SpatialContinuityTests.Model验证连续归位。
+- [实际合同与证据](M08_AUTO_POSTURE_MODEL.md)：TBD-017已由用户确认，手动收起后须真正离开再进入，原测试保留并去掉Proposed标记。
+
+[M08其余任务](../../30_Plans/V3_04_M08_AUTO_POSTURE_PLAN.md)待实施：生产观察循环/共享调度/实际中心控件，复用registry/恢复与Windows/DesktopMenuInteraction保护。System来源在命令提交层仍被拒绝，04需补受控入口及精确完成/取消，不能冒称已有自动提交。稳定App未替换。
+M07已收口；前两项[按需优化](../../30_Plans/ON_DEMAND_OPTIMIZATIONS.md)无实施排期。
+
+## M07 收口当前入口（2026-09-10）
+
+- `scripts/Get-M07StableBuild.ps1`：当前唯一24项绑定；动画/人工/资源/空间/安全均共用。
+- `start-m07-manual.ps1`：五场景、首次生成/后续复用、新closeout隔离目录；零目录不重建，return-sync仅首次排列。
+- `measure-m07.ps1`：冻结配置/逐格哈希/显示一致性、工作集/私有提交/句柄/线程完整统计；`start-m07-measurement.ps1`跑36次。
+- `measure-m07-spatial.ps1`：稳定包1/3/6、每帧覆盖和最终恢复；共用`smoke-spatial.ps1`。
+- `test-m07-safety.ps1`：编排已有确认/多实例/无空间/零目录回归；`smoke-input-confirmation.ps1`/`smoke-multi-instance.ps1`改用共用子进程启动器支持PS5.1，未改App测试钩子。
+- `test-m07-launcher.ps1`：11脚本AST/24指纹、只读预检和实际3张启动/退出；`-CheckOnly`不创建数据。
+- [自动证据与人工清单](M07_CLOSEOUT.md)、[36次资源报告](M07_RESOURCE_BASELINE_20260910.md)。生产呈现实现/产物没有变。
+
+日期：2026-09-11。本页维护当前代码映射及历史代码索引，不维护另一个任务队列；执行状态查细化工作流，交接查[HANDOFF](HANDOFF.md)。旧阶段测试计数属于对应版本，计划端口只有上方实际锚点覆盖部分才是现存代码，未执行验收不当作PASS。
 
 ## 当前呈现与动画
 
@@ -20,7 +111,7 @@
 - 连续空间合同/模型/SQLite v6与同批推让归位见 [M07_SPATIAL_CONTINUITY](M07_SPATIAL_CONTINUITY.md)；`PosterSpatialRuntime.ContinuitySmoke.cs`保留8命令生产通道回归，删除其额外重绘实验。
 - 菜单共享租约与输入让位见 [M07_MENU_REPAIR_R1](M07_MENU_REPAIR_R1.md)，`DesktopMenuInteraction.cs`/`NativeDesktopMenuPlatform.cs`；旧菜单取证为历史，不代表仍未修复。
 - [M07安全/测量合同](M07_MEASUREMENT_AND_SAFETY.md)：`measure-m07.ps1`、`MeasurementMath.cs`、`MeasurementFixtureData.cs`与测量合同测试。
-- M07人工/测量历史入口仍固定其当时包，执行剩余门前需重绑本次稳定包；不得拿旧包认证最新呈现。
+- M07当前人工/测量入口已共用24项稳定绑定；历史输出保留其当时版本身份，不得混入最新基线。
 - 证据：[R4](M07_ANIMATION_R4.md)、[VERIFICATION](VERIFICATION.md)；方法：[呈现诊断](../../20_Architecture/PRESENTATION_DIAGNOSIS_PLAYBOOK_V1.md)。
 
 ## M06 当前代码锚点

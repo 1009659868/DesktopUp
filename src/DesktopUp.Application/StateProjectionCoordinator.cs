@@ -1,13 +1,11 @@
 using System.Collections.ObjectModel;
-using System.Security.Cryptography;
-using System.Text.Json;
 using DesktopUp.Domain;
 
 namespace DesktopUp.Application;
 
 public sealed class StateProjectionCoordinator(
     IStateCommandRepository repository,
-    IStructuredLog? log = null) : IStateProjectionCoordinator, IStateCommandService
+    IStructuredLog? log = null) : IStateProjectionCoordinator, IStateCommandService, IAutomaticPostureCommitter
 {
     private readonly object _sync = new();
     private readonly Queue<StateProjectionChangedEventArgs> _pending = new();
@@ -71,10 +69,14 @@ public sealed class StateProjectionCoordinator(
         reads => command with { ReadSet = Required(reads), PosterIds = Array.AsReadOnly(command.PosterIds.Order(StringComparer.Ordinal).ToArray()) },
         StateCommandPolicy.Prepare);
 
+    public StateCommandResult ExecuteAutomaticPosture(PosterStateCommand command) => Run(
+        command.RequestId, command.Source, command.ExpectedRevision, command.ReadSet,
+        reads => command with { ReadSet = reads }, AutomaticPostureCommitPolicy.Prepare, allowSystem: true);
+
     private static StateReadSet Required(StateReadSet? reads) => reads ?? throw new ArgumentException("Entity read set is required.");
 
     private StateCommandResult Run<T>(string requestId, StateCommandSource source, long observedRevision,
-        StateReadSet? readSet, Func<StateReadSet?, T> freeze, Func<T, DesktopStateSnapshot, StateMutationPlan> prepare)
+        StateReadSet? readSet, Func<StateReadSet?, T> freeze, Func<T, DesktopStateSnapshot, StateMutationPlan> prepare, bool allowSystem = false)
     {
         StateCommandResult result;
         lock (_sync)
@@ -82,17 +84,17 @@ public sealed class StateProjectionCoordinator(
             try
             {
                 if (string.IsNullOrWhiteSpace(requestId) || requestId.Length > 128 || observedRevision < 0 ||
-                    !Enum.IsDefined(source) || source == StateCommandSource.System)
+                    !Enum.IsDefined(source) || (source == StateCommandSource.System && !allowSystem))
                     throw new ArgumentException("Request id, source or observed revision is invalid.");
                 StateReadSet? reads = readSet?.Freeze();
                 if (reads is not null && (reads.Posters.Any(p => string.IsNullOrWhiteSpace(p.Key) || p.Key.Length > 128 || p.Value < 1) ||
                     reads.SettingsVersion is < 1 || reads.CatalogVersion is < 0))
                     throw new ArgumentException("Entity read set contains invalid identities or versions.");
                 T frozen = freeze(reads);
-                string hash = Convert.ToHexString(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(new
+                string hash = StateRequestFingerprint.Compute(new
                 {
                     protocol = "desktopup-state-command-v2", type = typeof(T).Name, command = frozen
-                })));
+                });
                 if (_current is null)
                     result = Failure(StateCommandStatus.NotReady, requestId, observedRevision, "State projection is not initialized.");
                 else
@@ -190,7 +192,8 @@ public sealed class StateProjectionCoordinator(
         var tray = new TrayProjection(state.Revision, posters.Count, summary == PosterLockSummary.All,
             settings.Settings.DynamicEffectsPaused, $"DesktopUp · {posters.Count} 张海报 · {visible} 可见 · {locked} 锁定" +
                 (settings.Settings.DynamicEffectsPaused ? " · 已暂停" : ""))
-            { VisiblePosterCount = visible, LockedPosterCount = locked, LockSummary = summary };
+            { VisiblePosterCount = visible, LockedPosterCount = locked, LockSummary = summary,
+                AutoPostureEnabledPosterCount = posters.Count(p => p.Poster.AutoCollapseEnabled) };
         return new(state.Revision, selected, center, tray) { ProfileInitialized = state.Catalog.ProfileInitialized,
             SpatialOperations = state.SpatialOperations, SpatialContinuities = state.SpatialContinuities };
     }

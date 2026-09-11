@@ -6,7 +6,7 @@ using System.Text.Json;
 
 namespace DesktopUp.Contracts.Tests;
 
-public sealed class SpatialContinuityIntegrationTests
+public sealed partial class SpatialContinuityIntegrationTests
 {
     [Theory]
     [InlineData(false)] [InlineData(true)]
@@ -88,7 +88,7 @@ public sealed class SpatialContinuityIntegrationTests
     {
         using var f = new Fixture(false); LegacyStateDatabase.Create(f.Path, 5);
         using var store = new SqliteStateStore(f.Paths); var result = store.Initialize();
-        Assert.True(result.Succeeded, result.Error); Assert.Equal(5, result.PreviousSchemaVersion); Assert.Equal(6, result.Head!.SchemaVersion);
+        Assert.True(result.Succeeded, result.Error); Assert.Equal(5, result.PreviousSchemaVersion); Assert.Equal(7, result.Head!.SchemaVersion);
         Assert.Equal(5, store.ValidateBackup(System.IO.Path.Combine(f.Paths.Backups, result.PreMigrationBackupFileName!)).SchemaVersion);
         Assert.Empty(new SqliteStateCommandRepository(store).Read().SpatialContinuities);
     }
@@ -113,13 +113,13 @@ public sealed class SpatialContinuityIntegrationTests
         private SqliteStateStore? _store;
         public StateProjectionCoordinator Coordinator { get; } = null!;
         public SpatialEnvironment Environment = SpatialContinuityTests.Environment;
-        public Fixture(bool initialize = true)
+        public Fixture(bool initialize = true, bool automatic = false)
         {
             Paths = new(_root); Paths.EnsureCreated(); if (!initialize) return;
             _store = new(Paths); Assert.True(_store.Initialize().Succeeded);
             Coordinator = new(new SqliteStateCommandRepository(_store));
             var c = new PosterDefinition("C", "C", "test", "test", 0, 0, 240, 360, 0, 0, .24, .225,
-                false, true, false, "grid", "{}", "night-ops");
+                false, true, automatic, "grid", "{}", "night-ops");
             var state = Coordinator.EnsureInitialized(c);
             foreach (var entry in new[] { ("B", 60), ("A", 120) })
             {

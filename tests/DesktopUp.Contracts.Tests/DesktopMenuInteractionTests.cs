@@ -6,6 +6,28 @@ namespace DesktopUp.Contracts.Tests;
 
 public sealed class DesktopMenuInteractionTests
 {
+    [Theory] [InlineData(false)] [InlineData(true)]
+    public void AutoPosture_menu_activity_is_paired_even_after_prepare_failure_and_faulty_observer(bool fail)
+    {
+        var f = new Fixture(3); var states = new List<bool>();
+        void Broken() => throw new InvalidOperationException("observer fault");
+        void Observe() => states.Add(DesktopMenuInteraction.IsActive);
+        DesktopMenuInteraction.ActivityChanged += Broken;
+        DesktopMenuInteraction.ActivityChanged += Observe;
+        try
+        {
+            if (fail) { f.Native.FailTransparency = 22; Assert.Throws<InvalidOperationException>(() => f.Open()); }
+            else { using var menu = f.Open(); Assert.True(menu.ActivatePopup()); }
+            Assert.Equal(new[] { true, false }, states);
+            Assert.False(DesktopMenuInteraction.IsActive); Assert.Empty(f.Ledger.ActiveResources);
+        }
+        finally
+        {
+            DesktopMenuInteraction.ActivityChanged -= Broken;
+            DesktopMenuInteraction.ActivityChanged -= Observe;
+        }
+    }
+
     [Theory]
     [InlineData(1)]
     [InlineData(3)]
@@ -16,6 +38,7 @@ public sealed class DesktopMenuInteractionTests
         f.Native.Transparent[12] = true; // do not erase a pre-existing transparency bit
         using (var menu = f.Open())
         {
+            Assert.True(DesktopMenuInteraction.IsActive);
             Assert.Equal(count, f.Cancelled);
             Assert.Equal(count, f.Native.Transparent.Count(p => p.Value));
             Assert.All(f.Surfaces, s => Assert.True(DesktopMenuInteraction.BlocksInput(s.Input)));
@@ -27,6 +50,7 @@ public sealed class DesktopMenuInteractionTests
             Assert.Single(f.Ledger.ActiveResources);
         }
         Assert.Equal(count, f.Restored);
+        Assert.False(DesktopMenuInteraction.IsActive);
         Assert.True(f.Native.Transparent[12]);
         Assert.Single(f.Native.Transparent.Where(p => p.Value));
         Assert.All(f.Surfaces, s => Assert.False(DesktopMenuInteraction.BlocksInput(s.Input)));

@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Runtime.InteropServices;
+using DesktopUp.Application;
 
 namespace DesktopUp.Windows;
 
@@ -133,6 +134,10 @@ public sealed class DesktopEnvironmentWatcher : IDisposable
     private bool _installed;
     private bool _disposed;
     private bool _layerRepairInProgress;
+    private bool _sessionNotifications;
+    private readonly int _processSession = System.Diagnostics.Process.GetCurrentProcess().SessionId;
+    public bool SessionNotificationsRegistered => _sessionNotifications;
+    public int SessionNotificationError { get; private set; }
 
     public DesktopEnvironmentWatcher(
         nint windowHandle,
@@ -172,7 +177,18 @@ public sealed class DesktopEnvironmentWatcher : IDisposable
             ReleaseFallbackBrush();
             throw new Win32Exception(Marshal.GetLastPInvokeError());
         }
+        if (!_guardPosterWindow) TryRegisterSessionNotifications();
     }
+
+    // Only the shared hidden environment listener registers. Retry via its existing health tick
+    // if Terminal Services was not ready; never create one registration per poster.
+    public void TryRegisterSessionNotifications()
+    {
+        if (_disposed || _guardPosterWindow || _sessionNotifications) return;
+        _sessionNotifications = WTSRegisterSessionNotification(_windowHandle, 0);
+        SessionNotificationError = _sessionNotifications ? 0 : Marshal.GetLastPInvokeError();
+    }
+    public event Action<SystemLifecycleSignal>? LifecycleChanged;
 
     public event EventHandler<DesktopEnvironmentChangedEventArgs>? Changed;
     public event EventHandler<DesktopPointerActivationGuardedEventArgs>?
@@ -194,6 +210,7 @@ public sealed class DesktopEnvironmentWatcher : IDisposable
             MenuInputDiagnostics.Observe(windowHandle, message, lParam, "visual-guard");
         if (message == WmNcDestroy)
         {
+            ReleaseSessionNotifications();
             _installed = false;
             _disposed = true;
             ReleaseFallbackBrush();
@@ -236,6 +253,11 @@ public sealed class DesktopEnvironmentWatcher : IDisposable
         }
         else
         {
+            if (!_guardPosterWindow && DesktopLifecycleSignals.Classify(message, wParam, lParam, _processSession) is { } signal)
+            {
+                LifecycleChanged?.Invoke(signal);
+                if (message == DesktopLifecycleSignals.PowerBroadcast) return new nint(1);
+            }
             string? settingArea =
                 message == DesktopEnvironmentSignalClassifier.WmSettingChange &&
                 lParam != 0
@@ -348,6 +370,7 @@ public sealed class DesktopEnvironmentWatcher : IDisposable
         }
 
         _disposed = true;
+        ReleaseSessionNotifications();
         if (_installed && IsWindow(_windowHandle))
         {
             _ = RemoveWindowSubclass(_windowHandle, _subclassProc, SubclassId);
@@ -355,6 +378,7 @@ public sealed class DesktopEnvironmentWatcher : IDisposable
         _installed = false;
         ReleaseFallbackBrush();
         Changed = null;
+        LifecycleChanged = null;
         PointerActivationGuarded = null;
         LayerActivationGuarded = null;
         ZOrderChangeConstrained = null;
@@ -369,6 +393,19 @@ public sealed class DesktopEnvironmentWatcher : IDisposable
             _ = DeleteObject(brush);
         }
     }
+
+    private void ReleaseSessionNotifications()
+    {
+        if (!_sessionNotifications) return;
+        _ = WTSUnRegisterSessionNotification(_windowHandle);
+        _sessionNotifications = false;
+    }
+    [DllImport("wtsapi32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool WTSRegisterSessionNotification(nint window, uint flags);
+    [DllImport("wtsapi32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool WTSUnRegisterSessionNotification(nint window);
 
     [StructLayout(LayoutKind.Sequential)]
     private struct WindowPos

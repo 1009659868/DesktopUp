@@ -1,6 +1,3 @@
-using System.Security.Cryptography;
-using System.Text;
-using System.Text.Json;
 using DesktopUp.Application;
 using DesktopUp.Domain;
 using Microsoft.Data.Sqlite;
@@ -163,7 +160,7 @@ public sealed class SqlitePosterCatalogRepository(SqliteStateStore store) : IPos
     };
 
     private static string Fingerprint<T>(T request) =>
-        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(request))));
+        StateRequestFingerprint.Compute(request);
 
     private static long NextStackOrder(SqliteConnection connection, SqliteTransaction transaction)
     {

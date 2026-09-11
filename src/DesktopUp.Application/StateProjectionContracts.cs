@@ -18,7 +18,8 @@ public enum PosterStateCommandKind
     SetCollapsed = 3,
     SetVisible = 4,
     Rename = 5,
-    SetPresentation = 6
+    SetPresentation = 6,
+    SetAutoPosture = 7
 }
 
 public enum SettingsStateCommandKind
@@ -96,6 +97,7 @@ public sealed record PosterSurfaceProjection(
     public long LayoutGeneration { get; init; }
     public string? LastLayoutOperationId { get; init; }
     public ResolvedPosterPresentation Presentation => PosterPresentationPolicy.Resolve(Poster);
+    public AutoPosturePolicy AutoPosture => AutoPosturePolicy.From(Poster);
 }
 
 public sealed record SettingsProjection(
@@ -132,6 +134,8 @@ public sealed record TrayProjection(
     public int VisiblePosterCount { get; init; }
     public int LockedPosterCount { get; init; }
     public PosterLockSummary LockSummary { get; init; }
+    // Configured policy count, not a claim that native observation is running.
+    public int AutoPostureEnabledPosterCount { get; init; }
 }
 
 public sealed record DesktopUpProjection(

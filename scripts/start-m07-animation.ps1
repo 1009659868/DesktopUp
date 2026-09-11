@@ -3,18 +3,10 @@ param([switch]$CheckOnly, [switch]$Smoke, [string]$AnimationConfig)
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'Start-DesktopUpFixtureProcess.ps1')
 $taskRepo = Split-Path -Parent $PSScriptRoot
-$taskBuild = Join-Path $taskRepo 'out\verify\v3-04-m07-animation-stable'
-$taskApp = Join-Path $taskBuild 'app\DesktopUp.exe'
+$taskBinding = & (Join-Path $PSScriptRoot 'Get-M07StableBuild.ps1')
+$taskBuild = $taskBinding.Root
+$taskApp = $taskBinding.App
 $taskFixture = Join-Path $taskBuild 'fixture\DesktopUp.SessionFixture.dll'
-$taskExpected = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'm07-animation-build.json') -Raw | ConvertFrom-Json
-foreach ($taskArea in $taskExpected.PSObject.Properties) {
-    foreach ($taskEntry in $taskArea.Value.PSObject.Properties) {
-        $taskFile = Join-Path (Join-Path $taskBuild $taskArea.Name) $taskEntry.Name
-        if (!(Test-Path -LiteralPath $taskFile) -or (Get-FileHash -LiteralPath $taskFile).Hash -ne $taskEntry.Value) {
-            throw "Animation artifact fingerprint mismatch: $taskFile"
-        }
-    }
-}
 if ([string]::IsNullOrWhiteSpace($AnimationConfig)) { $AnimationConfig = Join-Path $taskRepo 'config\poster-animation.json' }
 $taskConfig = (Get-Item -LiteralPath $AnimationConfig).FullName
 if ($taskConfig.Contains('"')) { throw 'Invalid configuration path.' }

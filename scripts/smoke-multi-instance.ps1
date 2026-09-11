@@ -1,7 +1,8 @@
-#requires -Version 7.4
+#requires -Version 5.1
 param([Parameter(Mandatory)][string]$ExecutablePath, [Parameter(Mandatory)][string]$DataRoot,
     [ValidateSet('Exercise','Restart')][string]$Phase = 'Exercise')
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'Start-DesktopUpFixtureProcess.ps1')
 $taskExe = (Resolve-Path -LiteralPath $ExecutablePath).Path
 $taskRoot = [IO.Path]::GetFullPath($DataRoot).TrimEnd('\')
 $taskNormal = [IO.Path]::GetFullPath((Join-Path $env:LOCALAPPDATA 'DesktopUp\V3')).TrimEnd('\')
@@ -21,9 +22,7 @@ if ($Phase -eq 'Restart') {
     if ($null -eq $taskPrevious) { throw 'Missing final persisted catalog evidence.' }
 }
 $taskFlag = if ($Phase -eq 'Exercise') { '--multi-instance-smoke' } else { '--multi-instance-restart' }
-$taskEnvironment = @{ DESKTOPUP_V3_TEST_DATA_ROOT = $taskRoot }
-$taskProbe = Start-Process -FilePath $taskExe -ArgumentList @($taskFlag,'--show-control-center','--exit-after-ms=22000') `
-    -WindowStyle Hidden -PassThru -Environment $taskEnvironment
+$taskProbe = Start-DesktopUpFixtureProcess -ExecutablePath $taskExe -DataRoot $taskRoot -Arguments ($taskFlag + ' --show-control-center --exit-after-ms=22000') -WindowStyle Hidden
 $taskSecondaryId = $null
 if ($Phase -eq 'Exercise') {
     # Wait for this PID's initial snapshot, then use the real single-instance activation path.
@@ -38,7 +37,7 @@ if ($Phase -eq 'Exercise') {
         Start-Sleep -Milliseconds 150
     }
     if ($taskReady) {
-        $taskSecondary = Start-Process -FilePath $taskExe -ArgumentList '--show-control-center' -WindowStyle Hidden -PassThru -Environment $taskEnvironment
+        $taskSecondary = Start-DesktopUpFixtureProcess -ExecutablePath $taskExe -DataRoot $taskRoot -Arguments '--show-control-center' -WindowStyle Hidden
         $taskSecondaryId = $taskSecondary.Id
         if (-not $taskSecondary.WaitForExit(5000)) { throw "Secondary activation did not exit: $taskSecondaryId" }
         $taskSecondary.Refresh()

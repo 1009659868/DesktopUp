@@ -54,6 +54,7 @@ public sealed class ArchitectureTests
                 "PosterVisualWindow.cs",
                 "ControlCenterService.cs",
                 "ControlCenterWindow.xaml.cs",
+                "ControlCenterWindow.AutoPosture.cs",
                 "TrayService.cs"
             }.Select(file => File.ReadAllText(Path.Combine(appDirectory, file))));
 

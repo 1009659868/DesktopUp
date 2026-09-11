@@ -13,13 +13,18 @@ internal sealed partial class PosterSpatialRuntime(IStateProjectionCoordinator s
     private SpatialGestureSession? _gesture;
     private bool _suspended = true;
     public bool TryGetProjection(out DesktopUpProjection? projection) => state.TryGetCurrent(out projection);
-    public void Register(PosterVisualWindow window) => _windows[window.PosterId!] = window;
+    public void Register(PosterVisualWindow window)
+    {
+        _windows[window.PosterId!] = window;
+        ActivityChanged?.Invoke();
+    }
     public void Remove(PosterVisualWindow window)
     {
         _continuityProbeStop?.Invoke();
         if (_posture?.Participants.Contains(window) == true) CancelPosture("surface-disposed");
         if (ReferenceEquals(_owner, window)) End(window);
         if (window.PosterId is { } id && _windows.GetValueOrDefault(id) == window) _windows.Remove(id);
+        ActivityChanged?.Invoke();
     }
     public void Suspend()
     {
@@ -28,12 +33,12 @@ internal sealed partial class PosterSpatialRuntime(IStateProjectionCoordinator s
         _owner?.CancelSpatialGesture("environment-invalidated");
         foreach (var window in _windows.Values.ToArray()) window.SuspendInput();
     }
-    public void Resume() => _suspended = false;
+    public void Resume() { _suspended = false; ActivityChanged?.Invoke(); }
     public void OnProjection(StateProjectionChangedEventArgs change)
     {
         _effective.RemoveMissing(change.Projection);
         if (_posture is { } posture && posture.Command.RequestId != change.RequestId &&
-            !posture.ReadsCurrent(change.Projection)) CancelPosture("catalog-or-entity-changed");
+            !posture.ReadsCurrent(change.Projection)) CancelPosture("catalog-or-entity-changed", StateCommandStatus.Conflict);
         if (_gesture is { } gesture && change.RequestId != gesture.OperationId &&
             !gesture.IsCurrent(change.Projection, gesture.Initial.Environment))
             _owner?.CancelSpatialGesture("catalog-or-entity-changed");
@@ -42,6 +47,7 @@ internal sealed partial class PosterSpatialRuntime(IStateProjectionCoordinator s
     public SpatialGestureSession? Begin(PosterVisualWindow owner, DesktopPixelRect pressFrame,
         PosterGestureKind kind, PosterOperatingMode mode, int minWidth, int minHeight)
     {
+        BeforeManualIntent(owner.PosterId!);
         if (_posture is not null || _owner is not null && !ReferenceEquals(_owner, owner)) return null;
         if (!TrySnapshot(owner, out var snapshot, out var projection) ||
             owner.PosterId is not { } id || snapshot!.Posters.Single(p => p.PosterId == id).Bounds != Rect(pressFrame)) return null;
@@ -53,6 +59,7 @@ internal sealed partial class PosterSpatialRuntime(IStateProjectionCoordinator s
         }
         _owner = owner;
         _gesture = new(id, snapshot, projection!, kind, mode, minWidth, minHeight);
+        ActivityChanged?.Invoke();
         log.Write("info", "spatial.gesture_started", new { id, _gesture.OperationId, readCount = _gesture.Reads.Posters.Count });
         return _gesture;
     }
@@ -66,6 +73,7 @@ internal sealed partial class PosterSpatialRuntime(IStateProjectionCoordinator s
         if (!ReferenceEquals(owner, _owner)) return;
         _gesture = null;
         _owner = null;
+        ActivityChanged?.Invoke();
     }
 
     private bool TrySnapshot(PosterVisualWindow source, out SpatialSnapshot? snapshot, out DesktopUpProjection? projection)

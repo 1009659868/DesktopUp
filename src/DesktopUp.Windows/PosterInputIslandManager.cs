@@ -24,6 +24,7 @@ public sealed class PosterInputIslandManager : IInputRegionHost
     private const uint WmLButtonDown = 0x0201;
     private const uint WmLButtonUp = 0x0202;
     private const uint WmMouseMove = 0x0200;
+    private const uint WmMouseLeave = 0x02A3;
     private const uint WmMouseWheel = 0x020A;
     private const uint WmCaptureChanged = 0x0215;
     private const int MaNoActivate = 3;
@@ -62,6 +63,8 @@ public sealed class PosterInputIslandManager : IInputRegionHost
     private NativePoint _pressCursor;
     private DesktopPixelRect _pressFrame;
     private bool _gestureMoved;
+    private bool _trackingPointerLeave;
+    private bool _pointerObservationFaultReported;
     private bool _disposed;
     private long _desktopGeneration;
     private IDisposable? _windowLease;
@@ -295,6 +298,20 @@ public sealed class PosterInputIslandManager : IInputRegionHost
         nint lParam)
     {
         MenuInputDiagnostics.Observe(windowHandle, message, lParam, "input-island");
+        if (message == WmMouseLeave) _trackingPointerLeave = false;
+        if (message == WmMouseMove && !_trackingPointerLeave && _router.HasPointerObservers)
+        {
+            var tracking = new PointerLeaveTracking { Size = (uint)Marshal.SizeOf<PointerLeaveTracking>(), Flags = 2, Window = windowHandle };
+            _trackingPointerLeave = TrackMouseEvent(ref tracking);
+        }
+        if (message is WmMouseMove or WmMouseLeave or WmLButtonDown or WmLButtonUp or WmMouseWheel or WmCaptureChanged)
+        {
+            if (_router.NotifyPointerActivity(_session, AppliedLayoutRevision) is { } error && !_pointerObservationFaultReported)
+            {
+                _pointerObservationFaultReported = true;
+                _log.Write("warning", "poster.pointer_observation_failed", new { error.Message });
+            }
+        }
         switch (message)
         {
             case WmMouseActivate:
@@ -452,6 +469,16 @@ public sealed class PosterInputIslandManager : IInputRegionHost
         RaiseInput(eventKind, target, deltaX, deltaY);
         _gestureMoved = false;
     }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct PointerLeaveTracking
+    {
+        public uint Size, Flags;
+        public nint Window;
+        public uint HoverTime;
+    }
+    [DllImport("user32.dll")]
+    private static extern bool TrackMouseEvent(ref PointerLeaveTracking tracking);
 
     private void RaiseInput(
         PosterInputEventKind eventKind,

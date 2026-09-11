@@ -12,6 +12,14 @@ internal static class StateCommandPolicy
             return Invalid("Target entity version is required.");
         PosterDefinition? current = Find(state, command.PosterId);
         if (current is null) return Missing();
+        if (command.Kind == PosterStateCommandKind.SetAutoPosture)
+        {
+            if (command.Source != StateCommandSource.ControlCenter) return Denied();
+            if (command.ReadSet is null || command.SpatialGesture is not null || command.SpatialPosture is not null)
+                return Invalid("Auto-posture settings require entity CAS and cannot contain spatial operations.");
+            if (PosterAutoPosturePolicy.ValidateDelay(command.DesiredState.AutoCollapseDelaySeconds) is { } error)
+                return Invalid(error);
+        }
         if (command.Kind == PosterStateCommandKind.SetPresentation)
         {
             if (command.Source != StateCommandSource.ControlCenter) return Denied();
@@ -40,6 +48,8 @@ internal static class StateCommandPolicy
                 NormalizedWidth = desired.NormalizedWidth, NormalizedExpandedHeight = desired.NormalizedExpandedHeight
             },
             PosterStateCommandKind.SetLocked => current with { IsLocked = desired.IsLocked },
+            PosterStateCommandKind.SetAutoPosture => current with { AutoCollapseEnabled = desired.AutoCollapseEnabled,
+                AutoCollapseDelaySeconds = desired.AutoCollapseDelaySeconds },
             PosterStateCommandKind.SetCollapsed => current with { IsCollapsed = desired.IsCollapsed, VerticalAnchor = desired.VerticalAnchor },
             PosterStateCommandKind.SetVisible => current with { IsVisible = desired.IsVisible },
             PosterStateCommandKind.Rename => current with { Title = desired.Title },

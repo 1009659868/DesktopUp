@@ -48,6 +48,8 @@ public sealed partial class ControlCenterWindow : Window
     public void ApplyView(ControlCenterView view, string? commandError = null)
     {
         _view = view;
+        _autoEditor.Synchronize(view.SelectedPoster);
+        RenderAutoPosture();
         _applyingView = true;
         try
         {
