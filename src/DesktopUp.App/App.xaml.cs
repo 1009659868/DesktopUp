@@ -68,6 +68,7 @@ public partial class App : Microsoft.UI.Xaml.Application
         _services = BuildServices();
         _log = _services.GetRequiredService<IStructuredLog>();
         _ledger = _services.GetRequiredService<IResourceLedger>();
+        if (TryEnterOfflineRecovery()) return;
         PosterAnimationOptions animationOptions;
         try
         {
@@ -93,9 +94,11 @@ public partial class App : Microsoft.UI.Xaml.Application
                 stateInitialization.PreviousSchemaVersion,
                 stateInitialization.Error
             });
-            ExitApplication();
+            _services.GetRequiredService<SqliteStateStore>().Dispose();
+            OpenOfflineRecovery(stateInitialization.Error ?? "状态库无法打开。");
             return;
         }
+        _storageInitialized = true;
         try
         {
             SettingsStateSnapshot settings =
@@ -123,21 +126,17 @@ public partial class App : Microsoft.UI.Xaml.Application
         DebugSettings.IsXamlResourceReferenceTracingEnabled = true;
         DebugSettings.XamlResourceReferenceFailed += OnXamlResourceReferenceFailed;
         _stateCommands = _services.GetRequiredService<IStateCommandService>();
+        ConfigurePortableProfiles();
         _stateCoordinator.ProjectionChanged += OnStateProjectionChanged;
         _controlCenter = new ControlCenterService(
             _ledger,
             _log,
             ExecuteControlCenterPosterCommand,
             () => ToggleDynamicEffectsPaused(StateCommandSource.ControlCenter),
-            OnControlCenterSelectionChanged, _stateCoordinator, _stateCommands, _inputRouter,
-            target => _spatialRuntime?.GetEffectiveLayout(target));
+            _stateCoordinator, _stateCommands, _inputRouter,
+            target => _spatialRuntime?.GetEffectiveLayout(target), () => _spatialRuntime, _portableController);
         _tray = new TrayService(_ledger, _log);
-        _tray.Create(
-            ShowControlCenter,
-            TogglePosterEditing,
-            () => TogglePosterLocked(StateCommandSource.Tray),
-            () => ToggleDynamicEffectsPaused(StateCommandSource.Tray),
-            ExitApplication);
+        _tray.Create(QueueTrayAction);
         _log.Write("info", "application.started", new
         {
             version = typeof(App).Assembly.GetName().Version?.ToString(),
@@ -145,7 +144,8 @@ public partial class App : Microsoft.UI.Xaml.Application
             isElevated = IsProcessElevated(),
             requestedExecutionLevel = "asInvoker"
         });
-        _spatialRuntime = new PosterSpatialRuntime(_stateCoordinator, _stateCommands, _log, animationOptions);
+        _spatialRuntime = new PosterSpatialRuntime(_stateCoordinator, _stateCommands, _log, animationOptions,
+            () => _posterSessions?.GloballyHidden == true);
         _spatialRuntime.EffectiveLayoutChanged += RefreshControlCenterRuntime;
         StartAutoPosture();
         _spatialRuntime.RecoveryRequired += () => QueueDesktopRecovery(
@@ -166,13 +166,13 @@ public partial class App : Microsoft.UI.Xaml.Application
         }
 
         ScheduleSmokeExitIfRequested(_startupIntent.Arguments);
-        string[] smokeFlags = ["--auto-measurement", "--auto-lifetime-smoke", "--auto-settings-smoke", "--auto-posture-smoke", "--continuity-smoke", "--continuity-arrange", "--menu-smoke", "--presentation-smoke", "--spatial-smoke", "--input-confirmation-smoke", "--multi-instance-smoke", "--multi-instance-restart"];
+        string[] smokeFlags = ["--picker-smoke", "--portable-smoke", "--tray-smoke", "--control-center-smoke", "--title-surface-smoke", "--auto-measurement", "--auto-lifetime-smoke", "--auto-settings-smoke", "--auto-posture-smoke", "--continuity-smoke", "--continuity-arrange", "--menu-smoke", "--presentation-smoke", "--spatial-smoke", "--input-confirmation-smoke", "--multi-instance-smoke", "--multi-instance-restart"];
         if (_startupIntent.Arguments.Count(a => smokeFlags.Contains(a, StringComparer.OrdinalIgnoreCase)) > 1)
         {
             _log.Write("error", "contract.smoke_refused", new { reason = "one-smoke-per-process" });
             return;
         }
-        if (_startupIntent.Arguments.Any(a => a is "--auto-posture-smoke" or "--auto-settings-smoke" or "--auto-lifetime-smoke" or "--auto-measurement"))
+        if (_startupIntent.Arguments.Any(a => a is "--picker-smoke" or "--portable-smoke" or "--tray-smoke" or "--control-center-smoke" or "--title-surface-smoke" or "--auto-posture-smoke" or "--auto-settings-smoke" or "--auto-lifetime-smoke" or "--auto-measurement"))
         {
             string? testRoot = Environment.GetEnvironmentVariable("DESKTOPUP_V3_TEST_DATA_ROOT");
             string normalRoot = Path.GetFullPath(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DesktopUp", "V3"));
@@ -180,6 +180,19 @@ public partial class App : Microsoft.UI.Xaml.Application
             if (string.IsNullOrWhiteSpace(testRoot) || actual.Equals(normalRoot, StringComparison.OrdinalIgnoreCase) ||
                 actual.StartsWith(normalRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
                 _log.Write("error", "auto_posture.smoke_refused", new { reason = "isolated-profile-required" });
+            else if (_startupIntent.Arguments.Contains("--picker-smoke", StringComparer.Ordinal)) RunPickerSmoke(actual);
+            else if (_startupIntent.Arguments.Contains("--portable-smoke", StringComparer.Ordinal)) RunPortableSmoke(actual);
+            else if (_startupIntent.Arguments.Contains("--tray-smoke", StringComparer.Ordinal)) RunTraySmoke(actual);
+            else if (_startupIntent.Arguments.Contains("--control-center-smoke", StringComparer.Ordinal)) RunControlCenterSmoke(actual);
+            else if (_startupIntent.Arguments.Contains("--title-surface-smoke", StringComparer.Ordinal))
+            {
+                var lease = _ledger.Acquire("fixture.title-surface", "isolated-r4-component-faults");
+                var stop = _spatialRuntime.RunTitleSurfaceSmoke(_dispatcher, () =>
+                {
+                    lease.Dispose(); _stopAutoSmoke = null; ExitApplication();
+                });
+                _stopAutoSmoke = () => { try { stop(); } finally { lease.Dispose(); _stopAutoSmoke = null; } };
+            }
             else if (_startupIntent.Arguments.Contains("--auto-measurement", StringComparer.Ordinal))
             {
                 var modes = _startupIntent.Arguments.Where(a => a.StartsWith("--measurement-mode=", StringComparison.Ordinal)).ToArray();
@@ -636,8 +649,8 @@ public partial class App : Microsoft.UI.Xaml.Application
             {
                 if (applied) _spatialRuntime?.Resume();
                 // Failed clusters have no published input. Ready peers remain usable.
-                _inputRouter.Resume();
-                _autoReady = applied;
+                if (_posterSessions.GloballyHidden) _inputRouter.Suspend(); else _inputRouter.Resume();
+                _autoReady = applied && !_posterSessions.GloballyHidden;
                 ObserveAutoPosture();
             }
             if (_desktopRecoveryVersionGate.IsCurrent(request))
@@ -758,6 +771,8 @@ public partial class App : Microsoft.UI.Xaml.Application
     private void DispatchIntent(StartupIntent intent)
     {
         _log?.Write("info", "activation.received", new { kind = intent.Kind.ToString() });
+        if (_recoveryWindow is not null && intent.Kind != StartupIntentKind.Exit)
+        { _recoveryWindow.Activate(); return; }
         switch (intent.Kind)
         {
             case StartupIntentKind.ShowControlCenter:
@@ -786,30 +801,19 @@ public partial class App : Microsoft.UI.Xaml.Application
         XamlResourceReferenceFailedEventArgs args) =>
         _log?.Write("error", "xaml.resource_reference_failed", new { args.Message });
 
-    private void TogglePosterEditing()
-    {
-        string? selected = _controlCenter?.SelectedPosterId;
-        IPosterSession? session = _posterSessions?.Find(selected);
-        if (session is not null) _ = session.SetEditing(!session.IsEditing);
-        else _log?.Write("info", "poster.mode_change_ignored", new { posterId = selected, reason = "session-not-ready" });
-    }
-
     private void OnPosterEditingChanged(string posterId, bool editing)
     {
         ObserveAutoPosture();
-        if (_controlCenter?.SelectedPosterId == posterId)
-            _tray?.SetPosterEditing(editing);
     }
-
-    private void OnControlCenterSelectionChanged(string? posterId) =>
-        _tray?.SetPosterEditing(_posterSessions?.Find(posterId)?.IsEditing == true);
 
     private void RefreshControlCenterRuntime()
     {
-        _controlCenter?.ApplySessions(_posterSessions?.Sessions ?? Array.Empty<PosterSessionSnapshot>(), _controlCenterEnvironmentPending);
+        bool hidden = _posterSessions?.GloballyHidden == true;
+        _controlCenter?.ApplySessions(_posterSessions?.Sessions ?? Array.Empty<PosterSessionSnapshot>(), _controlCenterEnvironmentPending, hidden);
+        _tray?.ApplyRuntime(hidden, _controlCenterEnvironmentPending);
         if (_stateCoordinator?.TryGetCurrent(out var current) == true && current is not null)
         {
-            int constrained = current.Posters.Count(p => p.Poster.IsVisible && _spatialRuntime?.GetEffectiveLayout(p)?.IsConstrained == true);
+            int constrained = current.Posters.Count(p => p.IsEffectivelyVisible && _spatialRuntime?.GetEffectiveLayout(p)?.IsConstrained == true);
             _tray?.ApplyProjection(current.Tray with { ToolTipText = current.Tray.ToolTipText +
                 (constrained > 0 ? $" · {constrained} 张空间受限" : "") });
         }
@@ -863,7 +867,6 @@ public partial class App : Microsoft.UI.Xaml.Application
         _tray?.ApplyProjection(args.Projection.Tray);
         _posterSessions?.ApplyProjection(args);
         RefreshControlCenterRuntime();
-        OnControlCenterSelectionChanged(_controlCenter?.SelectedPosterId);
         ObserveAutoPosture();
     }
 
@@ -883,6 +886,7 @@ public partial class App : Microsoft.UI.Xaml.Application
                 currentProjection.Posters.Select(p => p.Poster.PosterId).ToArray(),
                 BatchPosterCommandKind.SetLocked, !currentProjection.Tray.AllPostersLocked, AllPosters: true));
             LogCommandResult("poster-lock-all", batch);
+            ShowTrayResult(batch);
             return;
         }
         // Per-poster center commands are frozen by ControlCenterView, never by this global tray path.
@@ -907,6 +911,7 @@ public partial class App : Microsoft.UI.Xaml.Application
             currentProjection.Revision,
             desired) { ReadSet = StateReadSet.ForSettings(currentProjection.ControlCenter.Settings.EntityVersion) });
         LogCommandResult("dynamic-effects-pause", result);
+        if (source == StateCommandSource.Tray) ShowTrayResult(result);
     }
 
     private bool TryGetProjection(
@@ -966,12 +971,14 @@ public partial class App : Microsoft.UI.Xaml.Application
 
     private async void ExitApplication()
     {
+        if (_recoveryWindow?.IsBusy == true) return;
         if (Interlocked.Exchange(ref _exiting, 1) != 0)
         {
             return;
         }
         _log?.Write("info", "application.exit_requested");
         StopAutoPosture();
+        if (_controlCenter is not null) await _controlCenter.CancelPortableAndWaitAsync();
         _inputRouter.Suspend();
         _controlCenter?.CancelRemoval("application-exit");
         DebugSettings.XamlResourceReferenceFailed -= OnXamlResourceReferenceFailed;
@@ -991,6 +998,9 @@ public partial class App : Microsoft.UI.Xaml.Application
         _controlCenter = null;
         _tray?.Dispose();
         _tray = null;
+        _recoveryWindow?.CloseForExit();
+        _recoveryWindow = null;
+        _recoveryWindowLease?.Dispose(); _recoveryWindowLease = null;
         _singleInstance.Dispose();
         _ledger?.WriteSnapshot();
         _log?.Write("info", "application.stopped", new
@@ -999,6 +1009,8 @@ public partial class App : Microsoft.UI.Xaml.Application
         });
         _services?.Dispose();
         _services = null;
+        _storageInitialized = false;
+        StartRequestedReplacement();
         Exit();
     }
 

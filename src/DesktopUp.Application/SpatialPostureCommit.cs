@@ -21,14 +21,14 @@ public static class SpatialPostureCommitPolicy
                 .SetEquals(state.Catalog.Posters.Select(p => p.Poster.PosterId))) return Invalid("Posture requires complete catalog CAS.");
         var current = state.Catalog.Posters.FirstOrDefault(p => p.Poster.PosterId == command.PosterId)?.Poster;
         var source = context.Initial.Posters.FirstOrDefault(p => p.PosterId == command.PosterId);
-        if (source is null || current is null || source.IsLocked != current.IsLocked || source.IsCollapsed != current.IsCollapsed ||
+        if (source is null || current is null || current.PlacementPending || source.IsLocked != current.IsLocked || source.IsCollapsed != current.IsCollapsed ||
             source.IsVisible != current.IsVisible) return Invalid("Posture source changed.");
         if (context.AllowPush)
         {
             foreach (var physical in context.Initial.Posters)
             {
                 var entity = state.Catalog.Posters.FirstOrDefault(p => p.Poster.PosterId == physical.PosterId);
-                if (entity is null || entity.LayoutGeneration != physical.LayoutGeneration || entity.LastLayoutOperationId != physical.LastLayoutOperationId ||
+                if (entity is null || entity.Poster.PlacementPending || entity.LayoutGeneration != physical.LayoutGeneration || entity.LastLayoutOperationId != physical.LastLayoutOperationId ||
                     entity.Poster.IsLocked != physical.IsLocked || entity.Poster.IsVisible != physical.IsVisible || entity.Poster.IsCollapsed != physical.IsCollapsed)
                     return Invalid("Spatial participant posture/generation changed.");
                 if (context.ContentMetrics is not null && physical.ExpandedHeight !=

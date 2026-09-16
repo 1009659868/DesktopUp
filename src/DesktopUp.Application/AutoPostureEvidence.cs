@@ -17,6 +17,8 @@ public sealed class AutoPostureEvidence
             _collapseExit[session] = pointer.ExitVersion;
         else if (!collapse) _collapseExit.Remove(session);
     }
+    public void CaptureTitleSuppression(TitleAutoRearmSuppression suppression) =>
+        _collapseExit[suppression.Session] = suppression.ExitVersion;
     public long? ManualCollapseExit(PosterInputSessionKey session, AutoPosturePointer pointer)
     {
         if (!_collapseExit.TryGetValue(session, out long exit)) return null;
@@ -53,6 +55,6 @@ public sealed class AutoPostureEvidence
     {
         p.MonitorDeviceName, p.FallbackXDip, p.FallbackYDip, p.WidthDip, p.ExpandedHeightDip,
         p.HorizontalAnchor, p.VerticalAnchor, p.NormalizedWidth, p.NormalizedExpandedHeight,
-        p.IsVisible, p.IsLocked, p.IsCollapsed, Metrics = PosterPresentationPolicy.Resolve(p).Metrics
+        p.IsVisible, p.PlacementPending, p.IsLocked, p.IsCollapsed, Metrics = PosterPresentationPolicy.Resolve(p).Metrics
     };
 }

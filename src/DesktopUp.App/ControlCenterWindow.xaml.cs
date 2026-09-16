@@ -30,6 +30,8 @@ public sealed partial class ControlCenterWindow : Window
     internal void InitializeView()
     {
         InitializeComponent();
+        InitializeEditing();
+        InitializeSettings();
         AppWindow.Resize(new global::Windows.Graphics.SizeInt32(980, 640));
         AppWindow.IsShownInSwitchers = true;
         if (AppWindow.Presenter is OverlappedPresenter presenter)
@@ -43,13 +45,14 @@ public sealed partial class ControlCenterWindow : Window
     internal bool VerifyProjection(DesktopUpProjection expected) => _view?.Projection.Revision == expected.Revision &&
         PosterSelector.ItemsSource is IReadOnlyList<ControlCenterPosterRow> rows &&
         rows.Select(row => row.PosterId).SequenceEqual(expected.Posters.Select(p => p.Poster.PosterId)) &&
-        PosterTitleText.Text == (_view.SelectedPoster?.Poster.Title ?? "暂无海报");
+        PosterTitleText.Text == (_view.SelectedPoster?.Poster.Title ?? "暂无海报") && VerifyMoreMenuForProbe();
 
     public void ApplyView(ControlCenterView view, string? commandError = null)
     {
+        if (_view?.SelectedPosterId != view.SelectedPosterId) CancelSettingsPreview();
         _view = view;
-        _autoEditor.Synchronize(view.SelectedPoster);
-        RenderAutoPosture();
+        SynchronizeEditing(view);
+        RenderSettings();
         _applyingView = true;
         try
         {
@@ -70,17 +73,19 @@ public sealed partial class ControlCenterWindow : Window
             ? "参数安全回退：" + presentation.Warning
             : $"模板：{presentation.EffectiveTemplateKey} · 图标 {presentation.Parameters.Content.IconSizeDip:0.#} DIP · " +
               $"单元最小宽 {presentation.Parameters.Content.ItemWidthDip:0.#} DIP · 间距 {presentation.Parameters.Content.GapDip:0.#} DIP\n" +
-              $"完整行高 {presentation.Metrics.CompleteItemRowDip:0.#} DIP · 参数{(presentation.IsLegacy ? "兼容读取，原文保留" : "v1")}（编辑面板后续接入）";
+              $"完整行高 {presentation.Metrics.CompleteItemRowDip:0.#} DIP · 参数{(presentation.IsLegacy ? "兼容读取，原文保留" : "v1")}";
         SettingsProjection settings = view.Projection.Settings;
         SettingsDetailText.Text = $"动态效果：{(settings.Settings.DynamicEffectsPaused ? "已暂停" : "运行中")} · 性能模式：{settings.Settings.PerformanceMode}";
-        PauseButton.Content = settings.Settings.DynamicEffectsPaused ? "恢复动态效果" : "暂停动态效果";
+        PauseButton.Content = settings.Settings.DynamicEffectsPaused ? "恢复提示动效" : "暂停提示动效";
+        SettingsDetailText.Text += " · 当前仅空间不足提示；不暂停自动收展动画";
         PauseButton.IsEnabled = true;
         RevisionText.Text = $"committed revision {view.Projection.Revision} · settings {settings.EntityVersion}";
         StateInfoBar.Severity = commandError is null ? InfoBarSeverity.Informational : InfoBarSeverity.Warning;
+        StateInfoBar.IsOpen = commandError is not null || view.SelectedPoster is null || view.GloballyHidden;
         if (view.SelectedPoster is not { } poster)
         {
             StateInfoBar.Title = view.Posters.Count == 0 ? "暂无海报" : "请选择海报";
-            StateInfoBar.Message = commandError ?? view.Notice ?? "控制中心与托盘继续运行；新增入口将在后续任务接入。";
+            StateInfoBar.Message = commandError ?? view.Notice ?? "控制中心与托盘继续运行；可使用左侧新增海报。";
             PosterTitleText.Text = view.Posters.Count == 0 ? "暂无海报" : "请选择海报";
             PosterIdentityText.Text = string.Empty;
             PosterDetailText.Text = "没有选中的目标，海报操作已禁用。";
@@ -89,7 +94,7 @@ public sealed partial class ControlCenterWindow : Window
             return;
         }
         StateInfoBar.Title = commandError is null ? "状态已同步" : "操作未应用";
-        StateInfoBar.Message = commandError ?? $"仅操作所选海报；目录共 {view.Posters.Count} 张。";
+        StateInfoBar.Message = commandError ?? (view.GloballyHidden ? "托盘已临时隐藏全部海报；新增和设置仍保存，恢复显示后生效。" : $"仅操作所选海报；目录共 {view.Posters.Count} 张。");
         PosterTitleText.Text = poster.Poster.Title;
         PosterIdentityText.Text = poster.Poster.PosterId;
         RevisionText.Text += $" · poster entity {poster.EntityVersion}";
@@ -103,7 +108,8 @@ public sealed partial class ControlCenterWindow : Window
         VisibilityButton.Content = poster.Poster.IsVisible ? "隐藏" : "显示";
         LockButton.IsEnabled = VisibilityButton.IsEnabled = true;
         RemoveButton.IsEnabled = true;
-        CollapseButton.IsEnabled = poster.CanToggleCollapsed;
+        CollapseButton.IsEnabled = poster.CanToggleCollapsed && !view.GloballyHidden;
+        if (_editor.IsPending) LockButton.IsEnabled = CollapseButton.IsEnabled = VisibilityButton.IsEnabled = RemoveButton.IsEnabled = false;
     }
 
     private void PosterSelector_SelectionChanged(object sender, SelectionChangedEventArgs args)

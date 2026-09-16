@@ -22,5 +22,6 @@
     <Compile Include="../Shared/MeasurementFixtureData.cs" Link="MeasurementFixtureData.cs" />
     <Compile Include="../../scripts/MeasurementMath.cs" Link="MeasurementMath.cs" />
     <Compile Include="../../scripts/M08MeasurementRules.cs" Link="M08MeasurementRules.cs" />
+    <None Include="../../scripts/fixtures/portable-p4-pending.desktopup.json" Link="Fixtures/portable-p4-pending.desktopup.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

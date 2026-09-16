@@ -22,6 +22,9 @@ public static class StateRequestFingerprint
             if (info.Type != typeof(PosterDefinition)) return;
             info.Properties.Single(p => p.Name == nameof(PosterDefinition.AutoCollapseDelaySeconds)).ShouldSerialize =
                 (_, value) => value is not int seconds || seconds != PosterAutoPosturePolicy.DefaultDelaySeconds;
+            // v8 had no pending-placement member. Default false retains historical receipt hashes.
+            info.Properties.Single(p => p.Name == nameof(PosterDefinition.PlacementPending)).ShouldSerialize =
+                (_, value) => value is not bool pending || pending;
         });
         return new() { TypeInfoResolver = resolver };
     }

@@ -169,7 +169,7 @@ public sealed class SpatialPushIntegrationTests
     {
         using var f = new MigrationFixture(); LegacyStateDatabase.Create(f.Path, 4);
         using var store = new SqliteStateStore(f.Paths); var result = store.Initialize();
-        Assert.True(result.Succeeded, result.Error); Assert.Equal(4, result.PreviousSchemaVersion); Assert.Equal(7, result.Head!.SchemaVersion);
+        Assert.True(result.Succeeded, result.Error); Assert.Equal(4, result.PreviousSchemaVersion); Assert.Equal(9, result.Head!.SchemaVersion);
         Assert.Equal(4, store.ValidateBackup(System.IO.Path.Combine(f.Paths.Backups, result.PreMigrationBackupFileName!)).SchemaVersion);
         Assert.Empty(new SqliteStateCommandRepository(store).Read().SpatialOperations);
         Assert.Equal(0L, f.Scalar("SELECT COUNT(*) FROM spatial_participants;"));

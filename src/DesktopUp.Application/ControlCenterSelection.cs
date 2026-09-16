@@ -41,13 +41,15 @@ public sealed class ControlCenterSelection
         return true;
     }
 
-    public ControlCenterView? BuildView(IReadOnlyList<PosterSessionSnapshot> sessions, bool environmentPending)
+    public ControlCenterView? BuildView(IReadOnlyList<PosterSessionSnapshot> sessions, bool environmentPending, bool globallyHidden = false)
     {
         if (Projection is not { } projection) return null;
         var runtime = sessions.ToDictionary(s => s.PosterId, StringComparer.Ordinal);
         var rows = projection.Posters.Select(p =>
         {
-            string status = !p.Poster.IsVisible ? "已隐藏" :
+            string status = p.Poster.PlacementPending ? "等待安置" :
+                runtime.GetValueOrDefault(p.Poster.PosterId)?.Status == PosterSessionStatus.Degraded ? "运行降级" :
+                !p.Poster.IsVisible ? "已隐藏" : globallyHidden ? "全局临时隐藏" :
                 runtime.GetValueOrDefault(p.Poster.PosterId)?.Status switch
                 {
                     PosterSessionStatus.Degraded => "运行降级",
@@ -61,13 +63,14 @@ public sealed class ControlCenterSelection
         }).ToArray();
         PosterSurfaceProjection? selected = SelectedPosterId is not null
             ? projection.PostersById.GetValueOrDefault(SelectedPosterId) : null;
-        return new(projection, selected, Array.AsReadOnly(rows), Notice);
+        return new(projection, selected, Array.AsReadOnly(rows), Notice) { GloballyHidden = globallyHidden };
     }
 }
 
 public sealed record ControlCenterView(ControlCenterProjection Projection, PosterSurfaceProjection? SelectedPoster,
     IReadOnlyList<ControlCenterPosterRow> Posters, string? Notice)
 {
+    public bool GloballyHidden { get; init; }
     public string? SelectedPosterId => SelectedPoster?.Poster.PosterId;
 
     // Freeze exactly the displayed ID, desired value and entity version before dispatch.
@@ -75,6 +78,7 @@ public sealed record ControlCenterView(ControlCenterProjection Projection, Poste
     public PosterStateCommand? CreatePosterCommand(PosterStateCommandKind kind, string requestId)
     {
         if (SelectedPoster is not { } target) return null;
+        if (kind == PosterStateCommandKind.SetCollapsed && target.Poster.PlacementPending) return null;
         PosterDefinition desired = kind switch
         {
             PosterStateCommandKind.SetLocked => target.Poster with { IsLocked = !target.Poster.IsLocked },

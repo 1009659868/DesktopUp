@@ -10,7 +10,7 @@ public sealed class SqliteStateStore : IStateStore
 {
     private const int ApplicationId = 0x44555033; // "DUP3"
     private const int BusyTimeoutMilliseconds = 5_000;
-    private const int CurrentSchemaVersion = 7;
+    private const int CurrentSchemaVersion = 9;
     private const string DatabaseFileName = "desktopup.sqlite3";
     private static readonly Migration[] Migrations =
     [
@@ -184,6 +184,32 @@ public sealed class SqliteStateStore : IStateStore
             """
             ALTER TABLE posters ADD COLUMN auto_collapse_delay_seconds INTEGER NOT NULL DEFAULT 3
                 CHECK (auto_collapse_delay_seconds BETWEEN 1 AND 300);
+            """),
+        new(8, "canonical-created-poster-layout", """
+            -- BUG-005: only the exact shipped basic-box payload AND a committed UI catalog receipt.
+            -- Never interpret arbitrary grid/custom/future/edited JSON as this historical mistake.
+            CREATE TEMP TABLE canonical_layout_repair_ids (poster_id TEXT PRIMARY KEY NOT NULL);
+            INSERT INTO canonical_layout_repair_ids
+            SELECT p.poster_id FROM posters p
+            WHERE p.layout_kind = 'grid' AND p.template_key = 'basic-box'
+              AND p.layout_parameters_json = '{"schemaVersion":1,"content":{"itemWidthDip":100,"itemHeightDip":72,"iconSizeDip":40,"gapDip":12,"labelFontSizeDip":12,"titleFontSizeDip":24},"theme":{"background":"#282B30","foreground":"#F2F2F2","accent":"#68BDFF"}}'
+              AND EXISTS (SELECT 1 FROM state_command_receipts r
+                  WHERE r.result_poster_id = p.poster_id AND r.outcome = 'committed'
+                    AND (r.request_id GLOB 'controlcenter-catalog-*' OR r.request_id GLOB 'tray-create-*'));
+            INSERT INTO state_operations (operation_id,expected_revision,committed_revision,committed_utc)
+            SELECT 'migration-v8-canonical-created-layout',revision,revision+1,strftime('%Y-%m-%dT%H:%M:%fZ','now')
+            FROM state_head WHERE singleton_id=1 AND EXISTS(SELECT 1 FROM canonical_layout_repair_ids);
+            UPDATE posters SET layout_kind='adaptive-grid',entity_version=entity_version+1,
+                state_revision=(SELECT revision+1 FROM state_head WHERE singleton_id=1),
+                updated_utc=strftime('%Y-%m-%dT%H:%M:%fZ','now')
+            WHERE poster_id IN (SELECT poster_id FROM canonical_layout_repair_ids);
+            UPDATE state_head SET revision=revision+1,last_operation_id='migration-v8-canonical-created-layout'
+            WHERE singleton_id=1 AND EXISTS(SELECT 1 FROM canonical_layout_repair_ids);
+            DROP TABLE canonical_layout_repair_ids;
+            """),
+        new(9, "poster-placement-pending", """
+            ALTER TABLE posters ADD COLUMN placement_pending INTEGER NOT NULL DEFAULT 0
+                CHECK (placement_pending IN (0, 1));
             """)
     ];
 
@@ -675,12 +701,25 @@ public sealed class SqliteStateStore : IStateStore
         if (expectedVersion >= 5) VerifySpatialSchema(connection, null);
         if (expectedVersion >= 6) VerifyContinuitySchema(connection, null);
         if (expectedVersion >= 7) VerifyAutoPostureSchema(connection, null);
+        if (expectedVersion >= 9) VerifyPendingPlacementSchema(connection, null);
         if (head.SchemaVersion != version)
         {
             throw new InvalidDataException(
                 $"State head schema {head.SchemaVersion} does not match user_version {version}.");
         }
         return head;
+    }
+
+    private static void VerifyPendingPlacementSchema(SqliteConnection connection, SqliteTransaction? transaction)
+    {
+        using var shape = connection.CreateCommand(); shape.Transaction = transaction;
+        shape.CommandText = "SELECT type, [notnull], dflt_value FROM pragma_table_info('posters') WHERE name = 'placement_pending';";
+        using (var reader = shape.ExecuteReader())
+            if (!reader.Read() || reader.GetString(0) != "INTEGER" || reader.GetInt64(1) != 1 || reader.GetString(2) != "0")
+                throw new InvalidDataException("Invalid pending-placement column.");
+        shape.CommandText = "SELECT COUNT(*) FROM posters WHERE typeof(placement_pending) != 'integer' OR placement_pending NOT IN (0,1);";
+        if (Convert.ToInt64(shape.ExecuteScalar(), CultureInfo.InvariantCulture) != 0)
+            throw new InvalidDataException("Invalid persisted pending-placement state.");
     }
 
     private static void VerifyAutoPostureSchema(SqliteConnection connection, SqliteTransaction? transaction)

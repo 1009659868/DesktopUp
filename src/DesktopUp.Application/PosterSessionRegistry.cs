@@ -46,6 +46,17 @@ public sealed class PosterSessionRegistry(IPosterSessionFactory factory, IStruct
     private bool _draining;
     private bool _pending;
     private bool _disposed;
+    public bool GloballyHidden { get; private set; }
+
+    // Runtime visibility reason only; individual intent and committed revisions remain unchanged.
+    public void SetGloballyHidden(bool hidden)
+    {
+        if (_disposed || GloballyHidden == hidden) return;
+        GloballyHidden = hidden;
+        foreach (Entry entry in _entries.Values.ToArray())
+            if (!Wants(entry.Id)) entry.Lifetime.Cancel();
+        Drain();
+    }
 
     public IReadOnlyList<PosterSessionSnapshot> Sessions => _entries.Values
         .Select(e => new PosterSessionSnapshot(e.Id, e.Epoch, e.Status,
@@ -71,6 +82,8 @@ public sealed class PosterSessionRegistry(IPosterSessionFactory factory, IStruct
         _environmentRequest = request;
         _environment = null;
         _environmentIsCurrent = null;
+        // Shared suspension clears native input even when shell/display generations stay equal.
+        foreach (Entry entry in _entries.Values) entry.RecoveredRequest = null;
     }
 
     public bool Recover(PosterSessionEnvironment environment, long request, Func<bool> isCurrent)
@@ -80,18 +93,19 @@ public sealed class PosterSessionRegistry(IPosterSessionFactory factory, IStruct
         _environment = environment;
         _environmentIsCurrent = isCurrent;
         Drain();
-        return !_disposed && isCurrent() && _environment == environment && _desired is not null &&
+        return !_disposed && isCurrent() && _environmentRequest == request &&
+            _environment == environment && _desired is not null &&
             _entries.Values.All(e => !e.Lifetime.IsCancellationRequested) &&
-            _desired.Projection.Posters.Where(p => p.Poster.IsVisible).All(p =>
+            _desired.Projection.Posters.Where(p => Wants(p.Poster.PosterId)).All(p =>
                 _entries.TryGetValue(p.Poster.PosterId, out Entry? e) && e.Status == PosterSessionStatus.Ready &&
-                e.Session?.CurrentGenerationPair == environment.Generations);
+                e.RecoveredRequest == request && e.Session?.CurrentGenerationPair == environment.Generations);
     }
 
     public bool NeedsRecovery(DesktopShellHostSnapshot shell)
     {
         if (_disposed || _desired is null) return false;
         if (_entries.Values.Any(e => e.Lifetime.IsCancellationRequested)) return true;
-        foreach (var p in _desired.Projection.Posters.Where(p => p.Poster.IsVisible))
+        foreach (var p in _desired.Projection.Posters.Where(p => Wants(p.Poster.PosterId)))
         {
             try
             {
@@ -103,7 +117,8 @@ public sealed class PosterSessionRegistry(IPosterSessionFactory factory, IStruct
         return false;
     }
 
-    private bool Wants(string id) => !_disposed && _desired?.Projection.PostersById.TryGetValue(id, out var p) == true && p.Poster.IsVisible;
+    private bool Wants(string id) => !_disposed && !GloballyHidden &&
+        _desired?.Projection.PostersById.TryGetValue(id, out var p) == true && p.IsEffectivelyVisible;
 
     private void Drain()
     {
@@ -118,7 +133,7 @@ public sealed class PosterSessionRegistry(IPosterSessionFactory factory, IStruct
                 foreach (Entry entry in _entries.Values.ToArray())
                     if (!Wants(entry.Id) || entry.Lifetime.IsCancellationRequested) Release(entry);
                 if (_disposed || _desired is not { } change) continue;
-                foreach (PosterSurfaceProjection target in change.Projection.Posters.Where(p => p.Poster.IsVisible))
+                foreach (PosterSurfaceProjection target in change.Projection.Posters.Where(p => Wants(p.Poster.PosterId)))
                 {
                     if (_disposed || !ReferenceEquals(change, _desired)) { _pending = true; break; }
                     string id = target.Poster.PosterId;
@@ -132,7 +147,9 @@ public sealed class PosterSessionRegistry(IPosterSessionFactory factory, IStruct
                         // Cleanup failure quarantines an incarnation; it must never be reused.
                         if (entry.Lifetime.IsCancellationRequested) continue;
                         PosterSessionEnvironment? env = _environment;
+                        long environmentRequest = _environmentRequest;
                         bool validEnvironment = env is not null && _environmentIsCurrent?.Invoke() == true;
+                        bool started = false;
                         if (entry.Status == PosterSessionStatus.Degraded && entry.Session is not null)
                         {
                             entry.Session.Dispose();
@@ -146,6 +163,7 @@ public sealed class PosterSessionRegistry(IPosterSessionFactory factory, IStruct
                             if (entry.Session.PosterId != id) throw new InvalidOperationException("session-id-mismatch");
                             if (!entry.Session.Start(target, env!, entry.Lifetime.Token))
                                 throw new InvalidOperationException("session-start-failed");
+                            started = true; // Start publishes the initial input layout for this request.
                             entry.Applied = change;
                         }
                         else if (!ReferenceEquals(entry.Applied, change))
@@ -154,12 +172,16 @@ public sealed class PosterSessionRegistry(IPosterSessionFactory factory, IStruct
                             entry.Applied = change;
                         }
                         if (!Wants(id) || entry.Lifetime.IsCancellationRequested) { _pending = true; continue; }
-                        if (!validEnvironment || _environment != env || _environmentIsCurrent?.Invoke() != true) continue;
+                        if (!validEnvironment || _environmentRequest != environmentRequest ||
+                            _environment != env || _environmentIsCurrent?.Invoke() != true) continue;
+                        if ((!started && entry.RecoveredRequest != environmentRequest) ||
+                            entry.Session.CurrentGenerationPair != env!.Generations || !entry.Session.IsAttached(env.Shell))
+                            if (!entry.Session.Recover(env!, environmentRequest)) throw new InvalidOperationException("session-recovery-failed");
+                        if (_environmentRequest != environmentRequest || _environment != env ||
+                            _environmentIsCurrent?.Invoke() != true) continue;
                         if (entry.Session.CurrentGenerationPair != env!.Generations || !entry.Session.IsAttached(env.Shell))
-                            if (!entry.Session.Recover(env, _environmentRequest)) throw new InvalidOperationException("session-recovery-failed");
-                        if (_environment != env || _environmentIsCurrent?.Invoke() != true) continue;
-                        if (entry.Session.CurrentGenerationPair != env.Generations || !entry.Session.IsAttached(env.Shell))
                             throw new InvalidOperationException("session-recovery-readback-failed");
+                        entry.RecoveredRequest = environmentRequest;
                         if (entry.Status != PosterSessionStatus.Ready)
                             log.Write("info", "poster_session.ready", new { posterId = id, entry.Epoch, request = _environmentRequest, generations = env.Generations });
                         entry.Status = PosterSessionStatus.Ready;
@@ -215,6 +237,7 @@ public sealed class PosterSessionRegistry(IPosterSessionFactory factory, IStruct
         public CancellationTokenSource Lifetime { get; } = new();
         public IPosterSession? Session { get; set; }
         public StateProjectionChangedEventArgs? Applied { get; set; }
+        public long? RecoveredRequest { get; set; }
         public PosterSessionStatus Status { get; set; } = PosterSessionStatus.Starting;
         public string? Error { get; set; }
     }

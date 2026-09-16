@@ -25,7 +25,7 @@ internal sealed partial class PosterSpatialRuntime
     public void SetCollapsed(PosterStateCommand request, Action<StateCommandResult> completed)
     {
         if (request.Source != StateCommandSource.System) BeforeManualIntent(request.PosterId, request.DesiredState.IsCollapsed);
-        if (_posture is not null || _owner is not null || !_windows.TryGetValue(request.PosterId, out var owner) ||
+        if (_title is not null || _posture is not null || _owner is not null || !_windows.TryGetValue(request.PosterId, out var owner) ||
             !TrySnapshot(owner, out var scene, out var projection))
         { completed(Failure(request, "空间环境尚未就绪或另一个拖缩/收展正在进行。")); return; }
         var target = projection!.PostersById[request.PosterId];
@@ -160,6 +160,7 @@ internal sealed partial class PosterSpatialRuntime
                 prepareAndCommitMs = System.Diagnostics.Stopwatch.GetElapsedTime(probeStart).TotalMilliseconds });
             if (!applied)
                 CancelPosture("native-batch-failed");
+            else run.AcceptedFrames++;
             return;
         }
         run.Timer.Stop();
@@ -184,9 +185,25 @@ internal sealed partial class PosterSpatialRuntime
             foreach (var change in run.Changes)
                 if (projection.PostersById.TryGetValue(change.PosterId, out var target))
                     _effective.Set(target, change.After, run.Initial.Environment);
+        bool restored = RestorePresentedGroup(run.Owner, run.Participants, run.Command.RequestId);
+        _posture = null;
+        EffectiveLayoutChanged?.Invoke();
+        if (!restored)
+        {
+            _suspended = true;
+            log.Write("error", "spatial.physical_recovery_required", new { run.Command.RequestId, result.CurrentRevision });
+            result = result with { Status = StateCommandStatus.Failed, Error = "物理布局应用失败，正在按 committed revision 恢复；未将显示失败当作成功。" };
+            RecoveryRequired?.Invoke();
+        }
+        run.Completed(result);
+    }
+
+    // Both posture and title owners finish through this exact R4 release/readback path.
+    private bool RestorePresentedGroup(PosterVisualWindow owner, IReadOnlyList<PosterVisualWindow> participants, string requestId)
+    {
         var restorations = new List<PosterVisualWindow.PreparedSpatialFrame>();
         bool restored = true;
-        foreach (var participant in run.Participants)
+        foreach (var participant in participants)
         {
             try
             {
@@ -202,26 +219,26 @@ internal sealed partial class PosterSpatialRuntime
         }
         try
         {
-            if (restorations.Count > 0) restored &= run.Owner.CommitSpatialFrames(restorations, DesktopFramePhase.FinalRestore);
+            if (restorations.Count > 0) restored &= owner.CommitSpatialFrames(restorations, DesktopFramePhase.FinalRestore);
         }
         catch (Exception exception)
         {
             restored = false;
             log.Write("error", "spatial.transition_final_commit_failed", new { exception.Message });
         }
-        bool layoutsReleased = run.Participants.Where(p => p.WindowHandle != 0).All(p => p.VerifyTransitionLayout(false));
-        restored &= layoutsReleased;
-        log.Write(restored ? "info" : "warning", "spatial.presentation_restored", new { run.Command.RequestId, restored, layoutsReleased });
-        _posture = null;
-        EffectiveLayoutChanged?.Invoke();
-        if (!restored)
+        bool layoutsReleased = true;
+        foreach (var participant in participants.Where(p => p.WindowHandle != 0))
         {
-            _suspended = true;
-            log.Write("error", "spatial.physical_recovery_required", new { run.Command.RequestId, result.CurrentRevision });
-            result = result with { Status = StateCommandStatus.Failed, Error = "物理布局应用失败，正在按 committed revision 恢复；未将显示失败当作成功。" };
-            RecoveryRequired?.Invoke();
+            try { layoutsReleased &= participant.VerifyTransitionLayout(false); }
+            catch (Exception exception)
+            {
+                layoutsReleased = false;
+                log.Write("error", "spatial.transition_release_check_failed", new { participant.PosterId, exception.Message });
+            }
         }
-        run.Completed(result);
+        restored &= layoutsReleased;
+        log.Write(restored ? "info" : "warning", "spatial.presentation_restored", new { requestId, restored, layoutsReleased });
+        return restored;
     }
 
     private StateCommandResult Failure(PosterStateCommand command, string message)
@@ -242,6 +259,7 @@ internal sealed partial class PosterSpatialRuntime
         public SpatialAnimationCursor Cursor { get; } = new(schedule, options);
         public Stopwatch Clock { get; } = new();
         public int ReadyCallbacks { get; set; }
+        public int AcceptedFrames { get; set; }
         public double? AnimationOriginMs { get; set; }
         public EventHandler<object>? RenderingHandler { get; set; }
         public IReadOnlyList<PosterVisualWindow> Participants { get; } = participants;

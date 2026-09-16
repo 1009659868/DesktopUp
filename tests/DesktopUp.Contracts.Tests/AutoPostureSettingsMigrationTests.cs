@@ -35,13 +35,13 @@ public sealed partial class AutoPostureSettingsTests
             """);
     }
 
-    // Capture every existing column (except the new field) as strings with null/type information.
+    // Compare every historical column; fields introduced after these fixtures are asserted separately.
     private static string Rows(Fixture f, string table, string? path = null)
     {
         using var c = f.Open(path); using var q = c.CreateCommand();
         q.CommandText = $"SELECT * FROM {table} ORDER BY 1;";
         using var r = q.ExecuteReader(); var rows = new List<object?[]>();
-        while (r.Read()) rows.Add(Enumerable.Range(0, r.FieldCount).Where(i => r.GetName(i) != "auto_collapse_delay_seconds")
+        while (r.Read()) rows.Add(Enumerable.Range(0, r.FieldCount).Where(i => r.GetName(i) is not ("auto_collapse_delay_seconds" or "placement_pending"))
             .Select(i => r.IsDBNull(i) ? null : new { Name = r.GetName(i), Type = r.GetDataTypeName(i), Value = r.GetValue(i) }).Cast<object?>().ToArray());
         return JsonSerializer.Serialize(rows);
     }
@@ -65,7 +65,7 @@ public sealed partial class AutoPostureSettingsTests
             "poster_catalog_operations", "spatial_operations", "spatial_participants", "spatial_continuity"];
         var before = tables.ToDictionary(t => t, t => Rows(f, t));
         var result = f.Store.Initialize(); Assert.True(result.Succeeded, result.Error);
-        Assert.Equal(6, result.PreviousSchemaVersion); Assert.Equal(7, result.Head!.SchemaVersion); Assert.Equal(8, result.Head.Revision);
+        Assert.Equal(6, result.PreviousSchemaVersion); Assert.Equal(9, result.Head!.SchemaVersion); Assert.Equal(8, result.Head.Revision);
         string backup = Path.Combine(f.Paths.Backups, result.PreMigrationBackupFileName!);
         Assert.Equal(6L, f.Scalar("PRAGMA user_version;", backup)); Assert.Equal("ok", f.Scalar("PRAGMA integrity_check;", backup));
         Assert.Equal(0L, f.Scalar("SELECT COUNT(*) FROM pragma_table_info('posters') WHERE name='auto_collapse_delay_seconds';", backup));
@@ -139,7 +139,7 @@ public sealed partial class AutoPostureSettingsTests
     public void Current_schema_missing_delay_column_fails_closed()
     {
         using var f = new Fixture(); f.Execute("ALTER TABLE posters DROP COLUMN auto_collapse_delay_seconds;");
-        Assert.False(f.Store.Initialize().Succeeded); Assert.Equal(7L, f.Scalar("PRAGMA user_version;"));
+        Assert.False(f.Store.Initialize().Succeeded); Assert.Equal(9L, f.Scalar("PRAGMA user_version;"));
     }
 
     [Fact]
@@ -149,7 +149,7 @@ public sealed partial class AutoPostureSettingsTests
         var backup = f.Store.CreateBackup("m08-settings"); Assert.True(backup.Succeeded, backup.Error);
         string path = Path.Combine(f.Paths.Backups, backup.FileName!); Assert.True(f.Store.ValidateBackup(path).IsValid);
         Assert.Equal(300L, f.Scalar("SELECT auto_collapse_delay_seconds FROM posters;", path));
-        f.Execute("PRAGMA user_version=8;");
+        f.Execute("PRAGMA user_version=10;");
         Assert.False(f.Store.Initialize().Succeeded); Assert.Equal(300L, f.Scalar("SELECT auto_collapse_delay_seconds FROM posters;"));
     }
 
@@ -164,6 +164,7 @@ public sealed partial class AutoPostureSettingsTests
             if (node is JsonObject obj)
             {
                 obj.Remove(nameof(PosterDefinition.AutoCollapseDelaySeconds));
+                obj.Remove(nameof(PosterDefinition.PlacementPending));
                 foreach (var pair in obj) RemoveDelay(pair.Value);
             }
             else if (node is JsonArray list) foreach (var child in list) RemoveDelay(child);

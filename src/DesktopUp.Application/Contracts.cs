@@ -102,6 +102,8 @@ public interface IDesktopLayerAttachment
         phase == DesktopFramePhase.Regular && ApplyPreparedBoundsBatch(bounds);
     bool CompletePreparedVisualFrame(IReadOnlyCollection<nint> windows) => false;
     bool VerifyVisualSurface(nint window, DesktopPixelRect surface, DesktopPixelRect visible) => false;
+    DesktopVisualSurfaceReadback InspectVisualSurface(nint window, DesktopPixelRect surface, DesktopPixelRect visible) =>
+        new(false, "surface-inspection-unsupported");
     bool Detach(nint windowHandle);
     bool IsAttached(nint windowHandle, DesktopShellHostSnapshot desktopHost);
 }

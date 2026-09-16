@@ -41,6 +41,8 @@ public sealed record PosterStateCommand(
     public StateReadSet? ReadSet { get; init; }
     public SpatialGestureCommit? SpatialGesture { get; init; }
     public SpatialPostureCommit? SpatialPosture { get; init; }
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public ControlCenterGeometryProof? ControlCenterGeometry { get; init; }
 }
 
 public sealed record SettingsStateCommand(
@@ -96,6 +98,7 @@ public sealed record PosterSurfaceProjection(
     public long EntityVersion { get; init; }
     public long LayoutGeneration { get; init; }
     public string? LastLayoutOperationId { get; init; }
+    public bool IsEffectivelyVisible => Poster.IsVisible && !Poster.PlacementPending;
     public ResolvedPosterPresentation Presentation => PosterPresentationPolicy.Resolve(Poster);
     public AutoPosturePolicy AutoPosture => AutoPosturePolicy.From(Poster);
 }
@@ -132,6 +135,7 @@ public sealed record TrayProjection(
     string ToolTipText)
 {
     public int VisiblePosterCount { get; init; }
+    public int PendingPlacementPosterCount { get; init; }
     public int LockedPosterCount { get; init; }
     public PosterLockSummary LockSummary { get; init; }
     // Configured policy count, not a claim that native observation is running.

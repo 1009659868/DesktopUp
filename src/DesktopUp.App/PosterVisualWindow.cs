@@ -81,6 +81,8 @@ internal sealed partial class PosterVisualWindow(
     public void RegisterSpatialSurface() => spatial.Register(this);
     public void SuspendInput()
     {
+        StopLocate();
+        ClearCenterPresentation();
         _menuInteraction?.Cancel();
         _posterMenu?.Hide();
         _posterMenu = null;
@@ -130,9 +132,22 @@ internal sealed partial class PosterVisualWindow(
             if (phase is DesktopFramePhase.Animation or DesktopFramePhase.SurfacePreparation)
             {
                 if (phase == DesktopFramePhase.Animation && !owner.VerifyTransitionSurfaceReady()) return false;
-                // Never enlarge a surface until the OLD visible region is verified in place.
-                if (phase == DesktopFramePhase.SurfacePreparation &&
-                    !attachment.VerifyVisualSurface(owner._windowHandle, owner._bounds, owner._bounds)) return false;
+                // A live R4 allocation can be larger than its logical visible clip. Verify
+                // both OLD boundaries before retagging/growing; do not assume they coincide.
+                if (phase == DesktopFramePhase.SurfacePreparation)
+                {
+                    var previousSurface = owner.CurrentNativeBounds(owner._bounds);
+                    if (!attachment.VerifyVisualSurface(owner._windowHandle, previousSurface, owner._bounds))
+                    {
+                        log.Write("warning", "spatial.surface_preparation_baseline_rejected", new
+                        {
+                            owner.PosterId, requestId = owner._activeCommandRequestId,
+                            expectedSurface = previousSurface, expectedVisible = owner._bounds,
+                            requestedSurface = owner.PreparedSurfaceBounds(frame.Bounds)
+                        });
+                        return false;
+                    }
+                }
                 if (!owner.ApplyTransitionViewport(frame.Bounds)) return false;
                 continue;
             }
@@ -159,12 +174,14 @@ internal sealed partial class PosterVisualWindow(
             bool matches = owner._window is not null && HasExpectedBounds(owner._window, windows[owner._windowHandle]);
             applied &= matches;
             // Native clipping follows the WHOLE position batch, never the per-owner prepare loop.
+            var regionBefore = owner._appliedVisualRegion;
             bool regionApplied = matches && owner.ApplyVisualRegion(owner._windowHandle, frame.Bounds, force: phase == DesktopFramePhase.FinalRestore);
             applied &= regionApplied;
             if (matches) owner._bounds = frame.Bounds;
             if (matches && phase == DesktopFramePhase.SurfacePreparation && owner._transitionLayout is { } lease)
                 lease.NativePrepared = true;
-            bool surfaceApplied = matches && attachment.VerifyVisualSurface(owner._windowHandle, windows[owner._windowHandle], frame.Bounds);
+            var surfaceReadback = attachment.InspectVisualSurface(owner._windowHandle, windows[owner._windowHandle], frame.Bounds);
+            bool surfaceApplied = matches && surfaceReadback.Verified;
             applied &= surfaceApplied;
             bool inputApplied = matches && owner._inputIsland is not null && owner._inputIsland.ApplyLayout(frame.Bounds, frame.Input);
             applied &= inputApplied;
@@ -172,8 +189,12 @@ internal sealed partial class PosterVisualWindow(
             {
                 owner.PosterId, nativeApplied, matches, inputApplied, regionApplied, surfaceApplied, expected = frame.Bounds,
                 expectedSurface = windows[owner._windowHandle],
-                appPosition = owner._window?.AppWindow.Position, appSize = owner._window?.AppWindow.Size,
-                nativeError = System.Runtime.InteropServices.Marshal.GetLastPInvokeError()
+                phase = phase.ToString(), requestId = owner._activeCommandRequestId,
+                surfaceReadback, regionSizeUnchanged = regionBefore == owner._appliedVisualRegion,
+                cachedRegionWidth = regionBefore?.Width, cachedRegionHeight = regionBefore?.Height,
+                cachedCornerRadius = regionBefore?.CornerRadius,
+                appX = owner._window?.AppWindow.Position.X, appY = owner._window?.AppWindow.Position.Y,
+                appWidth = owner._window?.AppWindow.Size.Width, appHeight = owner._window?.AppWindow.Size.Height
             });
         }
         if (phase == DesktopFramePhase.FinalRestore)
@@ -251,7 +272,7 @@ internal sealed partial class PosterVisualWindow(
         }
 
         _monitor = primaryMonitor;
-        if (!state.Poster.IsVisible)
+        if (!state.IsEffectivelyVisible)
         {
             return false;
         }
@@ -322,6 +343,7 @@ internal sealed partial class PosterVisualWindow(
             log,
             ReassertCurrentClusterBottom, inputRouter, inputSession, _windowHandle);
         _inputIsland.Input += OnInput;
+        _inputIsland.TitleInput += OnTitleInput;
         PosterInputLayoutSnapshot inputLayout = BuildInputLayout(_bounds);
         if (!_inputIsland.Create(desktopHost, _bounds, inputLayout))
         {
@@ -548,6 +570,23 @@ internal sealed partial class PosterVisualWindow(
 
     private bool ReassertCurrentClusterBottom() =>
         _desktopHost is not null && ReassertDesktopBottom(_desktopHost);
+
+    internal bool OwnsTitleCapture(PosterInputCapture capture) => _inputIsland?.OwnsTitleCapture(capture) == true;
+    internal bool IsTitleSessionCurrent(PosterInputSessionKey session) => session == inputSession &&
+        !_disposed && _mode == PosterOperatingMode.Using && _authoritativePoster?.AutoCollapseEnabled == true &&
+        inputRouter.ReadSurface(inputSession) is not null;
+    internal void CancelTitleCapture() => _inputIsland?.CancelPointerGesture();
+    private void OnTitleInput(object? sender, TitleNativeInputEventArgs args)
+    {
+        if (_disposed || !ReferenceEquals(sender, _inputIsland) || args.Capture.Press.Session != inputSession) return;
+        if (args.Kind == TitleNativeInputKind.Press)
+        {
+            if (_mode != PosterOperatingMode.Using || _authoritativePoster?.AutoCollapseEnabled != true) return;
+            args.Handled = true; // Failed/busy title intent cannot fall through into old drag or Item invoke.
+            spatial.BeginTitle(this, args);
+        }
+        else spatial.TitleInput(this, args);
+    }
 
     private void OnInput(object? sender, PosterInputEventArgs args)
     {
@@ -818,7 +857,7 @@ internal sealed partial class PosterVisualWindow(
             IsLocked: false,
             IsCollapsed: false,
             AutoCollapseEnabled: false,
-            LayoutKind: "adaptive-grid",
+            LayoutKind: PosterPresentationPolicy.AdaptiveGridLayout,
             LayoutParametersJson: PosterPresentationPolicy.Serialize(PosterPresentationPolicy.Defaults()),
             TemplateKey: "night-ops");
     }
@@ -1317,6 +1356,7 @@ internal sealed partial class PosterVisualWindow(
             CornerRadius = new CornerRadius(SurfaceCornerRadiusDip)
         };
         root.Children.Add(_surface);
+        AddLocateOutline(root);
 
         var structure = _contentStructure = new Grid();
         structure.RowDefinitions.Add(new RowDefinition { Height = new GridLength(HeaderHeightDip) });
@@ -2077,6 +2117,7 @@ internal sealed partial class PosterVisualWindow(
         if (_inputIsland is not null)
         {
             _inputIsland.Input -= OnInput;
+            _inputIsland.TitleInput -= OnTitleInput;
             Cleanup(() => { _inputIsland.Dispose(); _inputIsland = null; });
         }
         if (_window is not null)

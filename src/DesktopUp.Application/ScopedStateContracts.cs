@@ -31,10 +31,20 @@ public sealed record DesktopStateSnapshot(PosterCatalogSnapshot Catalog, Setting
 
 public sealed record CreatePosterCommand(
     string RequestId, StateCommandSource Source, long ExpectedRevision,
-    StateReadSet ReadSet, PosterDefinition Configuration);
+    StateReadSet ReadSet, PosterDefinition Configuration)
+{
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public ControlCenterPlacementProof? Placement { get; init; }
+}
 public sealed record ClonePosterCommand(
     string RequestId, StateCommandSource Source, long ExpectedRevision,
-    StateReadSet ReadSet, string SourcePosterId);
+    StateReadSet ReadSet, string SourcePosterId)
+{
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public ControlCenterPlacementProof? Placement { get; init; }
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public string? Title { get; init; }
+}
 public sealed record RemovePosterCommand(
     string RequestId, StateCommandSource Source, long ExpectedRevision,
     StateReadSet ReadSet, string PosterId, bool Confirmed);

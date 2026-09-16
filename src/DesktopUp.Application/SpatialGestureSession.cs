@@ -76,7 +76,7 @@ public static class SpatialGestureCommitPolicy
             return "Spatial commit requires the complete catalog entity read set.";
         var source = gesture.Initial.Posters.FirstOrDefault(p => p.PosterId == command.PosterId);
         var current = state.Catalog.Posters.FirstOrDefault(p => p.Poster.PosterId == command.PosterId)?.Poster;
-        if (source is null || current is null || source.IsLocked || !source.IsVisible ||
+        if (source is null || current is null || current.PlacementPending || source.IsLocked || !source.IsVisible ||
             source.IsCollapsed != current.IsCollapsed || source.IsLocked != current.IsLocked ||
             source.IsVisible != current.IsVisible || gesture.HasUserAdjusted != gesture.Path.Any(p => p.From != p.To) ||
             gesture.Path.Count > 8192 || !gesture.Final.IsValid) return "Invalid spatial source or trace.";

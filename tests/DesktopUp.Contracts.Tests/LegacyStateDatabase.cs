@@ -19,7 +19,11 @@ internal static class LegacyStateDatabase
         // Independently read from the retained M07 menu R1 Infrastructure assembly before v6.
         "655220756EA7D7718A07F5489E68F5096AD11693A36E9EF03F8823DC693F91B4",
         // Extracted independently from committed 53ebdb6 SQL before introducing v7.
-        "D5FBCD000A17312F50BC7CDEFBC0B3516B0B2C8D9AB8C83C5B8CFE17F31B3B1D"
+        "D5FBCD000A17312F50BC7CDEFBC0B3516B0B2C8D9AB8C83C5B8CFE17F31B3B1D",
+        // Independently read from the retained v7 tray candidate's database before adding v8.
+        "65C3066942D70B2E9AA567C49768D49B996680F7A673ACB5957826FF01FBAEC6",
+        // Read from the retained layout candidate's schema8 database before adding placement-pending.
+        "F5C0306B35FE9142800FF574B56DA69E9F5F5BDD86971ABB2DAB956A8FA053A4"
     ];
 
     public static void Create(string path, int version)

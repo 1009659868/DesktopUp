@@ -12,6 +12,9 @@ internal static class StateCommandPolicy
             return Invalid("Target entity version is required.");
         PosterDefinition? current = Find(state, command.PosterId);
         if (current is null) return Missing();
+        if (current.PlacementPending && command.Kind is PosterStateCommandKind.Move or PosterStateCommandKind.Resize or PosterStateCommandKind.SetCollapsed)
+            return StateMutationPlan.Reject(StateCommandStatus.PermissionDenied, "Poster is waiting for placement; geometry and posture cannot change yet.");
+        if (command.ControlCenterGeometry is not null) return ControlCenterSpatial.Prepare(command, state);
         if (command.Kind == PosterStateCommandKind.SetAutoPosture)
         {
             if (command.Source != StateCommandSource.ControlCenter) return Denied();
@@ -80,7 +83,10 @@ internal static class StateCommandPolicy
     {
         if (!IsManagement(command.Source)) return Denied();
         if (command.ReadSet.CatalogVersion is null) return Invalid("Create requires catalog version.");
-        return Create(state, command.Configuration);
+        if (command.Placement is not { } placement) return Create(state, command.Configuration);
+        if (!ControlCenterSpatial.CompleteReads(command.ReadSet, state) || !ControlCenterSpatial.SceneReadsCurrent(placement.Initial, state)) return Invalid("Placement requires complete current catalog/scene reads.");
+        var placed = ControlCenterSpatial.Place(command.Configuration, placement.Initial);
+        return placed is null ? StateMutationPlan.Reject(StateCommandStatus.InsufficientSpace, "没有可容纳海报的完整空位；未创建配置。") : Create(state, placed);
     }
 
     public static StateMutationPlan Prepare(ClonePosterCommand command, DesktopStateSnapshot state)
@@ -89,7 +95,12 @@ internal static class StateCommandPolicy
         if (command.ReadSet.CatalogVersion is null || !command.ReadSet.Posters.ContainsKey(command.SourcePosterId))
             return Invalid("Clone requires source and catalog versions.");
         PosterDefinition? source = Find(state, command.SourcePosterId);
-        return source is null ? Missing() : Create(state, source);
+        if (source is null) return Missing();
+        source = source with { Title = command.Title ?? source.Title };
+        if (command.Placement is not { } placement) return Create(state, source);
+        if (!ControlCenterSpatial.CompleteReads(command.ReadSet, state) || !ControlCenterSpatial.SceneReadsCurrent(placement.Initial, state)) return Invalid("Placement requires complete current catalog/scene reads.");
+        var placed = ControlCenterSpatial.Place(source, placement.Initial);
+        return placed is null ? StateMutationPlan.Reject(StateCommandStatus.InsufficientSpace, "没有可容纳副本的完整空位；未创建配置。") : Create(state, placed);
     }
 
     public static StateMutationPlan Prepare(RemovePosterCommand command, DesktopStateSnapshot state)

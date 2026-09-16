@@ -10,6 +10,6 @@ internal sealed partial class PosterSpatialRuntime
         _windows.Values.Select(w => w.ReadPointerTarget()).ToArray();
     public AutoPostureProtection PointerProtection =>
         (_suspended ? AutoPostureProtection.Recovery : AutoPostureProtection.None) |
-        (_owner is not null ? AutoPostureProtection.Gesture : AutoPostureProtection.None);
-    public bool IsSpatialBusy => _owner is not null || _posture is not null;
+        (_owner is not null || _title is not null ? AutoPostureProtection.Gesture : AutoPostureProtection.None);
+    public bool IsSpatialBusy => _owner is not null || _posture is not null || _title is not null;
 }

@@ -12,18 +12,20 @@ internal sealed partial class PosterSpatialRuntime
 
     public void BeforeManualIntent(string posterId, bool? collapse = null)
     {
+        CancelControlCenterVisuals();
         ManualIntent?.Invoke(posterId, collapse);
         if (_automatic is { } active) CancelAutomatic(active);
     }
 
     public void StartAutomatic(AutoPostureRequest request, Action<AutoPostureOutcome> completed)
     {
+        CancelControlCenterVisuals();
         if (_suspended || IsSpatialBusy || !_windows.TryGetValue(request.Session.PosterId, out var window) ||
             window.ReadPointerTarget().Session != request.Session ||
             !state.TryGetCurrent(out var current) || current?.PostersById.GetValueOrDefault(request.Session.PosterId) is not { } target)
         { completed(AutoPostureOutcome.HostUnavailable); return; }
         if (target.EntityVersion != request.ExpectedEntityRevision || target.AutoPosture != request.Policy ||
-            !target.AutoPosture.Enabled || !target.Poster.IsVisible || target.Poster.IsCollapsed == request.Collapse)
+        !target.AutoPosture.Enabled || !target.IsEffectivelyVisible || target.Poster.IsCollapsed == request.Collapse)
         { completed(AutoPostureOutcome.Conflict); return; }
         _automatic = request;
         _automaticCancellation = null;

@@ -243,6 +243,7 @@ public sealed partial class PosterSessionRegistryTests
         public HashSet<string> FailStart { get; } = new();
         public HashSet<string> FailApply { get; } = new();
         public Action<FakeSession>? OnStart { get; set; }
+        public Action<FakeSession>? OnRecover { get; set; }
         public FakeSession For(string id) => Created.Last(s => s.PosterId == id);
         public IPosterSession Create(string id, long epoch)
         {
@@ -274,6 +275,7 @@ public sealed partial class PosterSessionRegistryTests
         {
             Recoveries++;
             if (FailRecover) return false;
+            factory.OnRecover?.Invoke(this);
             CurrentGenerationPair = e.Generations; return true;
         }
         public bool IsAttached(DesktopShellHostSnapshot shell) => !Disposed && CurrentGenerationPair?.DesktopShellGeneration == shell.Generation;

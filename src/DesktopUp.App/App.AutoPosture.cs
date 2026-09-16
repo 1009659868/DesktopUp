@@ -22,11 +22,29 @@ public partial class App
             ArmAutoPosture, (request, done) => _spatialRuntime!.StartAutomatic(request, done),
             request => _spatialRuntime?.CancelAutomatic(request),
             (name, data) => _log?.Write("info", "auto_posture." + name, data));
-        _spatialRuntime!.ActivityChanged += ObserveAutoPosture;
+        if (_spatialRuntime is ITitleRuntimeReadback titleRuntime && _stateCommands is ITitleSpatialCommitter titleCommitter)
+            titleCommitter.BindTitleRuntime(titleRuntime);
+        _spatialRuntime!.ReadTitleEvidence = session =>
+        {
+            var pointer = ReadPassivePointer(++_autoPointerSequence, _autoEnvironment);
+            var observed = pointer.Posters.FirstOrDefault(p => p.Session == session);
+            return !_autoReady || observed is null ? null : new(_autoEnvironment, observed.Pointer);
+        };
+        _spatialRuntime.TitleEnvironmentEpoch = () => _autoEnvironment;
+        _spatialRuntime.TitleRearm += OnTitleRearm;
+        _spatialRuntime.TitleExpanded += OnTitleExpanded;
+        _spatialRuntime.ActivityChanged += ObserveAutoPosture;
         _spatialRuntime.ManualIntent += OnAutoManualIntent;
         _controlCenter!.RemovalInteractionChanged += ObserveAutoPosture;
         _controlCenter.SettingsInteractionChanged += ObserveAutoPosture;
     }
+
+    private void OnTitleRearm(TitleAutoRearmSuppression suppression)
+    {
+        if (suppression.EnvironmentEpoch == _autoEnvironment) _autoEvidence.CaptureTitleSuppression(suppression);
+    }
+    private void OnTitleExpanded(PosterInputSessionKey session) =>
+        _autoEvidence.CaptureManualCollapse(session, new(AutoPosturePresence.Unknown), false);
 
     private void OnAutoManualIntent(string id, bool? collapse)
     {
@@ -40,6 +58,7 @@ public partial class App
 
     private AutoPostureSample ReadAutoPosture()
     {
+        if (_posterSessions?.GloballyHidden == true) return new([], false, AutoPostureProtection.Recovery);
         var pointer = ReadPassivePointer(++_autoPointerSequence, _autoEnvironment);
         var targets = _spatialRuntime?.ReadPointerTargets() ?? [];
         _autoEvidence.RetainSessions(targets.Select(t => t.Session));
@@ -103,6 +122,10 @@ public partial class App
         {
             _spatialRuntime.ActivityChanged -= ObserveAutoPosture;
             _spatialRuntime.ManualIntent -= OnAutoManualIntent;
+            _spatialRuntime.TitleRearm -= OnTitleRearm;
+            _spatialRuntime.TitleExpanded -= OnTitleExpanded;
+            _spatialRuntime.ReadTitleEvidence = null;
+            _spatialRuntime.TitleEnvironmentEpoch = null;
         }
         if (_controlCenter is not null) _controlCenter.RemovalInteractionChanged -= ObserveAutoPosture;
         if (_controlCenter is not null) _controlCenter.SettingsInteractionChanged -= ObserveAutoPosture;

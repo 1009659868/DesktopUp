@@ -18,6 +18,9 @@ internal sealed partial class PosterVisualWindow
     // Canvas keeps the full content's desired size from enlarging the current root/client area.
     private void BeginTransitionLayout(string requestId, DesktopPixelRect expandedBounds)
     {
+        // Replacing a live lease changes layout ownership, not the HWND allocation yet.
+        // Keep that actual predecessor until the new native preparation succeeds.
+        var previousNativeBounds = CurrentNativeBounds(_bounds);
         RestoreTransitionLayout();
         if (_surface is null || _contentStructure is null || _footer is null || _monitor is null)
             throw new InvalidOperationException("Poster layout is not ready for a transition.");
@@ -26,7 +29,7 @@ internal sealed partial class PosterVisualWindow
         var canvas = new Canvas();
         var lease = new TransitionLayout(requestId, structure, footer, canvas,
             structure.Width, structure.Height, structure.Clip, footer.Width, footer.Height, footer.Clip,
-            PosterTransitionSurface.Create(_bounds, expandedBounds));
+            PosterTransitionSurface.Create(_bounds, expandedBounds), previousNativeBounds);
         _transitionLayout = lease; // Every partial preparation can be unwound by the same path.
         _surface.Child = null;
         structure.Children.Remove(footer);
@@ -49,6 +52,27 @@ internal sealed partial class PosterVisualWindow
             width = lease.StableWidth, height = lease.StableHeight, expandedBounds, collapsed = _geometry.IsCollapsed });
     }
 
+    // Ownership transfer keeps a live R4 allocation/layout when it already covers the new lease.
+    // No CancelPointerGesture and no restoration to committed geometry on this path.
+    internal void BeginTitlePreview(string requestId, DesktopPixelRect capacity, bool source)
+    {
+        CancelScheduledGestureFrame();
+        _activeCommandRequestId = requestId;
+        if (_transitionLayout is { } existing &&
+            existing.Surface.Width == capacity.Width && existing.Surface.Height >= capacity.Height)
+        {
+            existing.RequestId = requestId;
+            existing.TitleSource = source;
+            if (!ApplyTransitionViewport(_bounds)) throw new InvalidOperationException("Cannot retag title viewport.");
+            return;
+        }
+        if (source) _geometry = _geometry with { IsCollapsed = false };
+        UpdateVisualState();
+        BeginTransitionLayout(requestId, capacity);
+        _transitionLayout!.TitleSource = source;
+        if (!ApplyTransitionViewport(_bounds)) throw new InvalidOperationException("Cannot prepare title viewport.");
+    }
+
     private bool ApplyTransitionViewport(DesktopPixelRect frame)
     {
         if (_transitionLayout is not { } lease || lease.RequestId != _activeCommandRequestId || _monitor is null || _surface is null)
@@ -58,6 +82,10 @@ internal sealed partial class PosterVisualWindow
         double height = frame.Height / _monitor.ScaleY - border.Top - border.Bottom;
         var viewport = PosterTransitionViewport.Resolve(height,
             PosterFrameGeometryPolicy.CollapsedHeightDip - border.Top - border.Bottom, FooterHeightDip, _geometry.IsCollapsed);
+        // Content is pre-expanded behind the clip; the title indicator follows the visible frame,
+        // not that temporary layout flag (notably during a stationary compact press).
+        if (lease.TitleSource && _collapseGlyph is not null)
+            _collapseGlyph.Text = height <= PosterFrameGeometryPolicy.CollapsedHeightDip - border.Top - border.Bottom ? "⌃" : "⌄";
         lease.Canvas.Clip = new RectangleGeometry { Rect = new Rect(0, 0, width, height) };
         lease.Structure.Clip = new RectangleGeometry { Rect = new Rect(0, 0, width, viewport.BodyBottom) };
         Canvas.SetTop(lease.Footer, viewport.FooterTop);
@@ -72,7 +100,9 @@ internal sealed partial class PosterVisualWindow
         _transitionLayout?.Surface.At(visible) ?? visible;
 
     private DesktopPixelRect CurrentNativeBounds(DesktopPixelRect visible) =>
-        _transitionLayout is { NativePrepared: true } ? PreparedSurfaceBounds(visible) : visible;
+        _transitionLayout is { } lease
+            ? lease.NativePrepared ? lease.Surface.At(visible) : lease.PreviousNativeBounds
+            : visible;
 
     internal bool VerifyTransitionSurfaceReady()
     {
@@ -110,11 +140,14 @@ internal sealed partial class PosterVisualWindow
 
     private sealed class TransitionLayout(string requestId, Grid structure, Grid footer, Canvas canvas,
         double structureWidth, double structureHeight, RectangleGeometry? structureClip,
-        double footerWidth, double footerHeight, RectangleGeometry? footerClip, PosterTransitionSurface surface)
+        double footerWidth, double footerHeight, RectangleGeometry? footerClip, PosterTransitionSurface surface,
+        DesktopPixelRect previousNativeBounds)
     {
-        public string RequestId { get; } = requestId;
+        public string RequestId { get; set; } = requestId;
         public PosterTransitionSurface Surface { get; } = surface;
+        public DesktopPixelRect PreviousNativeBounds { get; } = previousNativeBounds;
         public bool NativePrepared { get; set; }
+        public bool TitleSource { get; set; }
         public Grid Structure { get; } = structure;
         public Grid Footer { get; } = footer;
         public Canvas Canvas { get; } = canvas;

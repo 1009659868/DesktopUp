@@ -11,17 +11,20 @@ public sealed record PosterContentParameters(double ItemWidthDip = 118, double I
     public double RowHeightDip => ItemHeightDip + 7 + LabelHeightDip + 13;
 }
 public sealed record PosterThemeParameters(string Background = "#21242A", string Foreground = "#F2F2F2", string Accent = "#99CEFF");
-public sealed record PosterPresentationParameters(PosterContentParameters Content, PosterThemeParameters Theme);
+public sealed record PosterPresentationParameters(PosterContentParameters Content, PosterThemeParameters Theme,
+    PosterContentPreferences? Preferences = null);
 public sealed record ResolvedPosterPresentation(string EffectiveTemplateKey, PosterPresentationParameters Parameters,
     PosterContentMetrics Metrics, bool CanEdit, bool IsLegacy, string? Warning)
 {
     public bool IsFallback => !CanEdit;
+    public PosterContentParameters EffectiveContent => PosterContentPreferencePolicy.Resolve(Parameters.Content, Parameters.Preferences);
     public double MetaHeightDip => EffectiveTemplateKey == "basic-box" ? 0 : Math.Ceiling(81 + Parameters.Content.TitleFontSizeDip * 1.35);
 }
 
 public static class PosterPresentationPolicy
 {
-    public const int SchemaVersion = 1;
+    public const string AdaptiveGridLayout = "adaptive-grid";
+    public const int SchemaVersion = 2;
     public const int MaximumJsonLength = 32768;
     public const double HorizontalPaddingDip = 28;
     public static bool IsBuiltIn(string? key) => key is "night-ops" or "basic-box";
@@ -32,6 +35,7 @@ public static class PosterPresentationPolicy
     public static string? Validate(PosterPresentationParameters? value)
     {
         if (value?.Content is not { } c || value.Theme is not { } t) return "Missing content/theme parameters.";
+        if (PosterContentPreferencePolicy.Validate(value.Preferences) is { } preferenceError) return preferenceError;
         if (!In(c.ItemWidthDip, 72, 320) || !In(c.ItemHeightDip, 48, 240) ||
             !In(c.IconSizeDip, 16, 128) || !In(c.GapDip, 0, 40) ||
             !In(c.LabelFontSizeDip, 9, 24) || !In(c.TitleFontSizeDip, 18, 48))
@@ -45,7 +49,7 @@ public static class PosterPresentationPolicy
 
     public static ResolvedPosterPresentation Resolve(PosterDefinition poster)
     {
-        if (!IsBuiltIn(poster.TemplateKey) || poster.LayoutKind != "adaptive-grid")
+        if (!IsBuiltIn(poster.TemplateKey) || poster.LayoutKind != AdaptiveGridLayout)
             return Fallback("Unknown template/layout; configuration retained.");
         try
         {
@@ -63,13 +67,13 @@ public static class PosterPresentationPolicy
     public static string? ValidateEdit(PosterDefinition previous, PosterDefinition desired)
     {
         if (!Resolve(previous).CanEdit) return "Unsupported stored presentation must be repaired explicitly before editing.";
-        if (!IsBuiltIn(desired.TemplateKey) || desired.LayoutKind != "adaptive-grid") return "Unsupported template/layout.";
+        if (!IsBuiltIn(desired.TemplateKey) || desired.LayoutKind != AdaptiveGridLayout) return "Unsupported template/layout.";
         try
         {
             using var oldDoc = Parse(previous.LayoutParametersJson);
             using var newDoc = Parse(desired.LayoutParametersJson);
             var value = Read(newDoc.RootElement, desired.TemplateKey, out bool legacy);
-            if (legacy) return "New presentation writes require schemaVersion=1.";
+            if (legacy) return "New presentation writes require a supported schemaVersion.";
             if (Validate(value) is { } error) return error;
             var expectedLegacy = LegacyPayload(oldDoc.RootElement);
             var actualLegacy = newDoc.RootElement.TryGetProperty("legacy", out var retained) ? retained : (JsonElement?)null;
@@ -87,12 +91,16 @@ public static class PosterPresentationPolicy
         if (Validate(value) is { } error) throw new ArgumentException(error);
         using var previous = previousJson is null ? null : Parse(previousJson);
         if (previous is not null && previous.RootElement.TryGetProperty("schemaVersion", out var v) &&
-            (!v.TryGetInt32(out int version) || version != SchemaVersion))
+            (!v.TryGetInt32(out int version) || version is not (1 or SchemaVersion)))
             throw new ArgumentException("Cannot overwrite an unknown presentation version.");
+        // Do not downgrade a v2 object when an older caller edits a fine parameter.
+        if (value.Preferences is null && previous?.RootElement.TryGetProperty("preferences", out var oldPreferences) == true)
+            value = value with { Preferences = ReadPreferences(oldPreferences) };
+        if (Validate(value) is { } retainedError) throw new ArgumentException(retainedError);
         using var bytes = new MemoryStream();
         using (var writer = new Utf8JsonWriter(bytes))
         {
-            writer.WriteStartObject(); writer.WriteNumber("schemaVersion", SchemaVersion);
+            writer.WriteStartObject(); writer.WriteNumber("schemaVersion", value.Preferences is null ? 1 : SchemaVersion);
             writer.WritePropertyName("content"); writer.WriteStartObject();
             writer.WriteNumber("itemWidthDip", value.Content.ItemWidthDip);
             writer.WriteNumber("itemHeightDip", value.Content.ItemHeightDip);
@@ -108,6 +116,13 @@ public static class PosterPresentationPolicy
             writer.WriteEndObject();
             if (previous is not null && LegacyPayload(previous.RootElement) is { } retained)
             { writer.WritePropertyName("legacy"); retained.WriteTo(writer); }
+            if (value.Preferences is { } preferences)
+            {
+                writer.WritePropertyName("preferences"); writer.WriteStartObject();
+                writer.WriteNumber("mappingVersion", preferences.MappingVersion);
+                writer.WriteNumber("scale", preferences.Scale); writer.WriteNumber("spacing", preferences.Spacing);
+                writer.WriteEndObject();
+            }
             writer.WriteEndObject();
         }
         string result = System.Text.Encoding.UTF8.GetString(bytes.ToArray());
@@ -117,7 +132,9 @@ public static class PosterPresentationPolicy
 
     public static int ResolveColumns(double widthDip, PosterContentParameters content)
     {
-        if (!double.IsFinite(widthDip) || widthDip <= 0 || Validate(new(content, new())) is not null) return 1;
+        // Render metrics may include macro/item scale and are not raw v1 parameter ranges.
+        if (!double.IsFinite(widthDip) || widthDip <= 0 || !double.IsFinite(content.ItemWidthDip) || content.ItemWidthDip <= 0 ||
+            !double.IsFinite(content.GapDip) || content.GapDip < 0) return 1;
         return (int)Math.Clamp(Math.Floor((Math.Max(1, widthDip - HorizontalPaddingDip * 2) + content.GapDip) /
             (content.ItemWidthDip + content.GapDip)), 1, 64);
     }
@@ -129,7 +146,7 @@ public static class PosterPresentationPolicy
     {
         double top = PosterTitleBarLayoutPolicy.HeaderHeightDip + (template == "basic-box" ? 0 :
             Math.Ceiling(81 + parameters.Content.TitleFontSizeDip * 1.35)) + PosterContentMetrics.ItemsTopInsetDip;
-        double row = parameters.Content.RowHeightDip;
+        double row = PosterContentPreferencePolicy.Resolve(parameters.Content, parameters.Preferences).RowHeightDip;
         // Keep the legacy metric identity for identical geometry, independent of colors/title text.
         string version = top == PosterContentMetrics.Current.ReservedTopDip && row == PosterContentMetrics.Current.CompleteItemRowDip
             ? PosterContentMetrics.Current.Version
@@ -166,8 +183,9 @@ public static class PosterPresentationPolicy
                 throw new ArgumentException("Legacy rowHeight cannot be represented safely; original data retained.");
             return defaults with { Content = content };
         }
-        Members(root, "schemaVersion", "content", "theme", "legacy");
-        if (!version.TryGetInt32(out int v) || v != SchemaVersion) throw new ArgumentException("Unknown presentation schema version.");
+        if (!version.TryGetInt32(out int v) || v is not (1 or SchemaVersion)) throw new ArgumentException("Unknown presentation schema version.");
+        if (v == 1) Members(root, "schemaVersion", "content", "theme", "legacy");
+        else Members(root, "schemaVersion", "content", "theme", "legacy", "preferences");
         if (root.TryGetProperty("legacy", out var retained) && retained.ValueKind != JsonValueKind.Object)
             throw new ArgumentException("Legacy payload must be an object.");
         var c = defaults.Content; var t = defaults.Theme;
@@ -183,7 +201,21 @@ public static class PosterPresentationPolicy
             Members(themeNode, "background", "foreground", "accent");
             t = new(Text(themeNode, "background", t.Background), Text(themeNode, "foreground", t.Foreground), Text(themeNode, "accent", t.Accent));
         }
-        return new(c, t);
+        PosterContentPreferences? preferences = null;
+        if (v == SchemaVersion)
+        {
+            if (!root.TryGetProperty("preferences", out var p)) throw new ArgumentException("Missing v2 preferences.");
+            preferences = ReadPreferences(p);
+        }
+        return new(c, t, preferences);
+    }
+    private static PosterContentPreferences ReadPreferences(JsonElement node)
+    {
+        Members(node, "mappingVersion", "scale", "spacing");
+        if (!node.TryGetProperty("mappingVersion", out var version) || !version.TryGetInt32(out int v) || v != 1 ||
+            !node.TryGetProperty("scale", out _) || !node.TryGetProperty("spacing", out _))
+            throw new ArgumentException("Unknown or incomplete preference mapping.");
+        return new(Number(node, "scale", 1), Number(node, "spacing", 1), v);
     }
     private static void Unique(JsonElement node)
     {

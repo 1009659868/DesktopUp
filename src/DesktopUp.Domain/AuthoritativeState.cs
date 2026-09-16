@@ -25,6 +25,8 @@ public sealed record PosterDefinition(
     public int AutoCollapseDelaySeconds { get; init; } = PosterAutoPosturePolicy.DefaultDelaySeconds;
     public string Purpose { get; init; } = "general";
     public bool IsVisible { get; init; } = true;
+    // Local placement availability is separate from the user's visibility intent.
+    public bool PlacementPending { get; init; }
     public long StackOrder { get; init; }
     public string? CollectionId { get; init; }
     // A reserved instance identity, not a loaded theme or executable theme package.

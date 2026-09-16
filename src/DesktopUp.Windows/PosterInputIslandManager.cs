@@ -96,6 +96,11 @@ public sealed class PosterInputIslandManager : IInputRegionHost
     public bool IsNativeInputTransparent => new NativeDesktopMenuPlatform().IsInputTransparent(WindowHandle);
 
     public event EventHandler<PosterInputEventArgs>? Input;
+    public event EventHandler<TitleNativeInputEventArgs>? TitleInput;
+    private bool _titleClaimed;
+    private long _titleSequence;
+    public bool OwnsTitleCapture(PosterInputCapture capture) => _router.Owns(capture) &&
+        _capture == capture && GetCapture() == WindowHandle;
 
     public static DesktopMenuSurface[] MenuSurfaces(PosterInputRouter router)
     {
@@ -304,7 +309,7 @@ public sealed class PosterInputIslandManager : IInputRegionHost
             var tracking = new PointerLeaveTracking { Size = (uint)Marshal.SizeOf<PointerLeaveTracking>(), Flags = 2, Window = windowHandle };
             _trackingPointerLeave = TrackMouseEvent(ref tracking);
         }
-        if (message is WmMouseMove or WmMouseLeave or WmLButtonDown or WmLButtonUp or WmMouseWheel or WmCaptureChanged)
+        if (message is WmMouseMove or WmMouseLeave or WmLButtonUp or WmMouseWheel or WmCaptureChanged)
         {
             if (_router.NotifyPointerActivity(_session, AppliedLayoutRevision) is { } error && !_pointerObservationFaultReported)
             {
@@ -322,6 +327,8 @@ public sealed class PosterInputIslandManager : IInputRegionHost
                 break;
             case WmLButtonDown:
                 BeginPointerGesture(lParam);
+                // Title arbitration precedes automatic observation of this capture.
+                _router.NotifyPointerActivity(_session, AppliedLayoutRevision);
                 return 0;
             case WmMouseMove:
                 ContinuePointerGesture();
@@ -333,12 +340,12 @@ public sealed class PosterInputIslandManager : IInputRegionHost
                 EndPointerGesture(cancelled: false);
                 return 0;
             case WmCancelMode:
-                EndPointerGesture(cancelled: true);
+                EndPointerGesture(cancelled: true, cause: TitleNativeEndReason.CancelMode);
                 return 0;
             case WmCaptureChanged:
                 if (_pressedRegion is not null && GetCapture() != windowHandle)
                 {
-                    EndPointerGesture(cancelled: true, releaseCapture: false);
+                    EndPointerGesture(cancelled: true, releaseCapture: false, cause: TitleNativeEndReason.CaptureTransferred);
                 }
                 return 0;
             case WmSetCursor:
@@ -386,18 +393,33 @@ public sealed class PosterInputIslandManager : IInputRegionHost
         _gestureMoved = false;
         _pressCursor = point;
         _ = SetCapture(WindowHandle);
-        if (GetCapture() != WindowHandle) EndPointerGesture(cancelled: true);
+        if (GetCapture() != WindowHandle) EndPointerGesture(cancelled: true, cause: TitleNativeEndReason.CaptureUnavailable);
+        else if (hit.Region.Kind == PosterInputTargetKind.TitleBar && _capture is { } capture)
+        {
+            var input = new TitleNativeInputEventArgs(TitleNativeInputKind.Press, capture,
+                new(point.X, point.Y), ++_titleSequence);
+            TitleInput?.Invoke(this, input);
+            _titleClaimed = input.Handled && _capture == capture;
+        }
     }
 
     private void ContinuePointerGesture()
     {
-        if (_pressedRegion is not null && !_router.Owns(_capture)) { EndPointerGesture(cancelled: true); return; }
+        if (_pressedRegion is not null && !_router.Owns(_capture))
+        { EndPointerGesture(cancelled: true, cause: TitleNativeEndReason.RouteInvalidated); return; }
         if (_pressedRegion is not { } target || !IsGestureTarget(target.Kind) ||
             !GetCursorPos(out NativePoint cursor))
         {
+            if (_titleClaimed) EndPointerGesture(cancelled: true, cause: TitleNativeEndReason.CursorUnavailable);
             return;
         }
 
+        if (_titleClaimed && _capture is { } capture)
+        {
+            TitleInput?.Invoke(this, new(TitleNativeInputKind.Move, capture,
+                new(cursor.X, cursor.Y), ++_titleSequence));
+            return;
+        }
         int deltaX = cursor.X - _pressCursor.X;
         int deltaY = cursor.Y - _pressCursor.Y;
         if (!_gestureMoved && ((long)deltaX * deltaX) + ((long)deltaY * deltaY) < 25)
@@ -435,7 +457,8 @@ public sealed class PosterInputIslandManager : IInputRegionHost
             unchecked((short)((long)wParam >> 16)));
     }
 
-    private void EndPointerGesture(bool cancelled, bool releaseCapture = true)
+    private void EndPointerGesture(bool cancelled, bool releaseCapture = true,
+        TitleNativeEndReason cause = TitleNativeEndReason.Programmatic)
     {
         if (_pressedRegion is not { } target)
         {
@@ -444,8 +467,14 @@ public sealed class PosterInputIslandManager : IInputRegionHost
 
         bool owns = _router.Owns(_capture);
         bool cursorAvailable = GetCursorPos(out NativePoint cursor);
-        cancelled |= !owns || !cursorAvailable || (!_gestureMoved &&
+        bool claimed = _titleClaimed;
+        var titleCapture = _capture;
+        _titleClaimed = false;
+        cancelled |= !owns || !cursorAvailable || (!claimed && !_gestureMoved &&
             (_capture is null || !_router.CanInvoke(_capture, cursor.X, cursor.Y)));
+        // Preserve the observed cause before ending router/capture ownership. A stale route or
+        // missing cursor is a hard failure even when WM_CAPTURECHANGED originally woke us.
+        var endReason = cancelled ? TitleNativeEndPolicy.Resolve(cause, owns, cursorAvailable) : TitleNativeEndReason.None;
         _pressedRegion = null;
         _router.End(_capture);
         _capture = null;
@@ -454,6 +483,13 @@ public sealed class PosterInputIslandManager : IInputRegionHost
             _ = ReleaseCapture();
         }
 
+        if (claimed && titleCapture is not null)
+        {
+            TitleInput?.Invoke(this, new(cancelled ? TitleNativeInputKind.Cancel : TitleNativeInputKind.Release,
+                titleCapture, new(cursor.X, cursor.Y), ++_titleSequence, CanInvoke: !cancelled, EndReason: endReason));
+            _gestureMoved = false;
+            return;
+        }
         int deltaX = cursor.X - _pressCursor.X;
         int deltaY = cursor.Y - _pressCursor.Y;
         PosterInputEventKind eventKind = cancelled

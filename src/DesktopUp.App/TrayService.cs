@@ -14,19 +14,15 @@ internal sealed class TrayService(IResourceLedger ledger, IStructuredLog log) : 
 {
     private Window? _ownerWindow;
     private TaskbarIcon? _icon;
-    private MenuFlyoutItem? _editItem;
-    private ToggleMenuFlyoutItem? _lockItem;
-    private ToggleMenuFlyoutItem? _pauseItem;
+    private readonly Dictionary<TrayAction, MenuFlyoutItem> _items = new();
+    private TrayProjection? _projection;
+    private bool _globallyHidden, _environmentPending = true;
+    private string? _feedback;
     private IDisposable? _ownerLease;
     private IDisposable? _iconLease;
     private long _projectionRevision = -1;
 
-    public void Create(
-        Action openControlCenter,
-        Action togglePosterEditing,
-        Action togglePosterLocked,
-        Action toggleDynamicEffectsPaused,
-        Action exitApplication)
+    public void Create(Action<TrayAction> dispatch)
     {
         if (_icon is not null)
         {
@@ -34,39 +30,15 @@ internal sealed class TrayService(IResourceLedger ledger, IStructuredLog log) : 
         }
 
         var menu = new MenuFlyout();
-        var openItem = new MenuFlyoutItem
+        foreach (var entry in TrayManagement.Menu(null, false, true))
         {
-            Text = "打开控制中心",
-            Command = new RelayCommand(openControlCenter)
-        };
-        var exitItem = new MenuFlyoutItem
-        {
-            Text = "退出 DesktopUp",
-            Command = new RelayCommand(exitApplication)
-        };
-        menu.Items.Add(openItem);
-        _editItem = new MenuFlyoutItem
-        {
-            Text = "进入海报编辑",
-            Command = new RelayCommand(togglePosterEditing)
-        };
-        menu.Items.Add(_editItem);
-        _lockItem = new ToggleMenuFlyoutItem
-        {
-            Text = "锁定全部海报",
-            Command = new RelayCommand(togglePosterLocked),
-            IsEnabled = false
-        };
-        menu.Items.Add(_lockItem);
-        _pauseItem = new ToggleMenuFlyoutItem
-        {
-            Text = "暂停动态效果",
-            Command = new RelayCommand(toggleDynamicEffectsPaused),
-            IsEnabled = false
-        };
-        menu.Items.Add(_pauseItem);
-        menu.Items.Add(new MenuFlyoutSeparator());
-        menu.Items.Add(exitItem);
+            MenuFlyoutItem item = entry.Checked is null ? new MenuFlyoutItem() : new ToggleMenuFlyoutItem();
+            item.Text = entry.Text; item.IsEnabled = entry.Enabled;
+            item.Command = new RelayCommand(() => dispatch(entry.Action));
+            _items.Add(entry.Action, item);
+            if (entry.Action == TrayAction.Exit) menu.Items.Add(new MenuFlyoutSeparator());
+            menu.Items.Add(item);
+        }
 
         _ownerWindow = new Window();
         _ownerWindow.AppWindow.IsShownInSwitchers = false;
@@ -78,7 +50,7 @@ internal sealed class TrayService(IResourceLedger ledger, IStructuredLog log) : 
             ContextMenuMode = ContextMenuMode.PopupMenu,
             MenuActivation = PopupActivationMode.RightClick,
             NoLeftClickDelay = true,
-            DoubleClickCommand = new RelayCommand(openControlCenter),
+            DoubleClickCommand = new RelayCommand(() => dispatch(TrayAction.OpenCenter)),
             IconSource = new GeneratedIconSource
             {
                 Text = "DU",
@@ -108,17 +80,27 @@ internal sealed class TrayService(IResourceLedger ledger, IStructuredLog log) : 
         log.Write("info", "tray.created", new { created = _icon.IsCreated });
     }
 
-    public void SetPosterEditing(bool editing)
-    {
-        if (_editItem is not null)
-        {
-            _editItem.Text = editing ? "完成海报编辑" : "进入海报编辑";
-        }
-    }
+    public void ApplyRuntime(bool hidden, bool environmentPending)
+    { _globallyHidden = hidden; _environmentPending = environmentPending; Render(); }
 
     internal bool VerifyProjection(TrayProjection projection) => _projectionRevision == projection.Revision &&
-        _icon?.IsCreated == true && _lockItem?.IsChecked == projection.AllPostersLocked &&
-        _editItem?.IsEnabled == (projection.VisiblePosterCount > 0);
+        _icon?.IsCreated == true && _items.Count == 6 &&
+        TrayManagement.Menu(projection, _globallyHidden, _environmentPending).All(e =>
+            _items.TryGetValue(e.Action, out var item) && item.Text == e.Text && item.IsEnabled == e.Enabled &&
+            (e.Checked is null || item is ToggleMenuFlyoutItem toggle && toggle.IsChecked == e.Checked));
+
+    // Runs the real command binding, not native input; isolated process probes explicitly report this limit.
+    internal void InvokeForProbe(TrayAction action)
+    { if (_items.TryGetValue(action, out var item) && item.IsEnabled) item.Command.Execute(null); }
+
+    public void Notify(string message, bool error = true)
+    {
+        _feedback = message; Render();
+        try { _icon?.ShowNotification("DesktopUp", message, error ? NotificationIcon.Warning : NotificationIcon.Info, sound: false); }
+        catch (Exception ex) { log.Write("warning", "tray.notification_failed", new { ex.Message }); }
+    }
+
+    public void ClearFeedback() { _feedback = null; Render(); }
 
     public void ApplyProjection(TrayProjection projection)
     {
@@ -127,21 +109,24 @@ internal sealed class TrayService(IResourceLedger ledger, IStructuredLog log) : 
             return;
         }
         _projectionRevision = projection.Revision;
+        _projection = projection;
+        Render();
+    }
+
+    private void Render()
+    {
         if (_icon is not null)
         {
-            _icon.ToolTipText = projection.ToolTipText;
+            string text = _feedback is not null ? "DesktopUp · " + _feedback :
+                (_projection?.ToolTipText ?? "DesktopUp") + (_globallyHidden ? " · 全局隐藏" : "") +
+                (_environmentPending ? " · 等待桌面" : "");
+            _icon.ToolTipText = text.Length <= 120 ? text : text[..120];
         }
-        if (_lockItem is not null)
+        foreach (var entry in TrayManagement.Menu(_projection, _globallyHidden, _environmentPending))
         {
-            _lockItem.IsChecked = projection.AllPostersLocked;
-            _lockItem.IsEnabled = projection.PosterCount > 0;
-            _lockItem.Text = projection.LockSummary == PosterLockSummary.Some ? "锁定全部海报（部分已锁定）" : "锁定全部海报";
-        }
-        if (_editItem is not null) _editItem.IsEnabled = projection.VisiblePosterCount > 0;
-        if (_pauseItem is not null)
-        {
-            _pauseItem.IsChecked = projection.DynamicEffectsPaused;
-            _pauseItem.IsEnabled = true;
+            if (!_items.TryGetValue(entry.Action, out var item)) continue;
+            item.Text = entry.Text; item.IsEnabled = entry.Enabled;
+            if (item is ToggleMenuFlyoutItem toggle) toggle.IsChecked = entry.Checked == true;
         }
     }
 
@@ -162,9 +147,7 @@ internal sealed class TrayService(IResourceLedger ledger, IStructuredLog log) : 
         _iconLease = null;
         _ownerLease?.Dispose();
         _ownerLease = null;
-        _editItem = null;
-        _lockItem = null;
-        _pauseItem = null;
+        _items.Clear(); _projection = null; _feedback = null;
         _projectionRevision = -1;
     }
 }

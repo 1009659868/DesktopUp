@@ -25,6 +25,8 @@ internal interface IDesktopWindowApi
     bool ApplyPreparedBoundsBatch(IReadOnlyDictionary<nint, DesktopPixelRect> bounds, IReadOnlyDictionary<nint, uint> flags) => false;
     bool RequestFrameRedraw(nint windowHandle) => false;
     bool VerifyVisualSurface(nint window, DesktopPixelRect surface, DesktopPixelRect visible) => false;
+    DesktopVisualSurfaceReadback InspectVisualSurface(nint window, DesktopPixelRect surface, DesktopPixelRect visible) =>
+        new(false, "surface-inspection-unsupported");
     void RemoveDwmBorder(nint windowHandle);
     int GetLastError();
 }
@@ -275,11 +277,16 @@ public sealed class DesktopLayerAttachment : IDesktopLayerAttachment
     }
 
     public bool VerifyVisualSurface(nint window, DesktopPixelRect surface, DesktopPixelRect visible)
+        => InspectVisualSurface(window, surface, visible).Verified;
+
+    public DesktopVisualSurfaceReadback InspectVisualSurface(nint window, DesktopPixelRect surface, DesktopPixelRect visible)
     {
         lock (_gate)
         {
-            return _original.ContainsKey(window) && _inputTransparentWindows.Contains(window) &&
-                _windows.IsWindow(window) && _windows.VerifyVisualSurface(window, surface, visible);
+            if (!_original.ContainsKey(window)) return new(false, "visual-not-registered");
+            if (!_inputTransparentWindows.Contains(window)) return new(false, "visual-not-input-transparent");
+            if (!_windows.IsWindow(window)) return new(false, "visual-window-invalid");
+            return _windows.InspectVisualSurface(window, surface, visible);
         }
     }
 
@@ -503,21 +510,33 @@ internal sealed class DesktopWindowNativeApi : IDesktopWindowApi
         0x0001 /* INVALIDATE */ | 0x0080 /* ALLCHILDREN */ | 0x0100 /* UPDATENOW */);
 
     public bool VerifyVisualSurface(nint window, DesktopPixelRect surface, DesktopPixelRect visible)
+        => InspectVisualSurface(window, surface, visible).Verified;
+
+    public DesktopVisualSurfaceReadback InspectVisualSurface(nint window, DesktopPixelRect surface, DesktopPixelRect visible)
     {
-        if (!surface.IsUsable || !visible.IsUsable || surface.X != visible.X || surface.Y != visible.Y ||
-            surface.Width < visible.Width || surface.Height < visible.Height ||
-            !GetWindowRect(window, out var native) || native.Left != surface.X || native.Top != surface.Y ||
-            native.Right - native.Left != surface.Width || native.Bottom - native.Top != surface.Height ||
-            !GetClientRect(window, out var client) || client.Right != surface.Width || client.Bottom != surface.Height) return false;
+        DesktopPixelRect? native = GetWindowRect(window, out var windowRect) ? Pixels(windowRect) : null;
+        DesktopPixelRect? client = GetClientRect(window, out var clientRect) ? Pixels(clientRect) : null;
+        DesktopPixelRect? clip = null;
+        int? regionResult = null, boxResult = null;
         nint region = CreateRectRgn(0, 0, 0, 0);
-        if (region == 0) return false;
-        try
+        if (region != 0)
         {
-            return GetWindowRgn(window, region) != 0 && GetRgnBox(region, out var clip) != 0 &&
-                clip.Left == 0 && clip.Top == 0 && clip.Right == visible.Width && clip.Bottom == visible.Height;
+            try
+            {
+                regionResult = GetWindowRgn(window, region);
+                if (regionResult != 0)
+                {
+                    boxResult = GetRgnBox(region, out var clipRect);
+                    if (boxResult != 0) clip = Pixels(clipRect);
+                }
+            }
+            finally { _ = DeleteObject(region); }
         }
-        finally { _ = DeleteObject(region); }
+        return DesktopVisualSurfaceReadback.Compare(surface, visible, native, client, clip, regionResult, boxResult);
     }
+
+    private static DesktopPixelRect Pixels(SurfaceRect rect) =>
+        new(rect.Left, rect.Top, rect.Right - rect.Left, rect.Bottom - rect.Top);
 
     [StructLayout(LayoutKind.Sequential)] private struct SurfaceRect { public int Left, Top, Right, Bottom; }
     [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)]

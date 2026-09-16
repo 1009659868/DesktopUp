@@ -3,9 +3,9 @@ using DesktopUp.Domain;
 
 namespace DesktopUp.Application;
 
-public sealed class StateProjectionCoordinator(
+public sealed partial class StateProjectionCoordinator(
     IStateCommandRepository repository,
-    IStructuredLog? log = null) : IStateProjectionCoordinator, IStateCommandService, IAutomaticPostureCommitter
+    IStructuredLog? log = null) : IStateProjectionCoordinator, IStateCommandService, IAutomaticPostureCommitter, ITitleSpatialCommitter
 {
     private readonly object _sync = new();
     private readonly Queue<StateProjectionChangedEventArgs> _pending = new();
@@ -72,6 +72,66 @@ public sealed class StateProjectionCoordinator(
     public StateCommandResult ExecuteAutomaticPosture(PosterStateCommand command) => Run(
         command.RequestId, command.Source, command.ExpectedRevision, command.ReadSet,
         reads => command with { ReadSet = reads }, AutomaticPostureCommitPolicy.Prepare, allowSystem: true);
+
+    // Pure/untrusted command path retains ordinary/durable initial geometry validation.
+    public StateCommandResult Execute(TitleSpatialCommand command) => Run(
+        command.RequestId, command.Source, command.ExpectedRevision, command.ReadSet,
+        reads => TitleSpatialCommitPolicy.Freeze(command with { ReadSet = Required(reads) }), TitleSpatialCommitPolicy.Prepare);
+
+    private ITitleRuntimeReadback? _titleRuntime;
+    public void BindTitleRuntime(ITitleRuntimeReadback runtime)
+    {
+        ArgumentNullException.ThrowIfNull(runtime);
+        lock (_sync)
+        {
+            if (_titleRuntime is not null && !ReferenceEquals(runtime, _titleRuntime))
+                throw new InvalidOperationException("A title runtime is already bound.");
+            _titleRuntime = runtime;
+        }
+    }
+    public TitleRuntimeLease? OpenTitle(TitleSpatialStart start, StateReadSet reads)
+    {
+        lock (_sync)
+        {
+            if (_current?.PostersById.GetValueOrDefault(start.Press.Capture.Press.Session.PosterId) is not { } source ||
+                _titleRuntime?.ValidateTitleStart(start, reads) != true) return null;
+            return new(this, start, reads, source.Presentation.Metrics,
+                _current.SpatialContinuities.FirstOrDefault(c => c.Environment.WorkspaceId == start.Initial.Environment.WorkspaceId));
+        }
+    }
+    public bool CheckpointTitle(TitleSpatialSession session, TitleRuntimeLease lease)
+    {
+        lock (_sync)
+        {
+            if (lease.Closed || !ReferenceEquals(lease.Issuer, this) || session.Start != lease.Start ||
+                session.Complete || session.Cancelled || session.SampleCount == 0 || _current is null ||
+                _current.CatalogVersion != lease.Reads.CatalogVersion || _current.Posters.Count != lease.Reads.Posters.Count ||
+                lease.Reads.Posters.Any(p => !_current.PostersById.TryGetValue(p.Key, out var e) || e.EntityVersion != p.Value) ||
+                _titleRuntime?.ValidateTitleStart(lease.Start, lease.Reads) != true) return false;
+            var trace = session.ProgressTrace();
+            var verified = TitleSpatialSession.ReplayBounded(trace, lease.Metrics, lease.InitialContinuity, lease.Checkpoint, false);
+            var next = new TitleProgressCheckpoint(lease.Start, lease.Metrics, lease.InitialContinuity, verified.AcceptedState,
+                checked((lease.Checkpoint?.Segment ?? 0) + 1),
+                StateRequestFingerprint.Compute(new { previous = lease.Checkpoint?.Digest, trace.Samples, trace.Presented, trace.Continuity }));
+            if (!session.Seal(next)) return false;
+            lease.Checkpoint = next;
+            return true; // RAM proof only: no repository operation, revision or projection event.
+        }
+    }
+
+    public StateCommandResult ExecuteTitle(TitleSpatialCommand command, TitleRuntimeLease lease)
+    {
+        try
+        {
+            return Run(command.RequestId, command.Source, command.ExpectedRevision, command.ReadSet,
+                reads => TitleSpatialCommitPolicy.Freeze(command with { ReadSet = Required(reads) }),
+                (frozen, snapshot) => ReferenceEquals(lease.Issuer, this) && lease.Matches(frozen) &&
+                    _titleRuntime?.ValidateTitleStart(frozen.Trace.Start, frozen.ReadSet) == true
+                    ? TitleSpatialCommitPolicy.PrepareAttested(frozen, snapshot, lease.Start.Initial, lease.Checkpoint)
+                    : StateMutationPlan.Reject(StateCommandStatus.ValidationFailed, "Title runtime witness expired or mismatched."));
+        }
+        finally { lease.Dispose(); }
+    }
 
     private static StateReadSet Required(StateReadSet? reads) => reads ?? throw new ArgumentException("Entity read set is required.");
 
@@ -176,7 +236,8 @@ public sealed class StateProjectionCoordinator(
         if (state.Settings.Revision != state.Revision || state.Catalog.Posters.Any(p => p.Revision != state.Revision))
             throw new InvalidDataException("Projection inputs must come from a single committed revision.");
         var posters = state.Catalog.Posters.Select(p => new PosterSurfaceProjection(
-            state.Revision, p.PosterRevision, p.Poster, !p.Poster.IsLocked, !p.Poster.IsLocked && !p.Poster.IsCollapsed, true)
+            state.Revision, p.PosterRevision, p.Poster, !p.Poster.IsLocked && !p.Poster.PlacementPending,
+            !p.Poster.IsLocked && !p.Poster.IsCollapsed && !p.Poster.PlacementPending, !p.Poster.PlacementPending)
             { EntityVersion = p.EntityVersion, LayoutGeneration = p.LayoutGeneration, LastLayoutOperationId = p.LastLayoutOperationId }).ToList().AsReadOnly();
         var byId = new ReadOnlyDictionary<string, PosterSurfaceProjection>(posters.ToDictionary(p => p.Poster.PosterId, StringComparer.Ordinal));
         // Transitional selection alias, never the identity used to route a target command.
@@ -186,13 +247,14 @@ public sealed class StateProjectionCoordinator(
         var center = new ControlCenterProjection(state.Revision, selected, settings)
             { Posters = posters, PostersById = byId, CatalogVersion = state.Catalog.CatalogVersion };
         int locked = posters.Count(p => p.Poster.IsLocked);
-        int visible = posters.Count(p => p.Poster.IsVisible);
+        int visible = posters.Count(p => p.IsEffectivelyVisible);
+        int pending = posters.Count(p => p.Poster.PlacementPending);
         PosterLockSummary summary = posters.Count == 0 ? PosterLockSummary.Empty : locked == 0 ? PosterLockSummary.None :
             locked == posters.Count ? PosterLockSummary.All : PosterLockSummary.Some;
         var tray = new TrayProjection(state.Revision, posters.Count, summary == PosterLockSummary.All,
             settings.Settings.DynamicEffectsPaused, $"DesktopUp · {posters.Count} 张海报 · {visible} 可见 · {locked} 锁定" +
-                (settings.Settings.DynamicEffectsPaused ? " · 已暂停" : ""))
-            { VisiblePosterCount = visible, LockedPosterCount = locked, LockSummary = summary,
+                (pending > 0 ? $" · {pending} 等待安置" : "") + (settings.Settings.DynamicEffectsPaused ? " · 已暂停" : ""))
+            { VisiblePosterCount = visible, PendingPlacementPosterCount = pending, LockedPosterCount = locked, LockSummary = summary,
                 AutoPostureEnabledPosterCount = posters.Count(p => p.Poster.AutoCollapseEnabled) };
         return new(state.Revision, selected, center, tray) { ProfileInitialized = state.Catalog.ProfileInitialized,
             SpatialOperations = state.SpatialOperations, SpatialContinuities = state.SpatialContinuities };

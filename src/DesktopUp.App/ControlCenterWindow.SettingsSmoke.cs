@@ -13,25 +13,38 @@ namespace DesktopUp;
 // Only called by --auto-settings-smoke with the isolated-profile guard in App.
 public sealed partial class ControlCenterWindow
 {
-    internal ControlCenterAutoPostureEditor SettingsEditorForProbe => _autoEditor;
     internal bool SettingsControlsEnabledForProbe => AutoPostureSwitch.IsEnabled && AutoPostureDelay.IsEnabled;
-    internal bool SettingsWarningForProbe => AutoPostureInfo.Severity == InfoBarSeverity.Warning;
+    internal bool AppearanceControlsEnabledForProbe => _template.IsEnabled && ScaleSlider.IsEnabled && SpacingSlider.IsEnabled;
+    internal void TemplateForProbe(string key) => _template.SelectedItem = key;
+    internal void SpacingForProbe(double value) { _settingsHeld = true; SpacingSlider.Value = value; }
+    internal object PresetDiagnosticsForProbe() => new { scaleMinimum = ScaleSlider.Minimum, scaleMaximum = ScaleSlider.Maximum,
+        scaleValue = ScaleSlider.Value, spacingMinimum = SpacingSlider.Minimum, spacingValue = SpacingSlider.Value };
+    internal ControlCenterSettingsSession CommonSettingsForProbe => _settings;
     internal void SelectSettingsTargetForProbe(string id) => PosterSelector.SelectedItem =
         ((IReadOnlyList<ControlCenterPosterRow>)PosterSelector.ItemsSource).Single(p => p.PosterId == id);
-    internal void EditSettingsForProbe(bool enabled, string text)
+    internal void PreviewScaleForProbe(double value) { _settingsHeld = true; ScaleSlider.Value = value; }
+    internal void FinishSettingsForProbe() { _settingsHeld = false; FinishSettings(); }
+    internal void DelayForProbe(double value) => AutoPostureDelay.Value = value;
+    internal void ToggleForProbe(bool value) => AutoPostureSwitch.IsOn = value;
+    internal void RevealSettingsForProbe() => SettingsTabs.SelectedIndex = 0;
+    internal void RevealBehaviorForProbe() => SettingsTabs.SelectedIndex = 1;
+    internal void PresetForProbe(bool spacing, int index)
     {
-        AutoPostureSwitch.IsOn = enabled; AutoPostureDelay.Text = text;
+        var marks = spacing ? _spacingMarks! : _scaleMarks!;
+        var slider = spacing ? SpacingSlider : ScaleSlider;
+        var point = marks.CenterForProbe(index);
+        _settingsHeld = true;
+        marks.Begin(1, point);
+        slider.Value = marks.Complete(1, point) ?? throw new InvalidOperationException("Preset click missed its native track mark");
+        FinishSettingsForProbe();
     }
-    internal void InvokeSettingsForProbe(bool apply)
-    {
-        Button button = apply ? AutoPostureApply : AutoPostureCancel;
-        if (!button.IsEnabled) throw new InvalidOperationException("Settings button disabled.");
-        var peer = FrameworkElementAutomationPeer.CreatePeerForElement(button);
-        if (peer?.GetPattern(PatternInterface.Invoke) is not IInvokeProvider invoke)
-            throw new InvalidOperationException("Missing native button invoke provider.");
-        invoke.Invoke(); // Real Button automation/Click path, not the draft command directly.
-    }
-    internal void RevealSettingsForProbe() => AutoPostureApply.StartBringIntoView(new BringIntoViewOptions { AnimationDesired = false });
+    internal bool VerifyPresetLayoutForProbe() =>
+        ScaleHost.ActualWidth > 0 && ScaleHost.ActualWidth <= 320 && SpacingHost.ActualWidth == ScaleHost.ActualWidth &&
+        _scaleMarks?.Ready == true && _spacingMarks?.Ready == true &&
+        _scaleMarks.CenterForProbe(0).X < _scaleMarks.CenterForProbe(1).X &&
+        _scaleMarks.CenterForProbe(1).X < _scaleMarks.CenterForProbe(2).X &&
+        ScaleMarks.IsHitTestVisible == false && SpacingMarks.IsHitTestVisible == false &&
+        _scaleMarks.ThumbAlignedForProbe() && _spacingMarks.ThumbAlignedForProbe();
     internal async Task CaptureSettingsForProbeAsync(string path)
     {
         var bitmap = new RenderTargetBitmap(); await bitmap.RenderAsync(Content);

@@ -7,9 +7,9 @@ internal sealed partial class ControlCenterService(
     IStructuredLog log,
     Action<PosterStateCommand> posterCommand,
     Action toggleDynamicEffectsPaused,
-    Action<string?> selectionChanged,
     IStateProjectionCoordinator state, IStateCommandService commands, PosterInputRouter inputRouter,
-    Func<PosterSurfaceProjection, EffectivePosterLayout?> effectiveLayout) : IDisposable
+    Func<PosterSurfaceProjection, EffectivePosterLayout?> effectiveLayout,
+    Func<PosterSpatialRuntime?>? spatialRuntime = null, PortableProfileController? portable = null) : IDisposable
 {
     private ControlCenterWindow? _window;
     private IDisposable? _lease;
@@ -17,12 +17,15 @@ internal sealed partial class ControlCenterService(
     private readonly ControlCenterSelection _selection = new();
     private IReadOnlyList<PosterSessionSnapshot> _sessions = Array.Empty<PosterSessionSnapshot>();
     private bool _environmentPending = true;
+    private bool _globallyHidden;
     private string? _commandError;
     private readonly PosterRemovalConfirmation _removal = new();
     private bool _removalShowing;
     private bool _disposed;
     private IDisposable? _removalLease;
     public string? SelectedPosterId => _selection.SelectedPosterId;
+    public Task CancelPortableAndWaitAsync() => _window?.CancelPortableAndWaitAsync() ?? Task.CompletedTask;
+    internal ControlCenterWindow? WindowForPortableProbe => _window;
     // Includes async show/dismiss: cancelling the ticket is not proof the dialog has closed.
     public bool IsRemovalInteractionActive => _removalShowing;
     public event Action? RemovalInteractionChanged;
@@ -46,8 +49,25 @@ internal sealed partial class ControlCenterService(
                     toggleDynamicEffectsPaused, RequestRemoval, effectiveLayout);
                 stage = "load-xaml";
                 pendingWindow.InitializeView();
+                pendingWindow.ConfigureEditing(() => state.TryGetCurrent(out var p) ? p : null,
+                    id => spatialRuntime?.Invoke()?.ReadControlCenterGeometry(id),
+                    request =>
+                    {
+                        if (spatialRuntime?.Invoke() is { } runtime) runtime.ApplyControlCenterGeometry(request, ShowCommandResult);
+                        else ShowCommandResult(Unavailable(request.RequestId, request.ObservedRevision));
+                    }, request =>
+                    {
+                        var result = spatialRuntime?.Invoke()?.ApplyControlCenterCatalog(request) ?? Unavailable(request.RequestId, request.Revision);
+                        ShowCommandResult(result);
+                        if (result.Succeeded && result.ResultPosterId is { } id) SelectPoster(id);
+                    });
                 stage = "apply-projection";
-                if (_selection.BuildView(_sessions, _environmentPending) is { } initialView)
+                pendingWindow.ConfigureUsability(
+                    edit => spatialRuntime?.Invoke()?.PreviewControlCenterSetting(edit) == true,
+                    () => spatialRuntime?.Invoke()?.CancelControlCenterVisuals(),
+                    id => spatialRuntime?.Invoke()?.LocateControlCenterPoster(id) ?? "桌面尚未就绪。", ledger);
+                if (portable is not null) pendingWindow.ConfigurePortable(portable, ledger, log);
+                if (_selection.BuildView(_sessions, _environmentPending, _globallyHidden) is { } initialView)
                 {
                     pendingWindow.ApplyView(initialView, _commandError);
                     LogProjectionApplied(initialView.Projection);
@@ -99,28 +119,29 @@ internal sealed partial class ControlCenterService(
 
     public void ApplyProjection(ControlCenterProjection projection)
     {
-        string? previousSelection = SelectedPosterId;
         if (!_selection.ApplyProjection(projection)) return;
         _projection = projection;
         _commandError = null;
         if (_removal.Pending is not null && !_removal.IsCurrent(projection))
             CancelRemoval("海报或目录已变化，删除确认已取消；请查看最新状态后重试。");
         Present();
-        if (previousSelection != SelectedPosterId) selectionChanged(SelectedPosterId);
     }
 
-    public void ApplySessions(IReadOnlyList<PosterSessionSnapshot> sessions, bool environmentPending)
+    public void ApplySessions(IReadOnlyList<PosterSessionSnapshot> sessions, bool environmentPending, bool globallyHidden = false)
     {
         _sessions = sessions;
         _environmentPending = environmentPending;
+        _globallyHidden = globallyHidden;
         Present();
     }
 
     public void ShowCommandResult(StateCommandResult result)
     {
         if (result.Projection is not null) ApplyProjection(result.Projection.ControlCenter);
+        if (_window?.CompleteEditing(result) == true) return;
+        if (result.RequestId.StartsWith("controlcenter-edit-", StringComparison.Ordinal)) return;
         if (_window?.CompleteAutoPosture(result) == true) return;
-        if (result.RequestId.StartsWith("controlcenter-auto-", StringComparison.Ordinal)) return;
+        if (result.RequestId.StartsWith("controlcenter-settings-", StringComparison.Ordinal)) return;
         if (!result.Succeeded)
         {
             _commandError = $"{result.Status}：{result.Error ?? "目标已变化，请查看最新状态后重试。"}";
@@ -133,13 +154,19 @@ internal sealed partial class ControlCenterService(
         if (!_selection.Select(posterId)) return;
         _commandError = null;
         Present();
-        selectionChanged(SelectedPosterId);
+        _window?.LocateSelected();
         log.Write("info", "control_center.selection_changed", new { posterId, revision = _projection?.Revision });
+    }
+
+    private StateCommandResult Unavailable(string id, long revision)
+    {
+        state.TryGetCurrent(out var p);
+        return new(StateCommandStatus.Failed, id, revision, p?.Revision ?? 0, p, "空间服务尚未就绪。");
     }
 
     private void Present()
     {
-        if (_window is not null && _selection.BuildView(_sessions, _environmentPending) is { } view)
+        if (_window is not null && _selection.BuildView(_sessions, _environmentPending, _globallyHidden) is { } view)
         {
             _window.ApplyView(view, _commandError);
             LogProjectionApplied(view.Projection);
@@ -202,7 +229,7 @@ internal sealed partial class ControlCenterService(
 
     public async void RequestRemoval(PosterRemovalRequest request)
     {
-        if (_disposed || _removalShowing) return;
+        if (_disposed || _removalShowing || _window?.IsPortableInteractionActive == true) return;
         bool OriginCurrent() => request.Origin is not { } key || inputRouter.IsCurrent(key, request.OriginLayoutRevision);
         _removalShowing = true;
         RemovalInteractionChanged?.Invoke();

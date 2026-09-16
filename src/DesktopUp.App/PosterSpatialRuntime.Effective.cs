@@ -20,7 +20,7 @@ internal sealed partial class PosterSpatialRuntime
         if (!state.TryGetCurrent(out var current) || current is null) return null;
         // The registry resolves unknown/disconnected monitor affinities to the primary display.
         // Use the same monitor mapping, retaining all siblings in this workspace for recovery.
-        var targets = current.Posters.Where(p => p.Poster.IsVisible &&
+        var targets = current.Posters.Where(p => p.IsEffectivelyVisible &&
             (string.Equals(p.Poster.MonitorDeviceName, monitor.DeviceName, StringComparison.OrdinalIgnoreCase) ||
              monitor == _effectiveTopology?.PrimaryMonitor &&
              !_effectiveTopology.Monitors.Any(m => string.Equals(m.DeviceName, p.Poster.MonitorDeviceName, StringComparison.OrdinalIgnoreCase)))).ToArray();
