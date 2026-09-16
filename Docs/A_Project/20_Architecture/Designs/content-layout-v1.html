@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DesktopUp · 内容布局设计 V1</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#edf0f3;color:#142330;font:14px/1.5 "Segoe UI","Microsoft YaHei",sans-serif}button,input,select{font:inherit}button{cursor:pointer}header{padding:26px 34px 20px;background:#fff;border-bottom:1px solid #d9e0e6;display:flex;align-items:center;justify-content:space-between;gap:20px}header h1{font-size:22px;margin:3px 0}small,.eyebrow{font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:#536978}.badge{padding:6px 12px;border:1px solid #bccbd5;border-radius:20px;font-size:12px;white-space:nowrap}.shell{display:grid;grid-template-columns:280px minmax(0,1fr);min-height:calc(100vh - 110px)}aside{background:#fff;padding:24px;border-right:1px solid #d9e0e6}h2{font-size:14px;margin:0 0 12px}.presets{display:grid;gap:8px;margin:0 0 26px}.preset{padding:12px;text-align:left;border:1px solid #d6e0e7;border-radius:10px;background:#f9fbfc}.preset[aria-pressed=true]{border-color:#167b8d;background:#e9f6f6;box-shadow:inset 3px 0 #167b8d}.preset span{display:block;font-size:12px;color:#5d7484;margin-top:3px}.field{margin:16px 0}.field label{display:flex;justify-content:space-between}.field input{width:100%;accent-color:#167b8d}.detail{border-top:1px solid #e1e7eb;padding-top:20px}.detail strong{display:block;font-size:17px}aside p{font-size:12px;color:#536978;margin-top:16px}.toggle{display:flex;gap:9px;align-items:center;margin:22px 0}input:focus-visible,button:focus-visible{outline:3px solid #04a4c4;outline-offset:3px}main{min-width:0;padding:24px 34px 40px}.bar{display:flex;gap:20px;align-items:baseline;justify-content:space-between;margin-bottom:16px}.bar h2{font-size:18px;margin:0}.bar span{font-size:12px;color:#536978}.stage{overflow:auto;display:grid;justify-items:center;align-items:start;background:radial-gradient(ellipse at top,#d7e1e5,transparent 70%);padding:22px 8px 32px;border-radius:16px}.poster{--cols:12;--cell:28px;--gap:8px;width:calc(var(--cols)*(var(--cell) + var(--gap)) - var(--gap) + 52px);padding:26px;background:#f9f6ec;position:relative;isolation:isolate;overflow:hidden;border-radius:15px;box-shadow:0 18px 40px #162b3b24;color:#0c2236}.poster::before{content:"";width:350px;height:350px;position:absolute;right:-145px;top:-180px;background:#c5e6f3;border-radius:50%;z-index:-1}.poster::after{content:"";position:absolute;width:370px;height:700px;left:-280px;top:240px;border:4px solid #bbdcd44d;border-radius:50%;z-index:-1}.poster header{display:block;background:none;border:0;padding:0 0 22px}.poster .title{font-size:40px;line-height:1;letter-spacing:-.04em;font-weight:900;margin:12px 0}.poster .subtitle{font-size:14px;opacity:.7}.native-title{display:flex;justify-content:space-between;font-size:10px;letter-spacing:.06em;opacity:.7;margin-bottom:25px}.grid{position:relative;display:block;width:100%}.grid.show{background-image:linear-gradient(to right,#6ba1ab40 1px,transparent 1px),linear-gradient(to bottom,#6ba1ab40 1px,transparent 1px);background-size:36px 36px}.tile{position:absolute;padding:0;border:1px solid #fff4;border-radius:14px;overflow:hidden;background:var(--bg);color:#173b53;cursor:pointer;box-shadow:0 2px 4px #20394508;text-align:left;transition:none}.tile svg{width:100%;height:100%;display:block}.tile.selected{outline:3px solid #128695;outline-offset:3px;z-index:2}.tile .caption{position:absolute;left:10px;right:8px;bottom:8px;font-size:10px;letter-spacing:.04em;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 4px #fff7}.span-label{display:none;position:absolute;top:6px;left:6px;background:#092535dd;color:#fff;padding:1px 5px;border-radius:5px;font-size:10px}.show .span-label{display:block}.poster footer{font-size:9px;letter-spacing:.25em;text-align:center;padding:28px 0 2px;opacity:.7}.dark{color:#efebff;background:radial-gradient(circle at 55% 0,#372057,#080e19 48%)}.dark::before{background:none;border:2px solid #9759ff66;width:480px;height:480px;top:-240px;right:-12px;box-shadow:0 0 20px #6547b24d}.dark::after{display:none}.dark .title{text-align:center;font-size:29px;letter-spacing:.08em}.dark .subtitle{text-align:center;font-size:12px}.dark .tile{border:1px solid #a7b5ff66;color:#d8effe}.dark .tile .caption{font-size:11px;color:#fff;text-shadow:0 2px 4px #000}.dark .tile::after{content:"";position:absolute;inset:60% 0 0;background:linear-gradient(transparent,#060e2077);pointer-events:none}.dark .tile .caption{z-index:1}.dark .selected{outline-color:#b6a0ff}.wide{--cols:18}.wide .title,.wide .subtitle{text-align:left}.wide .title{font-size:32px}.readout{margin-top:18px;font-size:12px;color:#465b68;min-height:20px}.note{font-size:12px;color:#657985;max-width:820px;margin:20px auto 0}a{color:#166c80}.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:#5d7484;margin-bottom:12px}.legend b{color:#142330}@media(max-width:880px){.shell{grid-template-columns:230px minmax(0,1fr)}aside{padding:18px}main{padding:22px 16px}header{padding:20px}.bar{display:block}.stage{justify-items:start}}@media(max-width:620px){.shell{display:block}aside{border:0;padding:16px}.presets{grid-template-columns:repeat(3,1fr);margin-bottom:15px}.preset{padding:8px;font-size:12px}.preset span{font-size:10px}.detail{display:grid;grid-template-columns:1fr 1fr;gap:12px}.detail h2,.detail strong{grid-column:1/-1;margin:0}.field{margin:0}.toggle{margin:16px 0 8px}aside p{margin:10px 0 0}header{display:block}header .badge{display:inline-block;margin-top:8px}main{padding:16px}.bar span{display:block}}
+</style></head><body>
+<header><div><div class="eyebrow">DesktopUp / Layout foundation</div><h1>一套占位模型，三种海报结构</h1></div><div class="badge">V1 · 设计稿 / 尚未接入产品</div></header>
+<div class="shell"><aside><h2>参考构图</h2><div class="presets">
+<button class="preset" data-preset="icons" aria-pressed="true">01 · 插画图标墙<span>大主卡 · 两张中卡 · 小卡矩阵</span></button>
+<button class="preset" data-preset="covers" aria-pressed="false">02 · 封面层级墙<span>横幅 · 双列 · 三列 · 四列</span></button>
+<button class="preset" data-preset="wide" aria-pressed="false">03 · 横版混排<span>主竖卡 · 次级卡 · 侧栏小卡</span></button></div>
+<div class="detail"><h2>选中卡片 / 调整跨格占位</h2><strong id="selected">ARCANE RIFT</strong>
+<div class="field"><label for="span-x">横向跨度 <output id="x-value">8 格</output></label><input id="span-x" type="range" min="1" max="12" step="1" value="8"></div>
+<div class="field"><label for="span-y">纵向跨度 <output id="y-value">8 格</output></label><input id="span-y" type="range" min="1" max="12" step="1" value="8"></div></div>
+<label class="toggle"><input id="show-grid" type="checkbox">显示基线网格与跨度</label>
+<p>点选卡片可调整跨度，也可把卡片拖到另一张之前改变顺序。这里只验证占位结构，不写入应用配置；不执行文件打开、移动或热度统计。</p>
+<p><a href="../CONTENT_LAYOUT_FOUNDATION_V1.md">布局合同</a> · <a href="../../30_Plans/V3_04_L_CONTENT_LAYOUT_PLAN.md">分步制作计划</a></p>
+</aside><main><div class="bar"><h2 id="mode-title">插画图标墙</h2><span>卡片占位 ≠ 图片缩放 ≠ 热度得分</span></div>
+<div class="legend"><span><b>稳定身份</b> 每张卡片始终保留</span><span><b>不重叠</b> 占位图统一计算</span><span><b>可留白</b> 不强求填满</span></div>
+<div class="stage"><section class="poster" id="poster" aria-label="布局设计海报"><div class="native-title"><span>DESKTOP COLLECTION / 01</span><span>⌄ &nbsp; ···</span></div>
+<header><div class="title">DISCOVER<br>GAMES</div><div class="subtitle">Find your next favourite.</div></header><div class="grid" id="grid"></div><footer>POPULARITY IN PLAY · DEMO CONTENT</footer></section></div>
+<div class="readout" id="readout" aria-live="polite"></div>
+<p class="note">网格是不可见的定位基线，一张卡片可跨多格。设计稿采用固定格距＋稳定顺序首个合法位置，窗口变窄时展示区可滚动，不偷偷缩小内容。正式WinUI版还需完成事务、虚拟化、输入和热更新门。</p>
+</main></div>
+<svg width="0" height="0" aria-hidden="true" style="position:absolute"><defs>
+<symbol id="sword" viewBox="0 0 100 100"><path d="M50 12L59 26V59L50 68L41 59V26Z" fill="#effcff"/><path d="M50 12L59 26V59L50 68Z" fill="#265170"/><path d="M27 64L35 56L50 66L65 56L73 64L65 72L53 68V86H47V68L35 72Z" fill="#153a53"/><path d="M50 81L56 88L50 96L44 88Z" fill="#d8f5ef"/></symbol>
+<symbol id="helmet" viewBox="0 0 100 100"><path d="M20 66Q12 22 52 20Q87 20 86 60L72 81H29Z" fill="#f8f5e9"/><path d="M23 45L70 43Q86 46 67 66L20 66Z" fill="#12354d"/><path d="M53 23L64 26L42 45H33Z" fill="#72baf0"/><circle cx="68" cy="51" r="4" fill="#dffaff"/></symbol>
+<symbol id="robot" viewBox="0 0 100 100"><path d="M50 12V27" stroke="#174361" stroke-width="5"/><circle cx="50" cy="10" r="7" fill="#ef963e"/><rect x="22" y="26" width="56" height="39" rx="13" fill="#174361"/><circle cx="37" cy="44" r="6" fill="#fff5e3"/><circle cx="63" cy="44" r="6" fill="#fff5e3"/><rect x="31" y="69" width="38" height="18" rx="5" fill="#174361"/><path d="M24 74L19 86M76 74L81 86M39 86V93M61 86V93" stroke="#174361" stroke-width="8" stroke-linecap="round"/></symbol>
+<symbol id="leaf" viewBox="0 0 100 100"><path d="M49 85Q42 31 84 19Q83 70 49 85ZM44 78Q10 65 12 43Q46 44 44 78Z" fill="#397e70"/><path d="M44 91L69 40" stroke="#a7d4ba" stroke-width="4"/></symbol>
+<symbol id="peak" viewBox="0 0 100 100"><circle cx="72" cy="28" r="20" fill="#f8d299"/><path d="M9 87L41 22L65 62L76 46L95 87Z" fill="#254d68"/><path d="M29 47L41 22L55 46L43 41L38 49Z" fill="#f3fcff"/></symbol>
+<symbol id="castle" viewBox="0 0 100 100"><path d="M18 42V87H82V42H71V32H62V45H55V23H46V45H36V32H27V42Z" fill="#1b485e"/><path d="M43 87V68Q50 57 57 68V87" fill="#a7d6c4"/><path d="M51 23V8L74 16Z" fill="#e9904d"/></symbol>
+</defs></svg>
+<script>
+const root=document, board=root.getElementById('grid'), poster=root.getElementById('poster');
+const names=['ARCANE RIFT','OVERDRIVE','ATLAS-9','WILD ACRES','BYTE CAVE','SUN TEMPLE','ORBITAL','SUMMIT','PUZZLE','TIDE'];
+const symbols=['sword','helmet','robot','leaf','castle','castle','sword','peak','robot','peak'];
+const colors=['#a6d6bf','#aed8f2','#ffcf9e','#cee6cd','#add5ed','#b7ddd0','#f6ca9b','#bcdbed','#a9d5c7','#bdcbed'];
+let preset='icons',selected=0,items=[],placements=[],cols=12,dragId=null;
+const x=root.getElementById('span-x'),y=root.getElementById('span-y');
+function reset(kind){preset=kind;cols=kind==='wide'?18:12;const spans=kind==='icons'?[[8,8],[6,6],[6,6],[4,4],[4,4],[4,4],[4,4],[4,4],[4,4]]:
+kind==='covers'?[[12,6],[6,5],[6,5],[4,4],[4,4],[4,4],[3,3],[3,3],[3,3],[3,3]]:
+[[5,8],[4,4],[3,4],[4,4],[3,4],[3,2],[3,2],[3,2],[3,2],[6,4]];
+items=spans.map((s,i)=>({id:i,w:s[0],h:s[1]}));selected=0;
+poster.className='poster'+(kind!=='icons'?' dark':'')+(kind==='wide'?' wide':'');
+poster.querySelector('.title').innerHTML=kind==='icons'?'DISCOVER<br>GAMES':'DISCOVER GAMES';
+poster.querySelector('.subtitle').textContent=kind==='icons'?'Find your next favourite.':'Popularity shapes the playfield';
+root.getElementById('mode-title').textContent={icons:'插画图标墙',covers:'封面层级墙',wide:'横版混排'}[kind];
+root.querySelectorAll('[data-preset]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.preset===kind)));
+x.max=cols;render();}
+function solve(){const cells=new Set(),out=[];let cursorRow=0;for(const item of items){let found=null;
+for(let r=cursorRow;r<500&&!found;r++)for(let c=0;c<=cols-item.w;c++){let free=true;
+for(let a=0;a<item.w&&free;a++)for(let b=0;b<item.h;b++)if(cells.has((r+b)*cols+c+a)){free=false;break;}
+if(free){found={...item,c,r};break;}}
+if(!found)throw Error('Bounded layout overflow');cursorRow=found.r;
+for(let a=0;a<item.w;a++)for(let b=0;b<item.h;b++)cells.add((found.r+b)*cols+found.c+a);
+out.push(found);}return out;}
+function render(){placements=solve();board.replaceChildren();board.style.height=Math.max(...placements.map(p=>(p.r+p.h)*36-8))+'px';
+for(const p of placements){let tile=document.createElement('button');tile.type='button';tile.className='tile'+(p.id===selected?' selected':'');tile.draggable=true;tile.dataset.id=p.id;
+tile.setAttribute('aria-label',names[p.id]+', '+p.w+'乘'+p.h+'格');tile.setAttribute('aria-pressed',String(p.id===selected));
+Object.assign(tile.style,{left:p.c*36+'px',top:p.r*36+'px',width:p.w*36-8+'px',height:p.h*36-8+'px'});
+tile.style.setProperty('--bg',preset==='icons'?colors[p.id]:'linear-gradient(150deg,'+['#7855a8','#bc683c','#316b80','#66804a','#345c91'][p.id%5]+',#101d35)');
+const scene=preset==='icons'?'':'<circle cx="78" cy="24" r="22" fill="#e3b4ff" opacity=".35"/><path d="M0 75L26 43L47 64L74 36L100 60V100H0Z" fill="#091936" opacity=".6"/>';
+const caption=p.w>=3&&p.h>=3?'<span class="caption">'+names[p.id]+'</span>':'';
+tile.innerHTML='<svg viewBox="0 0 100 100" aria-hidden="true">'+scene+'<use href="#'+symbols[p.id]+'" x="'+(preset==='icons'?12:20)+'" y="8" width="76" height="76"/></svg>'+caption+'<span class="span-label">'+p.w+' × '+p.h+'</span>';
+tile.onclick=()=>{selected=p.id;render();};
+tile.ondragstart=()=>{dragId=p.id;};tile.ondragover=e=>e.preventDefault();
+tile.ondrop=e=>{e.preventDefault();if(dragId===null||dragId===p.id)return;const item=items.find(i=>i.id===dragId);items=items.filter(i=>i!==item);items.splice(items.findIndex(i=>i.id===p.id),0,item);selected=item.id;dragId=null;render();};
+board.append(tile);}
+const current=items.find(i=>i.id===selected);x.value=current.w;y.value=current.h;
+root.getElementById('selected').textContent=names[selected];root.getElementById('x-value').textContent=current.w+' 格';root.getElementById('y-value').textContent=current.h+' 格';
+root.getElementById('readout').textContent=items.length+' 张 DEMO 卡片 · '+cols+' 列基线 · 选中 '+current.w+' × '+current.h+' 格 · 所有卡片可达，无重叠';}
+root.querySelectorAll('[data-preset]').forEach(b=>b.onclick=()=>reset(b.dataset.preset));
+x.oninput=()=>{items.find(i=>i.id===selected).w=+x.value;render();};y.oninput=()=>{items.find(i=>i.id===selected).h=+y.value;render();};
+root.getElementById('show-grid').onchange=e=>board.classList.toggle('show',e.target.checked);
+window.layoutDesignProbe=()=>({preset,cols,placements:placements.map(p=>({...p})),selected});
+reset('icons');
+</script></body></html>

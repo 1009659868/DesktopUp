@@ -1,6 +1,314 @@
 # V3-04 验证记录
 
+## 2026-09-16：当前V3状态Git同步前检查
+
+用户明确要求同步当前状态至远端；目标为origin/impl/poster-redesign-V3，基线73c7f857bcd4f524c37d48e34046304ae3292795。fetch后HEAD与对应远端0 ahead/0 behind。范围包含此前未提交的标题仲裁/故障验证、中心UX与紧凑滑块、全局托盘、便携配置/恢复与BUG-007，以及04-L01 READY的文档交接；不是只提交本轮文档，也不是发布合并。实现/测试与对应文档采用相邻检查点提交，实际提交与远端结果以Git记录为准。
+
+本轮重新验证：1462/1462合同PASS、0失败/0跳过，结果out/verify/git-sync-v3-04-l-ready/results/git-sync-v3-04-l-ready.trx；独立Release应用构建0警告/0错误，输出同根app。12份变更PowerShell脚本解析通过，git diff --check通过；191个待提交路径只在Docs/src/tests/scripts，常见密钥模式和敏感/二进制文件名检查无命中。它不是全面安全审计，也不将构建通过扩大为新包实机验收。
+
+当前R3运行实例未停止或覆盖；out构建/测试产物、日常库及日志不入库。三个删除项对应已记录的旧ExpansionDrag退役，没有新增删库/清理用户文件。首次暂存检查发现四个新增cs文件末尾多余空行，仅删除空行后检查通过，无逻辑修改；源码/测试/脚本检查点为5219e07，本文件及其余文档在相邻提交记录。BUG-001/006和其他未验余门处置不变，04-L01未实施；不推main/dev/mainline、不打发布标签、不强推。
+
+## 2026-09-16：ABC文档同步（DOC-ONLY，非新一轮功能验收）
+
+按用户要求复核当前A/B/C链及直接引用。修正：04-06计划尾部与交付P1～P9矩阵的旧下一步/BUG-007失败标签；A/B仍将已接UX/便携写成待实施；布局设计将旧v8误作当前基线；登记表的旧候选/PID/待验入口；M08/04-04计划的历史定位。L03本地未知原文保留与便携未知必需版本拒绝两种边界分清，不新增允许未知导入的产品选项。
+
+现有代码只读核对：SqliteStateStore.CurrentSchemaVersion=9，PortableProfileCodec现有LayoutKind/参数外壳，PosterContentPreferences相对尺度输入，PosterVisualWindow的DEMO/视口/R4入口。新CODE_ANCHORS提供可点击复用图，不把设计中的LayoutDocument/求解器当成已交付类型。
+
+本轮不改生产/脚本/数据库/设计稿，不运行App或合同/进程测试，不更改旧计数，不提交推送。当前L01 READY，L02～07 PLANNED；旧余门按DEC-008延期，不补PASS。历史库不整体重写。
+
+检查PASS：17份修订文档＋只读核对的总计划/工作流，共19份；539个本地文件链接（md/cs/ps1/html，含重复引用）目标均存在，0失效。七项状态检查全通过：L01 READY、L02～07未启动、延期不等于通过、P9旧失败/新通过分列、便携当前指向L01、模块UX不再标待实施、schema9基线明确。git diff --check -- Docs通过。本检查不测试网络链接或所有历史片段锚点，也不代替应用验证。
+
+## 2026-09-16：DEC-008主线前移与BUG-007用户结果补登记
+
+用户已在BUG-007独立R3复验后明确反馈“验证通过”；本次按已发步骤补登记USER PASS/关闭该缺陷，不把旧失败删除，也不扩大为他机、普通权限或断电认证。本次未新运行合同/进程/人工测试，原1462合同和29同包门为已有证据，不另计一轮。
+
+用户随后决定跳过前置计划直接进入04-L。已核对现有04-04 UX清理/定位/预览、App.ExitApplication、PosterSessionRegistry及对应测试；这些基础存在，不要求为阶段编号重写。L01/02只依赖有界合同/纯模型，04-06未验余项及04-07/08专项收口登记DEFERRED。当前L01 READY，不声称已交付schema/夹具或生产编辑器。
+
+本次验证限文档状态/依赖和本地链接检查；未改生产、数据库、日常配置、候选或启动脚本，未提交推送。最近下一工作及携带范围见[04-L计划](../../30_Plans/V3_04_L_CONTENT_LAYOUT_PLAN.md)。
+
+## 历史：2026-09-16 BUG-007 CODE/AUTO PASS，当时USER RETEST PENDING
+
+R3 App C0D2873C…，独立Release 0警告/0错误；完整1462合同0失败/0跳过；真实原生8门、既有12托盘/中心/设置、6便携、3离线窗口全部PASS，所有进程退出资源0。原生退出两例163.5483/162.8531ms，数据库字节不变；自动命令触发而非鼠标认证，未执行真实文件选择/覆盖、实际他机或断电。完整hash/路径/范围见[BUG007记录](BUG007_NATIVE_PICKER.md)。
+
+失败不删：R1 PID18544 Close返回S_OK但Show未结束，用户正常取消后资源0；R2 PID50496测试直接Window.Close绕过Closing并资源2，已纠正为中心原生关闭消息和路径断言，R3同场景通过。审批容量拒绝不是命令已执行，用户批准后按审批继续，未绕过或强杀。旧候选/配置/日志均保留，BUG-006未修，无Git同步。
+
+最终PS5.1检查：新picker25指纹/29进程门、旧stable25/21均通过；3个脚本解析及git diff --check通过。已启动R3独立人工lifecycle/PID19436，3会话Ready、error0、isElevated=true；实际鼠标与选择/覆盖/取消结果待用户反馈，退出资源待本批结束。未进行人工结果代填。
+
+## 2026-09-16：P9分项USER PASS／第4项USER FAIL
+
+用户反馈绑定lifecycle/PID12380、App395914F0…：第1项除控制中心位置记忆外通过，第2项弹窗期间关闭中心通过，第3项普通窗口覆盖/Win+D通过；第4项原生选择器期间托盘退出失败，手动关闭选择器后才退出。BUG-006位置记忆按用户要求延期，BUG-007退出等待OPEN；P9不能整体收口。
+
+日志原始时间：application.exit_requested=16:00:42.137141+08:00，desktop_environment.monitoring_stopped=16:01:07.1175219，application.stopped=16:01:07.1797596/activeResources0。说明退出请求已送达且最终能清理，不证明取消及时生效。等待区间仍有桌面事件，未发现对应error/fatal；没有Cancel/完成边界日志，具体SDK取消子原因仍未证实。原进程已退出，未强杀。
+
+静态定位涉及App.ExitApplication、ControlCenterService.CancelPortableAndWaitAsync、ControlCenterWindow.Portable的取消和completion，未改代码/包/配置，未运行新测试。本轮更新缺陷与任务状态，不Git同步；下一步先解决并复验P9-4，不继续P5。
+
+## 2026-09-16：P6收口USER PASS／P9独立场景就绪
+
+用户确认零目录已发五步按预期执行，结合上轮恢复往返，P6记USER PASS。backup日志：PID39620最后revision4/0张，正常退出activeResources=0；PID45824重启仍revision4/0张、正常退出activeResources=0，未发现error/fatal。备份和恢复归档保留，未扩大至P7/P8故障恢复或真实他机。
+
+无DesktopUp进程后启动P9独立lifecycle场景PID12380，3会话Ready/错误0。App395914F0…未改，仅启动器增加独立三张场景；系统PS5.1核对25指纹及6+12+3既有证据通过，不记自动门重跑。当前运行isElevated=true如实记录。原three/pending/backup均保留，未强杀、未Git同步。
+
+P9四组操作仍待用户反馈，结束后再核对资源；未执行原生点击，不以就绪日志代替菜单/取消/层级验收。具体步骤见[交付](PORTABLE_PROFILE_DELIVERY.md)。
+
+## 2026-09-16：P6恢复往返USER PASS／零海报人工待验
+
+用户确认上轮已发步骤“验证通过如预期执行”，绑定395914F0…App与backup目录。实际日志：PID61200正常退出activeResources=0，35196进入离线恢复后退出activeResources=0，39620在原隔离根正常启动revision1、一会话Ready；未见error/fatal。备份`desktopup-20260916-072514-371-r1-control-center.sqlite3`保留，`state/recovery/fb28b85f226d434ea2125eb95e76ddd4/completed-journal.json`为completed，原库归档存在。点击/取消/视觉通过来自用户反馈，日志只作生命周期补证。
+
+当前继续同一恢复后实例的零目录全局入口：用户删除、备份、导入与取消、再次清零并正常退出重启。尚未执行，不补PASS。没有代码/二进制变化、没有重新运行合同或进程门、没有Git同步；three/pending保留。具体操作与下一步P9见[交付](PORTABLE_PROFILE_DELIVERY.md)。
+
+## 2026-09-16：P4 USER PASS／P6人工就绪
+
+用户明确“验证通过如预期执行”，对应P4既定三步：追加后等待安置、未腾空重试不变、删除占位A后原尺寸/锁定展开状态安置。绑定395914F0…App与pending目录，不扩大至实际另一主机/任意多张组合。PID40160的application.stopped记录activeResources=0。
+
+新增启动脚本backup场景，生产App/Fixture不改。系统PowerShell5.1 CheckOnly通过25产物hash和原6+12+3证据；原1455合同证据沿用，不记为本轮重跑。新独立backup目录PID61200正常启动，1会话Ready、错误0，isElevated=true如实登记。未执行实际备份/恢复确认或删除；three/pending保留，无强杀、无Git提交推送。
+
+P6第一段仍MANUAL PENDING：创建→修改→离线选择/确认→正常重启。下一批零目录入口及其余D2独立待验，具体步骤见[交付](PORTABLE_PROFILE_DELIVERY.md)。
+
+
+## 2026-09-16：恢复D2-P4人工场景
+
+用户要求进入下一步，暂停指令结束。样例3/3 PASS（`out/verify/v3-04-06/results/portable-p4-sample.trx`），完整1455/1455、0跳过（`portable-p4-full.trx`）；只增加实际JSON/测试及pending启动分支，未改App/Fixture二进制。系统PS5.1 pending CheckOnly核对25指纹和21同包证据通过。
+
+用户正常退出PID10760后，P4独立目录`out/manual/v3-04-06/pending`首次启动PID40160：1会话Ready、错误0，工作区主屏2560×1392 px、96 DPI，与2480×1320 DIP样例预设相符。原three目录保留。P4真实导入/待安置/删除占位/重试仍待人工，不将纯规划通过写为USER PASS。下一步P4反馈后P6恢复，未Git同步。
+
+## 2026-09-16：首批人工USER PASS／更多菜单微调AUTO PASS
+
+用户明确“验证通过”，对应上一轮已发三项：三海报导出/默认追加、替换取消再确认、正常退出重启。绑定原3DAE8014…包及`out/manual/v3-04-06/three`。P1/P2未发的0/1目录、全部状态/取消点/全局选项不自动补PASS；P3～P9保留未验。
+
+用户认为独立配置按钮突兀并要求放入更多，本轮仅改XAML菜单层级，明确全局、保留零目录可用及全部原处理。正常退出PID33640后备份原包`accepted-before-menu`并构建新App `395914F0204CDF5614639D7B181C1F371EB9B8FB7E85A1B303B3C03ACE02D67C`，0警告0错误。
+
+完整`results/portable-menu-full.trx`1452/1452、0跳过；修订同包12+6+3门通过，退出资源0（目录分别`gates-092d89bc0fc84845a6cd7e366c90159f`、`gates-55ea1421e1964206937de29bfdbb9496`、`recovery-gates-2316fbd920a94a6d95afefb106ed0d03`，均在`out/verify/v3-04-06/`）。新增VerifyMoreMenuForProbe验证真实XAML结构/使能状态，不模拟点击确认恢复。系统PS5.1入口25指纹、21证据通过。用户要求暂不进入下一步，保留剩余人工项；不Git同步。
+
+## 2026-09-16：04-06 D1最终同包通过／D2人工待验
+
+- 完整合同`out/verify/v3-04-06/results/portable-full-r2.trx`：1452/1452 PASS，0跳过；App/SessionFixture Release0警告0错误。新增6项同代次恢复请求用例，定向注册55/55。
+- 最终App SHA256 `3DAE80145BBDCD3CDCA34B5FA48C35B0111BFD95D786963801BAD2BA1975591C`；Fixture `1AFD3E9889371B524F83DC94DC73B5FDB5920D91BA0120CAC246AA17884B1DF9`；候选路径`out/verify/v3-04-06`、25指纹`scripts/portable-candidate.json`。
+- 6项portable、12项tray/controls/settings/restart、3项offline窗口均PASS，每进程退出资源0。最终结果分别`gates-329441c60ce24963bd9e74b38890e37c/results.json`、`gates-330d5719de2246f6a82f622e9f095f99/results.json`、`recovery-gates-6ac6375aa5d34bd2932d56467f9856ab/results.json`（均在该候选根目录）。三份*-gates-passed证据供启动器读取。
+- 真实Windows PowerShell5.1执行`start-portable-manual.ps1 -CheckOnly`通过：25产物、6+12+3门、同一hash。不要求管理员，不使用旧包fallback；重复人工启动保留独立库。
+- 初次三海报导入6张窗口仅3张输入就绪。Suspend清空旧输入，但同代次/附着未变而跳过Recover；新增每请求见证，复用原窗口Recover重新发布输入，最终日志6/6。两轮失败日志、原候选副本保留，未降低夹具就绪判据。
+- 离线脚本备份根修为state/backups；corrupt用例精确验证两层SQLite Error26日志。恢复门只读：库/备份字节未变、不执行恢复；pending存在时禁止正常启动/普通恢复。实际服务替换/归档/中断回滚由25项恢复合同单独验证，不能冒称窗口点击或真实断电。
+
+用户已正常退出旧程序，未强制结束进程、未动日常配置；当前停D2人工P1～P9。范围、失败日志和启动命令见[交付](PORTABLE_PROFILE_DELIVERY.md)。实际另一主机/原生文件选择/恢复确认仍待验，无Git提交推送。
+
+## 历史：2026-09-16 04-06生产接线构建／当时等待旧进程退出
+
+- 完整合同`out/verify/v3-04-06/results/portable-full.trx`：1446/1446 PASS，0跳过；Release App及SessionFixture均0警告0错误。
+- 当前独立候选`out/verify/v3-04-06`，App SHA256 `9EC9C5B1BA62E0496EE16A6C7CD0C5E278497F911D5D6092FB3533A7E37D85F3`；25指纹清单`scripts/portable-candidate.json`。
+- 已用系统Windows PowerShell5.1运行`smoke-portable-profile.ps1 -CheckOnly`：READY/NOT EXECUTED；`start-portable-manual.ps1 -CheckOnly`在校验产物后因缺`portable-gates-passed.json`拒绝，符合缺门不放行。
+- 6便携配置＋12原托盘/控制中心＋3离线恢复窗口门尚未执行：旧PID53204仍在，未结束旧程序、未动原数据。此候选尚未获进程或人工PASS。
+- 静态审查补关闭竞争：中心portable忙时Closing取消并等待；lease归还后才释放owner，退出主动取消SDK picker；离线恢复busy保护和未初始化存储边界保留。原生点击/取消仍需P9，代码审查不代替实测。
+- SDK新picker首编译暴露项目`DesktopUp.Windows`遮蔽系统Windows命名空间，改`global::Windows.Foundation`后0警告错误。未通过升级依赖绕过，未改原空间策略/R4。
+
+下一步用户正常退出旧程序后执行21门，成功再进入D2的P1～P9；真实他机和真实断电未实测。无Git提交推送。
+
+## 2026-09-16：04-06分项自动证据／最终同包与人工门待续
+
+用户确认V2-TBD-021：空间不足全部保留、暂不显示且明确待处理；与IsVisible意图分开。已知分项：47模型、46文件/离线恢复、19待安置、19导入事务；最终总数/候选/实际进程由主代理整合后另记，不把各次构建快照直接相加冒充同包总数。
+
+待安置中间全量`out/verify/v3-04-06/results/pending-foundation-full-r2.trx`为1376/1376、0 skipped；事务`portable-import-transactions.trx`为19/19。首轮`pending-foundation-full.trx`15失败保留：旧schema断言/旧列比较/历史wire未排除新增字段，经历史语义修正后通过；新增缺列/非法bool守卫，不降低生产校验。
+
+[04-06交付草案](PORTABLE_PROFILE_DELIVERY.md)已列P1～P9，A/B/C生产整合和D1最终同包门仍进行中；D2人工、真实他机、多屏混合DPI及真实断电未获证据，均不能补PASS。已有托盘/布局统一USER PASS只覆盖旧范围。下一步完成D1并绑定候选，再交D2人工；未执行Git同步。
+
+## 2026-09-16：布局统一候选三项人工USER PASS
+
+用户确认上一轮三项验证通过：已有“新海报2”外观可编辑、中心/托盘新增可编辑、正常退出重启保持修改。对应layout候选App SHA256 0E2C5250708A555AF94DEB76E459921FF155C516E20AE0C80BEE494563012C5A；BUG-005在此范围关闭。原托盘人工通过保留，不扩大至BUG-001/004或M08余门。
+
+用户认可布局设计稿并明确采纳两个独立显示开关，已登记DEC-007及04-L设计/计划。本次仅文档记录，未修改产品/原型、未重跑构建、未执行Git同步。04-06目前完整分项见主工作流§5.1，尚无独立专项计划，A详细合同仍待开始。
+
+## 2026-09-16：布局统一修复与真实旧库副本迁移
+
+完整1315/1315（0 skipped）、独立Release App/Fixture 0警告0错误；0/1/3张各exercise/restart/controls/settings共12 PASS、退出资源0。新增实际模板/尺度/疏密控件链及同库重启保存验证，不冒充原生鼠标。真实PS5.1入口25指纹/12门PASS。证据、SHA256、首轮测试假设错误及修正见[布局统一交付](LAYOUT_UNIFICATION_DELIVERY.md#2-自动证据)。
+
+旧global/three只读复制到layout/three；PID51808正常迁移7→8、revision18→19后退出0资源；仅问题新海报的layout_kind和必要版本时间变化，其他实体/参数/状态/空间及原库不变，迁移前备份与旧posters一致。原PID57844用户已正常退出。托盘既有人工通过保留，新增外观三项复验待用户。
+
+离线设计稿通过三预设/跨格改动/不重叠/窄屏/脚本异常检查；它只证明DEMO设计，不证明WinUI编辑器或真实热度。04-L当前为设计/计划；本轮未执行04-06-A或Git同步。
+
+## 2026-09-16：用户托盘人工通过；BUG-005只读诊断
+
+用户确认05-05当前人工验证通过；另报新海报2外观禁用。生产新增grid→策略要求adaptive-grid→CanEdit=false已确认；SQLite mode=ro/query_only读取实际隔离库，A/B/C为adaptive-grid，新海报2为grid/basic-box且v1参数合法。登记[BUG-005](KNOWN_ISSUES.md)，原1302/12项未覆盖新增后外观编辑链路。
+
+只按托盘清单范围记录USER PASS，不关闭BUG-005或BUG-001/004/M08等既有余门。本轮未改源码/用户库/候选，未构建或运行新测试，未提交/推送。
+
+## 2026-09-15：05-02/04实现与05-05同包自动门
+
+见[托盘交付](TRAY_DELIVERY.md)：旧4例退役、新12例，最终1302/1302、0 skipped；App/Fixture Release均0警告0错误。0/1/3张各托盘、重启、中心、设置共12项进程通过，退出资源均0，PS5.1独立人工入口25项指纹/12项证据校验通过。故障TRX、PID15404的Starting误断言及PS5.1嵌套数组定位保留，未以降低安全要求消除失败。
+
+实际App SHA256 B4EF7340540E0D8F26571B9CE4DE349AE691C808366B6D90F0FC26585A9D5C80，证据out/verify/v3-04-05-global/gates-b397de032d45400e926ed41ee9307faf。NativeMouse=false、系统通知模拟，人工G1～G8待验；不冒充GPU/DPI/真实Explorer重启通过。旧包/日常配置保留，未commit/push；BUG-001/004不关闭。
+
+18:08人工入口真实PS5.1启动成功：PID17764、独立three数据、三会话ready、无启动error/fatal，中心未自动打开。权限日志isElevated=true，不冒充普通权限门；G1～G8仍PENDING。
+
+## 2026-09-15：DEC-006文档对齐与静态代码审查
+
+本轮只修订需求/架构/专项计划/导航与[审查报告](TRAY_SCOPE_AND_CODE_AUDIT.md)，冻结六类整体托盘入口，05-03取消；05-02安排旧专用入口/单张辅助退役及安全新增。调用检索确认单张辅助和SetGloballyHidden未接生产；动效当前仅按钮反馈直接消费。备份/生命周期/宏观参数是复用基础，不是未来完整产品能力。
+
+未改源码/测试、未构建或运行DesktopUp、未改候选/配置、未commit/push；下面1294/构建为此前基础证据，含4例即将退役的单张托盘测试，不补为新菜单通过。BUG-001/004与既有未验范围保留。文档检查：本轮16份文档、420个本地文件链接路径全部存在（不含锚点渲染验证）；CRLF感知git diff --check通过，活动托盘引用已核对；不是功能验证。
+
+## 2026-09-15：04-05基础合同与独立构建
+
+见[托盘计划/证据](../../30_Plans/V3_04_05_TRAY_PLAN.md#自动证据2026-09-15)：新增11项，全1294/1294、0 skipped；WinUI Release0警告0错误。out/verify/v3-04-05/results/tray-foundation-full.trx；foundation-app/DesktopUp.dll SHA256 6CB008940CF26296A66ED7664196963AFEB4D6B35FF2B4173F4549DB9A781167。首轮定向收起锚点误断言失败保留并说明，未改空间生产规则。
+
+仅合同/隔离仓储及构建，无本轮原生进程/鼠标/画面门；没有启动或停止旧应用、覆盖候选或Git提交。生产托盘接线尚未做，05整体仍IN PROGRESS，BUG-004非阻塞但未修复。完整工作树CRLF感知diff检查通过（换行提示不等于错误）。
+
+## 2026-09-15：滑块节点修订
+
+滑块文档完成后，依次只读检查列表行record、ItemsSource赋值点、当前依赖默认过渡及旧PID30652日志；结论/反例边界见[BUG-004](KNOWN_ISSUES.md)。列表生产实现未修改，未将闪烁标PASS。
+
+[详细证据](CONTROL_CENTER_SLIDER_REFINEMENT.md)：1283/1283、0 skipped；app/fixture Release均0警告0错误。gates-a30e0c7cddf9415dbbab0875350a6119六组controls/settings各0/1/3全部PASS，正常退出资源0；实际原生thumb与点位对齐、精确预设单次提交、真实XAML已验。DLL EE3C5F1A10A741EE911808646F5E5E2BFDA9968262D8C1B49A91BFDBF082FBDA。
+
+初次加载失败的调用栈确认XBF将0.8保存为float32；改从既有Domain合同设置double边界/预设，不放宽验证。稳定截图已阅；NativeMouse=false，真实点选、窄窗口及GPU视觉仍待人工。旧包/配置/失败证据保留，未commit/push。下一步按用户顺序排查列表闪烁，不先实施其修复。
+
+## 2026-09-15：UX-05最终同包六组PASS，人工待验
+
+- [实施记录§4/5](CONTROL_CENTER_USABILITY_DELIVERY.md#4-最终自动证据与修订经过)记录失败演进、最终指纹和场景。gates-4461eca8e7ff4231bcde57fd198f31b4：controls PID58180/57396/35744，settings PID5300/25132/32192，分别0/1/3张，全部PASS、正常退出资源0，nativeMouse=false。
+- 本次完整合同重跑ux05-final.trx：1265/1265、0 skipped、13秒；最终Release 0警告0错误。DLL C27880F459D20A2DDB02926B35F21A606DF6431689860BB958261543F4B658C6，25项绑定更新并预检通过。
+- 最终验实际预览/提交XAML、定位前台/owner/前一层窗口/样式/可信Bounds/revision不变、提示自然结束；外观/行为/高级稳定RenderTargetBitmap已阅。截图不当真实鼠标/GPU合成证据。
+- 初轮未加载Expander控件、次轮COM计时器重入致提前退出/资源3、增强断言后float32读回差异均保留；按实际机制修订夹具和只读断言，未放宽业务保护。诊断的NaN输出错误、过渡截图也保留说明。
+- 旧PID57612按用户确认正常退出。人工PID30652已启动，三海报隔离配置保持auto-OFF初值；U1～U7待用户验证，BUG-002/003不关闭，BUG-001/M08余门不变。未修改日常配置或执行Git提交/推送。
+
+## 历史：2026-09-15 UX纯模型、接线与构建
+
+- [UX实施记录](CONTROL_CENTER_USABILITY_DELIVERY.md)及[当前计划](../../30_Plans/V3_04_04_CONTROL_CENTER_PLAN.md)。基线1236；UX-01新增28达1264；UX-02追加8项实际几何/事务并退役缩略专用7项，最终1265/1265，0 skipped。
+- out/verify/v3-04-04-ux/results/ux-full.trx为最终完整证据（14秒）；ux01-full.trx保留1264阶段证据。初次新增测试环境属性写错RuntimeId导致编译失败，按真实合同修为RuntimeSessionId后重跑，未放宽生产校验。
+- app/fixture独立Release均0警告0错误；25项新绑定、PowerShell5.1启动预检通过。旧PID57612仍运行，未启动新包、未执行六组控件/进程门，nativeMouse/GPU视觉均未验证。
+- 删除旧缩略专用模型/读取/比例断言，保留旧包及旧报告；生产常用Apply/Cancel改自动提交，旧专用UI烟测按新规则替换。仅此范围清理，没有清空全库测试。
+- UX-05下一步等待旧版正常退出，运行scripts/smoke-control-center-usability.ps1，自动门通过后才给人工入口。BUG-002/003不提前关闭，BUG-001和M08失败/余门不变；未commit/push。
+- 收尾静态检查：90份Markdown、676个相对文件链接、缺失0；两个新PS5.1脚本ParseErrors=0；CRLF感知git diff --check退出0。旧预览/Apply控件生产引用扫描无残留。
+
+## 历史：2026-09-15 人工反馈归档与DEC-005文档对齐（当时未实施UX）
+
+- 用户报告旧G1预览/G2初始几何失败；其余描述范围通过，具体归属见[交付报告](CONTROL_CENTER_DELIVERY.md)，不把粗粒度反馈扩成每个环境/子例认证。
+- BUG-002：静态确认fallback字段与运行锚点位置分源；宽高差异尚需分别核对。BUG-003：等比居中＋同色整画布留白解释边界误导。没有新增原生测量或宣称已修好。
+- A需求/DEC-005、B可用性设计、C的UX顺序与历史适用性标签已对齐。下一步UX-01纯合同/事务验证，非生产接线。
+- 本轮仅文档；未运行构建/合同/产品/鼠标验证，未改源码、测试、候选绑定、日常配置或Git提交推送。1236是旧自动证据；BUG-001与M08余门保持。
+- 文档检查：89份Markdown、662个相对文件链接、缺失0；CRLF感知git diff --check退出0。复核活动入口与预览验收条款，替换残留旧要求；历史证据保留并标明适用范围。首次rg路径通配符写法已改正并重查。未运行产品测试，不把文档检查当实现PASS。
+
+## 历史：2026-09-15 V3-04-04-02～06自动门通过，交付时人工待验
+
+- [交付/范围/人工清单](CONTROL_CENTER_DELIVERY.md)；新增31项，完整1236/1236，0 skipped；Release/fixture构建0警告0错误。
+- results/full-compatible.trx为最终1236合同证据；full-final.trx是此前1233通过，full.trx保留夹具工作区身份不一致的首轮1232/1233反例，修正夹具而非放宽生产规则。
+- 最终DesktopUp.dll SHA256 F7177D45824C0FBD74ED9C8FC88C182ACFAD1D10C92F1E7F0C3BB5666F7E4ED7；PowerShell5.1运行scripts/smoke-control-center-editing.ps1，0/1/3同包各4次开窗、activeResources=0，nativeMouse=false。
+- 证据out/verify/v3-04-04-06/gates-d8f7d0165272473985d8c11abc969b7f/{0,1,3}：0组创建/投影、1/3组真实控件/草稿/参数/几何及在途版本冲突恢复，均正常退出。人工G1～G7仍待验；不把截图或HWND读回当GPU视觉PASS。
+- scripts/start-control-center-manual.ps1 -CheckOnly在PowerShell5.1核对25项绑定通过；不启动人工进程，未改日常配置，旧包绑定与V3-BUG-001/M08余门不变，未commit/push。
+
+## 2026-09-15：V3-04-04-01纯模型/隔离事务通过
+
+- 范围：[编辑合同](CONTROL_CENTER_EDIT_CONTRACT.md)；未接控件/原生提交，未修改标题缺陷代码。
+- 基线1152/1152；新模型41/41；事务首轮11/12，NotFound缺独立投影时未清目标，反例修订后新53/53；完整1205/1205，0 skipped。
+- 独立WinUI Release x64构建成功，0 warning / 0 error。out/verify/v3-04-04-01/results/{baseline,editor-first,transactions-first,editor-transactions,full}.trx及app/为本步证据。
+- 实际SQLite覆盖：参数多字段单revision/三端一致、重入/重放/重开，无关实体与设置更新不冲突，同目标/完整空间读集冲突、SQL故障字段/head/receipt回滚、删除至零/迟到结果、NoChange不增revision。
+- 仅测试GUID独立库并清理自建临时目录；未运行产品、不更换正式绑定、不改日常配置，未commit/push。新增NotFound缺口不是V3-BUG-001根因；M08/原生/资源余门保留。下一项04-04-02。
+
+## 历史：2026-09-15用户确认缺陷未解决，暂停修复并准备主线
+
+本段为01实施前历史；当前新增结果见上节，不改变原Bug失败结论。
+
+同日后续审查：完善Bug总表及[实现/计划差异记录](V3_04_IMPLEMENTATION_PLAN_AUDIT_2026-09-15.md)，静态追踪真实控件→命令→策略/仓储、托盘投影与已有测试源码，修正托盘汇总仍被列为待新增的描述。未构建、未启动应用、未执行测试或变更生产代码/配置；“代码已有”不是新一轮PASS，不改变M08/缺陷状态。
+
+拖动回起点、同一次长按失效、必须再次按住，登记[V3-BUG-001](KNOWN_ISSUES.md)。新PID/指纹/日志未提供，不猜测根因，不以1152合同/八项R4覆盖人工失败。
+
+按V2-DEC-004仅更新缺陷台账、活动计划和交接，准备[04-04-01](../../30_Plans/V3_04_04_CONTROL_CENTER_PLAN.md)；未改生产代码/配置/候选绑定，未运行应用或回归测试，未commit/push。M08未验收完成，TI-04修复暂停，TI-05/其他余门不补PASS。
+
 本文件按日期/产物追加验证事件，保留当时结果；当前阶段与下一项查[HANDOFF](HANDOFF.md)。旧事件中的“当前/待验/PID”只描述当时观测，不是今日任务指令，也不保证进程仍运行。
+
+## 2026-09-14：TI-04 最新位置与分类中止，合同/组件通过，实机门保留
+
+- 用户已补充：首次拖动成功，快速拖动且左键未松开时偶发回起点；PID14408已正常退出，旧surfaceApplied=false不能归因为失焦/捕获丢失。
+- 最新位置RED 2项、封段边界RED 1项均已取得；完成小合同、连续测试后接生产；最终1152/1152，0 skipped，WinUI/fixture Release x64均0警告0错误。
+- 新包safe-stop：R4八项PID14772 PASS、exit0/clean0；生命周期exercise PID59288（3→0）及restart PID44952（0）PASS，ObservedOutside=false。原生组件与局部通知不代替真实标题捕获/在途门。
+- 自动回归PID3932未通过：Unavailable、0请求/0提交、超时退出，clean0。具体Ready/Visible/Unknown原因未细分；新包不以旧版本PASS代验。
+- 独立候选25项CheckOnly PASS；旧handoff清单另存旧包根，正式M08/R1的25项只读复检PASS，未改绑。新人工普通入口启动检查审批容量失败、未实际执行，配置未创建。
+- 证据、准确指纹、取消语义及下一步见[TI-04§7](M08_TI04_ISOLATED_GATES.md#7-最新位置与安全中止2026-09-14)。无强杀、无用户文件/日常库修改、无commit/push；不进入TI-05，0/36不变。
+
+## 2026-09-14：TI-04 人工反馈其他异常，根因仍待确认
+
+PID14408：有展开中接管50帧/HasUserMoved/Status0样本；另一次Expanded拖动3帧后surfaceApplied=false，触发generation-or-native-batch取消并恢复成功，其余batch布尔项true。尚缺window/client/HRGN细分读回，不能把合并错误名当作代次变化结论。用户未描述实际操作/画面，已追问，三项不记PASS；只读排查，没有新改生产代码或停止当前候选，不进入TI-05。
+
+## 2026-09-14：TI-04 用户执行七项R4 GREEN，修订候选启动/同库重启通过
+
+用户提供PID50188 PASS；读取相同profile日志，七项含handoff-reuse/grow全部通过、Revision3不变、无写库、布局释放；台账08:02:43 UTC clean/0，用户脚本ExitCode0。结合PID58304精确RED，原生容量/visible守卫修订组件门通过，不等于真实首按capture通过。
+
+同一App指纹8B62D760…1F9FC194未重建；fixture最终统一Release x64。25项候选指纹只有App不同，启动器改绑修订包/新manual根；旧指纹另存旧包内，正式M08/R1入口不变。PS5.1 CheckOnly PASS；启动PID56300及重启PID54160正常退出、无error/critical、clean/0、退出后DB指纹完全一致，详见[TI-04§6](M08_TI04_ISOLATED_GATES.md#6-修订green与当前原生标题入口2026-09-14)。App OS退出码未单独持句柄读回，不冒称该字段已验。
+
+当前普通产品候选PID14408已打开，用户三项首按/Pending/释放抑制验证PENDING。computer-use本轮仍初始化1385，未合成输入绕过；未重新运行纯合同集（上轮1105已验，生产源码未再改）、未采资源、不进入TI-05、未commit/push。
+
+
+## 2026-09-14：TI-04 首次接管原生RED已复现，GREEN被工具环境阻挡
+
+用户确认旧版退出，PID18172台账clean/0；无运行DesktopUp。独立未修复包PID58304通过原五项，handoff-reuse在CommitSpatialFrames(SurfacePreparation)断言retained R4 surface rejected during title handoff，脚本如预期退出1；App正常退出activeResources0。未执行grow，不能冒称两个RED均取得。日志路径及准确范围见[TI-04§5](M08_TI04_ISOLATED_GATES.md#5-首次标题接管失败定位与修订2026-09-14)。
+
+修订包GREEN配置尚未创建：同一安全生成命令多次遭审批服务容量错误拒绝，未实际运行；computer-use初始化1385、重置重试遭审批容量拒绝，未执行鼠标操作。没有绕过限制、强杀、覆盖旧包/日常配置或更新候选绑定；本轮新增的是故障复现证据，不是修订通过证据。下一步继续TI-04七项组件和真实首按门，不进入TI-05；未commit/push。
+
+## 2026-09-14：TI-04 首次接管缺陷已定位并修订，新增原生回归PENDING
+
+旧候选PID18172日志：同源自动收展移交后报Title R4 surface preparation failed，title_finished为Status7/AcceptedFrames0/samples0/HasUserMoved=false并恢复；第二次从Compact开始的title成功，Status0/AcceptedFrames50/HasUserMoved=true。结合VerifyVisualSurface的HWND/client/HRGN精确检查，根因是SurfacePreparation错把逻辑可见区当已有原生容量；此前五项组件仅从静态表面开始，未覆盖复用活跃R4租约。
+
+本修订分离已有原生容量与可见裁切，扩容时保留前驱容量直到新原生准备成功，所有原安全检查/事务/输入通道不变。新增handoff-reuse/grow组件用例，已编译但尚未运行；旧进程仍在，等待托盘正常退出，不强杀。
+
+RED与修订独立App构建0警告0错误；修订全合同1105/1105、0 skipped、exit0，报告`out/verify/v3-04-m08-07-ti04-handoff/tests/ti04-handoff-full.trx`。初次命令虽1105测试通过，但TRX参数未引用导致shell退出1，已纠正并重新执行，最终引用后命令exit0；不把首次非零命令当完整成功。
+
+Computer-use初始化/重置重试均报CreateProcessWithLogonW1385，未执行真实鼠标动作；未绕过工具注入输入。R4新增回归、first DOWN→MOVE→UP、画面与生命周期仍PENDING，详情见[TI-04§5](M08_TI04_ISOLATED_GATES.md#5-首次标题接管失败定位与修订2026-09-14)。R1正式入口及TI-04旧候选绑定未换，本轮不进入TI-05；未commit/push。
+
+
+## 2026-09-14：M08-07-TI-04分段证明/隔离组件/既有进程分项PASS，原生标题门OPEN
+
+[TI-04报告](M08_TI04_ISOLATED_GATES.md)记录本步：原整次256样本耗尽取消改为同一运行租约内的有界分段证明，完整接受后独立重放再封段，无逐帧写库；最终完整CAS/单revision。新25/25、全1105/1105、0 skipped，App/fixture Release0警告0错误。
+
+实际R4组件五场景（部分准备、提交前拒绝、部分组提交、部分结束恢复、完整呈现）两次通过，第二次从Windows PowerShell5.1运行；原生自动与0/1/3/6涉及的生命周期/同库重启共九次最终包进程exit0/clean0。不是实际title capture或TitleRun在途恢复分支验收，也不是GPU像素门。R2-A正确方法名过滤4/4 PASS，第一次按partial文件名筛选0项未计通过，原始TRX保留。
+
+默认输入桌面只读预检正常；computer-use工具启动1385、重试仍退出，未能执行真实鼠标验证，未注入替代输入。候选独立25项指纹与入口已准备；正式人工/测量仍R1，TI-04仍IN PROGRESS，原生标题/在途生命周期及R2-A实机待补，再TI-05。有效资源0/36、06余门不变，未commit/push。
+
+## 2026-09-14：M08-07-TI-03生产接线/适配器自动化PASS
+
+原输入岛TitleInput、同源收展→title capture所有者移交、R4容量/预布局/组提交/统一恢复及可信起点租约已接。新增驱动24项、见证/SQLite13项均首次通过；最终完整1080/1080、0 skipped；独立WinUI Release0警告/0错误。[TI-03报告](M08_TI03_PRODUCTION_TITLE_ADAPTER.md)记录范围、TRX、最终指纹与下一门。
+
+新增测试检查消息合并仍保留阈值、释放不能越过在途帧、快展单终态、Pending无定时动作、部分提交不接受proposal、代次检查、旧token、释放退出证据、见证失效/冒用/篡改及完整CAS。保留motion-budget-exhausted恢复及日志；不能由这些测试推断长拖体验合格。
+
+本步没有启动App、注入真实鼠标或实测动画像素；未换R1绑定、未计资源样本、未commit/push。生产源码包含原R2-A，但其原生复验仍独立。下一项[M08计划TI-04](../../30_Plans/V3_04_M08_AUTO_POSTURE_PLAN.md#41-标题交互修订的最近顺序)补故障/生命周期/长拖压力与固定包；06/07余门与0/36不变。
+
+## 2026-09-14：M08-07-TI-02空间／呈现／事务纯验证PASS
+
+新82项、完整1043/1043、0 skipped，独立WinUI Release 0警告/0错误。[TI-02报告](M08_TI02_SPATIAL_TRANSACTION.md)记录代码单元、样例、TRX及指纹。复用原碰撞/归位/细分与协调器/SQLite，不接生产输入、不换人工包。
+
+新增“上展→半收起→快展→再收起”测试修复前期待Y940、实际Y640，证实半收起帧新建展开种子丢失UpInset/Home；改为反向原接受前缀并保留原关系，最终通过。首轮事务21/22中删除读实体的NotFound被错误预期成Conflict，已对齐原仓储语义；不是改仓储掩盖拒绝。
+
+验证实际高度/扫掠、抓取点、链/分支/合流/反向推动与条件归位、用户介入、30×100种子轨迹/100轮无漂移、8运行失效/9取消、伪造/过期证明、完整CAS、单revision/发布、SQL整组回滚/receipt及同库重读。无关settings-only revision不误冲突。
+
+App/Windows/Domain/Infrastructure、脚本及日常数据未改，未commit/push。真实鼠标、R4画面、恢复及资源仍待TI-03..05；人工绑定R1与资源0/36不变。下一项[M08计划TI-03](../../30_Plans/V3_04_M08_AUTO_POSTURE_PLAN.md#41-标题交互修订的最近顺序)须补可信运行起点/代次门及单所有者移交，不删起点校验。
+
+## 2026-09-14：M08-07-TI-01退役与标题仲裁纯模型PASS
+
+用户要求执行TI-01，并要求每次按步交付给出对应计划和下一步。已将该交付要求记录在README/M08计划/交接。
+先确认旧组合仅由实验测试和专用协调器口引用，App/Windows未接；清理前全921/921通过。10文件当前副本压缩归档后，删除4份旧实现、5份69项旧测试及专用事务口。通用CAS/自动口、原空间/R4/输入及R2-A保留。未跟踪实验也可从归档恢复，不宣称仅靠Git可恢复全部内容。
+
+新增TitleInteractionModel和3组纯测试：仲裁50、连续55、原自动抑制接合4，共109/109首次通过；最终完整961/961、0 skipped，计数为921−69＋109。覆盖按下暂停/阶段固定、5px、释放快展、两类拖动意图、锁定、微抖/长按、重复/身份、9类失效×4状态、10000次不动/微抖、4个DPI参数各1000次反向意图和种子随机序列。独立WinUI Release 0警告/0错误。详情/指纹/归档见[TI-01报告](M08_TI01_TITLE_MODEL.md)。
+
+本项只通过纯意图仲裁及自动抑制接合；没有实际空间帧、邻居移动授权或数据库组合提交，没有新鼠标/画面/资源PASS。未启动App、未替换R1绑定，未修改日常配置或commit/push；06/07余门及有效资源0/36保持。下一步[M08计划TI-02](../../30_Plans/V3_04_M08_AUTO_POSTURE_PLAN.md#41-标题交互修订的最近顺序)补并行收拢/移动、因果、呈现接受及CAS证明，然后才接生产。
+
+## 2026-09-14：标题规则冻结与过时活动文档清理
+
+用户确认五意图方案并要求冻结/调整优先计划、清理否定或过时内容。A层新增V2-DEC-003；DEC-002旧增长默认被替代，TBD-018跟手优先保留，TBD-019按设计替代关闭（不是接受旧特例提议）。新增[TI合同](M08_TITLE_INTERACTION_CONTRACT.md)，冻结按下整组暂停、未拖释放快展、按下阶段固定的收起/展开态拖动及真实离开重入规则。
+
+删除旧M08_EXPANSION_DRAG_CONTRACT文档与18行旧矩阵；R2文档移除200ms/先恢复再拖的否定方案和重复步骤；R3报告保留为HISTORICAL并删除旧接线计划。清理交接中的重复旧待办，对齐需求、决策索引、模块职责、总/细计划、登记和活动入口。源码/测试中的未接线增长实验列入下一TI-01审查退役，不直接删除可复用安全资产。
+
+源码检查确认：StartAutomatic和ToggleCollapsed均进入SetCollapsed，同一SpatialContinuitySolver/SpatialExpansionPolicy、SpatialAnimationSchedule、R4整组呈现及权威提交/恢复；自动只有资格/受限System校验和不足时反馈不同，没有两套展开几何。
+
+本轮仅文档：新TI矩阵全部PENDING，旧921/880项不算新规则通过；人工包仍R1，06/07余门及资源0/36不变。未启动应用、修改日常数据或执行Git同步。本文后续旧事件中的TBD-019待决/旧接线步骤只描述当时，不再作为当前指令。
+
+文档验证：最终18份受影响文档的313个本地文件引用全部存在，已删除合同的Markdown引用为0；旧合同已在HEAD检查点中确认可取回。源码/测试/脚本/配置的原有diff及未跟踪文件指纹对比一致。按仓库原生行尾配置执行git diff --check通过；没有运行新产品测试。
+
+## 2026-09-14：组合连续空间、语义重放与SQLite事务前置
+
+用户要求先补暂缓/恢复连续操作及空间/事务验证，再接生产，外部连点仍独立。新增空间模型、呈现后接受的有界会话、完整语义重放和独立IExpansionDragCommitter；原System自动口未放宽，未改schema或R2-A源码。首次空间测试14中3失败：1条抓取点安全门漏检，2条采样期望错误；分别补帧门和修夹具后原28＋新空间14通过。另新重放6、SQLite17、会话4，最终全量**921/921、0 skipped**。独立WinUI Release **0警告/0错误**，未启动/换包，无新增原生或资源PASS。
+
+证据根`out/verify/v3-04-m08-07-combined`，详见[报告](M08_COMBINED_VALIDATION_R3.md)。100px锁定窄缝/220px夹具最小高度实证无法同时满足原有终态限制，登记V2-TBD-019并询问特例收起，尚无用户决定。当前仅拒绝非法提交，不能声称已解决有限交互结束。因此未接App输入/自动调度移交/R4，原人工入口仍R1；需要决定和适配器门后继续。没有commit/push或日常库修改。
+
+## 2026-09-14：跟手优先决定与文档对齐
+
+后续同日实现见新增事件及[前置报告](M08_COMBINED_VALIDATION_R3.md)；本节“仅文档”限定上一轮决定登记，不描述后续实现。
+
+用户明确V2-TBD-018：优先跟手，自动展开/收纳只是辅助操作。统一需求索引已RESOLVED，视觉需求和组合合同同步；去掉“未来展开放不下就拒绝合法拖动”的相反限制，新增CD15～18暂缓/恢复/松手/自动收起让位待验场景。任务正文、登记和交接已对齐，不再等待该产品裁决。
+
+本轮仅文档更新，没有生产/模型代码改动或新测试执行；原28/880项不覆盖新规则。下一步按新优先级补纯模型、组合空间/因果/CAS，再接生产与实机。73c7f85检查点已在用户确认后推送且远端哈希一致；本轮文档不自动提交/推送。
 
 ## 2026-09-11 V3当前状态同步检查点
 
@@ -8,7 +316,7 @@
 
 ## 2026-09-11 M08-07 R2：组合前置模型与外部点击归属
 
-用户授权按组合目标先合同/连续测试，再接生产；不采用短停留或先回滚再拖。新增[组合合同](M08_EXPANSION_DRAG_CONTRACT.md)及28项纯模型/帧结构测试；包含两种结束顺序、普通点击、捕获/身份、不可回退高度、扫掠、锁定、4个DPI各1000轮往返。仍缺完整组合空间/因果重放、CAS和原生适配；几何安全不能授权任意邻居移动的反例已明确保留。V2-TBD-018优先跟手或优先增长已询问，未代用户决定。
+用户授权按组合目标先合同/连续测试，再接生产；不采用短停留或先回滚再拖。新增旧组合合同（已删除，见[历史实验](M08_COMBINED_VALIDATION_R3.md)）及28项纯模型/帧结构测试；包含两种结束顺序、普通点击、捕获/身份、不可回退高度、扫掠、锁定、4个DPI各1000轮往返。仍缺完整组合空间/因果重放、CAS和原生适配；几何安全不能授权任意邻居移动的反例已明确保留。V2-TBD-018优先跟手或优先增长已询问，未代用户决定。
 
 R2-A单独先红后绿：`out/verify/v3-04-m08-07-r2/tests/outside-click-before.trx`4/4失败，复现deadline清空与遮挡下错误保护。只修`PassivePosterPointerObserver`原始保护归属；新9项包含连点/按住、前台遮挡、auto关闭邻居、离开后捕获、零需求/代次失效、菜单保留。未修改AutoPostureModel延迟或R1进行中取消规则。
 

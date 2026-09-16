@@ -1,12 +1,16 @@
 # DesktopUp V2 V3 技术路线与总体架构 V1
 
-状态：`DESIGN BASELINE — GENERAL CONTENT / MULTI-POSTER`；文档归属检查：2026-09-11
+状态：`DESIGN BASELINE — GENERAL CONTENT / MULTI-POSTER`；文档归属检查：2026-09-16（DEC-008与已有实现边界对齐）
 
 建立日期：2026-09-03
 
 适用分支：`impl/poster-redesign-V3`
 
 ## 0. 本次扩展合同
+
+2026-09-16配置/恢复增量：沿用SQLite单权威和原命令投影，引入PortableProfileCodec/Planner、单事务导入提案、原子文件IO及显式离线StateBackupRecovery。schema9待安置与用户显隐意图分层，未安置不创建窗口/参与空间/运行自动收展；控制中心全局数据入口不依赖选中海报。整体架构不增加第二状态源或文件执行权；基础已接代码，生产整合/同包及人工门查[04-06交付](../40_Implementation/V3-04/PORTABLE_PROFILE_DELIVERY.md)，真实他机未实测。
+
+2026-09-15 UX增量（已接入）：[控制中心首版可用性](CONTROL_CENTER_USABILITY_DESIGN_V1.md)承接V2-DEC-005，撤掉桌面缩略预览、改真实海报定位，宏观偏好/热度结果/视口布局分层，常用参数临时预览＋自动提交。复用独立会话、单权威CAS、空间/R4/恢复；下文M08应用/取消为原阶段历史入口，现常用设置已由UX替换，不重写自动行为模型。具体实现及验证范围见[UX交付](../40_Implementation/V3-04/CONTROL_CENTER_USABILITY_DELIVERY.md)，不在架构层维护另一套验收状态。
 
 2026-09-11必要补项设计：[M08自动收展计划](../30_Plans/V3_04_M08_AUTO_POSTURE_PLAN.md)在现有会话之上补逐海报纯交互模型、被动指针观察和共享截止时间调度；复用空间运行器，不新增状态权威、窗口层或空间求解器。当前已实现Application纯模型及[设置/迁移](../40_Implementation/V3-04/M08_AUTO_POSTURE_SETTINGS.md)，以及[M08-03观察适配器](../40_Implementation/V3-04/M08_POINTER_OBSERVATION.md)；[M08-04](../40_Implementation/V3-04/M08_SHARED_SCHEDULER.md)已接共享观察/截止调度和受限System姿态提交，沿用committed revision/CAS与R4恢复。[M08-05](../40_Implementation/V3-04/M08_CONTROL_CENTER_SETTINGS.md)已接窗口内目标草稿、开关/秒数和应用/取消，仍复用同一实体CAS；[M08-06](../40_Implementation/V3-04/M08_LIFECYCLE_REGRESSION.md)已补共享系统通知与多原因暂停，复用原恢复并使旧计时/回调失效；实际鼠标视觉/增量资源门及最终自动环境复测仍待补，不把运行通道接通等同于完整产品可用。
 
@@ -218,7 +222,7 @@ DesktopUp.exe
 ### 8.2 Tray
 
 - 托盘始终是快速入口和生命周期控制面，不是权威状态；
-- 提供打开控制中心、显示/隐藏、暂停动态效果、启动设置和退出；
+- 按V2-DEC-006只提供新增、控制中心、全局临时隐藏/恢复、全部锁定/解锁、动效暂停/恢复、退出；不持有单张选择或目标子菜单，启动设置/主题/AI/诊断归控制中心；
 - 双击、连续命令和单实例转发串行处理；
 - 主进程退出前先禁用新命令，再销毁窗口、停止 watcher、刷盘和移除托盘图标。
 
@@ -259,6 +263,8 @@ DesktopUp.exe
 - 第三方 Shell 扩展和缩略图处理优先放到 ShellProxy，防止主进程崩溃。
 
 ## 10. Item 排版与活跃度
+
+2026-09-16增量（V2-DEC-007/008，设计待L01冻结）：[布局地基设计](CONTENT_LAYOUT_FOUNDATION_V1.md)分离内容事实、逐海报布局意图、几何快照与皮肤，目标是同一求解器支持多格跨度、异尺寸构图、人工约束和未来热度。视图与输入共用几何，复用当前视口/输入岛/R4/事务恢复，不造主题专属几何或第二套文件模型。当前主线已到[04-L01 READY](../30_Plans/V3_04_L_CONTENT_LAYOUT_PLAN.md)，不是已有跨格编辑器；既有adaptive-grid、宏观参数及便携/恢复能力继续复用。下面策略名是职责设计，不代表同名类均已存在；真实热度仍未实现，代码入口见[当前锚点](../40_Implementation/V3-04/CODE_ANCHORS.md)。04-07/08收口延期不改变上述架构和安全约束。
 
 - `ActivityScoringPolicy` 根据需求公式计算分数，不直接操作 XAML；
 - `ItemLayoutPolicy` 接收 viewport、内容参数、固定项和排序结果，输出稳定布局快照；

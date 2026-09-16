@@ -1,6 +1,6 @@
 # DesktopUp V2 V3 模块分类与端口目录 V1
 
-状态：`DESIGN BASELINE — MODULE RESPONSIBILITIES ALIGNED 2026-09-11`
+状态：`DESIGN BASELINE — MODULE RESPONSIBILITIES ALIGNED 2026-09-16`（布局职责待L01冻结，不把设计类型记为现存代码）
 
 建立日期：2026-09-03
 
@@ -16,7 +16,7 @@
 | B13 | PosterStackCoordinator | 正常布局无重叠；保留异常重叠命中防御和cluster顺序；不得以抬层消除碰撞或盖住普通程序 | V3-04-M04-06 |
 | D11 | PosterCatalogApplicationService | Create/CloneConfig/Rename/Remove/List，profile 初始化与零实例 | V3-04-M01/02 |
 | D12 | ScopedCommandCoordinator | Entity/ReadSet CAS、全局提交序列、批量状态事务和 NotFound | V3-04-M02 |
-| D13 | PortableProfileApplicationService（设计） | 一致快照导出、解析/依赖映射/影响预览、确认后按目标版本导入；不形成第二权威 | V3-04-06；主题载荷复用 V3-07-04 |
+| D13 | PortableProfile职责（现有代码承接） | Application/PortableProfileCodec、Planner及StateProjectionCoordinator.Portable：一致快照/严格解析/确定性映射/完整CAS；App/PortableProfileController及中心全局入口：选择/预览/确认；Infrastructure/PortableProfileFile和StateBackupRecovery：原子文件及离线恢复，均不形成第二权威 | V3-04-06已接入，剩余验证归C；L03扩展布局载荷/映射，完整主题素材仍V3-07-04 |
 | E14 | ContentCapabilities | 文件/应用/Shell/虚拟流能力和 DropIntent；不越权搬运 | V3-05-01/07/13 |
 | E15 | PosterThemeParameterContract（M05最小实现已接入） | Domain/PosterPresentationPolicy解析v1参数/旧兼容/安全fallback，Application/PosterPresentationDraft与SetPresentation复用实体CAS；每实例Presentation.Metrics供renderer/输入/展开/恢复，不强制固定NIGHT OPS；完整manifest/主题加载仍V3-07 | V3-04-M05、V3-07 |
 | F13 | CollectionSubscriptionHub | 共享来源 watcher 引用计数、取消、事件合并，更新多个关联视图 | V3-05-11 |
@@ -24,13 +24,25 @@
 
 已实现状态以代码锚点为准。App/PosterVisualWindow 中尚集中存在的协调和演示逻辑，在对应项逐步提取；模块目录不把计划中的类当作现有代码。
 
-M05实际边界见[参数合同](../40_Implementation/V3-04/M05_PRESENTATION_PARAMETERS.md)：几何、内容参数与主题实例身份分离；外框缩放不改iconSize/字号，参数提交不擅自移动外框。只读中心摘要已接，完整编辑器后续复用同一草稿/提交口。
+04-06新增持久PlacementPending由Domain/仓储负责，投影计算有效可见，A07会话注册/恢复过滤待处理项；空间命令拒绝直接移缩/收展绕过安置。D13只产出本机配置变更，不操作真实Item文件。内部备份恢复与便携导入两条通道分开，最终交付范围见[本轮记录](../40_Implementation/V3-04/PORTABLE_PROFILE_DELIVERY.md)。
+
+M05实际边界见[参数合同](../40_Implementation/V3-04/M05_PRESENTATION_PARAMETERS.md)：几何、内容参数与主题实例身份分离；外框缩放不改iconSize/字号，参数提交不擅自移动外框。M05当时仅有中心摘要；后续04-04已接常用/高级参数编辑与自动提交，不能继续标作未实施。L05待做的是Item跨格编辑，不是再造一次控制中心参数编辑器。
 
 M06为[多实例合同夹具](../40_Implementation/V3-04/M06_MULTI_INSTANCE_FIXTURES.md)，复用上述模块而非新增产品服务；测试专用共享数据、故障注入及隔离App探针不进入日常启动路径。该阶段自动/进程证据保留，后续集中人工与资源证据已归入M07，不再把M07列为待启动任务。
 
 M07是外部测量/安全门，不新增生产服务或状态权威；当前已[收口](../40_Implementation/V3-04/M07_CLOSEOUT.md)，资源预算差距和未认证环境仍保留。具体计数、产物、人工结论只引用C层证据，本模块目录不重复维护滚动测试数字或下一步指令。M08已增加Application纯行为模型及逐海报设置/迁移合同，原生观察及生产共享调度/空间事务已接，最小设置UI已由M08-05接入，M08-06已补共享系统通知/多原因暂停及隔离生命周期回归，完整体验门与最终自动环境复测仍待补，现有空间、输入和恢复通道继续复用。
 
+### M08标题交互职责补充（TI-01/02证明及TI-03接线已建，实机门待验）
+
+按V2-DEC-003及[TI合同](../40_Implementation/V3-04/M08_TITLE_INTERACTION_CONTRACT.md)，Windows输入层只负责命中、capture和阈值事件；Application负责按下阶段固定、点击/双类拖动仲裁及抑制；A09既有PosterSpatialRuntime是唯一组几何运行器。Domain继续复用SpatialContinuitySolver/SpatialExpansionPolicy；D12保留完整读集和原权威事务。R4负责整组容量/预布局/提交/恢复，不因快展再建一条像素写入路径。
+
+现有自动StartAutomatic和手动ToggleCollapsed均调用SetCollapsed，来源区别只在触发/权限/反馈，不在空间策略。新标题快展只改变呈现节奏；收起态拖动按TI-01/02模型证明、TI-03原通道接管执行。旧ExpansionDrag增长实验及专用事务口已在TI-01退役；Application/TitleInteractionModel只输出暂停/快展/双类拖动意图，TitleAutoRearmSuppression复用原自动模型的手动退出证据，不新增几何或状态权威。TI-02新增TitleSpatialKernel/Session/Commit：复用原碰撞/归位/细分、接受已呈现提案、重放并核对终态/因果，使用原协调器与SQLite单revision完整CAS。详见[TI-02报告](../40_Implementation/V3-04/M08_TI02_SPATIAL_TRANSACTION.md)；[TI-03](../40_Implementation/V3-04/M08_TI03_PRODUCTION_TITLE_ADAPTER.md)已接原输入岛TitleInput→PosterSpatialRuntime.Title→TitlePresentationDriver→原R4组呈现；ITitleSpatialCommitter通过一次绑定的可信宿主见证复用原CAS，不新增持久权威或第二套收展求解。
+
+[TI-04分段证明](../40_Implementation/V3-04/M08_TI04_ISOLATED_GATES.md)：Application在当前租约内独立重放有界尾段后封存不透明checkpoint，保留原Press/因果，不逐帧写库；原Title运行器仅在完整proposal接受后请求封段，最终仍完整CAS/单revision。组件故障夹具只测R4 API和共享恢复，不是第二个生产输入或新的状态权威。
+
 ## 1. 目的
+
+2026-09-16补充（V2-DEC-007/008，04-L01 READY）：C02/D06/E03/E04/E07的跨格占位、编辑和连续视口增量归[04-L](../30_Plans/V3_04_L_CONTENT_LAYOUT_PLAN.md)，现已前移为主线、位于真实Item前。LayoutDocument/Placement/Snapshot是待L01冻结的合同职责，由Domain/Application承接；UI复用现有视口、输入岛/R4，SQLite与PortableProfile承接版本化持久化，不另建权威。G类主题只提交声明和度量，不自建几何；E06真实热度仍V3-06。现有宏观度量/呈现/事务/生命周期入口见[代码锚点](../40_Implementation/V3-04/CODE_ANCHORS.md)，不把已有单项尺寸接口当作完成跨格求解或编辑器。04-06余验收和04-07/08收口的延期归C计划，不删相应模块职责。
 
 本文把 V3 总体架构拆成可独立实现、测试和替换的模块。模块名表达职责，不等同于最终程序集数量；首发可在一个解决方案和主进程中实现，只有高风险 Shell、主题代码和更新流程需要物理隔离。
 
@@ -113,11 +125,15 @@ B01/B02 的 Shell generation 与 B09 的 topology generation 必须分离。两�
 | C02 | `ItemViewportView` | 虚拟化 Item、连续裁剪、滚动与稳定 identity | `LayoutSnapshot` / `ItemCommand` | V3-05 接真实内容时推进 V3-06-01..04 |
 | C03 | `ItemCardView` | 图标、标题、状态、选择、启动和拖放反馈 | `ItemProjection` | V3-05 |
 | C04 | `ControlCenterWindow` | 海报列表、编辑、Item 管理、主题和设置 | `ControlCenterProjection` | V3-04 起 |
-| C05 | `TraySurface` | 快速入口、暂停、可见性和退出 | `TrayProjection` | V3-01/04 |
+| C05 | `TraySurface` | DEC-006六类整体入口：新增、中心、临时全局显隐、全部锁定、动效、退出；无单张选择/子菜单 | 全局/目录命令、`TrayProjection`及运行期显隐摘要；不依赖中心SelectedPosterId | V3-01/04 |
 | C06 | `DialogCoordinator` | 确认、冲突、失败、文件/文件夹选择和系统对话框 owner | `IDialogService` | V3-04/05 |
 | C07 | `FallbackSurface` | 主题、数据库或渲染故障时的最小恢复 UI | `RecoveryProjection` | V3-04/07 |
 
 C 类不得直接写数据库或调用 Shell API。所有交互转换成 Application command。
+
+2026-09-15旧UI实现基线：[04-04编辑合同](../40_Implementation/V3-04/CONTROL_CENTER_EDIT_CONTRACT.md)及[02～06接线](../40_Implementation/V3-04/CONTROL_CENTER_DELIVERY.md)。Application/ControlCenterPosterEditor负责目标草稿，ControlCenterWindow.Editing已接预览/几何/目录/参数，M08专用编辑器仍是应用/取消。ControlCenterGeometryRequest交原空间运行器，ControlCenterSpatial组织碰撞/完整CAS证明，App复用R4与恢复；用户反馈几何/预览失败，不能整体标验收通过。
+
+V2-DEC-005的[可用性设计](CONTROL_CENTER_USABILITY_DESIGN_V1.md)已由04-04 UX接入：C04宏观控件/真实海报定位，Application目标化预览/自动提交与ContentMetrics映射，Domain参数/相对层级/布局输入分层，App目标会话的短时定位和清理。目录状态刷新闪烁另按BUG-004记录，不能把接线完成写成所有体验问题已解决。持久化沿用原命令/仓储，空间仍归原运行器；旧桌面缩略预览专用入口已退役，共享有效几何读回保留。M08仅设置适配变化，不重写自动调度。
 
 ## 6. D 类：应用用例与投影
 

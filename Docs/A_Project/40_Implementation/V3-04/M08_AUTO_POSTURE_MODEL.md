@@ -3,6 +3,8 @@
 日期：2026-09-11。范围：Application纯模型及虚拟输入验证；用户确认手动抑制后M08-01 PASS，不代表原生自动功能已接入产品。
 需求裁决：[A层统一索引](../../10_Requirements/REQUIREMENTS_RISKS_AND_OPEN_QUESTIONS.md) V2-DEC-001；手动抑制V2-TBD-017已RESOLVED。当前任务状态归[工作流](../../30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md)，后续设置已进入[M08-02合同](M08_AUTO_POSTURE_SETTINGS.md)。
 
+2026-09-14目标补充：V2-DEC-003及[TI合同](M08_TITLE_INTERACTION_CONTRACT.md)替代标题空白的旧“普通点击继续/拖动继续增长”目标；外部普通点击仍保留R1规则，基础自动进入/离开模型不重写。下方为已有实现/历史证据，新标题所有者移交、快展和收起态拖动尚未接入；不能直接用旧取消恢复路径冒充接管。
+
 ## 1. 交付与未交付
 
 - 新增 [AutoPostureModel](../../../../src/DesktopUp.Application/AutoPostureModel.cs)：输入完整目录观察、虚拟单调时间、交互保护和完成回执，输出新的不可变状态、至多一个自动请求或取消请求。

@@ -1,19 +1,42 @@
 # DesktopUp V2 V3 文档登记表
 
-最后检查：2026-09-11
+最后检查：2026-09-16（DEC-008，04-L主线与延期入口对齐）
 
 本表只登记文档职责与资料类型，不独立裁决任务状态：当前任务查[细化工作流](../A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md)，运行交接查[HANDOFF](../A_Project/40_Implementation/V3-04/HANDOFF.md)，产品决定查[统一索引](../A_Project/10_Requirements/REQUIREMENTS_RISKS_AND_OPEN_QUESTIONS.md)。HISTORICAL表示对应版本证据，不是新待办；PLANNED不表示已有实现。
 
 | 文档 | 职责 | 状态 |
 | --- | --- | --- |
-| [M08_EXPERIENCE_AND_RESOURCE_GATE](../A_Project/40_Implementation/V3-04/M08_EXPERIENCE_AND_RESOURCE_GATE.md) | M08-07固定验证入口、G1～G5人工、36格/18对资源合同及证据 | IN PROGRESS；基础三项PASS，R1进程/两项点击PASS，R2-A源码修订、R2-B组合前置进行中，有效采样0，携带06原生余门 |
+| [V3_04_06_PORTABLE_PROFILE_PLAN](../A_Project/30_Plans/V3_04_06_PORTABLE_PROFILE_PLAN.md) | 便携格式/容量/隐私、追加替换、待安置、显式恢复与A～D执行卡 | 已有分项证据保留；剩余验收DEFERRED，不阻塞04-L |
+| [PORTABLE_PROFILE_DELIVERY](../A_Project/40_Implementation/V3-04/PORTABLE_PROFILE_DELIVERY.md) | 首批交付与分批人工范围；最新修订指向BUG007专门记录 | CURRENT EVIDENCE / P6及P9部分通过保留，BUG-006延期 |
+| [BUG007_NATIVE_PICKER](../A_Project/40_Implementation/V3-04/BUG007_NATIVE_PICKER.md) | 原生取消/退出修订、失败对照、R3指纹与1462合同/29进程门、人工复验 | CODE/AUTO + USER PASS；不扩大未验范围 |
+| [CONTENT_LAYOUT_FOUNDATION_V1](../A_Project/20_Architecture/CONTENT_LAYOUT_FOUNDATION_V1.md) | DEC-007跨格跨度、布局意图/几何/皮肤、热度/编辑/恢复边界与三参考构图 | DESIGN / 待L01冻结；DEC-008已前移排期，未接跨格生产 |
+| [内容布局设计稿](../A_Project/20_Architecture/Designs/content-layout-v1.html) | 离线三构图、跨度与顺序调整的示意原型 | DEMO / 不是产品或素材能力证明 |
+| [V3_04_L_CONTENT_LAYOUT_PLAN](../A_Project/30_Plans/V3_04_L_CONTENT_LAYOUT_PLAN.md) | DEC-008当前主线L01～07执行卡、前置延期清单与连续矩阵 | ACTIVE / L01 READY，未接生产 |
+| [LAYOUT_UNIFICATION_DELIVERY](../A_Project/40_Implementation/V3-04/LAYOUT_UNIFICATION_DELIVERY.md) | 新建统一、v8窄修复、1315合同/12进程及旧库副本迁移、外观复验 | CURRENT / CODE AUTO + USER PASS |
+| [V3_04_05_TRAY_PLAN](../A_Project/30_Plans/V3_04_05_TRAY_PLAN.md) | DEC-006六类整体菜单、专用入口退役、共享新增/显隐与验证出口 | 05-05原托盘人工USER PASS，新增外观修订USER PASS |
+| [TRAY_DELIVERY](../A_Project/40_Implementation/V3-04/TRAY_DELIVERY.md) | 托盘实际接线、1302合同/12进程门、失败原因、25指纹/PS5.1与人工G1～G8 | 原托盘交付USER PASS；新修订见LAYOUT_UNIFICATION_DELIVERY |
+| [TRAY_SCOPE_AND_CODE_AUDIT](../A_Project/40_Implementation/V3-04/TRAY_SCOPE_AND_CODE_AUDIT.md) | 实施前范围审查与退役/复用依据 | HISTORICAL STATIC AUDIT；后续实际接线见TRAY_DELIVERY |
+| [CONTROL_CENTER_SLIDER_REFINEMENT](../A_Project/40_Implementation/V3-04/CONTROL_CENTER_SLIDER_REFINEMENT.md) | 紧凑轨道预设点实现/失败取证/1283合同/独立候选与后续列表排查 | 新六组自动门PASS，真实点选待复验；列表未修复。以下1265/PID30652为旧UX证据 |
+| [CONTROL_CENTER_USABILITY_DESIGN_V1](../A_Project/20_Architecture/CONTROL_CENTER_USABILITY_DESIGN_V1.md) | DEC-005首版简洁布局、真实定位、宏观/热度分层、即时编辑与几何真实性的设计边界 | DESIGN BASELINE / UX已接入，候选验证范围归交付记录 |
+| [CONTROL_CENTER_EDIT_CONTRACT](../A_Project/40_Implementation/V3-04/CONTROL_CENTER_EDIT_CONTRACT.md) | 04-04-01原目标化草稿、事务边界和验证证据 | HISTORICAL CONTRACT / 必需Apply和fallback等规则由DEC-005替代；身份/CAS机制复用 |
+| [CONTROL_CENTER_DELIVERY](../A_Project/40_Implementation/V3-04/CONTROL_CENTER_DELIVERY.md) | 旧02～06接线、同包证据、人工通过范围及G1/G2失败 | HISTORICAL CANDIDATE / 旧部分通过及失败保留，后继UX/滑块证据另列，不是当前开工指令 |
+| [V3_04_IMPLEMENTATION_PLAN_AUDIT_2026-09-15](../A_Project/40_Implementation/V3-04/V3_04_IMPLEMENTATION_PLAN_AUDIT_2026-09-15.md) | 进入04-04前的代码/计划盘点 | HISTORICAL STATIC AUDIT；后续05范围与当前盘点见TRAY_SCOPE_AND_CODE_AUDIT |
+| [KNOWN_ISSUES](../A_Project/40_Implementation/V3-04/KNOWN_ISSUES.md) | 现版缺陷现象、证据、未知根因、处置及关闭条件 | BUG-001/006延期、004非阻塞；005/007已CLOSED/USER PASS；其他范围仍按详细记录 |
+| [V3_04_04_CONTROL_CENTER_PLAN](../A_Project/30_Plans/V3_04_04_CONTROL_CENTER_PLAN.md) | 控制中心旧证据承接、UX-01～05顺序与U1～U7出口 | HISTORICAL PLAN / 已有接线/自动及用户反馈范围保留，未确认项不补PASS；当前任务转04-L |
+| [CONTROL_CENTER_USABILITY_DELIVERY](../A_Project/40_Implementation/V3-04/CONTROL_CENTER_USABILITY_DELIVERY.md) | 宏观参数、可信几何、定位、自动提交的实现与证据 | CANDIDATE EVIDENCE / 1265与六组门属旧UX，后续滑块另列；旧PID/待验描述不作当前下一步 |
+| [M08_EXPERIENCE_AND_RESOURCE_GATE](../A_Project/40_Implementation/V3-04/M08_EXPERIENCE_AND_RESOURCE_GATE.md) | M08-07固定验证入口、G1～G5人工、36格/18对资源合同及证据 | IN PROGRESS；基础三项PASS，R1进程/两项点击PASS，R2-A源码修订、TI-01/02证明及TI-03接线及TI-04分项PASS，原生标题整合/实机待续，有效采样0，携带06原生余门 |
 | [M08_ANIMATION_INPUT_R1](../A_Project/40_Implementation/V3-04/M08_ANIMATION_INPUT_R1.md) | 动画中普通点击误取消的证据、阶段保护修订及回归 | 合同843/843、构建/预检PASS；6次隔离进程PASS；两项人工PASS |
-| [M08_INPUT_ARBITRATION_R2](../A_Project/40_Implementation/V3-04/M08_INPUT_ARBITRATION_R2.md) | 外部点击与组合交互分线证据/范围 | R2-A源码/回归PASS，实机待验；R2-B前置进行中 |
-| [M08_EXPANSION_DRAG_CONTRACT](../A_Project/40_Implementation/V3-04/M08_EXPANSION_DRAG_CONTRACT.md) | 组合行为、连续操作矩阵和分层生产准入门 | 生命周期/帧结构28项PASS；V2-TBD-018待确认，空间证明/CAS/生产OPEN |
+| [M08_INPUT_ARBITRATION_R2](../A_Project/40_Implementation/V3-04/M08_INPUT_ARBITRATION_R2.md) | 外部点击与组合交互分线证据/范围 | R2-A源码/回归PASS，实机待验；旧R2-B方案撤销，标题目标转TI |
+| [M08_TITLE_INTERACTION_CONTRACT](../A_Project/40_Implementation/V3-04/M08_TITLE_INTERACTION_CONTRACT.md) | V2-DEC-003标题按下/点击/双类拖动、共用空间与连续操作矩阵 | FROZEN / TI-01/02证明及TI-03接线及TI-04分项PASS；原生标题/实机PENDING，替代旧合同 |
+| [M08_TI01_TITLE_MODEL](../A_Project/40_Implementation/V3-04/M08_TI01_TITLE_MODEL.md) | 旧增长代码/端口/测试退役、标题纯仲裁与旧自动抑制接合证据 | PASS（TI-01范围）；新109/全961项、独立构建，未接UI；后续TI-02证据另列 |
+| [M08_TI02_SPATIAL_TRANSACTION](../A_Project/40_Implementation/V3-04/M08_TI02_SPATIAL_TRANSACTION.md) | 并行占位/抓取点、呈现接受/因果重放、单revision完整CAS证据 | PASS（纯模型/隔离SQLite/构建）；新82/全1043项；TI-03接生产，人工/资源待验 |
+| [M08_TI03_PRODUCTION_TITLE_ADAPTER](../A_Project/40_Implementation/V3-04/M08_TI03_PRODUCTION_TITLE_ADAPTER.md) | 原输入capture、单所有者、可信起点、R4呈现恢复接线与适配层测试 | PASS（代码/自动化/构建）；新37/全1080项；后继TI-04证据另列，未替换R1人工绑定 |
+| [M08_TI04_ISOLATED_GATES](../A_Project/40_Implementation/V3-04/M08_TI04_ISOLATED_GATES.md) | 标题修订自动/原生证据与未解决缺陷关联 | CARRIED / 用户暂停修复；BUG-001人工失败，旧分项证据不覆盖，M08未关闭；主线查ACTIVE_PATH |
+| [M08_COMBINED_VALIDATION_R3](../A_Project/40_Implementation/V3-04/M08_COMBINED_VALIDATION_R3.md) | 旧增长暂缓/恢复、因果重放、SQLite及呈现会话实验和反例 | HISTORICAL / SUPERSEDED；旧41/921项证据保留，不作为TI验收/接线计划 |
 | [M08_LIFECYCLE_REGRESSION](../A_Project/40_Implementation/V3-04/M08_LIFECYCLE_REGRESSION.md) | M08-06系统生命周期、多原因暂停、隔离显隐/删除/0/1/3/6退出与复测证据 | 实现/已执行回归PASS；原生自动环境/受影响视觉门OPEN，未关闭06 |
-| [M08_CONTROL_CENTER_SETTINGS](../A_Project/40_Implementation/V3-04/M08_CONTROL_CENTER_SETTINGS.md) | M08-05控件/草稿/CAS/应用取消、交互保护和真实控件证据 | PASS（设置范围）；最终自动环境复测OPEN，不代填完整运行门 |
+| [M08_CONTROL_CENTER_SETTINGS](../A_Project/40_Implementation/V3-04/M08_CONTROL_CENTER_SETTINGS.md) | 原M08-05控件/CAS/应用取消及真实控件证据 | HISTORICAL UI / 原设置分项PASS；新即时入口由04-04 UX承接，M08余门不关闭 |
 | [M08_SHARED_SCHEDULER](../A_Project/40_Implementation/V3-04/M08_SHARED_SCHEDULER.md) | M08-04共享观察/截止调度、受限System空间事务及真实进程证据 | PASS（04阶段证据）；设置UI后续已归05，完整体验门后续 |
-| [V3_04_M08_AUTO_POSTURE_PLAN](../A_Project/30_Plans/V3_04_M08_AUTO_POSTURE_PLAN.md) | 必要自动收展的七项实施卡、连续场景、参考取舍及安全主线路径 | IN PROGRESS；01～05分项PASS，06实现/余门OPEN，07工具就绪/待人工采样 |
+| [V3_04_M08_AUTO_POSTURE_PLAN](../A_Project/30_Plans/V3_04_M08_AUTO_POSTURE_PLAN.md) | 必要自动收展的七项实施卡、连续场景、参考取舍及安全主线路径 | CARRIED / 分项证据保留，TI-04修复暂停、TI-05不启动；余人工/资源不补PASS，不是当前开工计划 |
 | [M08_AUTO_POSTURE_MODEL](../A_Project/40_Implementation/V3-04/M08_AUTO_POSTURE_MODEL.md) | M08-01观察/行为/取消协议、连续纯模型验证及接线边界 | PASS；用户规则已确认，非原生功能完成 |
 | [M08_POINTER_OBSERVATION](../A_Project/40_Implementation/V3-04/M08_POINTER_OBSERVATION.md) | M08-03被动观察、热区/归属/保护及原生API证据 | PASS（03适配器/API阶段证据）；后续生产接线见M08-04 |
 | [M08_AUTO_POSTURE_SETTINGS](../A_Project/40_Implementation/V3-04/M08_AUTO_POSTURE_SETTINGS.md) | M08-02实体设置、schema7、目标CAS/投影、备份与回执兼容证据 | PASS（02数据/构建阶段证据）；设置UI已由05接入 |
@@ -31,10 +54,10 @@
 | `Docs/00_Catalog/REQUIREMENTS_INDEX.md` | 七份需求权威入口 | `FROZEN` |
 | `Docs/A_Project/10_Requirements/DESKTOPUP_V2_REQUIREMENTS_PROFILE_V1.md` | 项目级完整需求画像 | `REQUIREMENTS — 决策归属2026-09-11对齐` |
 | `Docs/A_Project/10_Requirements/POSTER_VISUAL_AND_INTERACTION_V1.md` | 海报视觉、几何、命中与交互 | `REQUIREMENTS — 决策归属2026-09-11对齐` |
-| `Docs/A_Project/10_Requirements/RUNTIME_SURFACES_AND_TRAY_V1.md` | 海报、控制中心、托盘和生命周期 | `USER REVISION 2026-09-08` |
+| `Docs/A_Project/10_Requirements/RUNTIME_SURFACES_AND_TRAY_V1.md` | 海报、控制中心、托盘和生命周期 | USER REVISION 2026-09-15 / DEC-006六类整体入口 |
 | `Docs/A_Project/10_Requirements/CONTENT_ITEM_ACTIVITY_LAYOUT_V1.md` | Item、活跃度与动态排版 | `FROZEN` |
 | `Docs/A_Project/10_Requirements/THEME_PLATFORM_AND_AI_V1.md` | 主题平台、热更新与 AI | `FROZEN` |
-| `Docs/A_Project/10_Requirements/REQUIREMENTS_RISKS_AND_OPEN_QUESTIONS.md` | 产品风险、待定/明确优先级/延期的统一索引 | `CURRENT — V2-DEC-001 / V2-DEFER-005/006 / V2-TBD-017` |
+| `Docs/A_Project/10_Requirements/REQUIREMENTS_RISKS_AND_OPEN_QUESTIONS.md` | 产品风险、待定/明确优先级/延期的统一索引 | CURRENT / DEC-006托盘范围；TBD-020已确认保持隐藏新增；既有决定保留 |
 | `Docs/A_Project/10_Requirements/REQUIREMENTS_MIGRATION_TRACEABILITY_V1.md` | 需求来源追溯 | `FROZEN EVIDENCE` |
 | `Docs/A_Project/10_Requirements/REQUIREMENTS_CONSISTENCY_AUDIT_2026-08-20.md` | 需求一致性审计 | `NON-NORMATIVE EVIDENCE` |
 | `Docs/A_Project/20_Architecture/DESKTOPUP_V2_V3_ARCHITECTURE_V1.md` | DeskBox路线、总体拓扑和跨模块边界 | `DESIGN — 含M08计划接口，非全部已实现` |

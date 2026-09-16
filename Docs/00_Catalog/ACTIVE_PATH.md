@@ -1,15 +1,23 @@
 # DesktopUp V2 当前执行入口
 
-最后检查：2026-09-11（M08-07人工与资源）。分支：`impl/poster-redesign-V3`。
+最新执行（2026-09-16，V2-DEC-008）：用户决定直接进入[04-L01合同与样例冻结](../A_Project/30_Plans/V3_04_L_CONTENT_LAYOUT_PLAN.md)，L01 READY。04-06余验收、04-07/08专项收口延期，不作L开工前置、不补PASS；BUG-007已获用户复验通过，BUG-006继续延期。依赖核对/携带范围见[04-L§1.1](../A_Project/30_Plans/V3_04_L_CONTENT_LAYOUT_PLAN.md#11-前置调整与携带项)。本次不改生产、数据库或运行包。
+
+历史阶段（2026-09-16，04-06首批）：[04-06-A～D](../A_Project/30_Plans/V3_04_06_PORTABLE_PROFILE_PLAN.md) A/B/C与D1 AUTO PASS，完整1452/1452合同及同包6＋12＋3进程门通过、退出资源均为0；真实另一主机未验证。分批人工/候选见[交付](../A_Project/40_Implementation/V3-04/PORTABLE_PROFILE_DELIVERY.md)，未验余项现延期。空间不足按V2-TBD-021全部保留为待安置配置。
+
+历史执行（2026-09-16，04-06开始前）：05-05人工G1～G8与[布局统一交付](../A_Project/40_Implementation/V3-04/LAYOUT_UNIFICATION_DELIVERY.md)的外观三项USER PASS；1315合同/12同包门及旧库副本迁移通过。当时04-L仅设计、下一步04-06-A；当前以DEC-008/L01入口为准。
+
+历史（04-04滑块交付）：[滑块修订](../A_Project/40_Implementation/V3-04/CONTROL_CENTER_SLIDER_REFINEMENT.md)1283/六组自动门PASS，点选/微调待复验；当时的列表排查/暂缓05指令已由用户后续进入05替代。运行事实及证据只查最新[HANDOFF](../A_Project/40_Implementation/V3-04/HANDOFF.md)，不沿用旧PID。
+
+最后检查：2026-09-16（DEC-008，04-L01 READY）。分支：`impl/poster-redesign-V3`。
 
 | 层级 | 权威入口 | 当前状态 |
 | --- | --- | --- |
 | A 需求 | [七份需求](REQUIREMENTS_INDEX.md) | 通用内容、多海报、唯一中心/托盘、独立主题、热度与 AI |
 | A 架构 | [总体架构](../A_Project/20_Architecture/DESKTOPUP_V2_V3_ARCHITECTURE_V1.md)、[多海报合同](../A_Project/20_Architecture/GENERAL_CONTENT_MULTI_POSTER_CONTRACT_V1.md) | 当前设计基线 |
 | B 模块 | [模块分类](../A_Project/20_Architecture/DESKTOPUP_V2_V3_MODULE_CATALOG_V1.md) | 共享宿主恢复、独立海报会话 |
-| C 总计划/任务索引 | [制作计划](../A_Project/30_Plans/DESKTOPUP_V2_V3_IMPLEMENTATION_PLAN_V1.md)、[细化工作流](../A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md) | M07已收口 → M08自动收展 → 原04-04 |
-| C 当前门 | [M08计划](../A_Project/30_Plans/V3_04_M08_AUTO_POSTURE_PLAN.md)、[M08-07合同](../A_Project/40_Implementation/V3-04/M08_EXPERIENCE_AND_RESOURCE_GATE.md)；前置[M07收口](../A_Project/40_Implementation/V3-04/M07_CLOSEOUT.md) | 07基础三项通过；R1隔离进程/两项点击PASS，R2-A源码修订、R2-B组合前置进行中，余门及有效采样0/36待验；06原生/视觉余门保留 |
-| C 本次修复 | [R4](../A_Project/40_Implementation/V3-04/M07_ANIMATION_R4.md) | 白条人工确认；清理与回归记录在文末 |
+| C 总计划/任务索引 | [制作计划](../A_Project/30_Plans/DESKTOPUP_V2_V3_IMPLEMENTATION_PLAN_V1.md)、[细化工作流](../A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md)、[04-L专项](../A_Project/30_Plans/V3_04_L_CONTENT_LAYOUT_PLAN.md) | 当前L01 READY；04-06剩余验收、04-07/08收口延期；M08余门携带 |
+| C 当前工作/携带门 | [04-L任务及携带清单](../A_Project/30_Plans/V3_04_L_CONTENT_LAYOUT_PLAN.md)、[便携分项结果](../A_Project/40_Implementation/V3-04/PORTABLE_PROFILE_DELIVERY.md)、[缺陷清单](../A_Project/40_Implementation/V3-04/KNOWN_ISSUES.md) | L01 READY；04-06余验收/04-07/08收口延期；BUG-005/007 USER PASS，BUG-001/006延期、004非阻塞，真实他机未验 |
+| C 历史呈现修复 | [R4](../A_Project/40_Implementation/V3-04/M07_ANIMATION_R4.md) | 白条人工确认；保留方法论与历史证据，非本轮修改 |
 | C 交接/代码/证据 | [HANDOFF](../A_Project/40_Implementation/V3-04/HANDOFF.md)、[CODE_ANCHORS](../A_Project/40_Implementation/V3-04/CODE_ANCHORS.md)、[VERIFICATION](../A_Project/40_Implementation/V3-04/VERIFICATION.md) | 当前事实与历史证据分开 |
 
 ## 当前决定
@@ -23,12 +31,12 @@ ABC资料归属见[文档入口](../README.md#abc归属与历史记录)；当前
 
 ## 最近步骤
 
-1. V3-04-M08：[R2分线](../A_Project/40_Implementation/V3-04/M08_INPUT_ARBITRATION_R2.md)外部点击归属已修订；[组合合同/28项模型](../A_Project/40_Implementation/V3-04/M08_EXPANSION_DRAG_CONTRACT.md)通过，边界冲突V2-TBD-018待确认。随后补组合策略重放/因果/CAS，再接生产并验实机；不是短悬停或先回滚再拖。全880/880、独立构建通过，人工入口仍R1；其余人工/36格资源及06实际恢复门保留。
-2. V3-04-04：复用目录/选择器，基础桌面预览及新增/复制/重命名/删除，位置/尺寸/内容参数草稿与CAS；均走同一空间服务，不额外发展复杂预览画布。
-3. V3-04-05：托盘新增、数量/状态汇总、单张/全部目标与全局隐藏/暂停，保留唯一实例与原双击/退出。
-4. V3-04-06-A..D：基础便携配置/恢复；04-07/08生命周期收口后进入V3-05真实内容纵向闭环，先非破坏性添加/展示/打开/定位/移除引用及重启保持；磁盘执行仍以前置恢复账本为门。
+1. [04-L专项计划](../A_Project/30_Plans/V3_04_L_CONTENT_LAYOUT_PLAN.md)当前L01 READY：身份/跨度/模式/版本CAS合同、独立辅助开关及三参考几何样例；之后L02纯布局。未启动新人工场景或生产编辑器。
+2. 原05-03单张目标子菜单由V2-DEC-006取消，不改号另派任务；旧合同测试不作为当前托盘交付。
+3. 05-02/04已接原通道；TBD-020保持隐藏新增已实现，05-05人工用户通过。新增外观链路另验，不扩大旧PASS范围。
+4. DEC-008直接推进04-L01～07 → V3-05真实内容纵向闭环；原04-06剩余验收和04-07/08收口延期。04-06已有版本化便携外壳，L03补跨格载荷/映射及针对性兼容验证；L新增输入/资源随本阶段验收，不预先补全旧阶段。磁盘执行仍以前置恢复账本为门。
 
-“回归主线”指开发计划，**不是未经授权合并 dev/mainline 或 main**。此前检查点53ebdb6已同步；用户于2026-09-11明确授权将当前状态提交并推送至现有V3分支，本次为进行中检查点，不改变未通过门项或发布基线。
+“回归主线”指开发计划，**不是未经授权合并 dev/mainline 或 main**。历史检查点73c7f85于2026-09-14推送；2026-09-16用户另行授权将之后的当前V3实现/测试/文档同步至origin/impl/poster-redesign-V3，具体检查点范围查[HANDOFF](../A_Project/40_Implementation/V3-04/HANDOFF.md)，提交hash与远端状态以Git记录为准。不同步到发布分支，不改变未通过门项或发布基线。
 
 ## 不可越过的边界
 
