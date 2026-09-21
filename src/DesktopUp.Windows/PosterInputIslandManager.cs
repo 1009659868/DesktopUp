@@ -27,6 +27,9 @@ public sealed class PosterInputIslandManager : IInputRegionHost
     private const uint WmMouseLeave = 0x02A3;
     private const uint WmMouseWheel = 0x020A;
     private const uint WmCaptureChanged = 0x0215;
+    private const uint WmTimer = 0x0113;
+    private const uint ContentEscapeTimerId = 0xD04;
+    private const int VkEscape = 0x1B;
     private const int MaNoActivate = 3;
     private const int HtClient = 1;
     private const int RgnAnd = 1;
@@ -99,6 +102,11 @@ public sealed class PosterInputIslandManager : IInputRegionHost
     public event EventHandler<TitleNativeInputEventArgs>? TitleInput;
     private bool _titleClaimed;
     private long _titleSequence;
+    private bool _contentClaimed;
+    private long _contentSequence;
+    private nuint _contentEscapeTimer;
+    private IDisposable? _contentCaptureLease;
+    private NativePoint _contentLatestPoint;
     public bool OwnsTitleCapture(PosterInputCapture capture) => _router.Owns(capture) &&
         _capture == capture && GetCapture() == WindowHandle;
 
@@ -337,8 +345,16 @@ public sealed class PosterInputIslandManager : IInputRegionHost
                 RouteMouseWheel(wParam, lParam);
                 return 0;
             case WmLButtonUp:
+                if (CancelContentForEscapeOrLostCapture()) return 0;
                 EndPointerGesture(cancelled: false);
                 return 0;
+            case WmTimer:
+                if (_contentEscapeTimer != 0 && wParam == _contentEscapeTimer)
+                {
+                    _ = CancelContentForEscapeOrLostCapture();
+                    return 0;
+                }
+                break;
             case WmCancelMode:
                 EndPointerGesture(cancelled: true, cause: TitleNativeEndReason.CancelMode);
                 return 0;
@@ -360,6 +376,9 @@ public sealed class PosterInputIslandManager : IInputRegionHost
                 PaintTransparentInputSurface(windowHandle);
                 return 0;
             case WmDestroy:
+                if (_contentClaimed) EndPointerGesture(cancelled: true, cause: TitleNativeEndReason.RouteInvalidated);
+                StopContentCaptureTimer();
+                _contentClaimed = false;
                 _pressedRegion = null;
                 break;
             case WmNcDestroy:
@@ -381,6 +400,7 @@ public sealed class PosterInputIslandManager : IInputRegionHost
 
     private void BeginResolvedGesture(PosterInputHit hit, NativePoint point)
     {
+        if (PosterContentInputPolicy.IsTarget(hit.Region.Kind) && !PosterContentInputPolicy.HasValidIdentity(hit.Region)) return;
         if (_disposed || _pressedRegion is not null || (_capture = _router.Begin(hit)) is null) return;
         if (MenuInputDiagnostics.Collecting) MenuInputDiagnostics.Route(WindowHandle, new
         {
@@ -394,6 +414,16 @@ public sealed class PosterInputIslandManager : IInputRegionHost
         _pressCursor = point;
         _ = SetCapture(WindowHandle);
         if (GetCapture() != WindowHandle) EndPointerGesture(cancelled: true, cause: TitleNativeEndReason.CaptureUnavailable);
+        else if (PosterContentInputPolicy.IsTarget(hit.Region.Kind) && _capture is { } contentCapture)
+        {
+            // Claim before dispatch so synchronous invalidation during Press emits a content cancellation.
+            _contentClaimed = true;
+            var input = CreateContentEvent(PosterInputEventKind.Pressed, contentCapture, point);
+            Input?.Invoke(this, input);
+            if (_capture != contentCapture || !_contentClaimed) return;
+            if (!input.Handled || !StartContentCaptureTimer())
+                EndPointerGesture(cancelled: true, cause: TitleNativeEndReason.Programmatic);
+        }
         else if (hit.Region.Kind == PosterInputTargetKind.TitleBar && _capture is { } capture)
         {
             var input = new TitleNativeInputEventArgs(TitleNativeInputKind.Press, capture,
@@ -407,10 +437,12 @@ public sealed class PosterInputIslandManager : IInputRegionHost
     {
         if (_pressedRegion is not null && !_router.Owns(_capture))
         { EndPointerGesture(cancelled: true, cause: TitleNativeEndReason.RouteInvalidated); return; }
+        if (CancelContentForEscapeOrLostCapture()) return;
         if (_pressedRegion is not { } target || !IsGestureTarget(target.Kind) ||
             !GetCursorPos(out NativePoint cursor))
         {
-            if (_titleClaimed) EndPointerGesture(cancelled: true, cause: TitleNativeEndReason.CursorUnavailable);
+            if (_titleClaimed || _contentClaimed && _pressedRegion is { } content && PosterContentInputPolicy.CanDrag(content.Kind))
+                EndPointerGesture(cancelled: true, cause: TitleNativeEndReason.CursorUnavailable);
             return;
         }
 
@@ -422,18 +454,80 @@ public sealed class PosterInputIslandManager : IInputRegionHost
         }
         int deltaX = cursor.X - _pressCursor.X;
         int deltaY = cursor.Y - _pressCursor.Y;
-        if (!_gestureMoved && ((long)deltaX * deltaX) + ((long)deltaY * deltaY) < 25)
+        if (!_gestureMoved && !PosterContentInputPolicy.CrossedDragThreshold(deltaX, deltaY))
         {
             return;
         }
 
         _gestureMoved = true;
+        if (_contentClaimed && _capture is { } contentCapture)
+        {
+            Input?.Invoke(this, CreateContentEvent(PosterInputEventKind.GesturePreview, contentCapture, cursor));
+            return;
+        }
         RaiseInput(
             PosterInputEventKind.GesturePreview,
             target,
             deltaX,
             deltaY);
     }
+
+    private PosterInputEventArgs CreateContentEvent(PosterInputEventKind kind, PosterInputCapture capture,
+        NativePoint point, TitleNativeEndReason endReason = TitleNativeEndReason.None)
+    {
+        if (endReason == TitleNativeEndReason.CursorUnavailable) point = _contentLatestPoint;
+        else _contentLatestPoint = point;
+        return PosterContentInputPolicy.Event(capture, kind, new(_pressCursor.X, _pressCursor.Y),
+            new(point.X, point.Y), AppliedLayoutRevision, ++_contentSequence, endReason);
+    }
+
+    private bool StartContentCaptureTimer()
+    {
+        if (_contentEscapeTimer != 0) return true;
+        try
+        {
+            _contentEscapeTimer = SetTimer(WindowHandle, ContentEscapeTimerId, 33, 0);
+            if (_contentEscapeTimer == 0)
+                throw new Win32Exception(Marshal.GetLastPInvokeError(), "Cannot observe Escape during content capture.");
+            _contentCaptureLease = _ledger.Acquire("timer.content-capture", "capture-only-native-escape-observer");
+            return true;
+        }
+        catch (Exception exception)
+        {
+            StopContentCaptureTimer();
+            _log.Write("warning", "poster.content_capture_timer_failed", new { exception.Message });
+            return false;
+        }
+    }
+
+    private void StopContentCaptureTimer()
+    {
+        nuint timer = _contentEscapeTimer;
+        _contentEscapeTimer = 0;
+        if (timer != 0 && WindowHandle != 0) _ = KillTimer(WindowHandle, timer);
+        _contentCaptureLease?.Dispose();
+        _contentCaptureLease = null;
+    }
+
+    private bool CancelContentForEscapeOrLostCapture()
+    {
+        if (!_contentClaimed || _capture is null) return false;
+        if (!_router.Owns(_capture))
+        {
+            EndPointerGesture(cancelled: true, cause: TitleNativeEndReason.RouteInvalidated);
+            return true;
+        }
+        if (GetCapture() != WindowHandle)
+        {
+            EndPointerGesture(cancelled: true, releaseCapture: false, cause: TitleNativeEndReason.CaptureTransferred);
+            return true;
+        }
+        // Never queried outside our own live content capture. No global hook or key suppression.
+        if ((GetAsyncKeyState(VkEscape) & 0x8000) == 0) return false;
+        EndPointerGesture(cancelled: true, cause: TitleNativeEndReason.CancelMode);
+        return true;
+    }
+
 
     private void RouteMouseWheel(nuint wParam, nint lParam)
     {
@@ -444,8 +538,23 @@ public sealed class PosterInputIslandManager : IInputRegionHost
         };
         if (ResolveRoute(point) is not { } route ||
             route.Hit.Region.Kind is not (PosterInputTargetKind.Item or
-                PosterInputTargetKind.ItemScroll))
+                PosterInputTargetKind.ItemScroll or PosterInputTargetKind.ContentItem or
+                PosterInputTargetKind.ContentSpanHandle or PosterInputTargetKind.ContentViewport))
         {
+            return;
+        }
+
+        if (PosterContentInputPolicy.IsTarget(route.Hit.Region.Kind))
+        {
+            if (!PosterContentInputPolicy.HasValidIdentity(route.Hit.Region)) return;
+            route.Owner.Input?.Invoke(route.Owner, new PosterInputEventArgs(
+                PosterInputEventKind.Scrolled, route.Hit.Region.Kind, route.Hit.Region.Index,
+                route.Hit.Frame, 0, 0, route.Hit.LayoutRevision, unchecked((short)((long)wParam >> 16)))
+            {
+                Session = route.Hit.Session, ContentItemId = route.Hit.Region.ContentItemId,
+                ContentSnapshotGeneration = route.Hit.Region.ContentSnapshotGeneration,
+                LatestPoint = new(point.X, point.Y), Sequence = ++route.Owner._contentSequence
+            });
             return;
         }
 
@@ -468,9 +577,12 @@ public sealed class PosterInputIslandManager : IInputRegionHost
         bool owns = _router.Owns(_capture);
         bool cursorAvailable = GetCursorPos(out NativePoint cursor);
         bool claimed = _titleClaimed;
+        bool contentTarget = PosterContentInputPolicy.IsTarget(target.Kind);
         var titleCapture = _capture;
         _titleClaimed = false;
-        cancelled |= !owns || !cursorAvailable || (!claimed && !_gestureMoved &&
+        _contentClaimed = false;
+        StopContentCaptureTimer();
+        cancelled |= !owns || !cursorAvailable || (!claimed && !contentTarget && !_gestureMoved &&
             (_capture is null || !_router.CanInvoke(_capture, cursor.X, cursor.Y)));
         // Preserve the observed cause before ending router/capture ownership. A stale route or
         // missing cursor is a hard failure even when WM_CAPTURECHANGED originally woke us.
@@ -487,6 +599,18 @@ public sealed class PosterInputIslandManager : IInputRegionHost
         {
             TitleInput?.Invoke(this, new(cancelled ? TitleNativeInputKind.Cancel : TitleNativeInputKind.Release,
                 titleCapture, new(cursor.X, cursor.Y), ++_titleSequence, CanInvoke: !cancelled, EndReason: endReason));
+            _gestureMoved = false;
+            return;
+        }
+        if (contentTarget && titleCapture is not null)
+        {
+            // Release is addressed to the captured stable item, not an index from the latest reflow.
+            // The adapter owns selection/threshold/commit semantics; no old Item or outer-frame fallback.
+            bool contentMoved = _gestureMoved || PosterContentInputPolicy.CanDrag(target.Kind) &&
+                PosterContentInputPolicy.CrossedDragThreshold(cursor.X - _pressCursor.X, cursor.Y - _pressCursor.Y);
+            PosterInputEventKind contentKind = cancelled ? PosterInputEventKind.GestureCancelled :
+                contentMoved ? PosterInputEventKind.GestureCompleted : PosterInputEventKind.Invoked;
+            Input?.Invoke(this, CreateContentEvent(contentKind, titleCapture, cursor, endReason));
             _gestureMoved = false;
             return;
         }
@@ -586,7 +710,8 @@ public sealed class PosterInputIslandManager : IInputRegionHost
             PosterInputTargetKind.ResizeTop or
             PosterInputTargetKind.ResizeBottom => IdcSizeNs,
             PosterInputTargetKind.ResizeTopLeft or
-            PosterInputTargetKind.ResizeBottomRight => IdcSizeNwse,
+            PosterInputTargetKind.ResizeBottomRight or
+            PosterInputTargetKind.ContentSpanHandle => IdcSizeNwse,
             PosterInputTargetKind.ResizeTopRight or
             PosterInputTargetKind.ResizeBottomLeft => IdcSizeNesw,
             _ => IdcArrow
@@ -596,6 +721,8 @@ public sealed class PosterInputIslandManager : IInputRegionHost
     }
 
     private static bool IsGestureTarget(PosterInputTargetKind kind) => kind is
+        PosterInputTargetKind.ContentItem or
+        PosterInputTargetKind.ContentSpanHandle or
         PosterInputTargetKind.TitleBar or
         PosterInputTargetKind.EditSurface or
         PosterInputTargetKind.ResizeLeft or
@@ -744,6 +871,8 @@ public sealed class PosterInputIslandManager : IInputRegionHost
             return;
         }
         DesktopMenuInteraction.CancelForSurface(WindowHandle);
+        StopContentCaptureTimer();
+        _contentClaimed = false;
         _disposed = true;
         _router.Remove(_session);
         _capture = null;
@@ -943,6 +1072,16 @@ public sealed class PosterInputIslandManager : IInputRegionHost
     [DllImport("user32.dll")]
     private static extern nint GetCapture();
 
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern nuint SetTimer(nint windowHandle, nuint timerId, uint intervalMilliseconds, nint timerProc);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool KillTimer(nint windowHandle, nuint timerId);
+
+    [DllImport("user32.dll")]
+    private static extern short GetAsyncKeyState(int key);
+
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool GetCursorPos(out NativePoint point);
@@ -956,4 +1095,13 @@ public sealed class PosterInputIslandManager : IInputRegionHost
 
     [DllImport("user32.dll")]
     private static extern nint SetCursor(nint cursor);
+}
+
+// Query only while handling a wheel event already routed to the current poster. No hook or key capture.
+public static class NativeInputKeys
+{
+    public static bool ShiftDown => (GetAsyncKeyState(0x10) & 0x8000) != 0;
+
+    [DllImport("user32.dll")]
+    private static extern short GetAsyncKeyState(int key);
 }

@@ -193,13 +193,20 @@ public enum PosterInputTargetKind
     ResizeTop = 11,
     ResizeTopLeft = 12,
     ResizeTopRight = 13,
-    ResizeBottomLeft = 14
+    ResizeBottomLeft = 14,
+    ContentItem = 15,
+    ContentSpanHandle = 16,
+    ContentViewport = 17
 }
 
 public readonly record struct PosterInputRegion(
     PosterInputTargetKind Kind,
     int Index,
-    DesktopPixelRect Bounds);
+    DesktopPixelRect Bounds)
+{
+    public string? ContentItemId { get; init; }
+    public long ContentSnapshotGeneration { get; init; }
+}
 
 public sealed record PosterInputLayoutSnapshot(
     long Revision,
@@ -214,7 +221,8 @@ public enum PosterInputEventKind
     GestureCompleted = 1,
     GestureCancelled = 2,
     Invoked = 3,
-    Scrolled = 4
+    Scrolled = 4,
+    Pressed = 5
 }
 
 public sealed record PosterInputEventArgs(
@@ -228,6 +236,46 @@ public sealed record PosterInputEventArgs(
     int WheelDelta = 0)
 {
     public PosterInputSessionKey? Session { get; init; }
+    public string? ContentItemId { get; init; }
+    public long ContentSnapshotGeneration { get; init; }
+    public PosterInputCapture? Capture { get; init; }
+    public PointerScreenPoint LatestPoint { get; init; }
+    public TitleNativeEndReason EndReason { get; init; } = TitleNativeEndReason.None;
+    public long Sequence { get; init; }
+    // Set synchronously on content Pressed only. No claim means cancellation, never legacy fallback.
+    public bool Handled { get; set; }
+}
+
+public static class PosterContentInputPolicy
+{
+    public static bool IsTarget(PosterInputTargetKind kind) => kind is
+        PosterInputTargetKind.ContentItem or PosterInputTargetKind.ContentSpanHandle or PosterInputTargetKind.ContentViewport;
+
+    public static bool CanDrag(PosterInputTargetKind kind) => kind is
+        PosterInputTargetKind.ContentItem or PosterInputTargetKind.ContentSpanHandle;
+
+    public static bool HasValidIdentity(PosterInputRegion region) => IsTarget(region.Kind) &&
+        region.ContentSnapshotGeneration > 0 &&
+        (region.Kind == PosterInputTargetKind.ContentViewport || !string.IsNullOrWhiteSpace(region.ContentItemId));
+
+    // Match the existing native island's five-physical-pixel threshold exactly.
+    public static bool CrossedDragThreshold(int deltaX, int deltaY) =>
+        ((long)deltaX * deltaX) + ((long)deltaY * deltaY) >= 25;
+
+    public static PosterInputEventArgs Event(PosterInputCapture capture, PosterInputEventKind kind,
+        PointerScreenPoint press, PointerScreenPoint latest, long currentLayoutRevision, long sequence,
+        TitleNativeEndReason endReason = TitleNativeEndReason.None)
+    {
+        PosterInputRegion region = capture.Press.Region;
+        if (!HasValidIdentity(region)) throw new ArgumentException("A content event requires a stable target and snapshot.", nameof(capture));
+        return new(kind, region.Kind, region.Index, capture.Press.Frame,
+            latest.X - press.X, latest.Y - press.Y, currentLayoutRevision)
+        {
+            Session = capture.Press.Session, Capture = capture,
+            ContentItemId = region.ContentItemId, ContentSnapshotGeneration = region.ContentSnapshotGeneration,
+            LatestPoint = latest, EndReason = endReason, Sequence = sequence
+        };
+    }
 }
 
 public interface IInputRegionHost : IDisposable

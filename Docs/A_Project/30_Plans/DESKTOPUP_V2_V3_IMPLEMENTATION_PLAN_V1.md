@@ -1,14 +1,14 @@
 # DesktopUp V2 V3 制作计划 V1
 
-最新用户指令（2026-09-16，V2-DEC-008）：直接进入[04-L01合同与样例冻结](V3_04_L_CONTENT_LAYOUT_PLAN.md)，原04-06剩余验收及04-07/08专项收口延期，不作为L开工前置，不记完成。BUG-007已获用户复验通过，BUG-006及M08余门继续延期；当前L01 READY，尚未交付新生产布局。携带项与局部依赖见04-L§1.1。
+最新执行（2026-09-17）：[04-L](V3_04_L_CONTENT_LAYOUT_PLAN.md)L01～06 CODE/AUTO PASS；最终R4通过1630合同绑定、35同包进程门和资源基线，L07人工入口就绪。现进行集中人工，用户通过后05-01。DEC-008延期项、BUG-001/004/006及M08余门不变；结果见[交付](../40_Implementation/V3-04/CONTENT_LAYOUT_DELIVERY.md)。
 
 历史阶段证据（2026-09-16，04-06首批）：[04-06专项](V3_04_06_PORTABLE_PROFILE_PLAN.md) A/B/C及D1 AUTO PASS，完整1452/1452合同与同包6＋12＋3进程门通过、退出资源均为0；后续分批人工及BUG-007修订见[交付](../40_Implementation/V3-04/PORTABLE_PROFILE_DELIVERY.md)。未验余项现延期，真实另一主机未验证。TBD-021待安置语义仍有效。
 
 历史阶段（2026-09-16，04-06开始前）：05-05托盘人工用户通过；[布局统一修订](../40_Implementation/V3-04/LAYOUT_UNIFICATION_DELIVERY.md)CODE/AUTO PASS，外观三项人工USER PASS。1315合同/12同包进程/PS5.1及旧配置副本迁移通过。DEC-007新增[04-L布局地基计划](V3_04_L_CONTENT_LAYOUT_PLAN.md)，仅设计未实施，位于真实Item前。BUG-001/004、M08余门处置不变。
 
-最后检查：2026-09-16（DEC-008，当前04-L01 READY）。适用分支：`impl/poster-redesign-V3`。
+最后检查：2026-09-17（L01～06自动交付，L07人工待验）。适用分支：`impl/poster-redesign-V3`。
 携带的历史基线：M07 PASS；M08 IN PROGRESS，01～05分项PASS、TBD-017已解决，M08-06已实现/已执行回归通过，真实恢复与受影响视觉门OPEN；R4及M05/M06既有结论保留，不随04-06自动结果关闭余门。
-历史 [修复/清理记录](../40_Implementation/V3-04/M07_ANIMATION_R4.md) 与 [排查方法](../20_Architecture/PRESENTATION_DIAGNOSIS_PLAYBOOK_V1.md) 保留；`scripts/start-m07-animation.ps1`不是本轮04-06验收入口，当前用`scripts/start-portable-manual.ps1`。
+历史 [修复/清理记录](../40_Implementation/V3-04/M07_ANIMATION_R4.md) 与 [排查方法](../20_Architecture/PRESENTATION_DIAGNOSIS_PLAYBOOK_V1.md) 保留；动画旧入口及04-06的`scripts/start-portable-manual.ps1`分别绑定历史候选。当前L07使用`scripts/start-content-layout-manual.ps1`。
 最近顺序：04-L01合同/样例 → L02纯布局 → L03～07持久化/呈现/编辑/验证 → V3-05真实内容。04-06剩余验收、04-07/08专项收口延期；05-03取消。文件安全、单权威事务和新增资源的验证要求保留，不扩张完整主题/无限画布范围。
 本总计划维护阶段目标和依赖；子项当前状态归[细化工作流§4](V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md#4-v3-04-m多海报与参数基础前置)，交接仅摘要，验证日志保留当时事实。历史状态不自动成为当前待办，也不因上层收口自动补成全范围PASS。
 
@@ -299,7 +299,7 @@ V3-02-08/09 共同遵循：恢复任务捕获 `(DesktopShellGeneration, DisplayT
 
 2026-09-07 用户补充门（历史需求来源）：首次无配置恰好一张默认；已有或导入的有效 0..N 配置按集合恢复，不额外播种。中心/托盘均可新增；中心/海报“...”均可删除且必须提示后果，真实内容不删除。配置文件覆盖海报集合、几何/启动状态及独立主题/排版偏好；跨机先映射/预览/确认，再进入本机唯一权威。当前实施状态见[细化工作流§5.1](V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md#51-v3-04-06-配置迁移细化planned)；M01历史117/117不替代本轮便携入口或真实跨机人工证据。
 
-## 8.1 V3-04-L：真实Item前的内容布局地基（ACTIVE / L01 READY）
+## 8.1 V3-04-L：真实Item前的内容布局地基（L01～06 CODE/AUTO PASS，L07待验）
 
 按[04-L01～07](V3_04_L_CONTENT_LAYOUT_PLAN.md)完成合同与连续夹具 → 纯求解 → 持久化/便携映射 → 同一视口与几何快照 → 跨格编辑与撤销 → 热度/主题端口及资源 → 集中人工。DEC-008取消04-06余验收及04-07/08专项收口的整阶段前置；复用已有基础，只验证L实际改动涉及的数据/呈现/生命周期增量。出口是DEMO数据下可编辑、可持久化的异尺寸布局，不是真实收纳或完整主题平台。V3-06-01..04的视口基础前移复用，不造两套引擎。
 
@@ -497,7 +497,7 @@ V3-02-08/09 共同遵循：恢复任务捕获 `(DesktopShellGeneration, DisplayT
 
 ## 18. 立即下一步
 
-当前执行以[04-L专项](V3_04_L_CONTENT_LAYOUT_PLAN.md)与[主工作流§5](V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md#5-v3-04-余项唯一控制中心与托盘)为准：L01 READY；04-06剩余人工及04-07/08收口延期，已有代码/分项证据保留、不补PASS。真实另一主机尚未验证。以下日期段落仅保留历史阶段证据，不再作为当前开工指令。
+当前执行以[04-L专项](V3_04_L_CONTENT_LAYOUT_PLAN.md)与[主工作流§5](V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md#5-v3-04-余项唯一控制中心与托盘)为准：L01～06代码与同包自动门通过，L07待人工；04-06余验收及04-07/08专项延期，不补PASS。真实另一主机尚未验证。以下日期段落仅保留历史证据。
 
 2026-09-11当前：M07已关闭；M08-01～05及[设置入口](../40_Implementation/V3-04/M08_CONTROL_CENTER_SETTINGS.md)分项PASS，TBD-017已确认，M08-06已实现/已执行回归通过，真实恢复与受影响视觉门OPEN。生产自动通道已接，M07稳定App未替换；F03/F06按需登记而非完成。零目录同库重启0张/revision19证据保留，不重复验收。权限不阻止启动，50MiB预算不改；未commit/push。以下旧阶段证据按其当时版本保留。
 

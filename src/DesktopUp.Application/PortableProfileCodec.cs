@@ -12,6 +12,8 @@ public sealed record PortablePosterProfile(string Key, string Title, string Subt
     int AutoCollapseDelaySeconds, string LayoutKind, JsonElement LayoutParameters, string TemplateKey)
 {
     [JsonIgnore] public string LayoutParametersJson => LayoutParameters.GetRawText();
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public PortableContentLayout? ContentLayout { get; init; }
 }
 public sealed record PortableProfileDocument(string Format, int Version, IReadOnlyList<PortablePosterProfile> Posters,
     PortableSettings Settings);
@@ -20,7 +22,7 @@ public sealed record PortableProfileDocument(string Format, int Version, IReadOn
 public static class PortableProfileCodec
 {
     public const string Format = "DesktopUp.PortableProfile";
-    public const int Version = 1, MaximumBytes = 4 * 1024 * 1024, MaximumPosters = 128,
+    public const int Version = 2, MaximumBytes = 4 * 1024 * 1024, MaximumPosters = 128,
         MaximumDepth = 32, MaximumLayoutBytes = 32768;
     public const double MaximumExtentDip = 32768;
     private static readonly JsonSerializerOptions Options = new()
@@ -62,7 +64,13 @@ public static class PortableProfileCodec
             var document = JsonSerializer.Deserialize<PortableProfileDocument>(parsed.RootElement, Options)
                 ?? throw new ArgumentException("Portable configuration is null.");
             Validate(document);
-            return document with { Posters = Array.AsReadOnly(document.Posters.Select(p => p with { LayoutParameters = p.LayoutParameters.Clone() }).ToArray()) };
+            return document with { Posters = Array.AsReadOnly(document.Posters.Select(p => p with
+            {
+                LayoutParameters = p.LayoutParameters.Clone(),
+                ContentLayout = p.ContentLayout is { } content ? content with
+                { Regions = Array.AsReadOnly(content.Regions.ToArray()), Placements = Array.AsReadOnly(content.Placements.ToArray()),
+                    ReservedSpaces = Array.AsReadOnly(content.ReservedSpaces.ToArray()) } : null
+            }).ToArray()) };
         }
         catch (Exception error) when (error is JsonException or DecoderFallbackException or InvalidOperationException or OverflowException)
         { throw new ArgumentException("Invalid portable configuration: " + error.Message, error); }
@@ -71,7 +79,7 @@ public static class PortableProfileCodec
     public static void Validate(PortableProfileDocument document)
     {
         ArgumentNullException.ThrowIfNull(document);
-        if (document.Format != Format || document.Version != Version) throw new ArgumentException("Unknown portable format or version.");
+        if (document.Format != Format || document.Version is not (1 or Version)) throw new ArgumentException("Unknown portable format or version.");
         if (document.Settings is null || !Enum.IsDefined(document.Settings.PerformanceMode)) throw new ArgumentException("Invalid portable settings.");
         if (document.Posters is null || document.Posters.Count > MaximumPosters) throw new ArgumentException("Portable poster count exceeds 128.");
         var keys = new HashSet<string>(StringComparer.Ordinal);
@@ -86,6 +94,15 @@ public static class PortableProfileCodec
                 PosterAutoPosturePolicy.ValidateDelay(p.AutoCollapseDelaySeconds) is not null)
                 throw new ArgumentException("Invalid or unsupported portable poster fields.");
             ValidateParameters(p.LayoutParameters, p.TemplateKey);
+            if (p.ContentLayout is { } content)
+            {
+                if (document.Version == 1) throw new ArgumentException("Content layout requires portable format version two.");
+                var documentLayout = PortableContentLayoutCodec.Import(content, p.Key);
+                var appearance = PosterConfigurationFactory.NewBasicBox("portable-content-validation", "portable-content-validation") with
+                { LayoutParametersJson = p.LayoutParametersJson, TemplateKey = PosterPresentationPolicy.IsBuiltIn(p.TemplateKey) ? p.TemplateKey : "basic-box" };
+                var preferences = PosterPresentationPolicy.Resolve(appearance).Parameters.Preferences ?? new();
+                ContentLayoutCommandPolicy.ValidateAuthoring(documentLayout, preferences.Scale, preferences.Spacing);
+            }
         }
         // This also bounds documents constructed programmatically, not only parsed byte streams.
         if (JsonSerializer.SerializeToUtf8Bytes(document, Options).Length > MaximumBytes)
@@ -108,10 +125,13 @@ public static class PortableProfileCodec
             using var converted = JsonDocument.Parse(PosterPresentationPolicy.Serialize(resolved.Parameters));
             parameters = converted.RootElement.Clone();
         }
+        if (!ContentLayoutPolicy.TryRead(poster.ContentLayoutJson, poster.PosterId, out var content, out var contentError))
+            throw new ArgumentException("Cannot export unsupported content layout for " + poster.Title + ": " + contentError);
         return new(key, poster.Title, poster.Subtitle, poster.Purpose, poster.MonitorDeviceName,
             poster.WidthDip, poster.ExpandedHeightDip, poster.HorizontalAnchor, poster.VerticalAnchor,
             poster.StackOrder, poster.IsVisible, poster.IsLocked, poster.IsCollapsed, poster.AutoCollapseEnabled,
-            poster.AutoCollapseDelaySeconds, poster.LayoutKind, parameters, poster.TemplateKey);
+            poster.AutoCollapseDelaySeconds, poster.LayoutKind, parameters, poster.TemplateKey)
+        { ContentLayout = PortableContentLayoutCodec.Export(content!) };
     }
 
     private static void ValidateParameters(JsonElement parameters, string template)

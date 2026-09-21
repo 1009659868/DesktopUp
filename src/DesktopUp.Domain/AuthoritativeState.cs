@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace DesktopUp.Domain;
 
@@ -27,6 +28,9 @@ public sealed record PosterDefinition(
     public bool IsVisible { get; init; } = true;
     // Local placement availability is separate from the user's visibility intent.
     public bool PlacementPending { get; init; }
+    // Independent content intent; null is the legacy virtual DEMO layout, not a query-time migration.
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? ContentLayoutJson { get; init; }
     public long StackOrder { get; init; }
     public string? CollectionId { get; init; }
     // A reserved instance identity, not a loaded theme or executable theme package.

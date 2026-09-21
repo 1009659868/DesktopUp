@@ -22,6 +22,7 @@ public sealed partial class ControlCenterWindow
 
     internal ControlCenterPosterEditor EditorForProbe => _editor;
     internal bool CatalogDialogForProbe => _catalogDialog is not null;
+    internal bool LegacyGridFieldsReadOnlyForProbe() => new[]{"ItemWidth","ItemHeight","Gap"}.All(key=>!_styleFields[key].IsEnabled);
     internal void CancelCatalogForProbe() => _catalogDialog?.Hide();
     internal void EditFieldForProbe(bool style, string key, string text)
     {
@@ -29,6 +30,7 @@ public sealed partial class ControlCenterWindow
         if (style) foreach (var expander in EditorSections.Children.OfType<Expander>()) expander.IsExpanded = true;
         Content.UpdateLayout();
         var field = (style ? _styleFields : _geometryFields)[key];
+        if(!field.IsEnabled) throw new InvalidOperationException("Cannot edit a disabled field: "+key);
         field.StartBringIntoView(new BringIntoViewOptions { AnimationDesired = false });
         field.Text = text;
     }
@@ -37,7 +39,7 @@ public sealed partial class ControlCenterWindow
         FrameworkElement button = action switch { "geometry" => _geometryApply, "geometry-cancel" => _geometryCancel,
             "style" => _styleApply, "style-cancel" => _styleCancel, "create" => CreatePosterButton, "clone" => ClonePosterButton, _ => RenamePosterButton };
         if (button is Control control && !control.IsEnabled)
-            throw new InvalidOperationException($"Control disabled: {action}; loaded={button.IsLoaded}; group={_editor.Group}; dirty={_editor.IsDirty}; canCancel={_editor.CanCancel}");
+            throw new InvalidOperationException($"Control disabled: {action}; loaded={button.IsLoaded}; group={_editor.Group}; dirty={_editor.IsDirty}; canCancel={_editor.CanCancel}; error={_editor.Error}");
         if (FrameworkElementAutomationPeer.CreatePeerForElement(button)?.GetPattern(PatternInterface.Invoke) is not IInvokeProvider invoke)
             throw new InvalidOperationException("No Invoke provider: " + action);
         invoke.Invoke();

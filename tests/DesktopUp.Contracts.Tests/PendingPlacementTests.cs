@@ -50,7 +50,7 @@ public sealed partial class AutoPostureSettingsTests
         var result = f.Store.Initialize();
         Assert.True(result.Succeeded, result.Error);
         Assert.Equal(8, result.PreviousSchemaVersion);
-        Assert.Equal(9, result.Head!.SchemaVersion);
+        Assert.Equal(10, result.Head!.SchemaVersion);
         Assert.Equal(4, result.Head.Revision);
         Assert.Equal(before, PendingFields(f, excludePending: true));
         Assert.Equal(profile, Rows(f, "poster_profile"));
@@ -97,7 +97,7 @@ public sealed partial class AutoPostureSettingsTests
         using var f = new Fixture();
         f.Execute("ALTER TABLE posters DROP COLUMN placement_pending;");
         Assert.False(f.Store.Initialize().Succeeded);
-        Assert.Equal(9L, f.Scalar("PRAGMA user_version;"));
+        Assert.Equal(10L, f.Scalar("PRAGMA user_version;"));
     }
 
     [Fact]
@@ -123,7 +123,7 @@ public sealed partial class AutoPostureSettingsTests
         {
             var row = new SortedDictionary<string, object?>(StringComparer.Ordinal);
             for (int i = 0; i < reader.FieldCount; i++)
-                if (!excludePending || reader.GetName(i) != "placement_pending")
+                if (reader.GetName(i) != "content_layout_json" && (!excludePending || reader.GetName(i) != "placement_pending"))
                     row[reader.GetName(i)] = reader.IsDBNull(i) ? null : reader.GetValue(i);
             rows.Add(row);
         }

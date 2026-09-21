@@ -18,7 +18,7 @@ public sealed partial class ControlCenterWindow
     private Action? _cancelVisuals;
     private Func<string, string>? _locate;
     private SliderPresetMarks? _scaleMarks, _spacingMarks;
-    internal bool IsSettingsInteractionActive => _portableBusy || _settings.ProtectsInteraction || _editor.ProtectsInteraction || _catalogDialog is not null;
+    internal bool IsSettingsInteractionActive => _portableBusy || _contentFocused || _settings.ProtectsInteraction || _editor.ProtectsInteraction || _catalogDialog is not null;
     internal event Action? SettingsInteractionChanged;
 
     internal void ConfigureUsability(Func<PosterSettingEdit, bool> preview, Action cancel, Func<string, string> locate, IResourceLedger ledger)

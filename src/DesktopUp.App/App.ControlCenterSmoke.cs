@@ -72,15 +72,18 @@ public partial class App
                     case 5:
                         if (initialCount > 1)
                         {
-                            window!.EditFieldForProbe(true, "Gap", "16");
+                            window!.EditFieldForProbe(true, "Icon", "56");
                             window.SelectSettingsTargetForProbe(current.Posters[1].Poster.PosterId);
                             Require(!editor!.IsDirty, "selection leaked A draft"); window.SelectSettingsTargetForProbe(a);
                         }
-                        window!.EditFieldForProbe(true, "Gap", "16"); step++; break;
+                        Require(window!.LegacyGridFieldsReadOnlyForProbe(), "Legacy equal-grid fields must be read-only under span-grid.");
+                        // Both built-in legacy parameter sets admit 56 DIP; their retained
+                        // cell padding still constrains this advanced icon-only setting.
+                        window.EditFieldForProbe(true, "Icon", "56"); step++; break;
                     case 6: window!.InvokeEditorForProbe("style"); step++; break;
                     case 7:
                         Require(!editor!.IsDirty && !editor.IsPending && current.Revision == revision + 1 &&
-                            current.PostersById[a].Presentation.Parameters.Content.GapDip == 16, "style not committed exactly once");
+                            current.PostersById[a].Presentation.Parameters.Content.IconSizeDip == 56, "style not committed exactly once");
                         revision = current.Revision;
                         var target = current.PostersById[a]; var effective = _spatialRuntime.GetEffectiveLayout(target)!;
                         Require(effective is not null, "missing effective geometry");
@@ -92,7 +95,7 @@ public partial class App
                     case 9:
                         Require(!editor!.IsPending && !editor.IsDirty && editor.Error is null, "R4 geometry apply failed: " + editor!.Error);
                         Require(current.Revision == revision + 1 && Math.Abs(current.PostersById[a].Poster.ExpandedHeightDip-height) < 1, "geometry did not commit once");
-                        Require(current.PostersById[a].Presentation.Parameters.Content.GapDip == 16, "geometry changed content metrics");
+                        Require(current.PostersById[a].Presentation.Parameters.Content.IconSizeDip == 56, "geometry changed content metrics");
                         revision = current.Revision; window!.EditFieldForProbe(false, "Height", (height + 20).ToString("R", CultureInfo.InvariantCulture));
                         step = 40; break;
                     case 40: window!.InvokeEditorForProbe("geometry"); step = 41; break;
@@ -109,7 +112,7 @@ public partial class App
                     case 11:
                         if (window!.CatalogDialogForProbe) return;
                         Require(current.Revision == revision, "cancel clone created entity");
-                        window.EditFieldForProbe(true, "Gap", "18"); _controlCenter.CloseForContractProbe(); step++; break;
+                        window.EditFieldForProbe(true, "Icon", "60"); _controlCenter.CloseForContractProbe(); step++; break;
                     case 12:
                         Require(window is null && !_controlCenter.IsSettingsInteractionActive && current.Revision == revision, "close leaked draft/protection");
                         _controlCenter.Show(); opens++; step++; break;

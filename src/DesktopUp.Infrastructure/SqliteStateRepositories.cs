@@ -224,7 +224,7 @@ public sealed class SqlitePosterRepository(
                 state_revision,
                 updated_utc,
                 purpose, is_visible, stack_order, collection_id, theme_instance_id, entity_version,
-                layout_generation, last_layout_operation_id, auto_collapse_delay_seconds, placement_pending
+                layout_generation, last_layout_operation_id, auto_collapse_delay_seconds, placement_pending, content_layout_json
             FROM posters
             WHERE poster_id = $posterId;
             """;
@@ -261,7 +261,8 @@ public sealed class SqlitePosterRepository(
             CollectionId = reader.IsDBNull(23) ? null : reader.GetString(23),
             ThemeInstanceId = reader.GetString(24),
             AutoCollapseDelaySeconds = reader.GetInt32(28),
-            PlacementPending = reader.GetInt64(29) != 0
+            PlacementPending = reader.GetInt64(29) != 0,
+            ContentLayoutJson = reader.IsDBNull(30) ? null : reader.GetString(30)
         };
         return new PosterStateSnapshot(
             revision,
@@ -291,7 +292,7 @@ public sealed class SqlitePosterRepository(
                 is_locked, is_collapsed, auto_collapse_enabled,
                 layout_kind, layout_parameters_json, template_key,
                 state_revision, created_utc, updated_utc,
-                purpose, is_visible, stack_order, collection_id, theme_instance_id, auto_collapse_delay_seconds, placement_pending)
+                purpose, is_visible, stack_order, collection_id, theme_instance_id, auto_collapse_delay_seconds, placement_pending, content_layout_json)
             VALUES (
                 $posterId, $title, $subtitle, $monitorDeviceName,
                 $fallbackXDip, $fallbackYDip,
@@ -301,7 +302,7 @@ public sealed class SqlitePosterRepository(
                 $isLocked, $isCollapsed, $autoCollapseEnabled,
                 $layoutKind, $layoutParametersJson, $templateKey,
                 $stateRevision, $createdUtc, $updatedUtc,
-                $purpose, $isVisible, $stackOrder, $collectionId, $themeInstanceId, $autoCollapseDelaySeconds, $placementPending);
+                $purpose, $isVisible, $stackOrder, $collectionId, $themeInstanceId, $autoCollapseDelaySeconds, $placementPending, $contentLayoutJson);
             """;
         AddPosterParameters(command, poster, committedRevision, timestamp);
         command.Parameters.AddWithValue("$createdUtc", timestamp);
@@ -350,6 +351,7 @@ public sealed class SqlitePosterRepository(
                 purpose = $purpose,
                 is_visible = $isVisible,
                 placement_pending = $placementPending,
+                content_layout_json = $contentLayoutJson,
                 stack_order = $stackOrder,
                 collection_id = $collectionId,
                 theme_instance_id = $themeInstanceId,
@@ -404,6 +406,7 @@ public sealed class SqlitePosterRepository(
         command.Parameters.AddWithValue("$purpose", poster.Purpose);
         command.Parameters.AddWithValue("$isVisible", poster.IsVisible ? 1 : 0);
         command.Parameters.AddWithValue("$placementPending", poster.PlacementPending ? 1 : 0);
+        command.Parameters.AddWithValue("$contentLayoutJson", (object?)poster.ContentLayoutJson ?? DBNull.Value);
         command.Parameters.AddWithValue("$stackOrder", poster.StackOrder);
         command.Parameters.AddWithValue("$collectionId", (object?)poster.CollectionId ?? DBNull.Value);
         command.Parameters.AddWithValue("$themeInstanceId", poster.ThemeInstanceId);

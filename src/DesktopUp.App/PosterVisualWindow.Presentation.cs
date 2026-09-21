@@ -29,11 +29,13 @@ internal sealed partial class PosterVisualWindow
         _renderedTitle = _authoritativePoster?.Title;
         _renderedSubtitle = _authoritativePoster?.Subtitle;
         if (!changed || _window is null) return;
+        CancelContentGesture("presentation-changed");
         StopLocate();
         RestoreTransitionLayout();
         _posterMenu?.Hide();
         StopExpansionFeedback();
         _itemColumnCount = -1;
+        _contentCanvas = null; _contentCards.Clear(); _contentPaintKey = null;
         // Replace only this instance's XAML tree on an explicit presentation revision.
         // No window/host replacement, no global Application.Resources, no outer geometry write.
         ApplyWindowBackdrop(_window);
@@ -54,25 +56,20 @@ internal sealed partial class PosterVisualWindow
     // Read real XAML objects without synthesizing input or replacing a native layout.
     internal bool VerifyPresentation(PosterSurfaceProjection target)
     {
-        // WinUI stores these dependency values as float32. Accept only the exact
-        // value or its exact float32 representation, not a loose pixel tolerance.
-        static bool XamlNumber(double actual, double expected) => double.IsFinite(actual) && double.IsFinite(expected) &&
-            (actual == expected || actual == (double)(float)expected);
-        var expected = target.Presentation;
-        if (_presentation != expected || _renderedTitle != target.Poster.Title ||
-            _window?.Title != "DesktopUp V3 · " + target.Poster.Title ||
-            !VerifyWindowBackdrop() ||
-            _surface?.Child is not Grid structure || !XamlNumber(structure.RowDefinitions[1].Height.Value, target.Poster.IsCollapsed ? 0 : expected.MetaHeightDip) ||
-            _itemsGrid is null || _itemsGrid.Children.Count != Items.Length ||
-            !XamlNumber(_itemsGrid.RowSpacing, ContentParameters.GapDip) || !XamlNumber(_itemsGrid.ColumnSpacing, ContentParameters.GapDip) ||
-            _itemColumnCount != PosterPresentationPolicy.ResolveColumns(FrameWidthDip(_bounds), expected.EffectiveContent)) return false;
-        if (_itemsGrid.RowDefinitions.Any(r => !XamlNumber(r.Height.Value, expected.Metrics.CompleteItemRowDip))) return false;
-        foreach (Grid cell in _itemsGrid.Children.Cast<Grid>())
+        static bool XamlNumber(double actual,double expected)=>double.IsFinite(actual) && double.IsFinite(expected) &&
+            (actual==expected || actual==(double)(float)expected);
+        var expected=target.Presentation;
+        if(_presentation!=expected || _renderedTitle!=target.Poster.Title || _window?.Title!="DesktopUp V3 · "+target.Poster.Title ||
+            !VerifyWindowBackdrop() || _surface?.Child is not Grid structure ||
+            !XamlNumber(structure.RowDefinitions[1].Height.Value,target.Poster.IsCollapsed?0:expected.MetaHeightDip) ||
+            _contentCanvas is null || _itemsGrid?.Children.Contains(_contentCanvas)!=true || _contentSnapshot is not { } snapshot ||
+            snapshot.PosterId!=target.Poster.PosterId || snapshot.DocumentVersion!=ContentDocument.DocumentVersion) return false;
+        foreach(var pair in _contentCards)
         {
-            if (!XamlNumber(cell.RowDefinitions[0].Height.Value, ContentParameters.ItemHeightDip) ||
-                cell.Children[0] is not Border { Child: Grid card } ||
-                !card.Children.OfType<TextBlock>().Any(t => XamlNumber(t.Width, ContentParameters.IconSizeDip) && XamlNumber(t.Height, ContentParameters.IconSizeDip)) ||
-                cell.Children[1] is not TextBlock label || !XamlNumber(label.FontSize, ContentParameters.LabelFontSizeDip)) return false;
+            var slot=snapshot.Items.FirstOrDefault(p=>p.ItemId==pair.Key);
+            if(slot is null || !XamlNumber(pair.Value.Width,slot.Bounds.Width) || !XamlNumber(pair.Value.Height,slot.Bounds.Height) ||
+                !XamlNumber(Canvas.GetLeft(pair.Value),slot.Bounds.X-snapshot.ScrollXDip) ||
+                !XamlNumber(Canvas.GetTop(pair.Value),slot.Bounds.Y-snapshot.ScrollYDip)) return false;
         }
         return true;
     }

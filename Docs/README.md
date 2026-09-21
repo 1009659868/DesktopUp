@@ -1,6 +1,6 @@
 # DesktopUp V2 文档入口
 
-最新执行（2026-09-16，V2-DEC-008）：主线直接前移至[04-L01：合同与样例冻结](A_Project/30_Plans/V3_04_L_CONTENT_LAYOUT_PLAN.md)，L01 READY，尚未交付新schema/样例或生产布局。04-06未验余项、04-07/08专项收口延期，不作为L开工前置、不补PASS；已有实现/测试保留。BUG-007已获用户复验通过；BUG-006及M08余门处置不变。延期清单与L自身增量门见[04-L§1.1](A_Project/30_Plans/V3_04_L_CONTENT_LAYOUT_PLAN.md#11-前置调整与携带项)。以下阶段摘要为历史证据，不沿用旧“先回P5”指令。
+最新执行（2026-09-17）：[04-L](A_Project/30_Plans/V3_04_L_CONTENT_LAYOUT_PLAN.md)的L01～L06实现和自动门完成：1630合同、最终R4同包35进程门及1/3/6资源基线通过；25指纹/35门人工入口已在PS5.1预检。当前进入L07人工验收，真实输入/像素尚未确认。能力、限制与操作见[交付](A_Project/40_Implementation/V3-04/CONTENT_LAYOUT_DELIVERY.md)。旧延期和BUG处置不变，不补PASS。 最新L07反馈要求单轴/横向循环并简化整理，当前NEEDS REVISION；按DEC-009先讨论交互修订，尚未进入05-01。
 
 历史阶段（2026-09-16，04-06首批）：[04-06专项计划](A_Project/30_Plans/V3_04_06_PORTABLE_PROFILE_PLAN.md)的A/B/C生产接线与D1自动门已通过；完整1452/1452合同、同包portable6＋既有回归12＋离线恢复窗口3门通过，退出资源均为0。分批人工范围见[交付/人工矩阵](A_Project/40_Implementation/V3-04/PORTABLE_PROFILE_DELIVERY.md)，真实另一主机尚未验证。空间不足按V2-TBD-021保留全部配置为“等待安置”，不改显隐意图或尺寸/收展。旧layout包不能验收04-06。
 
@@ -10,14 +10,14 @@
 
 历史记录（04-04 UX交付）：1265合同/六组进程门及旧人工反馈见[UX实施记录](A_Project/40_Implementation/V3-04/CONTROL_CENTER_USABILITY_DELIVERY.md)；旧02～06证据见对应交付，不再将旧PID或“下一步UX-05”作为当前指令。M08余门不补PASS。
 
-最后更新：2026-09-16（DEC-008前移04-L，旧未验余门延期）。当前分支：`impl/poster-redesign-V3`。
-当前阶段：**04-L ACTIVE / L01 READY**，只完成主线与依赖调整。BUG-005/007已有相应USER PASS；旧包/日常配置保留。用户已另行授权当前V3分支Git同步，检查点范围与本轮重跑证据见[交接](A_Project/40_Implementation/V3-04/HANDOFF.md)及验证记录；不作发布合并。未验环境或场景不因排期/提交而通过。
+最后更新：2026-09-17（04-L自动交付，L07待人工）。当前分支：`impl/poster-redesign-V3`。
+当前阶段：**04-L01～L06 CODE/AUTO PASS；L07 MANUAL PENDING**。旧包/日常配置保留；HEAD为b118936，本轮未提交推送。当前候选只认证已记录的自动范围。
 
 ## 当前入口
 
 - [当前执行路径](00_Catalog/ACTIVE_PATH.md)：A → B → C 与最近步骤。
 - [当前交接](A_Project/40_Implementation/V3-04/HANDOFF.md)、[代码锚点](A_Project/40_Implementation/V3-04/CODE_ANCHORS.md)、[验证日志](A_Project/40_Implementation/V3-04/VERIFICATION.md)。
-- 当前[04-L01任务卡](A_Project/30_Plans/V3_04_L_CONTENT_LAYOUT_PLAN.md#6-立即下一步)：先合同与三参考样例，随后L02纯布局；本次没有新应用包或人工启动命令。04-06原验收入口和证据保留，但暂不启动剩余场景。
+- 当前[04-L任务卡](A_Project/30_Plans/V3_04_L_CONTENT_LAYOUT_PLAN.md#6-立即下一步)及[交付/人工矩阵](A_Project/40_Implementation/V3-04/CONTENT_LAYOUT_DELIVERY.md)：同包自动门已绑定，下一步L07集中人工。
 - [白条修复与清理证据](A_Project/40_Implementation/V3-04/M07_ANIMATION_R4.md)；[同类问题排查方法](A_Project/20_Architecture/PRESENTATION_DIAGNOSIS_PLAYBOOK_V1.md)。
 - 历史稳定动画入口：`scripts/start-m07-animation.ps1`；[启动配置](../config/README.md)。R2/R3/独立诊断入口已退出活动目录，旧动画包不能验收04-06。
 
@@ -42,7 +42,7 @@ ABC是逻辑分层，不要求搬迁现有目录。A维护产品需求、全局�
 ## 产品与边界
 
 正式方向：通用桌面内容收纳、多海报、一个控制中心、一个托盘、独立风格主题、热度排版、AI 辅助定制。游戏图标海报是特色起点，不限制通用文件/目录/应用/Shell 内容。
-技术路线沿用 DeskBox 的 Windows 原生经验与 WinUI；不恢复旧 Qt/WebView/Axiom 试验。当前六卡仍是 DEMO ITEMS，未实现真实文件收纳。
+技术路线沿用 DeskBox 的 Windows 原生经验与 WinUI；不恢复旧 Qt/WebView/Axiom 试验。当前内容仍是 DEMO ITEMS，04-L支持异尺寸样例与有界压力数据，未实现真实文件收纳。
 
 V3-01/02/03、V3-04-01/02/03及M01～M06已有分项证据；本轮[M07](A_Project/40_Implementation/V3-04/M07_MEASUREMENT_AND_SAFETY.md)集中S1～S5安全和测量均已通过，功能欠项不代填完成：减少动效/手动连点队列按需登记，自动收展转入M08。
 最近顺序（V2-DEC-008）：04-L01合同/样例 → L02纯布局 → L03～07持久化、呈现、编辑及验证 → V3-05真实内容安全闭环。04-06剩余验收和04-07/08专项收口延期，不是L开工前置；05-03取消，M08余门保留，不自动重启标题缺陷循环。

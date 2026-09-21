@@ -181,6 +181,7 @@ public interface IStateProjectionCoordinator
 
 public interface IStateCommandService
 {
+    StateCommandResult Execute(ContentLayoutCommand command) => throw new NotSupportedException("Content layout commands are not supported by this test adapter.");
     StateCommandResult Execute(PosterStateCommand command);
     StateCommandResult Execute(SettingsStateCommand command);
     StateCommandResult Execute(CreatePosterCommand command);

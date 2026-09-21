@@ -29,6 +29,14 @@ internal static class StateCommandPolicy
             if (command.ReadSet is null || command.SpatialGesture is not null || command.SpatialPosture is not null)
                 return Invalid("Presentation edit requires entity CAS and cannot contain a spatial gesture.");
             if (PosterPresentationPolicy.ValidateEdit(current, command.DesiredState) is { } error) return Invalid(error);
+            // Macro presentation changes must remain compatible with the independent authored grid.
+            // Unknown documents stay exact read-only raw text; they are never guessed or rewritten here.
+            if (ContentLayoutPolicy.TryRead(current.ContentLayoutJson, current.PosterId, out var content, out _))
+            {
+                var preferences = PosterPresentationPolicy.Resolve(command.DesiredState).Parameters.Preferences ?? new();
+                try { ContentLayoutCommandPolicy.ValidateAuthoring(content!, preferences.Scale, preferences.Spacing); }
+                catch (ArgumentException exception) { return Invalid("Presentation conflicts with the authored content layout: " + exception.Message); }
+            }
         }
         if (command.SpatialPosture is not null) return SpatialPostureCommitPolicy.Prepare(command, state);
         string? spatialError = SpatialGestureCommitPolicy.Validate(command, state);
@@ -143,6 +151,7 @@ internal static class StateCommandPolicy
         {
             PosterId = id, ThemeInstanceId = "theme-" + Guid.NewGuid().ToString("N"),
             CollectionId = null,
+            ContentLayoutJson = ContentLayoutCommandPolicy.RemapStored(configuration, id),
             StackOrder = state.Catalog.Posters.Count == 0 ? 0 : checked(state.Catalog.Posters.Max(p => p.Poster.StackOrder) + 1)
         };
         return new() { Creates = new[] { created }, ResultPosterId = id };

@@ -166,13 +166,13 @@ public partial class App : Microsoft.UI.Xaml.Application
         }
 
         ScheduleSmokeExitIfRequested(_startupIntent.Arguments);
-        string[] smokeFlags = ["--picker-smoke", "--portable-smoke", "--tray-smoke", "--control-center-smoke", "--title-surface-smoke", "--auto-measurement", "--auto-lifetime-smoke", "--auto-settings-smoke", "--auto-posture-smoke", "--continuity-smoke", "--continuity-arrange", "--menu-smoke", "--presentation-smoke", "--spatial-smoke", "--input-confirmation-smoke", "--multi-instance-smoke", "--multi-instance-restart"];
+        string[] smokeFlags = ["--content-layout-smoke", "--content-layout-restart", "--picker-smoke", "--portable-smoke", "--tray-smoke", "--control-center-smoke", "--title-surface-smoke", "--auto-measurement", "--auto-lifetime-smoke", "--auto-settings-smoke", "--auto-posture-smoke", "--continuity-smoke", "--continuity-arrange", "--menu-smoke", "--presentation-smoke", "--spatial-smoke", "--input-confirmation-smoke", "--multi-instance-smoke", "--multi-instance-restart"];
         if (_startupIntent.Arguments.Count(a => smokeFlags.Contains(a, StringComparer.OrdinalIgnoreCase)) > 1)
         {
             _log.Write("error", "contract.smoke_refused", new { reason = "one-smoke-per-process" });
             return;
         }
-        if (_startupIntent.Arguments.Any(a => a is "--picker-smoke" or "--portable-smoke" or "--tray-smoke" or "--control-center-smoke" or "--title-surface-smoke" or "--auto-posture-smoke" or "--auto-settings-smoke" or "--auto-lifetime-smoke" or "--auto-measurement"))
+        if (_startupIntent.Arguments.Any(a => a is "--content-layout-smoke" or "--content-layout-restart" or "--picker-smoke" or "--portable-smoke" or "--tray-smoke" or "--control-center-smoke" or "--title-surface-smoke" or "--auto-posture-smoke" or "--auto-settings-smoke" or "--auto-lifetime-smoke" or "--auto-measurement"))
         {
             string? testRoot = Environment.GetEnvironmentVariable("DESKTOPUP_V3_TEST_DATA_ROOT");
             string normalRoot = Path.GetFullPath(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DesktopUp", "V3"));
@@ -180,6 +180,7 @@ public partial class App : Microsoft.UI.Xaml.Application
             if (string.IsNullOrWhiteSpace(testRoot) || actual.Equals(normalRoot, StringComparison.OrdinalIgnoreCase) ||
                 actual.StartsWith(normalRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
                 _log.Write("error", "auto_posture.smoke_refused", new { reason = "isolated-profile-required" });
+            else if (_startupIntent.Arguments.Any(a => a is "--content-layout-smoke" or "--content-layout-restart")) RunContentLayoutSmoke(actual);
             else if (_startupIntent.Arguments.Contains("--picker-smoke", StringComparer.Ordinal)) RunPickerSmoke(actual);
             else if (_startupIntent.Arguments.Contains("--portable-smoke", StringComparer.Ordinal)) RunPortableSmoke(actual);
             else if (_startupIntent.Arguments.Contains("--tray-smoke", StringComparer.Ordinal)) RunTraySmoke(actual);

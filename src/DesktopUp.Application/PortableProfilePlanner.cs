@@ -45,7 +45,9 @@ public static class PortableProfilePlanner
                 Purpose = portable.Purpose, IsVisible = portable.IsVisible,
                 AutoCollapseDelaySeconds = portable.AutoCollapseDelaySeconds,
                 StackOrder = mode == PortableImportMode.Replace ? portable.StackOrder : nextStack++,
-                ThemeInstanceId = "theme-" + token, CollectionId = null
+                ThemeInstanceId = "theme-" + token, CollectionId = null,
+                ContentLayoutJson = portable.ContentLayout is { } content
+                    ? ContentLayoutPolicy.Serialize(PortableContentLayoutCodec.Import(content, id)) : null
             };
             var placed = Place(definition, topology, occupied, warnings);
             if (!PosterPresentationPolicy.IsBuiltIn(definition.TemplateKey))

@@ -1,6 +1,6 @@
 # DesktopUp V2 当前执行入口
 
-最新执行（2026-09-16，V2-DEC-008）：用户决定直接进入[04-L01合同与样例冻结](../A_Project/30_Plans/V3_04_L_CONTENT_LAYOUT_PLAN.md)，L01 READY。04-06余验收、04-07/08专项收口延期，不作L开工前置、不补PASS；BUG-007已获用户复验通过，BUG-006继续延期。依赖核对/携带范围见[04-L§1.1](../A_Project/30_Plans/V3_04_L_CONTENT_LAYOUT_PLAN.md#11-前置调整与携带项)。本次不改生产、数据库或运行包。
+最新执行（2026-09-17）：[04-L](../A_Project/30_Plans/V3_04_L_CONTENT_LAYOUT_PLAN.md)L01～06 CODE/AUTO PASS，1630合同＋R4同包35门、1/3/6资源基线和PS5.1入口25/35绑定通过。下一步L07人工，真实输入/像素不预填PASS；仍是DEMO。证据/操作见[交付](../A_Project/40_Implementation/V3-04/CONTENT_LAYOUT_DELIVERY.md)。 最新L07反馈要求单轴/横向循环并简化整理，当前NEEDS REVISION；按DEC-009先讨论交互修订，尚未进入05-01。
 
 历史阶段（2026-09-16，04-06首批）：[04-06-A～D](../A_Project/30_Plans/V3_04_06_PORTABLE_PROFILE_PLAN.md) A/B/C与D1 AUTO PASS，完整1452/1452合同及同包6＋12＋3进程门通过、退出资源均为0；真实另一主机未验证。分批人工/候选见[交付](../A_Project/40_Implementation/V3-04/PORTABLE_PROFILE_DELIVERY.md)，未验余项现延期。空间不足按V2-TBD-021全部保留为待安置配置。
 
@@ -8,15 +8,15 @@
 
 历史（04-04滑块交付）：[滑块修订](../A_Project/40_Implementation/V3-04/CONTROL_CENTER_SLIDER_REFINEMENT.md)1283/六组自动门PASS，点选/微调待复验；当时的列表排查/暂缓05指令已由用户后续进入05替代。运行事实及证据只查最新[HANDOFF](../A_Project/40_Implementation/V3-04/HANDOFF.md)，不沿用旧PID。
 
-最后检查：2026-09-16（DEC-008，04-L01 READY）。分支：`impl/poster-redesign-V3`。
+最后检查：2026-09-17（L07人工入口已准备）。分支：`impl/poster-redesign-V3`。
 
 | 层级 | 权威入口 | 当前状态 |
 | --- | --- | --- |
 | A 需求 | [七份需求](REQUIREMENTS_INDEX.md) | 通用内容、多海报、唯一中心/托盘、独立主题、热度与 AI |
 | A 架构 | [总体架构](../A_Project/20_Architecture/DESKTOPUP_V2_V3_ARCHITECTURE_V1.md)、[多海报合同](../A_Project/20_Architecture/GENERAL_CONTENT_MULTI_POSTER_CONTRACT_V1.md) | 当前设计基线 |
 | B 模块 | [模块分类](../A_Project/20_Architecture/DESKTOPUP_V2_V3_MODULE_CATALOG_V1.md) | 共享宿主恢复、独立海报会话 |
-| C 总计划/任务索引 | [制作计划](../A_Project/30_Plans/DESKTOPUP_V2_V3_IMPLEMENTATION_PLAN_V1.md)、[细化工作流](../A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md)、[04-L专项](../A_Project/30_Plans/V3_04_L_CONTENT_LAYOUT_PLAN.md) | 当前L01 READY；04-06剩余验收、04-07/08收口延期；M08余门携带 |
-| C 当前工作/携带门 | [04-L任务及携带清单](../A_Project/30_Plans/V3_04_L_CONTENT_LAYOUT_PLAN.md)、[便携分项结果](../A_Project/40_Implementation/V3-04/PORTABLE_PROFILE_DELIVERY.md)、[缺陷清单](../A_Project/40_Implementation/V3-04/KNOWN_ISSUES.md) | L01 READY；04-06余验收/04-07/08收口延期；BUG-005/007 USER PASS，BUG-001/006延期、004非阻塞，真实他机未验 |
+| C 总计划/任务索引 | [制作计划](../A_Project/30_Plans/DESKTOPUP_V2_V3_IMPLEMENTATION_PLAN_V1.md)、[细化工作流](../A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md)、[04-L专项](../A_Project/30_Plans/V3_04_L_CONTENT_LAYOUT_PLAN.md) | L01～06 CODE/AUTO PASS；L07人工待验，旧延期携带 |
+| C 当前工作/携带门 | [04-L交付](../A_Project/40_Implementation/V3-04/CONTENT_LAYOUT_DELIVERY.md)、[便携分项结果](../A_Project/40_Implementation/V3-04/PORTABLE_PROFILE_DELIVERY.md)、[缺陷清单](../A_Project/40_Implementation/V3-04/KNOWN_ISSUES.md) | R4已绑定35同包门，进入L07；BUG-005/007原USER PASS，001/006延期、004非阻塞，真实他机未验 |
 | C 历史呈现修复 | [R4](../A_Project/40_Implementation/V3-04/M07_ANIMATION_R4.md) | 白条人工确认；保留方法论与历史证据，非本轮修改 |
 | C 交接/代码/证据 | [HANDOFF](../A_Project/40_Implementation/V3-04/HANDOFF.md)、[CODE_ANCHORS](../A_Project/40_Implementation/V3-04/CODE_ANCHORS.md)、[VERIFICATION](../A_Project/40_Implementation/V3-04/VERIFICATION.md) | 当前事实与历史证据分开 |
 
@@ -31,7 +31,7 @@ ABC资料归属见[文档入口](../README.md#abc归属与历史记录)；当前
 
 ## 最近步骤
 
-1. [04-L专项计划](../A_Project/30_Plans/V3_04_L_CONTENT_LAYOUT_PLAN.md)当前L01 READY：身份/跨度/模式/版本CAS合同、独立辅助开关及三参考几何样例；之后L02纯布局。未启动新人工场景或生产编辑器。
+1. [04-L专项计划](../A_Project/30_Plans/V3_04_L_CONTENT_LAYOUT_PLAN.md)已完成L01～06代码与自动门；下一步使用绑定R4的入口进行L07人工。已测资源和35门不代替真实输入/像素确认。
 2. 原05-03单张目标子菜单由V2-DEC-006取消，不改号另派任务；旧合同测试不作为当前托盘交付。
 3. 05-02/04已接原通道；TBD-020保持隐藏新增已实现，05-05人工用户通过。新增外观链路另验，不扩大旧PASS范围。
 4. DEC-008直接推进04-L01～07 → V3-05真实内容纵向闭环；原04-06剩余验收和04-07/08收口延期。04-06已有版本化便携外壳，L03补跨格载荷/映射及针对性兼容验证；L新增输入/资源随本阶段验收，不预先补全旧阶段。磁盘执行仍以前置恢复账本为门。

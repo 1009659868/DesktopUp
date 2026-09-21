@@ -62,6 +62,7 @@ internal sealed partial class ControlCenterService(
                         if (result.Succeeded && result.ResultPosterId is { } id) SelectPoster(id);
                     });
                 stage = "apply-projection";
+                pendingWindow.ConfigureContentLayout(() => spatialRuntime?.Invoke());
                 pendingWindow.ConfigureUsability(
                     edit => spatialRuntime?.Invoke()?.PreviewControlCenterSetting(edit) == true,
                     () => spatialRuntime?.Invoke()?.CancelControlCenterVisuals(),

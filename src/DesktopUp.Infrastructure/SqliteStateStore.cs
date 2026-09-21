@@ -10,7 +10,7 @@ public sealed class SqliteStateStore : IStateStore
 {
     private const int ApplicationId = 0x44555033; // "DUP3"
     private const int BusyTimeoutMilliseconds = 5_000;
-    private const int CurrentSchemaVersion = 9;
+    private const int CurrentSchemaVersion = 10;
     private const string DatabaseFileName = "desktopup.sqlite3";
     private static readonly Migration[] Migrations =
     [
@@ -210,6 +210,9 @@ public sealed class SqliteStateStore : IStateStore
         new(9, "poster-placement-pending", """
             ALTER TABLE posters ADD COLUMN placement_pending INTEGER NOT NULL DEFAULT 0
                 CHECK (placement_pending IN (0, 1));
+            """),
+        new(10, "poster-content-layout-document", """
+            ALTER TABLE posters ADD COLUMN content_layout_json TEXT NULL;
             """)
     ];
 
@@ -591,6 +594,8 @@ public sealed class SqliteStateStore : IStateStore
             if (migration.Version >= 5) VerifySpatialSchema(connection, transaction);
             if (migration.Version >= 6) VerifyContinuitySchema(connection, transaction);
             if (migration.Version >= 7) VerifyAutoPostureSchema(connection, transaction);
+            if (migration.Version >= 9) VerifyPendingPlacementSchema(connection, transaction);
+            if (migration.Version >= 10) VerifyContentLayoutSchema(connection, transaction);
 
             string appliedUtc = DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture);
             using (SqliteCommand ledger = connection.CreateCommand())
@@ -702,12 +707,26 @@ public sealed class SqliteStateStore : IStateStore
         if (expectedVersion >= 6) VerifyContinuitySchema(connection, null);
         if (expectedVersion >= 7) VerifyAutoPostureSchema(connection, null);
         if (expectedVersion >= 9) VerifyPendingPlacementSchema(connection, null);
+        if (expectedVersion >= 10) VerifyContentLayoutSchema(connection, null);
         if (head.SchemaVersion != version)
         {
             throw new InvalidDataException(
                 $"State head schema {head.SchemaVersion} does not match user_version {version}.");
         }
         return head;
+    }
+
+    private static void VerifyContentLayoutSchema(SqliteConnection connection, SqliteTransaction? transaction)
+    {
+        using var shape = connection.CreateCommand(); shape.Transaction = transaction;
+        shape.CommandText = "SELECT type, [notnull] FROM pragma_table_info('posters') WHERE name = 'content_layout_json';";
+        using (var reader = shape.ExecuteReader())
+            if (!reader.Read() || reader.GetString(0) != "TEXT" || reader.GetInt64(1) != 0)
+                throw new InvalidDataException("Invalid content-layout column.");
+        // Unknown versions remain exact raw text. Reading/backup must not require the current parser.
+        shape.CommandText = "SELECT COUNT(*) FROM posters WHERE content_layout_json IS NOT NULL AND typeof(content_layout_json) != 'text';";
+        if (Convert.ToInt64(shape.ExecuteScalar(), CultureInfo.InvariantCulture) != 0)
+            throw new InvalidDataException("Invalid content-layout storage type.");
     }
 
     private static void VerifyPendingPlacementSchema(SqliteConnection connection, SqliteTransaction? transaction)

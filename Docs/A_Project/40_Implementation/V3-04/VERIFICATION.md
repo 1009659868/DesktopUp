@@ -1,5 +1,52 @@
 # V3-04 验证记录
 
+## 2026-09-17：L07用户反馈与根因核对（DOC/DESIGN ONLY）
+
+用户截图及描述报告单轴/横向循环需求、插画墙主卡及缩小卡片不能进入右侧空白、整理/手动入口和参数压力。源码确认ContentLayoutSamples.Illustration设置ReservedSpaces(8,0,4,8)，PushManualPeers先占用此区域并拒绝主拖动项碰撞；手动模式保留位置，缩小不重排其他项。现有滚动X/Y独立clamp并由Shift选择横轴，没有循环/主轴合同；双指示独立显示。未将所有拖动现象泛化为捕获失败，也未重开BUG-001。
+
+已形成交互修订草案和L07反馈记录；生产包/日常库/用户人工配置未修改，不运行新测试或声称修复完成。旧1630/35门说明原合同自动验证通过，不代表新产品规则或L07通过。
+## 2026-09-17：04-L最终R4 CODE/AUTO PASS，L07 MANUAL PENDING
+
+人工入口已实际以PS5.1启动PID39540：three独立配置、R4进程路径正确、3会话Ready/3输入岛、控制中心created/shown、error0；isElevated=true。未执行/代填人工拖动或画面验收。14份当前文档503本地文件链接0失效，diff --check通过；这些检查不认证全部历史片段锚点或网络链接。
+
+最终35同包门全通过：布局14（`content-gates-ae0b1e22732246fab77c5e6ad51a1bca`）、中心/托盘/设置12（`gates-5b1246ec2fbf48f4bad6b185edfea726`）、便携6（`gates-4d7eb40ebce7406da66e339a86bbbe07`）、只读离线窗口3（`recovery-gates-6c316a88b596431486401e46eae761ed`），均在`out/verify/v3-04-l-r4`，每进程资源0。布局门实际在Windows PowerShell5.1运行；三参考初跑338项断言、重启43项，业务Cases齐全，不以轮询次数冒充覆盖。1/3/6与0/100/1000资源实测表、权限/DPI条件及限制见[交付](CONTENT_LAYOUT_DELIVERY.md)。
+
+App SHA256 `95C8789EA33F4D52757D1B65B6901EF97670AD2A65E264C9BD2ED92037884D93`；Fixture `0B1CE4D0420BA3D1781D21DE9883CF8E19F7AFCD0784CB36EF65972FA55AC2D0`；25文件聚合 `EF670F0D7687D6D66330C74CAA41775E2D6B2637B18A7C203DAFB1FB2BB2CB73`。manifest已按真实文件生成；PS5.1人工入口CheckOnly通过25/35绑定。
+
+完整1630合同证据为`out/verify/v3-04-l-r2/results/content-layout-r2-delivery.trx`；之后只改App隔离夹具/脚本/文档，R4 Domain/Application/Infrastructure/Windows四DLL与被测DLL逐一SHA256相同，不声称又重跑全套。两个新增脚本语法0错误。原生鼠标/键盘/滚轮与像素仍MANUAL PENDING，旧BUG及DEC-008延期项不关闭。未读取/移动用户内容，未Git提交推送。
+
+## 2026-09-17：R3便携夹具兼容修订，R4最终绑定进行中
+
+R3布局14门及托盘/中心/设置12门通过；便携1张场景在最终语义比较处失败。`PortableContentLayout`新增的Regions/Placements/ReservedSpaces为列表，原record相等式比较引用，Parse/Export后即使字段一致也不相等。修订只把进程夹具改成完整序列化JSON深比较，仍仅归一化已预览的显示器映射和物理像素锚点，未排除新布局字段；不改生产导出/恢复行为。失败目录`out/verify/v3-04-l-r3/gates-0c5b0520e0104b36af3c2501e179d92d`和R3包保留。
+
+R4 App/Fixture Release 0警告0错误。便携6门`out/verify/v3-04-l-r4/gates-4d7eb40ebce7406da66e339a86bbbe07`与离线只读恢复窗口3门`recovery-gates-6c316a88b596431486401e46eae761ed`已通过，退出资源0。后者不执行恢复、不点击确认，不是断电/原生选择器认证。其余同包门继续执行，人工状态仍PENDING。
+
+## 2026-09-17：04-L R2全布局门通过，R3中心夹具收口中
+
+R2完整14布局进程/重启门通过，目录`out/verify/v3-04-l-r2/content-gates-f544e098790044859e9254eccffd01b2`；每门12次独立idle样本，退出资源全部0。三参考、暂停期间提案不重发布输入/恢复后排空、R4真实就绪中间帧与结束恢复通过；nativeMouse/Keyboard/Wheel/PixelVisualCertified仍false。完整合同再次1630/1630 PASS、0skip，`out/verify/v3-04-l-r2/results/content-layout-r2-delivery.trx`。
+
+同包既有回归在controls/1失败，原证据`out/verify/v3-04-l-r2/gates-8a94cb74937242af974cc764b4b98bc2`保留。原因是夹具从已只读Gap改测Icon后填入96，而兼容参数要求Icon≤ItemHeight−8（night-ops默认74；basic-box默认64）；应用禁用正确。R3只改夹具合法值56/取消值60并补失败校验文本，不放松生产验证。候选独立放`out/verify/v3-04-l-r3`，原R1/R2未覆盖；重新绑定同包各门后才封人工manifest。
+
+## 2026-09-17：04-L R1同包实跑与R2收尾（进行中）
+
+用户确认正常退出后，读进程列表为空；R1聚合458CF4B1…未变。首轮隔离目录out/verify/v3-04-l-r1/content-gates-4064ef5fde5f402bb3781906064f71bc：empty/hundred/thousand/resource-one/resource-six的初跑与重启共10门PASS，退出资源均0。three功能场景通过编辑/CAS/历史、四辅助组合、热度/主题安全点、合成latest/reverse/cancel/edge输入及R4收起，在展开准备即时断言失败；进程58396正常退出、资源0，未强杀。
+
+日志显示展开BeginTransitionLayout→spatial.posture_started后、spatial.surfaces_ready之前触发VerifyTransitionSurfaceReady；60→960的表面尚待异步就绪。R2将即时检查与native-ready中间帧分开，完成时仍要求实际观测ready及终态恢复，不删除表面验证。原R1包和失败日志保留，不生成通过manifest。
+
+只读审查另确认queued proposal→SuspendInput→dispatcher排空可在可信恢复前ApplyLayout/重发布surface；R2补内容暂停门，只有Show/Recover原生读回成功才解除，并补同UI入队/挂起、跨tick为空、恢复后排空的进程检查。资源比较增加同质resource-three；1/3/6都使用6Equal/basic-box/300×360/展开未锁，仅海报数量不同。three参考功能不再冒充可比三张基线，最终为7场景×初跑/重启＝14门。
+
+## 2026-09-16：04-L合同、连续压力与生产集成（同包门待执行）
+
+本轮最终更新：收尾后的App/Fixture Release均0警告0错误；完整合同再次1630/1630 PASS、0skip，content-layout-final-contracts.trx（22s）。真实Windows PowerShell5.1执行候选CheckOnly成功（NOT EXECUTED）；六组独立种子初始化PASS，14份文档498本地链接0失效，diff --check通过。最后只读确认旧PID47240仍运行，因此未启动12同包门、未采资源或新人工。候选聚合指纹458CF4B1…与完整值见[交付](CONTENT_LAYOUT_DELIVERY.md)，无通过manifest。
+
+- 已完成批次：1516合同初集成；106纯布局/历史定向及1596全量；追加资产预算、宏观参数兼容、连续属性后36定向及1630全量PASS、0跳过，编译0警告错误。最新合同证据out/verify/v3-04-l/results/content-layout-full-r2.trx，压力定向content-layout-stress-r1.trx。
+- 240固定种子序列×40步双重放19,200步：安全占位、确定性、有限拒绝、版本/撤销/CAS取消、区域留白、热度保护、宽窄无漂移。纯模型不替代原生鼠标和像素画面。
+- 集成审查已修：历史版本重算、外观尺度与手动布局组合校验、海报/中心选中同步、无效旧等格字段只读、自动模式跨度把手权限、投影失败只读状态恢复、提案保护结束排队。新增内容手势16ms合并/edge scroll/取消资源路径仍需同包进程与实际鼠标验证。
+- App初次编译曾因StackPanel.IsEnabled及误用void验证返回值失败；已修为ContentControl容器和异常校验。随后App/Fixture Release 0警告0错误；最终smoke收尾后仍需重建固定包，不能把中间构建当封包。
+- 12同包进程门/1-3-6资源基线/L07人工PENDING；两个PS5.1脚本解析通过。旧PID47240未被结束，等待用户正常退出后运行隔离门。25指纹manifest不在门未通过时生成。
+
+只改项目源/测试/文档和独立out产物，不读移用户内容、不覆旧包/日常库、不提交推送。详细范围见[交付](CONTENT_LAYOUT_DELIVERY.md)，既有BUG和旧延期不随本轮自动通过关闭。
+
 ## 2026-09-16：当前V3状态Git同步前检查
 
 用户明确要求同步当前状态至远端；目标为origin/impl/poster-redesign-V3，基线73c7f857bcd4f524c37d48e34046304ae3292795。fetch后HEAD与对应远端0 ahead/0 behind。范围包含此前未提交的标题仲裁/故障验证、中心UX与紧凑滑块、全局托盘、便携配置/恢复与BUG-007，以及04-L01 READY的文档交接；不是只提交本轮文档，也不是发布合并。实现/测试与对应文档采用相邻检查点提交，实际提交与远端结果以Git记录为准。

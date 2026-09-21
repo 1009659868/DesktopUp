@@ -264,7 +264,7 @@ DesktopUp.exe
 
 ## 10. Item 排版与活跃度
 
-2026-09-16增量（V2-DEC-007/008，设计待L01冻结）：[布局地基设计](CONTENT_LAYOUT_FOUNDATION_V1.md)分离内容事实、逐海报布局意图、几何快照与皮肤，目标是同一求解器支持多格跨度、异尺寸构图、人工约束和未来热度。视图与输入共用几何，复用当前视口/输入岛/R4/事务恢复，不造主题专属几何或第二套文件模型。当前主线已到[04-L01 READY](../30_Plans/V3_04_L_CONTENT_LAYOUT_PLAN.md)，不是已有跨格编辑器；既有adaptive-grid、宏观参数及便携/恢复能力继续复用。下面策略名是职责设计，不代表同名类均已存在；真实热度仍未实现，代码入口见[当前锚点](../40_Implementation/V3-04/CODE_ANCHORS.md)。04-07/08收口延期不改变上述架构和安全约束。
+2026-09-16的04-L实现增量：[布局地基设计](CONTENT_LAYOUT_FOUNDATION_V1.md)已落实为ContentLayoutDocument/Placement、纯ContentLayoutSolver及统一Snapshot；跨格生产编辑已接原视口/输入岛/R4和单revision事务，不新增宿主或主题专属几何。schema10在同一Poster聚合保存版本化ContentLayoutJson，PortableProfile v2携带跨格载荷且继续读v1；本地未知原文保留、便携未知必需版本拒绝。热度/主题只做有界提案，当前素材为DEMO/Null provider，不是实际算分或图片平台。当前[04-L](../30_Plans/V3_04_L_CONTENT_LAYOUT_PLAN.md)已完成L01～06代码与同包自动门、L07人工待验；代码入口见[当前锚点](../40_Implementation/V3-04/CODE_ANCHORS.md)。下面策略名仍是职责设计，不代表所有同名类均已存在；04-07/08延期不改变安全约束。
 
 - `ActivityScoringPolicy` 根据需求公式计算分数，不直接操作 XAML；
 - `ItemLayoutPolicy` 接收 viewport、内容参数、固定项和排序结果，输出稳定布局快照；

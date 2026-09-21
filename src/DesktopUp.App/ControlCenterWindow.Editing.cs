@@ -139,6 +139,11 @@ public sealed partial class ControlCenterWindow
             foreach (var (key, field) in _geometryFields) field.IsEnabled = geometry && !pending && movable &&
                 (key is "X" or "Y" || _editor.LatestCommitted?.CanResize == true);
             foreach (var field in _styleFields.Values) field.IsEnabled = style && !pending && _editor.Presentation is not null;
+            foreach (string key in new[] { "ItemWidth", "ItemHeight", "Gap" })
+            {
+                _styleFields[key].IsEnabled=false;
+                ToolTipService.SetToolTip(_styleFields[key],"旧等格兼容值，只读保留。当前卡片由内容布局的跨度/基线控制；宏观疏密在外观页调整。");
+            }
             _template.IsEnabled = style && !pending && !_editor.IsDirty && _editor.Presentation is not null;
             _geometryApply.IsEnabled = geometry && _editor.CanApply;
             _styleApply.IsEnabled = style && _editor.CanApply;
@@ -154,7 +159,7 @@ public sealed partial class ControlCenterWindow
             _editNotice.Message = error ?? (_editor.IsStale ? "同一海报已变化；应用将执行 CAS。可取消载入最新值。" :
                 "外框几何不改变图标大小和字号；修改只作用于当前目标。未知参数版本只读，不覆盖原文。");
             _geometryStatus.Text = geometry ? _editNotice.Title + " · " + (error ?? "位置和尺寸按一次事务应用。") : "请先应用或取消内容参数草稿。";
-            _styleStatus.Text = style ? _editNotice.Title + " · " + (error ?? "图标需小于单元扣除留白后的空间。") : "请先应用或取消几何草稿。";
+            _styleStatus.Text = style ? _editNotice.Title + " · " + (error ?? "旧单元宽高/间距只读保留；图标基准仅用于 contain 卡片，封面采用 cover。") : "请先应用或取消几何草稿。";
         }
         finally { _renderingEditor = false; }
         if (_editingProtection != IsSettingsInteractionActive)

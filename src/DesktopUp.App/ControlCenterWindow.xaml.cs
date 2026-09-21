@@ -53,6 +53,8 @@ public sealed partial class ControlCenterWindow : Window
         _view = view;
         SynchronizeEditing(view);
         RenderSettings();
+        RenderContentLayout();
+        QueueContentRefresh();
         _applyingView = true;
         try
         {
@@ -71,9 +73,8 @@ public sealed partial class ControlCenterWindow : Window
         var presentation = view.SelectedPoster?.Presentation;
         PresentationDetailText.Text = presentation is null ? "" : presentation.IsFallback
             ? "参数安全回退：" + presentation.Warning
-            : $"模板：{presentation.EffectiveTemplateKey} · 图标 {presentation.Parameters.Content.IconSizeDip:0.#} DIP · " +
-              $"单元最小宽 {presentation.Parameters.Content.ItemWidthDip:0.#} DIP · 间距 {presentation.Parameters.Content.GapDip:0.#} DIP\n" +
-              $"完整行高 {presentation.Metrics.CompleteItemRowDip:0.#} DIP · 参数{(presentation.IsLegacy ? "兼容读取，原文保留" : "v1")}";
+            : $"模板：{presentation.EffectiveTemplateKey} · 图标基准 {presentation.Parameters.Content.IconSizeDip:0.#} DIP（contain）\n" +
+              "卡片几何由独立跨格布局提供；旧等格宽高/间距保留兼容，不再控制卡片排版。";
         SettingsProjection settings = view.Projection.Settings;
         SettingsDetailText.Text = $"动态效果：{(settings.Settings.DynamicEffectsPaused ? "已暂停" : "运行中")} · 性能模式：{settings.Settings.PerformanceMode}";
         PauseButton.Content = settings.Settings.DynamicEffectsPaused ? "恢复提示动效" : "暂停提示动效";

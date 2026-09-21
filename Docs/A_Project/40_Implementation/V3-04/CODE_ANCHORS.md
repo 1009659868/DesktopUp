@@ -1,6 +1,16 @@
 # V3-04 代码锚点
 
-## 2026-09-16：04-L开工复用图（只读盘点，无新布局代码）
+## 2026-09-17：04-L跨格实现入口（L01～06自动通过，L07待人工）
+
+- [ContentLayout](../../../../src/DesktopUp.Domain/ContentLayout.cs)、[Solver](../../../../src/DesktopUp.Domain/ContentLayoutSolver.cs)、[Editing](../../../../src/DesktopUp.Domain/ContentLayoutEditing.cs)：稳定身份/跨度/三样例，区域留白、有界求解/裁切/锚，纯编辑与事务确认后移动的RAM历史。
+- [ContentLayoutCommand](../../../../src/DesktopUp.Application/ContentLayoutCommand.cs)、[事务](../../../../src/DesktopUp.Application/StateProjectionCoordinator.ContentLayout.cs)、[PortableContentLayout](../../../../src/DesktopUp.Application/PortableContentLayout.cs)：单revision/full CAS、成员和放置版本、schema10载荷及便携v2映射。内部布局不写外框LayoutGeneration或空间连续关系。
+- [生产内容呈现](../../../../src/DesktopUp.App/PosterVisualWindow.Content.cs)、[输入编辑](../../../../src/DesktopUp.App/PosterVisualWindow.ContentEditing.cs)、[中心桥接](../../../../src/DesktopUp.App/ControlCenterWindow.ContentLayout.cs)：同一Snapshot供Canvas/裁切/输入区域；捕获稳定ID，16ms最新输入合并/边缘滚动、release flush/CAS、Esc/失效取消。
+- [提案](../../../../src/DesktopUp.Domain/ContentLayoutProposals.cs)、[生产安全点](../../../../src/DesktopUp.App/PosterVisualWindow.ContentProposals.cs)、[素材预算](../../../../src/DesktopUp.Application/ContentAssetCache.cs)：热度5档/人工保护/最新合并、主题last-good、Null provider与有界缓存；不统计热度或读取文件。
+- [进程门](../../../../src/DesktopUp.App/App.ContentLayoutSmoke.cs)、[控件/输入读回](../../../../src/DesktopUp.App/PosterVisualWindow.ContentSmoke.cs)、[同包脚本](../../../../scripts/smoke-content-layout.ps1)、[人工入口](../../../../scripts/start-content-layout-manual.ps1)：14布局门＋21相关回归，25文件指纹绑定R4；native/pixel标志false。R4异步ready中间帧和暂停恢复均保留实际观测检查。
+
+当前状态只归[CONTENT_LAYOUT_DELIVERY](CONTENT_LAYOUT_DELIVERY.md)，下面开工盘点是历史，不再将其中“待冻结/schema9”当作当前实现。
+
+## 历史：2026-09-16 04-L开工复用图（当时只读盘点，无新布局代码）
 
 当前[04-L01 READY](../../30_Plans/V3_04_L_CONTENT_LAYOUT_PLAN.md)：合同/schema/三参考夹具尚未交付；设计中的LayoutDocument、Placement、Snapshot职责不能当作已有生产跨格协议。现有源码入口如下，逐项复用，不因跳过04-07/08收口而重写宿主、输入或退出。
 

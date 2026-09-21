@@ -45,7 +45,11 @@ internal sealed partial class PosterVisualWindow
         if (_disposed || _window is null || _activeCommandRequestId is not null || edit.Basis.EntityVersion != _posterEntityVersion ||
             edit.PosterId != PosterId || _authoritativePoster?.IsVisible != true) return false;
         var desired = edit.Command("visual-preview-only").DesiredState;
-        _centerPresentation = PosterPresentationPolicy.Resolve(desired);
+        var next=PosterPresentationPolicy.Resolve(desired);
+        var preferences=next.Parameters.Preferences??new();
+        try { ContentLayoutCommandPolicy.ValidateAuthoring(ContentDocument,preferences.Scale,preferences.Spacing); }
+        catch(ArgumentException) {return false;}
+        _centerPresentation = next;
         _centerPresentationVersion = _posterEntityVersion;
         ApplyPresentation(_centerPresentation);
         // The existing frame and input layout are reconciled at exactly the same bounds.

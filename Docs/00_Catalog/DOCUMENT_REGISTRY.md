@@ -1,17 +1,19 @@
 # DesktopUp V2 V3 文档登记表
 
-最后检查：2026-09-16（DEC-008，04-L主线与延期入口对齐）
+最后检查：2026-09-17（04-L交付、R4同包证据和L07入口对齐）
 
 本表只登记文档职责与资料类型，不独立裁决任务状态：当前任务查[细化工作流](../A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md)，运行交接查[HANDOFF](../A_Project/40_Implementation/V3-04/HANDOFF.md)，产品决定查[统一索引](../A_Project/10_Requirements/REQUIREMENTS_RISKS_AND_OPEN_QUESTIONS.md)。HISTORICAL表示对应版本证据，不是新待办；PLANNED不表示已有实现。
 
 | 文档 | 职责 | 状态 |
 | --- | --- | --- |
+| [CONTENT_LAYOUT_INTERACTION_REVISION_V1](../A_Project/20_Architecture/CONTENT_LAYOUT_INTERACTION_REVISION_V1.md) | DEC-009单轴/横向循环、空地约束根因、整理入口和操作意图矩阵 | DESIGN DRAFT；L07 NEEDS REVISION，单项人工覆盖建议待讨论 |
 | [V3_04_06_PORTABLE_PROFILE_PLAN](../A_Project/30_Plans/V3_04_06_PORTABLE_PROFILE_PLAN.md) | 便携格式/容量/隐私、追加替换、待安置、显式恢复与A～D执行卡 | 已有分项证据保留；剩余验收DEFERRED，不阻塞04-L |
 | [PORTABLE_PROFILE_DELIVERY](../A_Project/40_Implementation/V3-04/PORTABLE_PROFILE_DELIVERY.md) | 首批交付与分批人工范围；最新修订指向BUG007专门记录 | CURRENT EVIDENCE / P6及P9部分通过保留，BUG-006延期 |
 | [BUG007_NATIVE_PICKER](../A_Project/40_Implementation/V3-04/BUG007_NATIVE_PICKER.md) | 原生取消/退出修订、失败对照、R3指纹与1462合同/29进程门、人工复验 | CODE/AUTO + USER PASS；不扩大未验范围 |
-| [CONTENT_LAYOUT_FOUNDATION_V1](../A_Project/20_Architecture/CONTENT_LAYOUT_FOUNDATION_V1.md) | DEC-007跨格跨度、布局意图/几何/皮肤、热度/编辑/恢复边界与三参考构图 | DESIGN / 待L01冻结；DEC-008已前移排期，未接跨格生产 |
+| [CONTENT_LAYOUT_FOUNDATION_V1](../A_Project/20_Architecture/CONTENT_LAYOUT_FOUNDATION_V1.md) | DEC-007跨格跨度、布局意图/几何/皮肤、热度/编辑/恢复边界与三参考构图 | 已接ContentLayout与span-grid；同包/人工结果归交付，不扩称真实Item |
 | [内容布局设计稿](../A_Project/20_Architecture/Designs/content-layout-v1.html) | 离线三构图、跨度与顺序调整的示意原型 | DEMO / 不是产品或素材能力证明 |
-| [V3_04_L_CONTENT_LAYOUT_PLAN](../A_Project/30_Plans/V3_04_L_CONTENT_LAYOUT_PLAN.md) | DEC-008当前主线L01～07执行卡、前置延期清单与连续矩阵 | ACTIVE / L01 READY，未接生产 |
+| [V3_04_L_CONTENT_LAYOUT_PLAN](../A_Project/30_Plans/V3_04_L_CONTENT_LAYOUT_PLAN.md) | DEC-008当前主线L01～07执行卡、前置延期清单与连续矩阵 | L01～06 CODE/AUTO PASS；L07 MANUAL PENDING |
+| [CONTENT_LAYOUT_CONTRACT](../A_Project/40_Implementation/V3-04/CONTENT_LAYOUT_CONTRACT.md)、[CONTENT_LAYOUT_DELIVERY](../A_Project/40_Implementation/V3-04/CONTENT_LAYOUT_DELIVERY.md) | 04-L实际协议、限制、R4候选、资源表和人工矩阵 | 1630合同及35同包门通过；PS5.1/25指纹绑定，真实输入与像素待人工 |
 | [LAYOUT_UNIFICATION_DELIVERY](../A_Project/40_Implementation/V3-04/LAYOUT_UNIFICATION_DELIVERY.md) | 新建统一、v8窄修复、1315合同/12进程及旧库副本迁移、外观复验 | CURRENT / CODE AUTO + USER PASS |
 | [V3_04_05_TRAY_PLAN](../A_Project/30_Plans/V3_04_05_TRAY_PLAN.md) | DEC-006六类整体菜单、专用入口退役、共享新增/显隐与验证出口 | 05-05原托盘人工USER PASS，新增外观修订USER PASS |
 | [TRAY_DELIVERY](../A_Project/40_Implementation/V3-04/TRAY_DELIVERY.md) | 托盘实际接线、1302合同/12进程门、失败原因、25指纹/PS5.1与人工G1～G8 | 原托盘交付USER PASS；新修订见LAYOUT_UNIFICATION_DELIVERY |

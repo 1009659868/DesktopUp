@@ -54,10 +54,7 @@ public sealed partial class StateProjectionCoordinator
 
     private static PortableImportPlan FreezePortable(PortableImportPlan plan) => plan with
     {
-        Document = plan.Document is { } document ? document with
-        {
-            Posters = Array.AsReadOnly(document.Posters.Select(p => p with { LayoutParameters = p.LayoutParameters.Clone() }).ToArray())
-        } : null,
+        Document = plan.Document is { } document ? PortableProfileCodec.Freeze(document) : null,
         InitialTopology = plan.InitialTopology with { Monitors = Array.AsReadOnly(plan.InitialTopology.Monitors.ToArray()) },
         ReadSet = plan.ReadSet.Freeze(),
         Creates = Array.AsReadOnly(plan.Creates.ToArray()), Updates = Array.AsReadOnly(plan.Updates.ToArray()),

@@ -73,6 +73,7 @@ internal sealed partial class PosterVisualWindow(
     private bool _gestureFrameScheduled;
     private VisualRegionState? _appliedVisualRegion;
     private bool _disposed;
+    private bool _contentPresentationSuspended = true;
     private SpatialGestureSession? _spatialGesture;
 
     public nint WindowHandle => _windowHandle;
@@ -81,6 +82,8 @@ internal sealed partial class PosterVisualWindow(
     public void RegisterSpatialSurface() => spatial.Register(this);
     public void SuspendInput()
     {
+        _contentPresentationSuspended = true;
+        CancelContentGesture("input-suspended");
         StopLocate();
         ClearCenterPresentation();
         _menuInteraction?.Cancel();
@@ -93,6 +96,7 @@ internal sealed partial class PosterVisualWindow(
 
     public void BeginPosturePreview(string requestId, DesktopPixelRect expandedBounds, bool revealContents = true)
     {
+        CancelContentGesture("posture-preview");
         CancelScheduledGestureFrame();
         _inputIsland?.CancelPointerGesture();
         _activeCommandRequestId = requestId;
@@ -101,13 +105,14 @@ internal sealed partial class PosterVisualWindow(
         BeginTransitionLayout(requestId, expandedBounds);
     }
     public bool PresentPostureFrame(DesktopPixelRect frame) => !_disposed && ApplyFrame(frame);
-    internal sealed record PreparedSpatialFrame(PosterVisualWindow Owner, DesktopPixelRect Bounds, PosterInputLayoutSnapshot Input);
+    internal sealed record PreparedSpatialFrame(PosterVisualWindow Owner, DesktopPixelRect Bounds, PosterInputLayoutSnapshot Input,
+        ContentLayoutSnapshot Content, ContentLayoutViewport ContentViewport);
     public PreparedSpatialFrame? PrepareSpatialFrame(DesktopPixelRect frame)
     {
         if (_disposed || _window is null || _inputIsland is null || !frame.IsUsable) return null;
         var input = BuildInputLayout(frame);
         // Preparation must not clip or resize a live surface before its peers move.
-        return new(this, frame, input);
+        return new(this, frame, input, _contentSnapshot ?? EnsureContentSnapshot(frame), _contentViewport!);
     }
     public bool CommitSpatialFrames(IReadOnlyList<PreparedSpatialFrame> frames, DesktopFramePhase phase = DesktopFramePhase.Regular)
     {
@@ -152,7 +157,8 @@ internal sealed partial class PosterVisualWindow(
                 continue;
             }
             layouts.Add((root, root.Width, root.Height));
-            owner.RebuildItemGrid(owner.FrameWidthDip(frame.Bounds)); owner.UpdateItemScrollState(frame.Bounds);
+            owner._contentSnapshot = frame.Content; owner._contentViewport = frame.ContentViewport;
+            owner.DrawContentSnapshot(frame.Content, frame.ContentViewport);
             double width = frame.Bounds.Width / owner._monitor.ScaleX, height = frame.Bounds.Height / owner._monitor.ScaleY;
             root.Width = width; root.Height = height;
             root.Measure(new global::Windows.Foundation.Size(width, height));
@@ -212,6 +218,7 @@ internal sealed partial class PosterVisualWindow(
     {
         RestoreTransitionLayout();
         _activeCommandRequestId = null;
+        QueueContentProposalDrain();
         if (_disposed || _monitor is null || !spatial.TryGetProjection(out var current) ||
             current?.PostersById.GetValueOrDefault(PosterId ?? "") is not { } target || !AdoptPosterProjection(target, _monitor, applyFrame: false)) return null;
         return PrepareSpatialFrame(_bounds);
@@ -259,6 +266,7 @@ internal sealed partial class PosterVisualWindow(
         PosterSurfaceProjection state)
     {
         if (_disposed) return false;
+        _contentPresentationSuspended = true;
         if (_window is not null)
         {
             return Recover(desktopHost, displayTopology, request: 0);
@@ -372,6 +380,8 @@ internal sealed partial class PosterVisualWindow(
             inputRegionCount = inputLayout.Regions.Count,
             bounds = _bounds
         });
+        _contentPresentationSuspended = false;
+        QueueContentProposalDrain();
         return true;
     }
 
@@ -414,6 +424,7 @@ internal sealed partial class PosterVisualWindow(
         DisplayTopologySnapshot displayTopology,
         long request)
     {
+        _contentPresentationSuspended = true;
         if (_window is null ||
             _windowHandle == 0 ||
             _inputIsland is null ||
@@ -512,8 +523,14 @@ internal sealed partial class PosterVisualWindow(
             return false;
         }
 
-        return ReassertDesktopBottom(desktopHost) &&
+        bool ready = ReassertDesktopBottom(desktopHost) &&
             HasExpectedBounds(_window, expectedBounds);
+        if (ready)
+        {
+            _contentPresentationSuspended = false;
+            QueueContentProposalDrain();
+        }
+        return ready;
     }
 
     public bool SetEditing(bool editing)
@@ -527,8 +544,10 @@ internal sealed partial class PosterVisualWindow(
         }
 
         if (_spatialGesture is not null) CancelSpatialGesture("mode-changed");
+        CancelContentGesture("mode-changed");
         _mode = target;
         UpdateVisualState();
+        UpdateItemScrollState(_bounds);
         bool applied = _inputIsland?.ApplyLayout(
             _bounds,
             BuildInputLayout(_bounds)) == true;
@@ -544,6 +563,7 @@ internal sealed partial class PosterVisualWindow(
         {
             editingStateChanged?.Invoke(editing);
         }
+        if (!editing) QueueContentProposalDrain();
         return applied;
     }
 
@@ -591,6 +611,7 @@ internal sealed partial class PosterVisualWindow(
     private void OnInput(object? sender, PosterInputEventArgs args)
     {
         if (_disposed || args.Session != inputSession || !ReferenceEquals(sender, _inputIsland)) return;
+        if (HandleContentInput(args)) return;
         if (args.EventKind == PosterInputEventKind.GestureCancelled)
         {
             if (_spatialGesture is not null) CancelSpatialGesture("pointer-capture-cancelled");
@@ -892,6 +913,7 @@ internal sealed partial class PosterVisualWindow(
 
         _stateRevision = snapshot.Revision;
         _posterRevision = snapshot.PosterRevision;
+        if (_posterEntityVersion != snapshot.EntityVersion) CancelContentGesture("authoritative-version-changed");
         _posterEntityVersion = snapshot.EntityVersion;
         _authoritativePoster = poster;
         _placement = placement;
@@ -1056,6 +1078,7 @@ internal sealed partial class PosterVisualWindow(
         finally
         {
             _activeCommandRequestId = null;
+            QueueContentProposalDrain();
         }
 
         if (result.Succeeded && result.Projection is { } committed &&
@@ -1179,55 +1202,8 @@ internal sealed partial class PosterVisualWindow(
                 moreBounds)
         };
 
-        if (!_geometry.IsCollapsed)
-        {
-            double widthDip = frame.Width / scaleX;
-            int columns = ResolveColumns(widthDip);
-            double rowStrideDip = ItemRowHeightDip + ItemGapDip;
-            double cardWidthDip = PosterPresentationPolicy.CellWidth(widthDip, columns, ItemGapDip);
-            int itemStartY = ToPhysicalY(
-                HeaderHeightDip + MetaHeightDip + ItemsTopInsetDip,
-                _monitor);
-            int itemViewportBottom = Math.Max(
-                itemStartY,
-                frame.Height - ToPhysicalY(FooterHeightDip, _monitor));
-            for (int index = 0; index < Items.Length; index++)
-            {
-                int column = index % columns;
-                int row = index / columns;
-                int x = ToPhysicalX(
-                    HorizontalPaddingDip + (column * (cardWidthDip + ItemGapDip)),
-                    _monitor);
-                int y = itemStartY + ToPhysicalYOffset(
-                    (row * rowStrideDip) - _itemScrollOffsetDip,
-                    _monitor);
-                int width = ToPhysicalX(cardWidthDip, _monitor);
-                int top = Math.Max(y, itemStartY);
-                int bottom = Math.Min(
-                    y + ToPhysicalY(ItemCardHeightDip, _monitor),
-                    itemViewportBottom);
-                if (bottom > top)
-                {
-                    regions.Add(new PosterInputRegion(
-                        PosterInputTargetKind.Item,
-                        index,
-                        new DesktopPixelRect(x, top, width, bottom - top)));
-                }
-            }
+        AddContentInputRegions(frame, regions);
 
-            if (itemViewportBottom > itemStartY && ResolveMaximumItemScrollOffsetDip(frame, columns) > 0)
-            {
-                int scrollRailWidth = Math.Max(8, ToPhysicalX(12, _monitor));
-                regions.Add(new PosterInputRegion(
-                    PosterInputTargetKind.ItemScroll,
-                    -1,
-                    new DesktopPixelRect(
-                        frame.Width - scrollRailWidth,
-                        itemStartY,
-                        scrollRailWidth,
-                        Math.Max(1, itemViewportBottom - itemStartY))));
-            }
-        }
 
         if (_mode == PosterOperatingMode.Editing &&
             !_geometry.IsLocked &&
@@ -1303,13 +1279,6 @@ internal sealed partial class PosterVisualWindow(
             PosterInputTargetKind.TitleBar,
             -1,
             new DesktopPixelRect(0, 0, frame.Width, headerHeight)));
-        if (_mode == PosterOperatingMode.Editing && !_geometry.IsLocked)
-        {
-            regions.Add(new PosterInputRegion(
-                PosterInputTargetKind.EditSurface,
-                -1,
-                new DesktopPixelRect(0, 0, frame.Width, frame.Height)));
-        }
 
         return new PosterInputLayoutSnapshot(
             revision,
@@ -1376,7 +1345,8 @@ internal sealed partial class PosterVisualWindow(
 
         _itemsGrid = new Grid
         {
-            Margin = new Thickness(HorizontalPaddingDip, 0, HorizontalPaddingDip, 0)
+            Margin = new Thickness(HorizontalPaddingDip, 0, HorizontalPaddingDip, 0),
+            HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top
         };
         _itemsScrollViewer = new ScrollViewer
         {
@@ -1385,8 +1355,9 @@ internal sealed partial class PosterVisualWindow(
             HorizontalContentAlignment = HorizontalAlignment.Stretch,
             HorizontalScrollMode = ScrollMode.Disabled,
             HorizontalScrollBarVisibility = ScrollBarVisibility.Hidden,
-            VerticalScrollMode = ScrollMode.Enabled,
-            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            VerticalScrollMode = ScrollMode.Disabled,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Hidden,
+            VerticalContentAlignment = VerticalAlignment.Top,
             ZoomMode = ZoomMode.Disabled,
             IsVerticalRailEnabled = true
         };
@@ -1470,6 +1441,7 @@ internal sealed partial class PosterVisualWindow(
         editItem.Click += (_, _) => { if (MenuCurrent("edit")) _ = SetEditing(_mode != PosterOperatingMode.Editing); };
         flyout.Items.Add(editItem);
         flyout.Items.Add(new MenuFlyoutSeparator());
+        AddContentMenu(flyout, MenuCurrent);
 
         var newFileItem = StyleMenuItem(new MenuFlyoutItem
         {
@@ -1535,6 +1507,7 @@ internal sealed partial class PosterVisualWindow(
             if (ReferenceEquals(_posterMenu, flyout))
             {
                 _posterMenu = null;
+                QueueContentProposalDrain();
             }
             if (!_disposed)
             {
@@ -1601,7 +1574,7 @@ internal sealed partial class PosterVisualWindow(
         title.Foreground = ColorBrush(_presentation.Parameters.Theme.Foreground);
         title.MaxLines = 1; title.TextTrimming = TextTrimming.CharacterEllipsis;
         meta.Children.Add(subtitle); meta.Children.Add(title);
-        meta.Children.Add(Text($"{Items.Length:00} DEMO ITEMS", 10, 400, 170, 198, 198, 198));
+        meta.Children.Add(Text($"{ContentDocument.Placements.Count:00} DEMO ITEMS", 10, 400, 170, 198, 198, 198));
         return meta;
     }
 
@@ -1615,201 +1588,13 @@ internal sealed partial class PosterVisualWindow(
         };
         footer.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         footer.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        footer.Children.Add(Text($"{Items.Length} DEMO ITEMS", 10, 400, 150, 198, 198, 198));
+        footer.Children.Add(Text($"{ContentDocument.Placements.Count} DEMO ITEMS", 10, 400, 150, 198, 198, 198));
         _modeLabel = Text("USING  ·  DRAG TO MOVE", 10, 400, 150, 198, 198, 198);
         Grid.SetColumn(_modeLabel, 1);
         footer.Children.Add(_modeLabel);
         return footer;
     }
 
-    private void RebuildItemGrid(double widthDip)
-    {
-        if (_itemsGrid is null)
-        {
-            return;
-        }
-        int columns = ResolveColumns(widthDip);
-        if (_itemColumnCount == columns)
-        {
-            return;
-        }
-
-        _itemColumnCount = columns;
-        _itemsGrid.Children.Clear();
-        _itemsGrid.ColumnDefinitions.Clear();
-        _itemsGrid.RowDefinitions.Clear();
-        _itemsGrid.ColumnSpacing = ItemGapDip;
-        _itemsGrid.RowSpacing = ItemGapDip;
-        for (int column = 0; column < columns; column++)
-        {
-            _itemsGrid.ColumnDefinitions.Add(new ColumnDefinition
-            {
-                Width = new GridLength(1, GridUnitType.Star)
-            });
-        }
-        int rows = (int)Math.Ceiling(Items.Length / (double)columns);
-        for (int row = 0; row < rows; row++)
-        {
-            _itemsGrid.RowDefinitions.Add(new RowDefinition
-            {
-                Height = new GridLength(ItemRowHeightDip)
-            });
-        }
-
-        for (int index = 0; index < Items.Length; index++)
-        {
-            FrameworkElement card = CreateItem(Items[index]);
-            Grid.SetColumn(card, index % columns);
-            Grid.SetRow(card, index / columns);
-            _itemsGrid.Children.Add(card);
-        }
-    }
-
-    private void ScrollItems(int wheelDelta)
-    {
-        if (_monitor is null || _inputIsland is null ||
-            _geometry.IsCollapsed || wheelDelta == 0)
-        {
-            return;
-        }
-
-        int columns = ResolveColumns(FrameWidthDip(_bounds));
-        double maximumOffset = ResolveMaximumItemScrollOffsetDip(_bounds, columns);
-        double nextOffset = PosterItemViewportPolicy.ResolveWheelOffset(
-            _itemScrollOffsetDip,
-            wheelDelta,
-            ItemRowHeightDip + ItemGapDip,
-            maximumOffset);
-        if (Math.Abs(nextOffset - _itemScrollOffsetDip) < 0.5)
-        {
-            return;
-        }
-
-        _itemScrollOffsetDip = nextOffset;
-        ApplyItemScrollOffset();
-        bool applied = _inputIsland.ApplyLayout(_bounds, BuildInputLayout(_bounds));
-        log.Write(applied ? "info" : "warning", "poster.items_scrolled", new
-        {
-            wheelDelta,
-            offsetDip = _itemScrollOffsetDip,
-            maximumOffsetDip = maximumOffset,
-            columns,
-            layoutRevision = _layoutRevision,
-            applied
-        });
-    }
-
-    private void UpdateItemScrollState(DesktopPixelRect frame)
-    {
-        int columns = ResolveColumns(FrameWidthDip(frame));
-        double maximumOffset = ResolveMaximumItemScrollOffsetDip(frame, columns);
-        _itemScrollOffsetDip = Math.Clamp(_itemScrollOffsetDip, 0, maximumOffset);
-        ApplyItemScrollOffset();
-    }
-
-    private void ApplyItemScrollOffset()
-    {
-        if (_itemsScrollViewer is null)
-        {
-            return;
-        }
-
-        if (Math.Abs(_itemsScrollViewer.VerticalOffset - _itemScrollOffsetDip) < 0.5)
-        {
-            return;
-        }
-        if (_itemsScrollViewer.ChangeView(
-            null,
-            _itemScrollOffsetDip,
-            null,
-            disableAnimation: true))
-        {
-            return;
-        }
-        if (_window is not null)
-        {
-            _ = _window.DispatcherQueue.TryEnqueue(() =>
-                _ = _itemsScrollViewer?.ChangeView(
-                    null,
-                    _itemScrollOffsetDip,
-                    null,
-                    disableAnimation: true));
-        }
-    }
-
-    private double ResolveMaximumItemScrollOffsetDip(
-        DesktopPixelRect frame,
-        int columns)
-    {
-        if (_monitor is null)
-        {
-            return 0;
-        }
-
-        double viewportHeight = Math.Max(
-            0,
-            (frame.Height / _monitor.ScaleY) -
-                HeaderHeightDip - MetaHeightDip - FooterHeightDip - ItemsTopInsetDip);
-        return PosterItemViewportPolicy.ResolveMaximumOffset(
-            Items.Length,
-            columns,
-            ItemRowHeightDip,
-            ItemGapDip,
-            viewportHeight);
-    }
-
-    private FrameworkElement CreateItem(PosterItem item)
-    {
-        var cell = new Grid();
-        cell.RowDefinitions.Add(new RowDefinition { Height = new GridLength(ItemCardHeightDip) });
-        cell.RowDefinitions.Add(new RowDefinition { Height = new GridLength(ContentParameters.LabelHeightDip + 7) });
-        var card = new Border
-        {
-            Background = Brush(230, 22, 24, 29),
-            BorderBrush = Brush(24, 255, 255, 255),
-            BorderThickness = new Thickness(0.8),
-            CornerRadius = new CornerRadius(4)
-        };
-        var cardGrid = new Grid();
-        cardGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        cardGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(18) });
-        var accent = new Border
-        {
-            Width = 24,
-            Height = Math.Max(24, ItemCardHeightDip * .8),
-            HorizontalAlignment = HorizontalAlignment.Center,
-            VerticalAlignment = VerticalAlignment.Center,
-            Background = Brush(230, item.Red, item.Green, item.Blue),
-            RenderTransform = new RotateTransform { Angle = 25 },
-            RenderTransformOrigin = new global::Windows.Foundation.Point(0.5, 0.5)
-        };
-        if (_presentation.EffectiveTemplateKey == "night-ops") cardGrid.Children.Add(accent);
-        var initials = Text(item.Initials, ContentParameters.IconSizeDip * .5, 700, 255, 242, 246, 248);
-        initials.Width = ContentParameters.IconSizeDip;
-        initials.Height = ContentParameters.IconSizeDip;
-        initials.TextAlignment = TextAlignment.Center;
-        initials.Foreground = ColorBrush(_presentation.Parameters.Theme.Foreground);
-        initials.HorizontalAlignment = HorizontalAlignment.Center;
-        initials.VerticalAlignment = VerticalAlignment.Center;
-        Grid.SetColumnSpan(initials, 2);
-        cardGrid.Children.Add(initials);
-        var index = Text(item.Index, 8, 110, 255, 126, 137, 149);
-        index.HorizontalAlignment = HorizontalAlignment.Center;
-        index.VerticalAlignment = VerticalAlignment.Bottom;
-        index.Margin = new Thickness(0, 0, 0, 6);
-        Grid.SetColumn(index, 1);
-        cardGrid.Children.Add(index);
-        card.Child = cardGrid;
-        cell.Children.Add(card);
-        TextBlock name = Text(item.Name, ContentParameters.LabelFontSizeDip, 400, 185, 218, 218, 218);
-        name.Foreground = ColorBrush(_presentation.Parameters.Theme.Foreground, 185);
-        name.MaxLines = 1;
-        name.Margin = new Thickness(0, 7, 0, 0);
-        name.TextTrimming = TextTrimming.CharacterEllipsis;
-        Grid.SetRow(name, 1);
-        cell.Children.Add(name);
-        return cell;
-    }
 
     private void UpdateVisualState()
     {
@@ -2075,6 +1860,7 @@ internal sealed partial class PosterVisualWindow(
 
     private void ClearVisualReferences()
     {
+        ClearContentVisuals();
         RestoreTransitionLayout();
         _contentStructure = null; _metaPanel = null; _footer = null;
         _menuInteraction?.Cancel();
@@ -2093,6 +1879,9 @@ internal sealed partial class PosterVisualWindow(
 
     public void Dispose()
     {
+        CancelContentGesture("dispose");
+        ReleaseContentProposals();
+        _contentHistory.Clear();
         _menuInteraction?.Cancel();
         _menuInteraction = null;
         _menuDiagnostic?.Dispose();
@@ -2103,6 +1892,7 @@ internal sealed partial class PosterVisualWindow(
         _spatialGesture = null;
         if (_disposed && _window is null && _inputIsland is null && _windowLease is null) return;
         _disposed = true;
+        ReleaseContentAssets();
         var failures = new List<Exception>();
         void Cleanup(Action action)
         {

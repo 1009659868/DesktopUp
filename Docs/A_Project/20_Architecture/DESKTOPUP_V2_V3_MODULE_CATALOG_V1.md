@@ -1,6 +1,6 @@
 # DesktopUp V2 V3 模块分类与端口目录 V1
 
-状态：`DESIGN BASELINE — MODULE RESPONSIBILITIES ALIGNED 2026-09-16`（布局职责待L01冻结，不把设计类型记为现存代码）
+状态：`DESIGN BASELINE — MODULE RESPONSIBILITIES ALIGNED 2026-09-17`（L01～06实际布局职责已落地，L07人工待验；未来端口不冒充实现）
 
 建立日期：2026-09-03
 
@@ -42,7 +42,7 @@ M07是外部测量/安全门，不新增生产服务或状态权威；当前已[
 
 ## 1. 目的
 
-2026-09-16补充（V2-DEC-007/008，04-L01 READY）：C02/D06/E03/E04/E07的跨格占位、编辑和连续视口增量归[04-L](../30_Plans/V3_04_L_CONTENT_LAYOUT_PLAN.md)，现已前移为主线、位于真实Item前。LayoutDocument/Placement/Snapshot是待L01冻结的合同职责，由Domain/Application承接；UI复用现有视口、输入岛/R4，SQLite与PortableProfile承接版本化持久化，不另建权威。G类主题只提交声明和度量，不自建几何；E06真实热度仍V3-06。现有宏观度量/呈现/事务/生命周期入口见[代码锚点](../40_Implementation/V3-04/CODE_ANCHORS.md)，不把已有单项尺寸接口当作完成跨格求解或编辑器。04-06余验收和04-07/08收口的延期归C计划，不删相应模块职责。
+2026-09-16的04-L实现增量：C02/D06/E03/E04/E07由Domain的ContentLayout/ContentLayoutSolver/Editing承接意图、几何和纯操作；Application的ContentLayoutCommand/History事务及PortableContentLayout承接完整CAS、成员重映射；Infrastructure schema10保存ContentLayoutJson。UI内容partial共用现有Canvas/输入岛/R4；中心只桥接目标化编辑。G类主题与热度采用有界提案，ContentAssetCache绑定会话和可见集但生产为Null provider，未接真实文件解码；E06真实热度仍V3-06。代码见[锚点](../40_Implementation/V3-04/CODE_ANCHORS.md)，当前同包/人工结果归[交付](../40_Implementation/V3-04/CONTENT_LAYOUT_DELIVERY.md)。04-06余验收和04-07/08收口的延期归C计划，不删相应模块职责。
 
 本文把 V3 总体架构拆成可独立实现、测试和替换的模块。模块名表达职责，不等同于最终程序集数量；首发可在一个解决方案和主进程中实现，只有高风险 Shell、主题代码和更新流程需要物理隔离。
 

@@ -16,7 +16,8 @@ public sealed class SqlitePosterCatalogRepository(SqliteStateStore store) : IPos
         // and the replay fingerprint, then allocate real identities in the transaction.
         PosterDefinition input = configuration with
         {
-            PosterId = "new", ThemeInstanceId = "new", StackOrder = 0
+            PosterId = "new", ThemeInstanceId = "new", StackOrder = 0,
+            ContentLayoutJson = ContentLayoutCommandPolicy.RemapStored(configuration, "new")
         };
         string? error = AuthoritativeStateValidationPolicy.Validate(input);
         if (error is not null)
@@ -152,12 +153,15 @@ public sealed class SqlitePosterCatalogRepository(SqliteStateStore store) : IPos
             snapshot?.Revision ?? -1, null, null, snapshot, error);
     }
 
-    private static PosterDefinition WithNewIdentity(PosterDefinition source, long stackOrder) => source with
+    private static PosterDefinition WithNewIdentity(PosterDefinition source, long stackOrder)
     {
-        PosterId = $"poster-{Guid.NewGuid():N}",
-        ThemeInstanceId = $"theme-{Guid.NewGuid():N}",
-        StackOrder = stackOrder
-    };
+        string id = $"poster-{Guid.NewGuid():N}";
+        return source with
+        {
+            PosterId = id, ThemeInstanceId = $"theme-{Guid.NewGuid():N}", StackOrder = stackOrder,
+            ContentLayoutJson = ContentLayoutCommandPolicy.RemapStored(source, id)
+        };
+    }
 
     private static string Fingerprint<T>(T request) =>
         StateRequestFingerprint.Compute(request);

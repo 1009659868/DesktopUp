@@ -12,6 +12,12 @@ if (args.Length == 2 && args[0] == "--validate-animation-config")
     return;
 }
 
+if (args.Length == 3 && args[1] == "--content-layout")
+{
+    CreateContentLayoutFixture(args[0], args[2]);
+    return;
+}
+
 if (args.Length is < 2 or > 3 || !int.TryParse(args[1], out int count) || count is < 0 or > 6 ||
     args.Length == 3 && args[2] is not ("--measure-expanded" or "--measure-collapsed" or "--measure-hidden" or "--multi-instance" or "--spatial-chain" or "--spatial-chain-r2" or "--compact-pair" or "--r2-up" or "--r2-mixed" or "--r2-constrained" or "--r2-blocked"))
     throw new ArgumentException("Usage: DesktopUp.SessionFixture <NEW isolated directory> <0..3> [--multi-instance|--spatial-chain|--compact-pair|--r2-...] or <1|3|6> --measure-expanded|collapsed|hidden");
@@ -73,3 +79,104 @@ if (count == 0)
     current = result.Projection!;
 }
 Console.WriteLine(JsonSerializer.Serialize(new { root, revision = current.Revision, posterIds = current.Posters.Select(p => p.Poster.PosterId) }));
+
+// Content layouts are a separate opt-in mode; historical numeric scenarios above remain unchanged.
+static void CreateContentLayoutFixture(string requestedRoot, string scenario)
+{
+    string[] allowed = ["equal", "illustration", "covers", "landscape", "three", "empty", "hundred", "thousand", "resource-one", "resource-three", "resource-six"];
+    if (!allowed.Contains(scenario, StringComparer.Ordinal))
+        throw new ArgumentException("Unknown content layout fixture. Use equal|illustration|covers|landscape|three|empty|hundred|thousand|resource-one|resource-three|resource-six.");
+    if (!Path.IsPathFullyQualified(requestedRoot))
+        throw new ArgumentException("Content layout fixture requires an absolute new isolated directory.");
+    string contentRoot = Path.GetFullPath(requestedRoot);
+    string ordinaryRoot = Path.GetFullPath(Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DesktopUp", "V3")).TrimEnd(Path.DirectorySeparatorChar);
+    if (Directory.Exists(contentRoot) || File.Exists(contentRoot) ||
+        contentRoot.Equals(ordinaryRoot, StringComparison.OrdinalIgnoreCase) ||
+        contentRoot.StartsWith(ordinaryRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) ||
+        Path.GetPathRoot(contentRoot) == contentRoot)
+        throw new ArgumentException("Content fixture requires a NEW isolated directory outside the normal profile; existing data is preserved.");
+
+    int resourceCount = scenario switch { "resource-one" => 1, "resource-three" => 3, "resource-six" => 6, _ => 0 };
+    string[] examples = scenario == "three" ? ["illustration", "covers", "landscape"] :
+        resourceCount > 0 ? Enumerable.Repeat("equal", resourceCount).ToArray() : [scenario];
+    // Same native baseline as the existing measurement fixtures, not a cross-host layout assertion.
+    // At a 1920+ DIP work width these three authored boxes do not overlap; smaller hosts should use one example.
+    PosterDefinition Definition(int index)
+    {
+        string example = examples[index];
+        string id = index == 0 ? BuiltInStateIdentities.PrimaryPosterId : "content-fixture-" + index;
+        ContentLayoutDocument document = example switch
+        {
+            "illustration" => ContentLayoutSamples.Illustration(id),
+            "covers" => ContentLayoutSamples.Covers(id),
+            "landscape" => ContentLayoutSamples.Landscape(id),
+            "empty" => ContentLayoutSamples.Equal(id, 0),
+            "hundred" => ContentLayoutSamples.Equal(id, 100),
+            "thousand" => ContentLayoutSamples.Equal(id, 1000),
+            _ => ContentLayoutSamples.Equal(id)
+        };
+        ContentLayoutCommandPolicy.ValidateAuthoring(document);
+        string template = example == "covers" ? "night-ops" : "basic-box";
+        (double width, double height) = example switch
+        {
+            "illustration" => scenario == "three" ? (500, 960) : (540, 1020),
+            "covers" => scenario == "three" ? (500, 840) : (540, 880),
+            "landscape" => scenario == "three" ? (590, 540) : (660, 590),
+            _ => resourceCount > 0 ? (300, 360) : (540, 720)
+        };
+        double anchor = scenario == "three" ? index * .5 : .08;
+        var definition = PosterConfigurationFactory.NewBasicBox($"{(char)('A' + index)} / L {example}", "DISPLAY1") with
+        {
+            PosterId = id, ThemeInstanceId = "theme-" + id,
+            Subtitle = $"L: {document.Placements.Count} DEMO ITEMS; no files collected",
+            WidthDip = width, ExpandedHeightDip = height,
+            FallbackXDip = anchor * (2560 - width), FallbackYDip = 24,
+            HorizontalAnchor = anchor, VerticalAnchor = .02,
+            NormalizedWidth = width / 2560, NormalizedExpandedHeight = height / 1392,
+            IsCollapsed = false, IsLocked = false, AutoCollapseEnabled = false, IsVisible = true,
+            TemplateKey = template, LayoutParametersJson = PosterPresentationPolicy.Serialize(PosterPresentationPolicy.Defaults(template)),
+            ContentLayoutJson = ContentLayoutPolicy.Serialize(document)
+        };
+        if (resourceCount > 0)
+        {
+            // Exactly the same per-poster workload at 1/3/6; only identities/count/placement vary.
+            // Copy geometry only: the legacy measurement's varied themes are NOT imported.
+            var measured = MeasurementFixtureData.Create(index, resourceCount, "expanded");
+            definition = definition with { WidthDip=measured.WidthDip, ExpandedHeightDip=measured.ExpandedHeightDip,
+                HorizontalAnchor=measured.HorizontalAnchor, VerticalAnchor=measured.VerticalAnchor,
+                NormalizedWidth=measured.NormalizedWidth, NormalizedExpandedHeight=measured.NormalizedExpandedHeight,
+                FallbackXDip=measured.HorizontalAnchor*(2560-measured.WidthDip), FallbackYDip=measured.VerticalAnchor*(1392-measured.ExpandedHeightDip) };
+        }
+        return definition;
+    }
+
+    PosterDefinition[] definitions = Enumerable.Range(0, examples.Length).Select(Definition).ToArray();
+    var contentPaths = new UserDataPaths(contentRoot);
+    using var contentStore = new SqliteStateStore(contentPaths);
+    var initialization = contentStore.Initialize();
+    if (!initialization.Succeeded) throw new InvalidOperationException(initialization.Error);
+    var contentCoordinator = new StateProjectionCoordinator(new SqliteStateCommandRepository(contentStore));
+    DesktopUpProjection projection = contentCoordinator.EnsureInitialized(definitions[0]);
+    for (int index = 1; index < definitions.Length; index++)
+    {
+        var created = contentCoordinator.Execute(new CreatePosterCommand(
+            "content-fixture-create-" + index, StateCommandSource.ControlCenter, projection.Revision,
+            StateReadSet.ForCatalog(projection.CatalogVersion), definitions[index]));
+        if (!created.Succeeded) throw new InvalidOperationException(created.Error);
+        projection = created.Projection!;
+    }
+    var contents = projection.Posters.Select(entry =>
+    {
+        if (entry.Poster.ContentLayoutJson is null ||
+            !ContentLayoutPolicy.TryRead(entry.Poster.ContentLayoutJson, entry.Poster.PosterId, out var document, out var error))
+            throw new InvalidOperationException("Fixture content was not persisted with its allocated owner identity.");
+        return new { entry.Poster.PosterId, entry.Poster.Title, items = document!.Placements.Count,
+            document.Mode, document.ShowBaselineGrid, document.ShowSpanLabels };
+    }).ToArray();
+    Console.WriteLine(JsonSerializer.Serialize(new
+    {
+        root = contentRoot, scenario, revision = projection.Revision, posterIds = projection.Posters.Select(p => p.Poster.PosterId),
+        contents, demoOnly = true, requiresNewRoot = true
+    }));
+}

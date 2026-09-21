@@ -97,6 +97,53 @@
        </StackPanel></Expander>
       </StackPanel>
      </ScrollViewer></PivotItem>
+     <PivotItem Header="内容布局"><ScrollViewer HorizontalScrollBarVisibility="Disabled">
+      <ContentControl x:Name="ContentLayoutHost" HorizontalContentAlignment="Stretch"><StackPanel x:Name="ContentLayoutPanel" Spacing="12" Padding="0,8,12,16">
+       <TextBlock Text="跨格排版 · DEMO 内容" FontWeight="SemiBold"/>
+       <TextBlock x:Name="ContentLayoutStatus" TextWrapping="Wrap" FontSize="12"/>
+       <StackPanel Orientation="Horizontal" Spacing="8">
+        <Button x:Name="ContentEditToggle" Content="在海报上编辑" Click="ContentEditToggle_Click"/>
+        <Button Content="进入手动排版" Click="ContentManual_Click"/>
+        <DropDownButton Content="退出手动…"><DropDownButton.Flyout><MenuFlyout>
+         <MenuFlyoutItem Text="保留当前顺序" Tag="KeepOrder" Click="ContentExitManual_Click"/>
+         <MenuFlyoutItem Text="转为顺序锚" Tag="ConvertToAnchors" Click="ContentExitManual_Click"/>
+         <MenuFlyoutItem Text="恢复自动排列" Tag="RestoreAutomatic" Click="ContentExitManual_Click"/>
+        </MenuFlyout></DropDownButton.Flyout></DropDownButton>
+       </StackPanel>
+       <StackPanel Orientation="Horizontal" Spacing="18">
+        <CheckBox x:Name="ContentGridSwitch" Content="基线网格" Checked="ContentGuides_Changed" Unchecked="ContentGuides_Changed"/>
+        <CheckBox x:Name="ContentSpanSwitch" Content="跨度提示" Checked="ContentGuides_Changed" Unchecked="ContentGuides_Changed"/>
+       </StackPanel>
+       <ComboBox x:Name="ContentItemSelector" Header="所选卡片" Width="320" HorizontalAlignment="Left" SelectionChanged="ContentItem_Changed" DisplayMemberPath="Name"/>
+       <StackPanel Orientation="Horizontal" Spacing="10">
+        <NumberBox x:Name="ContentColumns" Header="列跨度" Minimum="1" Maximum="32" SmallChange="1" Width="140" SpinButtonPlacementMode="Inline" ValueChanged="ContentSpan_Changed"/>
+        <NumberBox x:Name="ContentRows" Header="行跨度" Minimum="1" Maximum="32" SmallChange="1" Width="140" SpinButtonPlacementMode="Inline" ValueChanged="ContentSpan_Changed"/>
+       </StackPanel>
+       <StackPanel Orientation="Horizontal" Spacing="8">
+        <Button Content="方卡 4×4" Tag="square" Click="ContentPreset_Click"/>
+        <Button Content="横幅 8×4" Tag="wide" Click="ContentPreset_Click"/>
+        <Button Content="竖卡 4×6" Tag="tall" Click="ContentPreset_Click"/>
+       </StackPanel>
+       <StackPanel Orientation="Horizontal" Spacing="8">
+        <Button x:Name="ContentFixedButton" Content="固定位置" Click="ContentFixed_Click"/>
+        <Button Content="恢复自动尺寸" Click="ContentAutoSize_Click"/>
+        <Button Content="撤销" Tag="undo" Click="ContentUndo_Click"/>
+        <Button Content="重做" Tag="redo" Click="ContentUndo_Click"/>
+       </StackPanel>
+       <Button x:Name="ContentKeyboardPad" Content="键盘编辑：方向键移动 · Shift＋方向键改跨度" KeyDown="ContentKeyboard_KeyDown" HorizontalAlignment="Left"/>
+       <TextBlock Text="先进入手动排版或固定卡片，再拖动内容；右下角把手改跨度。滚轮连续滚动，Shift＋滚轮横向滚动。鼠标拖动时 Esc 取消；每次完成自动保存。" TextWrapping="Wrap" FontSize="12" Opacity="0.65"/>
+       <Expander Header="DEMO 参考构图" HorizontalAlignment="Stretch"><StackPanel Spacing="8">
+        <TextBlock Text="仅替换演示排版，不操作实际文件；可撤销。重启保留修改。" TextWrapping="Wrap" FontSize="12"/>
+        <StackPanel Orientation="Horizontal" Spacing="8">
+         <Button Content="等尺寸" Tag="equal" Click="ContentSample_Click"/>
+         <Button Content="插画墙" Tag="illustration" Click="ContentSample_Click"/>
+         <Button Content="封面墙" Tag="covers" Click="ContentSample_Click"/>
+         <Button Content="横版混排" Tag="landscape" Click="ContentSample_Click"/>
+        </StackPanel>
+       </StackPanel></Expander>
+       <TextBlock x:Name="ContentLayoutNotice" FontSize="12" TextWrapping="Wrap"/>
+      </StackPanel></ContentControl>
+     </ScrollViewer></PivotItem>
     </Pivot>
    </Grid>
   </Grid>

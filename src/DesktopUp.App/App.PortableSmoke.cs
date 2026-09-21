@@ -177,9 +177,12 @@ public partial class App
                             var source = originalDocument.Posters[i]; var actual = finalDocument.Posters[i];
                             // Source fixtures name DISPLAY1; the native environment may name it \\.\DISPLAY1.
                             // Mapping and physical-pixel anchor rounding are previewed changes, not semantic loss.
-                            Require(JsonElement.DeepEquals(actual.LayoutParameters, source.LayoutParameters) &&
-                                actual with { MonitorHint = source.MonitorHint, HorizontalAnchor = source.HorizontalAnchor,
-                                    VerticalAnchor = source.VerticalAnchor, LayoutParameters = source.LayoutParameters } == source,
+                            // Portable v2 contains lists in ContentLayout. Record equality compares
+                            // those list references, so compare ALL serialized fields structurally.
+                            var normalized = actual with { MonitorHint = source.MonitorHint,
+                                HorizontalAnchor = source.HorizontalAnchor, VerticalAnchor = source.VerticalAnchor };
+                            Require(JsonElement.DeepEquals(JsonSerializer.SerializeToElement(normalized),
+                                JsonSerializer.SerializeToElement(source)),
                                 "portable non-geometric preferences or authored DIP dimensions changed during restore");
                         }
                         var real = current.Posters.Where(p => p.IsEffectivelyVisible)
