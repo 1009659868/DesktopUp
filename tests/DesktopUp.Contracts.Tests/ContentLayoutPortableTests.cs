@@ -21,7 +21,7 @@ public sealed class ContentLayoutPortableTests
         Assert.DoesNotContain("private-poster", json); Assert.DoesNotContain("documentVersion", json);
         Assert.DoesNotContain("itemSetVersion", json); Assert.DoesNotContain("entityVersion", json);
         var parsed = PortableProfileCodec.Parse(bytes);
-        Assert.Equal(2, parsed.Version);
+        Assert.Equal(PortableProfileCodec.Version, parsed.Version);
         var plan = PortableProfilePlanner.Plan(parsed, State(), Topology(), PortableImportMode.Append, false, () => "fresh");
         var created = Assert.Single(plan.Creates);
         Assert.True(ContentLayoutPolicy.TryRead(created.ContentLayoutJson, created.PosterId, out var imported, out var error), error);
@@ -42,6 +42,54 @@ public sealed class ContentLayoutPortableTests
         Assert.Null(Assert.Single(plan.Creates).ContentLayoutJson);
         tree["posters"]![0]!["contentLayout"] = JsonNode.Parse(PortableProfileCodec.Export(State(Poster(Sample("equal", "B")))))!["posters"]![0]!["contentLayout"]!.DeepClone();
         Assert.Throws<ArgumentException>(() => PortableProfileCodec.Parse(Encoding.UTF8.GetBytes(tree.ToJsonString())));
+    }
+
+    [Fact]
+    public void V3_carries_flow_axis_and_optional_heat_size_switch()
+    {
+        var d = Sample("equal", "A") with { FlowAxis = ContentFlowAxis.HorizontalLoop, AllowHeatDrivenSize = true };
+        byte[] bytes = PortableProfileCodec.Export(State(Poster(d)));
+        var content = PortableProfileCodec.Parse(bytes).Posters[0].ContentLayout!;
+        Assert.Equal(ContentFlowAxis.HorizontalLoop, content.FlowAxis);
+        Assert.True(content.AllowHeatDrivenSize);
+
+        var plan = PortableProfilePlanner.Plan(PortableProfileCodec.Parse(bytes), State(), Topology(), PortableImportMode.Append, false, () => "fresh");
+        var created = Assert.Single(plan.Creates);
+        Assert.True(ContentLayoutPolicy.TryRead(created.ContentLayoutJson, created.PosterId, out var imported, out var error), error);
+        Assert.Equal(ContentFlowAxis.HorizontalLoop, imported!.FlowAxis);
+        Assert.True(imported.AllowHeatDrivenSize);
+    }
+
+    [Fact]
+    public void V3_requires_an_explicit_flow_axis()
+    {
+        var tree = JsonNode.Parse(PortableProfileCodec.Export(State(Poster(Sample("equal", "A")))))!;
+        tree["posters"]![0]!["contentLayout"]!.AsObject().Remove("flowAxis");
+        Assert.Throws<ArgumentException>(() => PortableProfileCodec.Parse(Encoding.UTF8.GetBytes(tree.ToJsonString())));
+    }
+
+    [Fact]
+    public void V2_archive_without_axis_imports_as_vertical_with_heat_sizing_off()
+    {
+        var tree = JsonNode.Parse(PortableProfileCodec.Export(State(Poster(Sample("equal", "A") with { FlowAxis = ContentFlowAxis.HorizontalLoop }))))!;
+        tree["version"] = 2; tree["posters"]![0]!["contentLayout"]!.AsObject().Remove("flowAxis");
+        var v2 = PortableProfileCodec.Parse(Encoding.UTF8.GetBytes(tree.ToJsonString()));
+        var plan = PortableProfilePlanner.Plan(v2, State(), Topology(), PortableImportMode.Append, false, () => "v2");
+        var created = Assert.Single(plan.Creates);
+        Assert.True(ContentLayoutPolicy.TryRead(created.ContentLayoutJson, created.PosterId, out var imported, out var error), error);
+        Assert.Equal(ContentFlowAxis.Vertical, imported!.FlowAxis);
+        Assert.False(imported.AllowHeatDrivenSize);
+    }
+
+    [Fact]
+    public void V3_never_carries_reserved_regions()
+    {
+        // Reserved regions are deferred: an archive must not contain a keep-out area the UI cannot
+        // create, show or remove yet.
+        var d = Sample("illustration", "A") with
+        { ReservedSpaces = Array.AsReadOnly(new[] { new ContentReservedSpace(0, 0, 4, 4) }) };
+        var parsed = PortableProfileCodec.Parse(PortableProfileCodec.Export(State(Poster(d))));
+        Assert.Empty(parsed.Posters[0].ContentLayout!.ReservedSpaces);
     }
 
     [Theory]

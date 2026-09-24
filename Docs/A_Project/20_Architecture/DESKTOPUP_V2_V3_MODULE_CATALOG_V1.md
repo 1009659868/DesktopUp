@@ -1,5 +1,9 @@
 # DesktopUp V2 V3 模块分类与端口目录 V1
 
+2026-09-24场景模板UI探索：[模板分层建议](CONTENT_TEMPLATE_SCENES_REVIEW.md)区分结构度量、表面绘制、被动效果与宿主生命周期，并预留AI声明式计划。对应已有E15/D07/D08方向，不新增生产引擎或布局权威；顶灯/雨夜仅Docs原型，结构化主题完整实施仍归V3-07/08。
+
+2026-09-23内容布局增量评审：[整改设计V2](CONTENT_LAYOUT_REMEDIATION_DESIGN_V2.md)§9按既有Domain/Application/Infrastructure/App、空间/R4、中心/托盘和生命周期划分职责。它是待批准的模型建议，不宣称新服务已实现；保留本目录已有模块与代码映射。当前工作区缺陷及实际能力见[审查](../40_Implementation/V3-04/CONTENT_LAYOUT_REVIEW_2026-09-23.md)，L旧自动结论不认证未提交修订。
+
 状态：`DESIGN BASELINE — MODULE RESPONSIBILITIES ALIGNED 2026-09-17`（L01～06实际布局职责已落地，L07人工待验；未来端口不冒充实现）
 
 建立日期：2026-09-03

@@ -100,7 +100,9 @@ public sealed class ContentLayoutSolverTests
     {
         var d = Doc(1); d = d with { Placements = [d.Placements[0] with { ColumnSpan = 12 }] };
         var wide = ContentLayoutSolver.Resolve(d, View(354)); var small = ContentLayoutSolver.Resolve(d, View(114));
-        Assert.Equal(4, small.Items[0].ColumnSpan); Assert.Contains("responsive-span", small.Items[0].Diagnostic);
+        // L08: narrowing squeezes only at the container limit and reports it, instead of silently
+        // shrinking the card to fit.
+        Assert.Equal(4, small.Items[0].ColumnSpan); Assert.Contains("squeeze-single-column", small.Items[0].Diagnostic);
         for (int i = 0; i < 100; i++)
         {
             ContentLayoutSolver.Resolve(d, View(114));

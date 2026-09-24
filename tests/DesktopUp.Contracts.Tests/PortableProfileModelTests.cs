@@ -52,7 +52,8 @@ public sealed class PortableProfileModelTests
         Assert.Throws<NotSupportedException>(() => ((IList<PortablePosterProfile>)frozen.Posters).Clear());
     }
     [Theory]
-    [InlineData("version", "3")] [InlineData("format", "\"Wrong\"")]
+    // 3 became a supported version (single-axis payload); 4 is the next unknown value.
+    [InlineData("version", "4")] [InlineData("format", "\"Wrong\"")]
     [InlineData("unknown", "true")] [InlineData("posters", "null")] [InlineData("settings", "null")]
     public void Unknown_outer_format_or_fields_are_rejected(string field, string value)
     {

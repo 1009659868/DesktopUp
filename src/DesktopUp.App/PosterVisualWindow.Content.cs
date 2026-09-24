@@ -122,32 +122,25 @@ internal sealed partial class PosterVisualWindow
         var views = _contentSource.Read(doc);
         SyncContentAssets(EffectiveContentDocument,snapshot,viewport,views);
         var source = views.ToDictionary(p => p.ItemId, StringComparer.Ordinal);
-        // At most one cell of overscan; no permanent XAML object per offscreen item.
-        var visible = new ContentRect(snapshot.ScrollXDip, Math.Max(0,snapshot.ScrollYDip-pitch), viewport.WidthDip, viewport.HeightDip+pitch*2);
+        // Loop projection: a card straddling the seam is drawn on both sides, so the cache key carries
+        // the loop index while the saved state (ItemId/SourceIndex) stays single-owned. At most one
+        // cell of overscan is kept; no permanent XAML object exists per offscreen item.
+        var byId = snapshot.Items.ToDictionary(p => p.ItemId, StringComparer.Ordinal);
         var retained = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var slot in snapshot.Items.Where(p => p.Bounds.Intersects(visible)))
+        foreach (var tile in ContentLayoutFlow.ProjectTiles(snapshot, viewport))
         {
-            retained.Add(slot.ItemId);
-            if (!_contentCards.TryGetValue(slot.ItemId, out var card) || card.Width != slot.Bounds.Width || card.Height != slot.Bounds.Height)
-                _contentCards[slot.ItemId] = card = CreateContentCard(source[slot.ItemId], doc.Placements[slot.SourceIndex], slot);
-            Canvas.SetLeft(card, slot.Bounds.X-snapshot.ScrollXDip); Canvas.SetTop(card, slot.Bounds.Y-snapshot.ScrollYDip);
+            if (tile.Bounds.Bottom < -pitch || tile.Bounds.Y > viewport.HeightDip + pitch) continue;
+            string key = TileKey(tile);
+            retained.Add(key);
+            if (!_contentCards.TryGetValue(key, out var card) || card.Width != tile.Bounds.Width || card.Height != tile.Bounds.Height)
+                _contentCards[key] = card = CreateContentCard(source[tile.ItemId], doc.Placements[tile.SourceIndex], byId[tile.ItemId]);
+            // Tile bounds are already viewport-relative and carry the loop offset.
+            Canvas.SetLeft(card, tile.Bounds.X); Canvas.SetTop(card, tile.Bounds.Y);
             _contentCanvas.Children.Add(card);
         }
         foreach (string id in _contentCards.Keys.Where(id => !retained.Contains(id)).ToArray()) _contentCards.Remove(id);
-        if (snapshot.ExtentHeightDip > viewport.HeightDip && viewport.HeightDip > 0)
-        {
-            var thumb = new Rectangle { Width=3, Height=Math.Max(12, viewport.HeightDip*viewport.HeightDip/snapshot.ExtentHeightDip), Fill=Brush(110,210,220,225), IsHitTestVisible=false };
-            Canvas.SetLeft(thumb, Math.Max(0,viewport.WidthDip-3));
-            Canvas.SetTop(thumb, (viewport.HeightDip-thumb.Height)*snapshot.ScrollYDip/Math.Max(1,snapshot.ExtentHeightDip-viewport.HeightDip));
-            _contentCanvas.Children.Add(thumb);
-        }
-        if (snapshot.ExtentWidthDip > viewport.WidthDip && viewport.WidthDip > 0)
-        {
-            var thumb = new Rectangle { Height=3, Width=Math.Max(12, viewport.WidthDip*viewport.WidthDip/snapshot.ExtentWidthDip), Fill=Brush(110,210,220,225), IsHitTestVisible=false };
-            Canvas.SetTop(thumb, Math.Max(0,viewport.HeightDip-3));
-            Canvas.SetLeft(thumb, (viewport.WidthDip-thumb.Width)*snapshot.ScrollXDip/Math.Max(1,snapshot.ExtentWidthDip-viewport.WidthDip));
-            _contentCanvas.Children.Add(thumb);
-        }
+        // No scrollbar chrome on either edge. Content stays reachable through the wheel, the drag-edge
+        // auto-scroll and the clamped extent; hiding a bar is never used to make content unreachable.
         if (_contentReadOnly || doc.Placements.Count == 0)
             _contentCanvas.Children.Add(new TextBlock { Text=_contentProjectionFault ? "当前布局无法安全呈现 · 原配置保留" : _contentReadOnly ? "布局版本暂不支持 · 原配置只读保留" : "暂无内容 · DEMO 布局", FontSize=12, TextWrapping=TextWrapping.Wrap, Width=viewport.WidthDip, Foreground=ColorBrush(_presentation.Parameters.Theme.Foreground,170) });
     }
@@ -201,6 +194,10 @@ internal sealed partial class PosterVisualWindow
         }
         return cell;
     }
+    private static string TileKey(ContentLayoutTile tile) => tile.LoopIndex == 0
+        ? tile.ItemId
+        : tile.ItemId + "#" + tile.LoopIndex.ToString(global::System.Globalization.CultureInfo.InvariantCulture);
+
     private void RebuildItemGrid(double widthDip)
     {
         var frame = _bounds.IsUsable ? _bounds : new DesktopPixelRect(0,0,(int)Math.Ceiling(widthDip*(_monitor?.ScaleX??1)),(int)Math.Ceiling(_geometry.ExpandedHeightDip*(_monitor?.ScaleY??1)));
@@ -216,9 +213,32 @@ internal sealed partial class PosterVisualWindow
     private void ScrollItems(int wheelDelta)
     {
         if (_contentPresentationSuspended || _monitor is null || _inputIsland is null || _geometry.IsCollapsed || wheelDelta==0 || HasContentGesture || _transitionLayout is not null) return;
-        double delta=-wheelDelta/120d*72;
-        bool horizontal=global::DesktopUp.Windows.NativeInputKeys.ShiftDown;
-        if (horizontal) _contentScrollX=Math.Max(0,_contentScrollX+delta); else _itemScrollOffsetDip=Math.Max(0,_itemScrollOffsetDip+delta);
+        // One scroll axis, chosen by the poster. Shift never exposes a second axis, and a gesture in
+        // progress is already rejected above, so the loop cannot run away under the user's hand.
+        var flowSnapshot = EnsureContentSnapshot(_bounds);
+        // One notch moves exactly one grid step and the offset stays aligned to that step, so scrolling
+        // advances cell by cell instead of jumping by a fractional number of cards.
+        double step = Math.Max(1, flowSnapshot.CellDip + flowSnapshot.GapDip);
+        double delta = -wheelDelta / 120d * step;
+        // The axis decides which way the wheel scrolls; the independent LoopScroll switch decides only
+        // whether that axis wraps. With looping off the strip stays finite and simply stops at its end.
+        double loopPeriod = ContentLayoutFlow.LoopPeriodDip(flowSnapshot, _contentViewport!);
+        if (flowSnapshot.FlowAxis == ContentFlowAxis.HorizontalLoop)
+        {
+            double target = Math.Round(Math.Max(0, _contentScrollX + delta) / step) * step;
+            _contentScrollX = flowSnapshot.LoopScroll
+                ? ContentLayoutFlow.AdvanceScrollX(target, 0, loopPeriod) : target;
+        }
+        else if (flowSnapshot.LoopScroll)
+            _itemScrollOffsetDip = ContentLayoutFlow.AdvanceScrollY(
+                Math.Round(Math.Max(0, _itemScrollOffsetDip + delta) / step) * step, 0, loopPeriod);
+        else
+        {
+            // Vertical content only grows downward. A manual card that overflows the current width
+            // keeps its reach through the drag-edge auto-scroll and the clamped extent, not through a
+            // second wheel axis, so the retained horizontal offset is never reset here.
+            _itemScrollOffsetDip = Math.Round(Math.Max(0, _itemScrollOffsetDip + delta) / step) * step;
+        }
         UpdateItemScrollState(_bounds);
         _inputIsland.ApplyLayout(_bounds,BuildInputLayout(_bounds));
     }
@@ -232,16 +252,19 @@ internal sealed partial class PosterVisualWindow
             int right=(int)Math.Round((ContentLeftDip+r.Right)*_monitor.ScaleX), bottom=(int)Math.Round((ContentTopDip+r.Bottom)*_monitor.ScaleY);
             return new(x,y,Math.Max(1,right-x),Math.Max(1,bottom-y));
         }
-        foreach (var slot in snapshot.Items.Where(p=>!p.Clip.IsEmpty))
+        // Hit regions follow the same tiles that were drawn, so a card crossing the seam is clickable
+        // on both sides while still resolving to one ItemId.
+        foreach (var tile in ContentLayoutFlow.ProjectTiles(snapshot, viewport))
         {
-            if (IsEditing && !_geometry.IsLocked && !_contentReadOnly && _selectedContentItem==slot.ItemId)
+            if (tile.Clip.IsEmpty) continue;
+            if (IsEditing && !_geometry.IsLocked && !_contentReadOnly && _selectedContentItem==tile.ItemId)
             {
-                var handle=new ContentRect(slot.Bounds.Right-snapshot.ScrollXDip-16,slot.Bounds.Bottom-snapshot.ScrollYDip-16,16,16).Intersect(new(0,0,viewport.WidthDip,viewport.HeightDip));
-                if(!handle.IsEmpty) regions.Add(new(PosterInputTargetKind.ContentSpanHandle,slot.SourceIndex,Pixels(handle))
-                { ContentItemId=slot.ItemId,ContentSnapshotGeneration=snapshot.ViewportGeneration });
+                var handle=new ContentRect(tile.Bounds.Right-16,tile.Bounds.Bottom-16,16,16).Intersect(new(0,0,viewport.WidthDip,viewport.HeightDip));
+                if(!handle.IsEmpty) regions.Add(new(PosterInputTargetKind.ContentSpanHandle,tile.SourceIndex,Pixels(handle))
+                { ContentItemId=tile.ItemId,ContentSnapshotGeneration=snapshot.ViewportGeneration });
             }
-            regions.Add(new(PosterInputTargetKind.ContentItem,slot.SourceIndex,Pixels(slot.Clip))
-            { ContentItemId=slot.ItemId,ContentSnapshotGeneration=snapshot.ViewportGeneration });
+            regions.Add(new(PosterInputTargetKind.ContentItem,tile.SourceIndex,Pixels(tile.Clip))
+            { ContentItemId=tile.ItemId,ContentSnapshotGeneration=snapshot.ViewportGeneration });
         }
         if (viewport.WidthDip>0 && viewport.HeightDip>0) regions.Add(new(PosterInputTargetKind.ContentViewport,-1,Pixels(new(0,0,viewport.WidthDip,viewport.HeightDip)))
         {ContentSnapshotGeneration=snapshot.ViewportGeneration});

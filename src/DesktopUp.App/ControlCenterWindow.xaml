@@ -102,14 +102,29 @@
        <TextBlock Text="跨格排版 · DEMO 内容" FontWeight="SemiBold"/>
        <TextBlock x:Name="ContentLayoutStatus" TextWrapping="Wrap" FontSize="12"/>
        <StackPanel Orientation="Horizontal" Spacing="8">
-        <Button x:Name="ContentEditToggle" Content="在海报上编辑" Click="ContentEditToggle_Click"/>
-        <Button Content="进入手动排版" Click="ContentManual_Click"/>
-        <DropDownButton Content="退出手动…"><DropDownButton.Flyout><MenuFlyout>
-         <MenuFlyoutItem Text="保留当前顺序" Tag="KeepOrder" Click="ContentExitManual_Click"/>
-         <MenuFlyoutItem Text="转为顺序锚" Tag="ConvertToAnchors" Click="ContentExitManual_Click"/>
-         <MenuFlyoutItem Text="恢复自动排列" Tag="RestoreAutomatic" Click="ContentExitManual_Click"/>
-        </MenuFlyout></DropDownButton.Flyout></DropDownButton>
+        <Button x:Name="ContentEditToggle" Content="整理内容" Click="ContentEditToggle_Click"/>
+        <Button x:Name="ContentRestoreAuto" Content="恢复自动" Click="ContentRestoreAuto_Click"
+                ToolTipService.ToolTip="解除人工覆盖并回到自动排列；不与“完成整理”混用，可撤销。"/>
        </StackPanel>
+       <StackPanel Orientation="Horizontal" Spacing="12">
+        <ComboBox x:Name="ContentFlowSelector" Header="布局方向" Width="220" HorizontalAlignment="Left" SelectionChanged="ContentFlow_Changed">
+         <ComboBoxItem Content="纵向 · 向下滚动" Tag="vertical"/>
+         <ComboBoxItem Content="横向 · 向右滚动" Tag="horizontal"/>
+        </ComboBox>
+        <CheckBox x:Name="ContentLoopSwitch" Content="循环滚动（首尾相接）" Checked="ContentLoop_Changed" Unchecked="ContentLoop_Changed"
+                  ToolTipService.ToolTip="独立于布局方向：开启后沿当前主轴首尾相接，关闭则为有限条带。不影响缩放挤压与换行。"/>
+       </StackPanel>
+       <Expander Header="高级：全手动模式" HorizontalAlignment="Stretch"><StackPanel Spacing="8">
+        <TextBlock Text="全手动由用户完全控制顺序与位置，默认不启用；热度不参与排序。" TextWrapping="Wrap" FontSize="12"/>
+        <StackPanel Orientation="Horizontal" Spacing="8">
+         <Button Content="进入手动排版" Click="ContentManual_Click"/>
+         <DropDownButton Content="退出手动…"><DropDownButton.Flyout><MenuFlyout>
+          <MenuFlyoutItem Text="保留当前顺序" Tag="KeepOrder" Click="ContentExitManual_Click"/>
+          <MenuFlyoutItem Text="转为顺序锚" Tag="ConvertToAnchors" Click="ContentExitManual_Click"/>
+          <MenuFlyoutItem Text="恢复自动排列" Tag="RestoreAutomatic" Click="ContentExitManual_Click"/>
+         </MenuFlyout></DropDownButton.Flyout></DropDownButton>
+        </StackPanel>
+       </StackPanel></Expander>
        <StackPanel Orientation="Horizontal" Spacing="18">
         <CheckBox x:Name="ContentGridSwitch" Content="基线网格" Checked="ContentGuides_Changed" Unchecked="ContentGuides_Changed"/>
         <CheckBox x:Name="ContentSpanSwitch" Content="跨度提示" Checked="ContentGuides_Changed" Unchecked="ContentGuides_Changed"/>
@@ -131,7 +146,7 @@
         <Button Content="重做" Tag="redo" Click="ContentUndo_Click"/>
        </StackPanel>
        <Button x:Name="ContentKeyboardPad" Content="键盘编辑：方向键移动 · Shift＋方向键改跨度" KeyDown="ContentKeyboard_KeyDown" HorizontalAlignment="Left"/>
-       <TextBlock Text="先进入手动排版或固定卡片，再拖动内容；右下角把手改跨度。滚轮连续滚动，Shift＋滚轮横向滚动。鼠标拖动时 Esc 取消；每次完成自动保存。" TextWrapping="Wrap" FontSize="12" Opacity="0.65"/>
+       <TextBlock Text="整理态：单击选中卡片并显示把手，拖动卡片改位置，拖右下把手改占格大小；拖标题栏移动整张海报，拖海报边缘调整视口。滚轮只沿当前布局方向浏览，不修改排布。Esc 取消当前手势，撤销回退上一次完整操作；完成整理只退出编辑，不重新排版。" TextWrapping="Wrap" FontSize="12" Opacity="0.65"/>
        <Expander Header="DEMO 参考构图" HorizontalAlignment="Stretch"><StackPanel Spacing="8">
         <TextBlock Text="仅替换演示排版，不操作实际文件；可撤销。重启保留修改。" TextWrapping="Wrap" FontSize="12"/>
         <StackPanel Orientation="Horizontal" Spacing="8">

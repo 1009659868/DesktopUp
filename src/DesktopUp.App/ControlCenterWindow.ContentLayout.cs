@@ -59,7 +59,12 @@ public sealed partial class ControlCenterWindow
             if(view is null) {ContentItemSelector.ItemsSource=null;return;}
             ContentGridSwitch.IsChecked=view.Document.ShowBaselineGrid;
             ContentSpanSwitch.IsChecked=view.Document.ShowSpanLabels;
-            ContentEditToggle.Content=view.IsEditing?"完成海报编辑":"在海报上编辑";
+            // One entry point for tidying: entering shows "整理内容", editing shows "完成整理".
+            ContentEditToggle.Content=view.IsEditing?"完成整理":"整理内容";
+            // Per-poster switches. Both are read back from the committed document so the control always
+            // shows the poster's real state, never a local guess.
+            ContentFlowSelector.SelectedIndex=view.Document.FlowAxis==ContentFlowAxis.HorizontalLoop?1:0;
+            ContentLoopSwitch.IsChecked=view.Document.LoopScroll;
             var items=new DemoContentItemViewSource().Read(view.Document);
             if(ContentItemSelector.ItemsSource is not IReadOnlyList<ContentItemView> existing || !existing.SequenceEqual(items)) ContentItemSelector.ItemsSource=items;
             var source=(IReadOnlyList<ContentItemView>)ContentItemSelector.ItemsSource;
@@ -86,10 +91,27 @@ public sealed partial class ControlCenterWindow
     private string? SelectedContentId => (ContentItemSelector.SelectedItem as ContentItemView)?.ItemId;
     private void ContentEditToggle_Click(object sender,RoutedEventArgs e)=>ContentAction((r,id)=>r.SetContentEditing(id,r.ReadContentEditor(id)?.IsEditing!=true));
     private void ContentManual_Click(object sender,RoutedEventArgs e)=>ContentEdit(new(ContentLayoutEditKind.Mode){Mode=ContentLayoutMode.Manual});
+    // Independent and explicit: leaving the automatic layout always goes through its own command so it
+    // is never confused with simply finishing a tidy-up session.
+    private void ContentRestoreAuto_Click(object sender,RoutedEventArgs e)
+        =>ContentEdit(new(ContentLayoutEditKind.Mode){Mode=ContentLayoutMode.Automatic,ManualExit=ManualLayoutExit.RestoreAutomatic});
     private void ContentExitManual_Click(object sender,RoutedEventArgs e)
     {
         if(sender is MenuFlyoutItem {Tag:string tag} && Enum.TryParse<ManualLayoutExit>(tag,out var choice))
             ContentEdit(new(ContentLayoutEditKind.Mode){Mode=ContentLayoutMode.Automatic,ManualExit=choice});
+    }
+    private void ContentFlow_Changed(object sender,SelectionChangedEventArgs e)
+    {
+        if(_renderingContent || ContentFlowSelector is null) return;
+        if((ContentFlowSelector.SelectedItem as ComboBoxItem)?.Tag as string is not { } tag) return;
+        var axis=tag=="horizontal"?ContentFlowAxis.HorizontalLoop:ContentFlowAxis.Vertical;
+        ContentAction((r,id)=>r.SetContentFlowAxis(id,axis));
+    }
+    private void ContentLoop_Changed(object sender,RoutedEventArgs e)
+    {
+        if(_renderingContent || ContentLoopSwitch is null) return;
+        bool enabled=ContentLoopSwitch.IsChecked==true;
+        ContentAction((r,id)=>r.SetContentLoopScroll(id,enabled));
     }
     private void ContentGuides_Changed(object sender,RoutedEventArgs e)
     {

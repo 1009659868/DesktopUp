@@ -38,5 +38,15 @@ internal sealed partial class PosterSpatialRuntime
         if(_suspended || IsSpatialBusy || !_windows.TryGetValue(id,out var window)) return "海报尚未就绪。";
         return window.NudgeContent(x,y,resize);
     }
+    internal string? SetContentFlowAxis(string id,ContentFlowAxis axis)
+    {
+        if(_suspended || IsSpatialBusy || !_windows.TryGetValue(id,out var window)) return "海报尚未显示或正在交互，请稍后重试。";
+        return window.SetContentFlowAxis(axis);
+    }
+    internal string? SetContentLoopScroll(string id,bool enabled)
+    {
+        if(_suspended || IsSpatialBusy || !_windows.TryGetValue(id,out var window)) return "海报尚未显示或正在交互，请稍后重试。";
+        return window.SetContentLoopScroll(enabled);
+    }
     internal void CancelContentEditors() { foreach(var window in _windows.Values) window.CancelContentEditingFromCenter(); }
 }

@@ -1,6 +1,12 @@
 # DesktopUp V2 V3 制作计划 V1
 
-最新执行（2026-09-17）：[04-L](V3_04_L_CONTENT_LAYOUT_PLAN.md)L01～06 CODE/AUTO PASS；最终R4通过1630合同绑定、35同包进程门和资源基线，L07人工入口就绪。现进行集中人工，用户通过后05-01。DEC-008延期项、BUG-001/004/006及M08余门不变；结果见[交付](../40_Implementation/V3-04/CONTENT_LAYOUT_DELIVERY.md)。
+最新DEC-022/023（2026-09-24）：E1六任务反馈收清（06c提示后通过）；用户明确采用基础手势/退出A和被动极端不足时临时二维浏览。[操作与空间方案](../20_Architecture/CONTENT_LAYOUT_OPERATION_SPACE_REVIEW_V1.md)已成文；下一步继续组合反例与兼容/草稿交接，暂不细化控件，不改变04-L→V3-05主线。
+
+既有DEC-020手动局部让位、每次进入手动取当前画面、适配后有效编辑承接新构图保持。[手动专项](../20_Architecture/CONTENT_LAYOUT_MANUAL_COMPOSITION_REVIEW_V1.md)已成文，当前[LR-R1](V3_04_L_REMEDIATION_REVIEW_PLAN.md)已收清E1反馈，继续循环/受限恢复、特殊约束兼容及双入口草稿交接；暂不细化控件，未接生产。
+
+当前导航（2026-09-24）：[细化工作流](V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md)维护实际状态；04-L进入[LR-R1整改评审](V3_04_L_REMEDIATION_REVIEW_PLAN.md)。UI C已按DEC-017采用，DEC-018确认整理拖动固定顺序位，当前细化组合规则，尚未进入生产整改/05-01。以下执行摘要只适用对应历史产物，旧候选不直接验当前dirty源码。
+
+历史执行（2026-09-17）：[04-L](V3_04_L_CONTENT_LAYOUT_PLAN.md)L01～06 CODE/AUTO PASS；最终R4通过1630合同绑定、35同包进程门和资源基线，L07人工入口当时就绪。DEC-008延期项、BUG-001/004/006及M08余门不变；结果见[交付](../40_Implementation/V3-04/CONTENT_LAYOUT_DELIVERY.md)。
 
 历史阶段证据（2026-09-16，04-06首批）：[04-06专项](V3_04_06_PORTABLE_PROFILE_PLAN.md) A/B/C及D1 AUTO PASS，完整1452/1452合同与同包6＋12＋3进程门通过、退出资源均为0；后续分批人工及BUG-007修订见[交付](../40_Implementation/V3-04/PORTABLE_PROFILE_DELIVERY.md)。未验余项现延期，真实另一主机未验证。TBD-021待安置语义仍有效。
 

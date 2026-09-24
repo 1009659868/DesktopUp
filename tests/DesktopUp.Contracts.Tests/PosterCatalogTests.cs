@@ -274,7 +274,7 @@ public sealed class PosterCatalogTests
         Assert.True(result.Succeeded, result.Error);
         Assert.Equal(StateStoreInitializationStatus.Migrated, result.Status);
         Assert.Equal(2, result.PreviousSchemaVersion);
-        Assert.Equal(10, result.Head!.SchemaVersion);
+        Assert.Equal(11, result.Head!.SchemaVersion);
         Assert.Equal(7, result.Head.Revision);
         Assert.Equal(originalPoster, fixture.Scalar(LegacyPosterRow));
         Assert.Equal(originalSettings, fixture.Scalar(
@@ -413,7 +413,7 @@ public sealed class PosterCatalogTests
         var result = store.Initialize();
         Assert.True(result.Succeeded, result.Error);
         Assert.Equal(3, result.PreviousSchemaVersion);
-        Assert.Equal(10, result.Head!.SchemaVersion);
+        Assert.Equal(11, result.Head!.SchemaVersion);
         Assert.Equal(7, result.Head.Revision);
         var settings = new SqliteSettingsRepository(store).Read();
         Assert.True(settings.Settings.DynamicEffectsPaused);
@@ -446,7 +446,7 @@ public sealed class PosterCatalogTests
         using var store = fixture.Open();
         fixture.Execute("DROP TABLE state_command_receipts;");
         Assert.Equal(StateStoreInitializationStatus.Failed, store.Initialize().Status);
-        Assert.Equal(10L, fixture.Scalar("PRAGMA user_version;"));
+        Assert.Equal(11L, fixture.Scalar("PRAGMA user_version;"));
     }
 
     private const string LegacyPosterRow = """

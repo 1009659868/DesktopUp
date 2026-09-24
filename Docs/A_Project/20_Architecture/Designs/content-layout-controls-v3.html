@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DesktopUp · UI 方案 B / 墨色工作台</title>
+<link rel="stylesheet" href="content-layout-controls-v3.css">
+<script src="content-layout-controls-v3.js" defer></script>
+</head>
+<body>
+<main class="page" id="review-v3">
+<header class="reviewbar"><div class="reviewname"><span class="edition">方案 B</span><h1>墨色工作台</h1></div><nav class="reviewlinks" aria-label="评审文档"><a href="content-layout-controls-v2.html">对照上一版 ↗</a><a href="../CONTENT_LAYOUT_UI_REVIEW_V3.md">设计说明 ↗</a></nav></header>
+<div class="workspace">
+<section class="app" aria-label="控制中心设计原型">
+<header class="titlebar"><span class="brandmark" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span class="brand">DesktopUp</span><span class="caption">CONTROL CENTER</span><button type="button" id="about" class="iconbtn" aria-label="原型说明" data-tip="此页面是独立 UI 原型，不操作真实海报或配置。点击查看演示范围。">?</button></header>
+<div class="appbody">
+<aside class="sidebar" aria-label="选择海报"><div class="sidebar-title"><span>海报</span><span>03</span></div><button type="button" class="poster-choice" data-poster="games" aria-pressed="true"><span class="mini" aria-hidden="true"></span><span><span class="choice-title">游戏收藏</span><span class="choice-count">06 ITEMS</span></span></button><button type="button" class="poster-choice" data-poster="work" aria-pressed="false"><span class="mini" aria-hidden="true"></span><span><span class="choice-title">工作文件</span><span class="choice-count">06 ITEMS</span></span></button><button type="button" class="poster-choice" data-poster="ideas" aria-pressed="false"><span class="mini" aria-hidden="true"></span><span><span class="choice-title">灵感收集</span><span class="choice-count">06 ITEMS</span></span></button></aside>
+<div class="inspector">
+<div class="target"><div><h2 id="target-name">游戏收藏</h2><div class="target-id" id="target-id">POSTER 01</div></div><button type="button" class="iconbtn locate" id="locate" aria-label="定位海报" data-tip="短暂描边真实海报，不改变位置与排序。本稿在右侧演示定位反馈。">◎</button></div>
+<div class="tabs" role="tablist" aria-label="海报设置"><button type="button" class="tab" id="appearance-tab" role="tab" aria-selected="true" aria-controls="appearance-panel" data-tab="appearance">外观</button><button type="button" class="tab" id="behavior-tab" role="tab" aria-selected="false" aria-controls="behavior-panel" data-tab="behavior">行为</button></div>
+<div id="appearance-panel" role="tabpanel" aria-labelledby="appearance-tab">
+<div class="section-head"><span>模板</span></div><div class="skins" role="group" aria-label="内置模板"><button type="button" class="skin" data-theme="night" aria-pressed="true" data-tip="夜航：有标题层次的海报样式。切换模板不改变 Item 顺序。"><span class="swatch" aria-hidden="true"><i></i><i></i><i></i></span><strong>夜航</strong></button><button type="button" class="skin" data-theme="box" aria-pressed="false" data-tip="清简：减少装饰，保留内容卡片。仅演示配色和标题结构，不加载主题脚本。"><span class="swatch" aria-hidden="true"><i></i><i></i><i></i></span><strong>清简</strong></button></div>
+<div class="paired">
+<div data-tip="整体调整内容基准，保留 Item 的相对层级，不改热度或排名。拖动微调，也可点击三个预设节点。"><label class="fieldhead" for="scale"><span>内容尺度</span><output id="scale-value">1.00×</output></label><div class="range-wrap"><input id="scale" type="range" min="80" max="120" value="100" step="1"><div class="stops"><button type="button" class="stop" style="left:0%" data-scale="80">小</button><button type="button" class="stop" style="left:50%" data-scale="100">标准</button><button type="button" class="stop" style="left:100%" data-scale="120">大</button></div></div></div>
+<div data-tip="调整网格间距，不修改作者跨度或排序。跨格卡片的总占位包含格间距。"><label class="fieldhead" for="spacing"><span>内容疏密</span><output id="spacing-value">标准</output></label><div class="range-wrap"><input id="spacing" type="range" min="4" max="16" value="10" step="1"><div class="stops"><button type="button" class="stop" style="left:0%" data-gap="4">紧凑</button><button type="button" class="stop" style="left:50%" data-gap="10">标准</button><button type="button" class="stop" style="left:100%" data-gap="16">宽松</button></div></div></div>
+</div>
+<div class="divider"></div>
+<div class="row" data-tip="沿一个方向浏览。外框变窄或变矮只换行/列，不改变有效顺序或 Item 尺寸。"><span class="row-name">浏览方向</span><div class="segments" role="group" aria-label="浏览方向"><button type="button" data-axis="vertical" aria-pressed="true">↕ 纵向</button><button type="button" data-axis="horizontal" aria-pressed="false">↔ 横向</button></div></div>
+<div class="row" id="loop-row" data-tip="循环偏好独立于浏览方向。本原型只展示开关状态，内容仍按有限滚动演示。"><label class="row-name" for="loop">循环浏览</label><span class="side-value" id="loop-status">关闭</span><label class="switch"><input type="checkbox" id="loop" role="switch" aria-label="循环浏览"><span class="switch-track"></span></label></div>
+<div class="cta-row"><span class="save-state" id="memory-status" data-tip="只更新当前演示的内存状态，刷新页面会复位；没有数据库写入。">演示状态</span><button type="button" class="primary" id="arrange" data-tip="在海报上显示整理工具条。此版仅演示选中与尺寸，不实现图钉或拖动换位。">整理内容 ↗</button></div>
+</div>
+<div id="behavior-panel" role="tabpanel" aria-labelledby="behavior-tab" hidden>
+<div class="behavior-field"><div class="row" data-tip="指针进入时展开，离开后按延迟收起。本页仅评审行为设置的位置，不运行自动收展。"><label class="row-name" for="auto-posture">自动收展</label><label class="switch"><input type="checkbox" id="auto-posture" role="switch" aria-label="自动收展"><span class="switch-track"></span></label></div><div data-tip="开启自动收展后可调；生产将复用既有调度器。本原型只更新显示值。"><label class="fieldhead" for="delay"><span>离开延迟</span><output id="delay-value">1.0 s</output></label><div class="range-wrap"><input type="range" id="delay" min="0.5" max="5" step="0.5" value="1" disabled></div></div></div>
+<div class="cta-row"><span class="save-state" data-tip="此页仅展示信息分组与控件状态，不运行自动收展。">仅参数演示</span></div>
+</div>
+</div></div></section>
+<section class="stage-section" aria-label="独立海报演示">
+<header class="stagehead"><span>海报演示</span><button type="button" class="iconbtn" aria-label="海报演示说明" data-tip="这是控制中心之外的评审环境，不是产品桌面预览。滚动条静止时隐藏；滚动、键盘浏览或靠近滚动边缘时短暂出现。">ⓘ</button></header>
+<div class="stage" id="stage"><div class="poster vertical" id="poster">
+<div class="posterheader"><span id="poster-name">游戏收藏</span><span class="ordinal" id="poster-ordinal">01</span></div>
+<div class="poster-caption" id="poster-caption"><small>PERSONAL COLLECTION</small><span id="poster-subtitle">AFTER HOURS</span></div>
+<div class="viewportwrap" id="viewportwrap"><div class="viewport" id="viewport" role="region" tabindex="0" aria-label="演示内容；使用滚轮、方向键、PageUp/PageDown 或 Home/End 浏览"><div class="content" id="content"></div></div><div class="scrolltrack" id="scrolltrack" hidden><button type="button" class="scrollthumb" id="scrollthumb" aria-label="滚动位置，可拖动或使用方向键"></button></div></div>
+<footer class="posterfooter"><span>06 DEMO ITEMS</span><span id="poster-mode">BROWSE</span></footer><button type="button" class="resize-edge" id="edge" aria-label="调整海报交叉尺寸" data-tip="拖动此边缘测试换行/列。缩到最小边界时保序单列/单行，不按面积重排。"></button>
+</div>
+<div class="toolbar" id="toolbar" hidden><button type="button" class="guide-btn" id="grid" aria-label="基线网格" aria-pressed="true" data-tip="显示基线网格。只控制辅助显示，不改变底层排布。">▦</button><button type="button" class="guide-btn" id="spans" aria-label="左上跨度提示" aria-pressed="true" data-tip="在 Item 左上角显示跨度；与基线网格独立开关。">2×</button><span class="tool-divider"></span><button type="button" id="undo" class="guide-btn" aria-label="撤销尺寸修改" data-tip="撤销一次演示内的单项尺寸修改。" disabled>↶</button><button type="button" id="done" class="primary">完成</button><div class="itemtools" id="itemtools" hidden><span id="selected-name" class="selected-name"></span><label for="item-size" class="sr-only">单项跨度</label><select id="item-size" data-tip="只改当前 Item 的尺寸覆盖，不修改排名。本稿不提供图钉或换位操作。"><option value="1">1 × 1</option><option value="2">2 × 2</option><option value="3">3 × 3</option><option value="original">原始比例</option></select><button type="button" id="restore-size" class="guide-btn" aria-label="恢复原始尺寸" data-tip="恢复此演示 Item 的原始跨度，不改变顺序。">↺</button></div></div>
+</div>
+<details class="sim-controls"><summary>缩框测试</summary><div class="simbody"><label for="cross"><span id="cross-label">内容宽度</span><output id="cross-value"></output></label><input type="range" id="cross" min="164" max="340" value="288" step="1" data-tip="仅评审使用的操作器，不加入产品控制中心。外框最小边界由最大 Item 的交叉尺寸决定。"></div></details>
+</section></div>
+<footer class="bottomline"><span>UI DESIGN STUDY · 03 / 仅原型</span><a href="../CONTENT_LAYOUT_UI_REVIEW_V3.md">范围与待评审项 ↗</a></footer>
+<div class="tooltip" id="tooltip" role="tooltip" hidden></div><div class="toast" id="toast" role="status" hidden></div>
+<dialog id="about-dialog"><h2>这是一版独立 UI 原型</h2><p>可以切换演示海报、外观/行为分组、模板、尺度、疏密、浏览方向，体验悬停提示、隐藏滚动条及有限滚动。</p><p>图钉、拖动换位、真实热度、循环滚动、自动收展调度、数据库及文件操作均未接入。参数仅保留在本页面内存中。</p><form method="dialog"><button class="primary">知道了</button></form></dialog>
+</main>
+</body>
+</html>

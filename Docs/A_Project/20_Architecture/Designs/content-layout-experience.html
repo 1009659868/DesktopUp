@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DesktopUp · 整体体验试验 E1</title>
+<link rel="stylesheet" href="content-layout-controls-v3.css">
+<link rel="stylesheet" href="content-layout-experience.css">
+<script src="content-layout-experience.model.js" defer></script>
+<script src="content-layout-experience.js" defer></script>
+</head>
+<body>
+<main class="experience">
+<header class="reviewbar"><div class="reviewname"><span class="edition">E1 · 体验试验</span><h1>先判断是否顺手，再细化控件</h1></div><nav class="reviewlinks"><a href="content-layout-controls-c.html">UI C 原稿 ↗</a><a href="../CONTENT_LAYOUT_EXPERIENCE_REVIEW_V1.md">范围与验证记录 ↗</a></nav></header>
+<section class="testbench" aria-label="试验条件，不属于产品界面">
+<div class="bench-row"><strong>试验条件</strong><label>基础手势 <select id="gesture"><option value="" selected>请选择试验基线</option><option value="double">单击选中 · 双击 / Enter 打开</option><option value="single">单击打开 · 右键管理</option></select></label><label>退出手动 <select id="exit-policy"><option value="retain-auto">候选 A：沿用原自动覆盖</option><option value="carry-edited-size">候选 B：另带入手动改过的尺寸</option></select></label></div>
+<p class="scope">仅虚构内容 / 页面内存。打开为模拟；刷新复位。不接真实文件、数据库、系统拖放或循环浏览。手势与退出策略均为试验条件，非生产规则。</p>
+<div class="tasks" role="group" aria-label="体验任务"><button data-task="1" aria-pressed="true">01 找到与打开</button><button data-task="2" aria-pressed="false">02 移动与恢复</button><button data-task="3" aria-pressed="false">03 自动与固定</button><button data-task="4" aria-pressed="false">04 缩框后再编辑</button><button data-task="5" aria-pressed="false">05 模式来回切换</button><button data-task="6" aria-pressed="false">06 中断与受限</button></div>
+<div class="taskline"><p id="task-intent"></p><button id="restart-task">重新开始本任务</button></div>
+</section>
+<div class="trial-workspace">
+<section class="app" id="center" aria-label="控制中心试验界面">
+<header class="titlebar"><span class="brandmark" aria-hidden="true"><i></i><i></i><i></i><i></i></span><strong>DesktopUp</strong><span class="caption">UI C · 精简试验</span><button id="close-center" aria-label="关闭控制中心" class="iconbtn">×</button></header>
+<div class="trial-inspector"><h2>工作收藏</h2><div class="tabs"><span class="trial-tab">外观与布局</span></div>
+<div class="row"><span>布局方式</span><div class="segments" role="group" aria-label="布局方式"><button id="mode-manual" aria-pressed="true">手动</button><button id="mode-auto" aria-pressed="false">热度自动</button></div></div>
+<p id="mode-note" class="hint"></p>
+<div class="selection-panel"><div class="section-head"><span>选中的内容</span><strong id="selection-name">未选中</strong></div>
+<div class="row"><label for="size">单项跨度</label><select id="size" disabled><option value="">—</option><option value="2x1">2 × 1</option><option value="2x2">2 × 2</option><option value="3x2">3 × 2</option><option value="4x2">4 × 2</option><option value="4x3">4 × 3</option></select></div>
+<button id="toggle-pin" disabled>固定顺序</button></div>
+<div class="guide-row"><label><input id="show-grid" type="checkbox" checked> 基线网格</label><label><input id="show-span" type="checkbox" checked> 跨度提示</label></div>
+<div class="actions"><button id="undo" disabled title="撤销一次已提交的完整操作">↶ 撤销</button><button id="redo" disabled>↷ 重做</button></div>
+<p class="hint">只调整当前海报。真实控制中心的模板、主题与其他参数不在本轮扩展。</p>
+</div></section>
+<section class="desktop" aria-label="桌面海报试验区">
+<div class="desktop-heading"><span>桌面上的海报</span><button id="open-center" hidden>打开控制中心</button><span id="mode-badge">手动</span></div>
+<div class="stage-shell" id="stage">
+<div class="trial-poster" id="poster">
+<header class="poster-head"><strong>工作收藏</strong><span>08 DEMO</span></header>
+<div class="trial-caption"><small>MY DESKTOP, MY WAY</small><h2>留在手边。</h2></div>
+<div id="viewport" class="trial-viewport" tabindex="0" aria-label="海报内容，可滚动"><div id="board" class="trial-board"></div></div>
+<footer><span id="poster-state">页面内存</span><span>DesktopUp</span></footer>
+<button id="resize-edge" aria-label="拖动调整海报宽度" title="改变容器宽度，不缩小 Item"></button>
+</div>
+<div id="restricted" class="restricted" hidden><h3>试验空间不足</h3><p>最大内容无法完整放入。此次不保存布局；产品降级方案尚未决定。</p><button id="restore-space">还原演示空间</button></div>
+</div>
+<div id="feedback" class="feedback" role="status">选择试验基线后开始。所有内容均为 DEMO。</div>
+<details class="harness"><summary>试验操作器（不属于产品）</summary><div class="harness-body"><label for="width">内容宽度 <output id="width-output">8 格</output></label><input type="range" id="width" min="4" max="8" step="1" value="8"><div class="actions"><button id="heat">模拟一次热度顺序变化</button><button id="small-space">模拟空间不足</button></div><span class="hint">热度为固定样例，不统计使用；循环、跨海报与外部拖放没有接入。</span></div></details>
+</section>
+</div>
+<section class="record" aria-label="体验记录，仅页面内存">
+<header><h2>你的判断</h2><span>先写预期，再操作；不自动判通过。</span></header>
+<div class="record-fields"><label>操作前，我预计会发生什么<textarea id="prediction" rows="2" placeholder="尤其关注：放宽后哪些会恢复？切回自动后哪些会保留？"></textarea></label><label>操作后<select id="verdict"><option value="">尚未判断</option><option>符合预期</option><option>能理解，但操作费劲</option><option>结果出乎意料</option><option>找不到入口或无法完成</option></select><textarea id="observation" rows="2" placeholder="说明哪一步有意外，或者为什么不顺手"></textarea></label></div>
+<div class="actions"><button id="record-result">记录本任务反馈</button><span id="record-state" role="status"></span></div>
+<details><summary>本轮记录（刷新清空，可复制文字反馈）</summary><pre id="records">暂无记录</pre></details>
+<details><summary>操作事实（调试记录，不是可用性结论）</summary><pre id="facts"></pre></details>
+</section>
+<dialog id="mock-open"><h2 id="open-title"></h2><p>模拟打开成功。没有访问文件或启动程序。</p><form method="dialog"><button class="primary">返回试验</button></form></dialog>
+<div id="context" class="context-menu" hidden role="menu"><button id="context-open" role="menuitem">打开（模拟）</button><button id="context-pin" role="menuitem">固定顺序</button></div>
+</main></body></html>

@@ -1,0 +1,79 @@
+{
+  "format": "desktopup.template.demo",
+  "schemaVersion": 1,
+  "id": "demo.mint-rain",
+  "version": 1,
+  "name": "薄荷细雨",
+  "family": "我的天气",
+  "renderer": "rain@1",
+  "base": {
+    "background": "#193b33",
+    "card": "#2f5b50",
+    "heading": true
+  },
+  "properties": [
+    {
+      "key": "mintCloud",
+      "label": "云朵染色",
+      "bind": "cloud.color",
+      "type": "color",
+      "default": "#6f9f91",
+      "group": "我的天气"
+    },
+    {
+      "key": "drizzle",
+      "label": "细雨数量",
+      "bind": "rain.count",
+      "type": "range",
+      "default": 18,
+      "min": 0,
+      "max": 48,
+      "step": 1,
+      "unit": "滴",
+      "group": "我的天气"
+    },
+    {
+      "key": "streak",
+      "label": "雨丝颜色",
+      "bind": "rain.color",
+      "type": "color",
+      "default": "#9de7c5",
+      "group": "我的天气"
+    },
+    {
+      "key": "mood",
+      "label": "雨的节奏",
+      "group": "我的天气",
+      "type": "select",
+      "default": 0.7,
+      "bind": "rain.speed",
+      "options": [
+        {
+          "label": "慢慢落",
+          "value": 0.7
+        },
+        {
+          "label": "轻快些",
+          "value": 1.4
+        }
+      ],
+      "description": "这个下拉框也由 JSON 生成，UI 没有为它写专用分支。"
+    },
+    {
+      "key": "spark",
+      "label": "云间微光",
+      "group": "我的天气",
+      "type": "boolean",
+      "default": false,
+      "bind": "rain.lightning"
+    },
+    {
+      "key": "cards",
+      "label": "收藏底色",
+      "bind": "item.color",
+      "type": "color",
+      "default": "#2f5b50",
+      "group": "材质"
+    }
+  ]
+}

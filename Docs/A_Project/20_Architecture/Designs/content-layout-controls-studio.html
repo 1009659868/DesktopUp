@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DesktopUp · 样片夹</title>
+<link rel="stylesheet" href="content-layout-controls-v3.css">
+<link rel="stylesheet" href="content-layout-controls-bplus.css">
+<link rel="stylesheet" href="content-layout-controls-studio.css">
+<link rel="stylesheet" href="content-layout-controls-scenes.css">
+<script src="content-layout-controls-bplus.js" defer></script>
+<script src="content-layout-controls-bplus-core.js" defer></script>
+<script src="content-layout-controls-studio.js" defer></script>
+<script src="content-layout-controls-scenes.js" defer></script>
+</head>
+<body data-start-theme="light">
+<main class="page" id="review-bplus">
+<header class="reviewbar"><div class="reviewname"><span class="edition">探索稿</span><h1>桌面样片夹</h1></div><nav class="reviewlinks" aria-label="评审文档"><a href="content-layout-controls-bplus.html">对照 B+ ↗</a><a href="../CONTENT_LAYOUT_UI_REVIEW_STUDIO.md">设计说明 ↗</a></nav></header>
+<div class="workspace">
+<section class="app" aria-label="控制中心设计原型">
+<header class="titlebar"><span class="brandmark" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span class="brand">DesktopUp</span><span class="caption">我的桌面小工坊</span><button type="button" class="palette-trigger" id="palette-open" aria-haspopup="dialog" data-tip="更换控制中心的颜色，不影响海报样式。"><span class="color-dots" aria-hidden="true"><i></i><i></i><i></i></span><span>主题</span><span aria-hidden="true">⌄</span></button><button type="button" id="about" class="iconbtn" aria-label="原型说明" data-tip="此页面是独立 UI 原型，不操作真实海报或配置。点击查看演示范围。">?</button></header>
+<div class="appbody">
+<aside class="sidebar" aria-label="选择海报"><div class="sidebar-title"><span>海报</span><span>03</span></div><button type="button" class="poster-choice" data-poster="games" aria-pressed="true"><span class="mini" aria-hidden="true"></span><span><span class="choice-title">游戏收藏</span><span class="choice-count">06 ITEMS</span></span></button><button type="button" class="poster-choice" data-poster="work" aria-pressed="false"><span class="mini" aria-hidden="true"></span><span><span class="choice-title">工作文件</span><span class="choice-count">06 ITEMS</span></span></button><button type="button" class="poster-choice" data-poster="ideas" aria-pressed="false"><span class="mini" aria-hidden="true"></span><span><span class="choice-title">灵感收集</span><span class="choice-count">06 ITEMS</span></span></button></aside>
+<div class="inspector">
+<div class="target"><div><h2 id="target-name">游戏收藏</h2><div class="target-id" id="target-id">POSTER 01</div></div><button type="button" class="iconbtn locate" id="locate" aria-label="定位海报" data-tip="短暂描边真实海报，不改变位置与排序。本稿在右侧演示定位反馈。">◎</button></div>
+<div class="tabs" role="tablist" aria-label="海报设置"><button type="button" class="tab" id="appearance-tab" role="tab" aria-selected="true" aria-controls="appearance-panel" data-tab="appearance">外观</button><button type="button" class="tab" id="behavior-tab" role="tab" aria-selected="false" aria-controls="behavior-panel" data-tab="behavior">行为</button></div>
+<div id="appearance-panel" role="tabpanel" aria-labelledby="appearance-tab">
+<section class="sample-section" aria-label="选择海报模板">
+<div class="sample-heading"><span>海报模板</span><button type="button" class="text-action" id="template-save-open" aria-label="另存为我的模板" data-tip="从当前样式做一份自己的模板。本页仅作演示，刷新后复位。">＋ 留一份自己的</button></div>
+<div class="sample-folder"><span class="folder-tab" aria-hidden="true">样片夹</span>
+<button type="button" class="folder-toggle" id="folder-toggle" aria-expanded="true" aria-controls="folder-body"><span><small>当前样片</small><strong id="folder-current">夜航</strong></span><span id="folder-action">收起样片 ⌃</span></button>
+<div id="folder-body"><div class="sample-deck" id="sample-deck"></div>
+<div class="deck-bottom"><div class="deck-pagination"><button type="button" id="sample-prev" aria-label="翻看上一组模板">←</button><span id="sample-range" aria-live="polite"></span><button type="button" id="sample-next" aria-label="翻看下一组模板">→</button></div><button type="button" id="library-open" class="book-open" aria-haspopup="dialog">打开模板册 <span aria-hidden="true">↗</span></button></div></div></div>
+<div hidden><span id="current-mini"></span><span id="current-template-name"></span><span id="current-template-meta"></span><span id="library-count"></span><div id="template-shortcuts"></div></div>
+</section>
+<div class="scene-option" id="scene-option" hidden><span><label for="scene-motion">环境动效</label><small id="scene-status"></small></span><label class="switch"><input type="checkbox" id="scene-motion" role="switch" aria-label="当前海报环境动效" checked><span class="switch-track"></span></label><button type="button" class="iconbtn" aria-label="模板动效说明" data-tip="只改变光影与装饰，不改变 Item 尺寸、排序或命中。整理时暂缓；系统减少动效时使用静态版本。">ⓘ</button></div>
+<div class="paired">
+<div data-tip="整体调整内容基准，保留 Item 的相对层级，不改热度或排名。拖动微调，也可点击三个预设节点。"><label class="fieldhead" for="scale"><span>内容尺度</span><output id="scale-value">1.00×</output></label><div class="range-wrap"><input id="scale" type="range" min="80" max="120" value="100" step="1"><div class="stops"><button type="button" class="stop" style="left:0%" data-scale="80">小</button><button type="button" class="stop" style="left:50%" data-scale="100">标准</button><button type="button" class="stop" style="left:100%" data-scale="120">大</button></div></div></div>
+<div data-tip="调整网格间距，不修改作者跨度或排序。跨格卡片的总占位包含格间距。"><label class="fieldhead" for="spacing"><span>内容疏密</span><output id="spacing-value">标准</output></label><div class="range-wrap"><input id="spacing" type="range" min="4" max="16" value="10" step="1"><div class="stops"><button type="button" class="stop" style="left:0%" data-gap="4">紧凑</button><button type="button" class="stop" style="left:50%" data-gap="10">标准</button><button type="button" class="stop" style="left:100%" data-gap="16">宽松</button></div></div></div>
+</div>
+<div class="divider"></div>
+<div class="row" data-tip="沿一个方向浏览。外框变窄或变矮只换行/列，不改变有效顺序或 Item 尺寸。"><span class="row-name">浏览方向</span><div class="segments" role="group" aria-label="浏览方向"><button type="button" data-axis="vertical" aria-pressed="true">↕ 纵向</button><button type="button" data-axis="horizontal" aria-pressed="false">↔ 横向</button></div></div>
+<div class="row" id="loop-row" data-tip="循环偏好独立于浏览方向。本原型只展示开关状态，内容仍按有限滚动演示。"><label class="row-name" for="loop">循环浏览</label><span class="side-value" id="loop-status">关闭</span><label class="switch"><input type="checkbox" id="loop" role="switch" aria-label="循环浏览"><span class="switch-track"></span></label></div>
+<div class="cta-row"><span class="save-state" id="memory-status" data-tip="只更新当前演示的内存状态，刷新页面会复位；没有数据库写入。">演示状态</span><button type="button" class="primary" id="arrange" data-tip="在海报上显示整理工具条。此版仅演示选中与尺寸，不实现图钉或拖动换位。">整理内容 ↗</button></div>
+</div>
+<div id="behavior-panel" role="tabpanel" aria-labelledby="behavior-tab" hidden>
+<div class="behavior-field"><div class="row" data-tip="指针进入时展开，离开后按延迟收起。本页仅评审行为设置的位置，不运行自动收展。"><label class="row-name" for="auto-posture">自动收展</label><label class="switch"><input type="checkbox" id="auto-posture" role="switch" aria-label="自动收展"><span class="switch-track"></span></label></div><div data-tip="开启自动收展后可调；生产将复用既有调度器。本原型只更新显示值。"><label class="fieldhead" for="delay"><span>离开延迟</span><output id="delay-value">1.0 s</output></label><div class="range-wrap"><input type="range" id="delay" min="0.5" max="5" step="0.5" value="1" disabled></div></div></div>
+<div class="cta-row"><span class="save-state" data-tip="此页仅展示信息分组与控件状态，不运行自动收展。">仅参数演示</span></div>
+</div>
+</div></div></section>
+<section class="stage-section" aria-label="独立海报演示">
+<header class="stagehead"><span>桌面上的海报</span><button type="button" class="iconbtn" aria-label="海报演示说明" data-tip="这是控制中心之外的评审环境，不是产品桌面预览。滚动条静止时隐藏；滚动、键盘浏览或靠近滚动边缘时短暂出现。">ⓘ</button></header>
+<div class="stage" id="stage"><div class="poster vertical" id="poster">
+<div class="posterheader"><span id="poster-name">游戏收藏</span><span class="ordinal" id="poster-ordinal">01</span></div>
+<div class="poster-caption" id="poster-caption"><small>PERSONAL COLLECTION</small><span id="poster-subtitle">AFTER HOURS</span></div>
+<div class="viewportwrap" id="viewportwrap"><div class="viewport" id="viewport" role="region" tabindex="0" aria-label="演示内容；使用滚轮、方向键、PageUp/PageDown 或 Home/End 浏览"><div class="content" id="content"></div></div><div class="scrolltrack" id="scrolltrack" hidden><button type="button" class="scrollthumb" id="scrollthumb" aria-label="滚动位置，可拖动或使用方向键"></button></div></div>
+<footer class="posterfooter"><span>06 DEMO ITEMS</span><span id="poster-mode">BROWSE</span></footer><button type="button" class="resize-edge" id="edge" aria-label="调整海报交叉尺寸" data-tip="拖动此边缘测试换行/列。缩到最小边界时保序单列/单行，不按面积重排。"></button>
+</div>
+<div class="toolbar" id="toolbar" hidden><button type="button" class="guide-btn" id="grid" aria-label="基线网格" aria-pressed="true" data-tip="显示基线网格。只控制辅助显示，不改变底层排布。">▦</button><button type="button" class="guide-btn" id="spans" aria-label="左上跨度提示" aria-pressed="true" data-tip="在 Item 左上角显示跨度；与基线网格独立开关。">2×</button><span class="tool-divider"></span><button type="button" id="undo" class="guide-btn" aria-label="撤销尺寸修改" data-tip="撤销一次演示内的单项尺寸修改。" disabled>↶</button><button type="button" id="done" class="primary">完成</button><div class="itemtools" id="itemtools" hidden><span id="selected-name" class="selected-name"></span><label for="item-size" class="sr-only">单项跨度</label><select id="item-size" data-tip="只改当前 Item 的尺寸覆盖，不修改排名。本稿不提供图钉或换位操作。"><option value="1">1 × 1</option><option value="2">2 × 2</option><option value="3">3 × 3</option><option value="original">原始比例</option></select><button type="button" id="restore-size" class="guide-btn" aria-label="恢复原始尺寸" data-tip="恢复此演示 Item 的原始跨度，不改变顺序。">↺</button></div></div>
+</div>
+<details class="sim-controls"><summary>缩框测试</summary><div class="simbody"><label for="cross"><span id="cross-label">内容宽度</span><output id="cross-value"></output></label><input type="range" id="cross" min="164" max="340" value="288" step="1" data-tip="仅评审使用的操作器，不加入产品控制中心。外框最小边界由最大 Item 的交叉尺寸决定。"></div></details>
+</section></div>
+<footer class="bottomline"><span>桌面小工坊 / 仅设计原型</span><a href="../CONTENT_LAYOUT_UI_REVIEW_STUDIO.md">范围与待评审项 ↗</a></footer>
+<div class="tooltip" id="tooltip" role="tooltip" hidden></div><div class="toast" id="toast" role="status" hidden></div>
+<dialog id="about-dialog"><h2>这是一版独立 UI 原型</h2><p>可以浏览模板库、另存自定义样例、切换主题。所有“保存”仅保留在本页内存，刷新后复位；不操作本机文件。</p><p>图钉、拖动换位、真实热度、循环滚动、自动收展调度、数据库及文件操作均未接入。参数仅保留在本页面内存中。</p><form method="dialog"><button class="primary">知道了</button></form></dialog>
+
+<dialog id="library-dialog" class="library-dialog" aria-labelledby="library-title">
+<header class="dialog-head"><div><span class="eyebrow">SAMPLE BOOK</span><h2 id="library-title">海报模板册</h2></div><button type="button" class="iconbtn" data-close="library-dialog" aria-label="关闭模板库">×</button></header>
+<div id="library-browser">
+<div class="library-topline"><span class="scope-label" id="library-target"></span><button type="button" class="text-action" id="library-save">＋ 从当前另存</button></div>
+<div class="library-controls"><label class="search-field"><span aria-hidden="true">⌕</span><input type="search" id="template-search" placeholder="搜索模板" aria-label="搜索模板" autocomplete="off"></label><div class="library-filters" role="group" aria-label="模板来源"><button type="button" data-filter="all" aria-pressed="true">全部</button><button type="button" data-filter="builtin" aria-pressed="false">内置</button><button type="button" data-filter="mine" aria-pressed="false">我的</button><button type="button" data-filter="favorite" aria-pressed="false">收藏</button></div></div>
+<div class="library-grid" id="library-grid"></div><div class="empty-result" id="library-empty" hidden>没有找到模板<button type="button" class="text-action" id="clear-search">清除筛选</button></div>
+<footer class="dialog-foot"><span id="library-result" role="status"></span><span>点选即切换 · 仅当前海报</span></footer>
+</div>
+<form id="template-form" class="asset-form" hidden>
+<button type="button" class="text-action back-action" id="template-back">← 返回模板库</button><div class="asset-split"><div class="asset-example"><div class="template-art" id="draft-template-art"></div><span>外观预览</span></div><div class="asset-fields">
+<label class="form-field">模板名称<input id="template-name" type="text" maxlength="40" required autocomplete="off"></label>
+<div class="color-fields"><label>海报背景<input id="template-bg" type="color" value="#202e2a"></label><label>卡片底色<input id="template-card" type="color" value="#2d433a"></label></div>
+<label class="check-row"><input type="checkbox" id="template-title" checked>显示海报副标题</label><p class="form-error" id="template-error" role="alert" hidden></p><span class="muted-note">保留原模板的场景效果；仅修改名称与基础色，不含内容与位置</span></div></div>
+<footer class="dialog-foot"><span>本页内存 · 刷新复位</span><div class="form-actions"><button type="button" id="template-cancel">取消</button><button type="submit" class="primary">保存到“我的”</button></div></footer>
+</form>
+</dialog>
+<dialog id="palette-dialog" class="palette-dialog" aria-labelledby="palette-title">
+<header class="dialog-head"><div><span class="eyebrow">THEME</span><h2 id="palette-title">主题 <span class="scope-pill">控制中心</span></h2></div><button type="button" class="iconbtn" data-close="palette-dialog" aria-label="关闭主题">×</button></header>
+<div id="palette-browser"><div id="palette-grid" class="palette-grid"></div><div class="subsection-head"><span>我的主题</span><button type="button" id="palette-new" class="text-action">＋ 自定义主题</button></div><div id="custom-palettes" class="custom-palettes"></div><footer class="dialog-foot"><span>只换控制中心的颜色，海报样式不变</span></footer></div>
+<form id="palette-form" class="asset-form" hidden><button type="button" id="palette-back" class="text-action back-action">← 返回主题</button><div class="palette-draft" id="palette-draft"><span class="palette-sample-sidebar"></span><span class="palette-sample-main"><strong>DesktopUp</strong><span class="sample-line"></span><span class="sample-line short"></span><span class="sample-action">示例操作</span></span></div>
+<label class="form-field">主题名称<input type="text" id="palette-name" required maxlength="32" autocomplete="off"></label><div class="color-fields"><label>基础底色<input type="color" id="palette-bg" value="#202326"></label><label>强调色<input type="color" id="palette-accent" value="#e9b871"></label></div><span class="muted-note">文字颜色会自动适配</span><p class="form-error" id="palette-error" role="alert" hidden></p>
+<footer class="dialog-foot"><span>本页内存 · 刷新复位</span><div class="form-actions"><button type="button" id="palette-cancel">取消</button><button type="submit" class="primary">保存并使用</button></div></footer></form>
+</dialog>
+</main>
+</body>
+</html>

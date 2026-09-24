@@ -1,5 +1,17 @@
 # DesktopUp V2 当前执行入口
 
+## 当前（2026-09-24）：整体体验闭环验证优先
+
+DEC-021：保留既有决定，先验证基础手势与两重点风险，不直接细化控件。[E1与评审](../A_Project/20_Architecture/CONTENT_LAYOUT_EXPERIENCE_REVIEW_V1.md)六任务反馈收清，06c保留提示后通过标签；DEC-023已定double/退出A，DEC-022批准临时受限双轴，详见[操作/空间收敛](../A_Project/20_Architecture/CONTENT_LAYOUT_OPERATION_SPACE_REVIEW_V1.md)。新双轴未实现/验证。
+
+DEC-019确认：纯手动/热度自动两模式；按住移动即拖、无整理按钮/定时长按前置；手动网格位置/留白与中心精细调整。DEC-018顺序图钉规则保留于自动模式。UI C视觉已采纳，入口语义需随新决定定向修订。
+
+A→B→C：[DEC-019/020与需求§13](../A_Project/10_Requirements/REQUIREMENTS_RISKS_AND_OPEN_QUESTIONS.md) → [手动构图专项](../A_Project/20_Architecture/CONTENT_LAYOUT_MANUAL_COMPOSITION_REVIEW_V1.md)及[两模式组合稿](../A_Project/20_Architecture/CONTENT_LAYOUT_PIN_DRAG_REVIEW_V1.md) → [LR-R1计划](../A_Project/30_Plans/V3_04_L_REMEDIATION_REVIEW_PLAN.md)。局部让位、每次进入手动取当前画面、适配后编辑承接已确认；下一分项为操作/空间组合反例、循环/受限恢复、旧约束兼容及双入口草稿交接；暂不细化控件。
+
+当前仍设计评审，不进LR-R2或V3-05。2026-09-24用户授权以impl/poster-redesign-V3-wb保存现有代码实验、测试与设计文稿，合入并切换至impl/poster-redesign-V3，再推送两分支；后续工作入口为impl/poster-redesign-V3。本次仅开发检查点，未修复既有实验缺陷；旧CheckOnly指纹失败，不能继承旧PASS。后续状态归细化工作流，历史记录按产物理解。
+
+## 历史阶段摘要
+
 最新执行（2026-09-17）：[04-L](../A_Project/30_Plans/V3_04_L_CONTENT_LAYOUT_PLAN.md)L01～06 CODE/AUTO PASS，1630合同＋R4同包35门、1/3/6资源基线和PS5.1入口25/35绑定通过。下一步L07人工，真实输入/像素不预填PASS；仍是DEMO。证据/操作见[交付](../A_Project/40_Implementation/V3-04/CONTENT_LAYOUT_DELIVERY.md)。 最新L07反馈要求单轴/横向循环并简化整理，当前NEEDS REVISION；按DEC-009先讨论交互修订，尚未进入05-01。
 
 历史阶段（2026-09-16，04-06首批）：[04-06-A～D](../A_Project/30_Plans/V3_04_06_PORTABLE_PROFILE_PLAN.md) A/B/C与D1 AUTO PASS，完整1452/1452合同及同包6＋12＋3进程门通过、退出资源均为0；真实另一主机未验证。分批人工/候选见[交付](../A_Project/40_Implementation/V3-04/PORTABLE_PROFILE_DELIVERY.md)，未验余项现延期。空间不足按V2-TBD-021全部保留为待安置配置。
@@ -8,15 +20,15 @@
 
 历史（04-04滑块交付）：[滑块修订](../A_Project/40_Implementation/V3-04/CONTROL_CENTER_SLIDER_REFINEMENT.md)1283/六组自动门PASS，点选/微调待复验；当时的列表排查/暂缓05指令已由用户后续进入05替代。运行事实及证据只查最新[HANDOFF](../A_Project/40_Implementation/V3-04/HANDOFF.md)，不沿用旧PID。
 
-最后检查：2026-09-17（L07人工入口已准备）。分支：`impl/poster-redesign-V3`。
+最后检查：2026-09-24；DEC-021整体体验优先，E1六任务反馈收清，操作/空间基线已定、组合待评审；不启动旧L07候选。
 
 | 层级 | 权威入口 | 当前状态 |
 | --- | --- | --- |
 | A 需求 | [七份需求](REQUIREMENTS_INDEX.md) | 通用内容、多海报、唯一中心/托盘、独立主题、热度与 AI |
 | A 架构 | [总体架构](../A_Project/20_Architecture/DESKTOPUP_V2_V3_ARCHITECTURE_V1.md)、[多海报合同](../A_Project/20_Architecture/GENERAL_CONTENT_MULTI_POSTER_CONTRACT_V1.md) | 当前设计基线 |
 | B 模块 | [模块分类](../A_Project/20_Architecture/DESKTOPUP_V2_V3_MODULE_CATALOG_V1.md) | 共享宿主恢复、独立海报会话 |
-| C 总计划/任务索引 | [制作计划](../A_Project/30_Plans/DESKTOPUP_V2_V3_IMPLEMENTATION_PLAN_V1.md)、[细化工作流](../A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md)、[04-L专项](../A_Project/30_Plans/V3_04_L_CONTENT_LAYOUT_PLAN.md) | L01～06 CODE/AUTO PASS；L07人工待验，旧延期携带 |
-| C 当前工作/携带门 | [04-L交付](../A_Project/40_Implementation/V3-04/CONTENT_LAYOUT_DELIVERY.md)、[便携分项结果](../A_Project/40_Implementation/V3-04/PORTABLE_PROFILE_DELIVERY.md)、[缺陷清单](../A_Project/40_Implementation/V3-04/KNOWN_ISSUES.md) | R4已绑定35同包门，进入L07；BUG-005/007原USER PASS，001/006延期、004非阻塞，真实他机未验 |
+| C 总计划/任务索引 | [制作计划](../A_Project/30_Plans/DESKTOPUP_V2_V3_IMPLEMENTATION_PLAN_V1.md)、[细化工作流](../A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md)、[04-L整改评审](../A_Project/30_Plans/V3_04_L_REMEDIATION_REVIEW_PLAN.md) | LR-R1：整体体验评审，E1六任务反馈收清，操作/空间基线已定、组合待评审；生产未整改 |
+| C 当前工作/携带门 | [布局审查](../A_Project/40_Implementation/V3-04/CONTENT_LAYOUT_REVIEW_2026-09-23.md)、[旧04-L交付](../A_Project/40_Implementation/V3-04/CONTENT_LAYOUT_DELIVERY.md)、[缺陷清单](../A_Project/40_Implementation/V3-04/KNOWN_ISSUES.md) | BUG-008～017登记未修；旧Bug/专项延期保留，旧35门不转授当前工作区 |
 | C 历史呈现修复 | [R4](../A_Project/40_Implementation/V3-04/M07_ANIMATION_R4.md) | 白条人工确认；保留方法论与历史证据，非本轮修改 |
 | C 交接/代码/证据 | [HANDOFF](../A_Project/40_Implementation/V3-04/HANDOFF.md)、[CODE_ANCHORS](../A_Project/40_Implementation/V3-04/CODE_ANCHORS.md)、[VERIFICATION](../A_Project/40_Implementation/V3-04/VERIFICATION.md) | 当前事实与历史证据分开 |
 
@@ -31,7 +43,7 @@ ABC资料归属见[文档入口](../README.md#abc归属与历史记录)；当前
 
 ## 最近步骤
 
-1. [04-L专项计划](../A_Project/30_Plans/V3_04_L_CONTENT_LAYOUT_PLAN.md)已完成L01～06代码与自动门；下一步使用绑定R4的入口进行L07人工。已测资源和35门不代替真实输入/像素确认。
+1. [04-L专项计划](../A_Project/30_Plans/V3_04_L_CONTENT_LAYOUT_PLAN.md)保留L01～06历史证据；当前下一步[LR-R1设计评审](../A_Project/30_Plans/V3_04_L_REMEDIATION_REVIEW_PLAN.md)，先判断规则再决定是否制作，不运行指纹失配的旧人工候选。
 2. 原05-03单张目标子菜单由V2-DEC-006取消，不改号另派任务；旧合同测试不作为当前托盘交付。
 3. 05-02/04已接原通道；TBD-020保持隐藏新增已实现，05-05人工用户通过。新增外观链路另验，不扩大旧PASS范围。
 4. DEC-008直接推进04-L01～07 → V3-05真实内容纵向闭环；原04-06剩余验收和04-07/08收口延期。04-06已有版本化便携外壳，L03补跨格载荷/映射及针对性兼容验证；L新增输入/资源随本阶段验收，不预先补全旧阶段。磁盘执行仍以前置恢复账本为门。

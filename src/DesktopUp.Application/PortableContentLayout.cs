@@ -11,6 +11,16 @@ public sealed record PortableContentLayout(int SchemaVersion, string EngineId, i
     IReadOnlyList<PortableContentPlacement> Placements)
 {
     public IReadOnlyList<ContentReservedSpace> ReservedSpaces { get; init; } = Array.Empty<ContentReservedSpace>();
+
+    /// <summary>v3 carries the single scroll axis. Null means the member was absent: v2 archives are
+    /// imported as vertical, while an archive claiming version three must state its axis.</summary>
+    public ContentFlowAxis? FlowAxis { get; init; }
+    /// <summary>Optional in v3. Absent means heat-driven sizing stays off, so importing an older
+    /// archive never silently starts resizing manual or pinned cards.</summary>
+    public bool? AllowHeatDrivenSize { get; init; }
+    /// <summary>Optional in v3. Absent means loop scrolling stays off; the switch is independent of
+    /// the flow axis and never changes squeezing or wrapping.</summary>
+    public bool? LoopScroll { get; init; }
 }
 
 public static class PortableContentLayoutCodec
@@ -22,7 +32,14 @@ public static class PortableContentLayoutCodec
         Array.AsReadOnly(document.Placements.Select((p, i) => new PortableContentPlacement(
             "item-" + i.ToString("D4", System.Globalization.CultureInfo.InvariantCulture), p.Order, p.ColumnSpan, p.RowSpan,
             p.RegionId, p.Column, p.Row, p.FixedPosition, p.ManualSize, p.PinnedIndex, p.ImageFit)).ToArray()))
-        { ReservedSpaces = Array.AsReadOnly(document.ReservedSpaces.ToArray()) };
+        {
+            // Reserved regions are deferred: v3 deliberately does not carry them, so an imported
+            // archive can never contain a keep-out area the UI cannot create, show or remove.
+            ReservedSpaces = Array.Empty<ContentReservedSpace>(),
+            FlowAxis = document.FlowAxis,
+            AllowHeatDrivenSize = document.AllowHeatDrivenSize,
+            LoopScroll = document.LoopScroll
+        };
 
     public static ContentLayoutDocument Import(PortableContentLayout layout, string posterId)
     {
@@ -41,7 +58,11 @@ public static class PortableContentLayoutCodec
             Mode = layout.Mode, BaseCellDip = layout.BaseCellDip, BaseGapDip = layout.BaseGapDip,
             MaximumColumns = layout.MaximumColumns, ShowBaselineGrid = layout.ShowBaselineGrid,
             ShowSpanLabels = layout.ShowSpanLabels, Regions = Array.AsReadOnly(layout.Regions.ToArray()),
-            ReservedSpaces = Array.AsReadOnly(layout.ReservedSpaces.ToArray())
+            // Same deferred rule as export: reserved regions are not imported in v3.
+            ReservedSpaces = Array.Empty<ContentReservedSpace>(),
+            FlowAxis = layout.FlowAxis ?? ContentFlowAxis.Vertical,
+            AllowHeatDrivenSize = layout.AllowHeatDrivenSize ?? false,
+            LoopScroll = layout.LoopScroll ?? false
         };
         // Full strict domain validation and the independent 1 MiB document budget.
         _ = ContentLayoutPolicy.Serialize(document);

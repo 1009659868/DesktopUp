@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DesktopUp · 布局交互评审 V2</title>
+<style>
+:root{color-scheme:light dark;--bg:light-dark(#eef1f4,#161b20);--surface:light-dark(#fff,#23292f);--ink:light-dark(#17252d,#e7edf1);--muted:light-dark(#586973,#a9b9c3);--line:light-dark(#dce3e8,#3c4851);--accent:light-dark(#007f85,#60d3cb);--soft:light-dark(#e5f2f1,#243f40);--button:light-dark(#f4f6f7,#313b43);--poster:light-dark(#173536,#173536);--posterink:#f1f5ef;--tile:#274a49;--stage:light-dark(#e2e9e8,#151e22)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 "Segoe UI","Microsoft YaHei",sans-serif}button,input,select{font:inherit;color:inherit}button,select{border:1px solid var(--line);border-radius:7px;background:var(--button);padding:7px 12px}button{cursor:pointer}button:disabled{opacity:.5;cursor:default}button:hover:not(:disabled){filter:brightness(.96)}input[type=range]{width:100%;accent-color:var(--accent);margin:9px 0}input[type=checkbox]{accent-color:var(--accent)}h1,h2,h3,p{margin:0}h1{font-size:25px;font-weight:600}h2{font-size:20px;font-weight:600}h3{font-size:14px;font-weight:600}a{color:var(--accent)}[hidden]{display:none!important}.page{max-width:1240px;margin:auto;padding:28px}.pagehead{display:flex;gap:16px;justify-content:space-between;align-items:start;margin-bottom:24px}.eyebrow{font-size:12px;color:var(--accent);letter-spacing:1.5px;margin-bottom:5px}.muted{color:var(--muted);font-size:12px}.tag{background:var(--soft);color:var(--accent);padding:5px 10px;border-radius:20px;white-space:nowrap}.board{display:grid;grid-template-columns:minmax(290px,370px) minmax(0,1fr);gap:24px;align-items:start}.center{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:0 8px 22px #142b3810}.chrome{padding:12px 20px;border-bottom:1px solid var(--line);font-size:12px;color:var(--muted)}.centerbody{padding:22px}.target{display:flex;align-items:center;justify-content:space-between;gap:12px}.tabheading{margin:22px 0 18px;display:flex;align-items:center;gap:16px}.tabheading span{font-size:20px;color:var(--accent);border-bottom:3px solid var(--accent);padding-bottom:5px}.section{padding:18px 0;border-top:1px solid var(--line)}.section:first-of-type{border-top:0;padding-top:0}.control{margin-top:16px;max-width:285px}.control label{display:flex;justify-content:space-between;gap:12px}.value{font-variant-numeric:tabular-nums;color:var(--muted);font-size:12px}.rangegroup{position:relative;padding:0 8px}.stops{height:23px;position:relative}.stop{position:absolute;top:-2px;transform:translateX(-50%);padding:5px 4px 0;border:0;background:transparent;font-size:12px;white-space:nowrap;color:var(--muted)}.stop:before{content:"";position:absolute;top:-10px;left:calc(50% - 2px);width:4px;height:4px;border-radius:50%;background:var(--muted)}.segmented{display:flex;border-radius:8px;border:1px solid var(--line);padding:3px;background:var(--button);margin:12px 0;max-width:285px}.segmented button{flex:1;border:0;background:transparent}.segmented [aria-pressed=true]{background:var(--surface);box-shadow:0 1px 4px #0002;color:var(--accent)}.toggle{display:flex;justify-content:space-between;align-items:center;gap:12px;max-width:285px;padding:4px 0}.primary{background:var(--accent);border-color:var(--accent);color:light-dark(#fff,#0c2728)}.sectionfoot{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:16px}.sectionfoot p{max-width:185px}.review{min-width:0}.reviewhead{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:10px}.resize-control{background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:12px 16px;margin-bottom:12px}.resize-control label{display:flex;justify-content:space-between;gap:8px}.desktop{padding:24px;min-height:475px;border-radius:12px;background:var(--stage);border:1px solid var(--line);display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;position:relative}.poster{position:relative;background:var(--poster);border-radius:12px;color:var(--posterink);box-shadow:0 12px 25px #14272b20;max-width:100%;flex:none}.poster.focused{outline:3px solid var(--accent);outline-offset:4px}.posterhead{height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-bottom:1px solid #8fadab26}.posterhead small{font-size:11px;color:#bfd2ce;letter-spacing:1px}.viewport{position:relative;margin:16px;overflow:auto;scrollbar-width:thin;scrollbar-color:#719693 #173536;scrollbar-gutter:auto}.content{position:relative;min-height:1px}.poster.vertical .viewport{overflow-x:hidden;overflow-y:auto}.poster.horizontal .viewport{overflow-y:hidden;overflow-x:auto}.tile{position:absolute;padding:10px;border:1px solid #7aa8a64d;border-radius:8px;background:var(--tile);color:var(--posterink);text-align:left;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden}.tile.selected{outline:2px solid #9feddb;outline-offset:-3px}.tile .symbol{font-size:25px;font-weight:600;letter-spacing:-1px;line-height:1}.tile .name{font-size:11px;margin-top:6px}.spanhint{position:absolute;left:7px;top:5px;font-size:11px;color:#c5ded9}.posterfoot{height:31px;padding:0 16px;color:#b7d0ca;font-size:10px;letter-spacing:1px;display:flex;align-items:center;justify-content:space-between;gap:8px;border-top:1px solid #8fadab26}.resize-edge{position:absolute;touch-action:none;border:0;border-radius:8px;background:#72bfb3;opacity:.8;padding:0}.vertical .resize-edge{width:6px;height:44px;right:-3px;top:calc(50% - 22px);cursor:ew-resize}.horizontal .resize-edge{width:44px;height:6px;bottom:-3px;left:calc(50% - 22px);cursor:ns-resize}.arrangebar{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px;margin-top:16px;width:100%;display:flex;align-items:center;flex-wrap:wrap;gap:10px}.arrangebar details{position:relative}.arrangebar summary{cursor:pointer;font-size:12px}.guides{position:absolute;top:28px;left:0;min-width:170px;background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 16px #0002;z-index:10;padding:10px}.guides label{display:block;padding:6px}.arrangebar button{padding:5px 9px;font-size:12px}.arrangebar .done{margin-left:auto}.itemtools{display:flex;flex-wrap:wrap;align-items:center;gap:10px;width:100%;border-top:1px solid var(--line);padding-top:10px}.itemtools select{max-width:180px}.itemtools label{font-size:12px}.feedback{margin-top:12px;min-height:38px;color:var(--muted);font-size:12px}.footnotes{margin-top:22px;display:flex;flex-wrap:wrap;gap:12px;color:var(--muted);font-size:12px}.grid-on{background-image:linear-gradient(to right,#b1d6cf16 1px,transparent 1px),linear-gradient(to bottom,#b1d6cf16 1px,transparent 1px)}.help{margin-top:12px;padding-top:12px;border-top:1px solid var(--line);font-size:12px;color:var(--muted)}
+.sectionfoot button{white-space:nowrap;flex-shrink:0}.stop:before{top:-18px}.tile.compact{padding:7px}.tile.compact .symbol{font-size:18px;padding-top:8px}.tile.compact .name{display:none}.tile.compact .spanhint{top:2px;left:5px;line-height:1}
+@media(max-width:900px){.board{grid-template-columns:1fr}.centerbody{padding:18px}.control,.segmented,.toggle{max-width:340px}.desktop{min-height:0}.page{padding:18px}.center{max-width:none}}@media(max-width:430px){.page{padding:12px}.pagehead{display:block}.tag{display:inline-block;margin-top:10px}.desktop{padding:10px}.reviewhead{display:block}.resize-control{padding:10px}.centerbody{padding:16px}.posterhead{padding:0 10px}.posterhead small{display:none}.tile .name{font-size:11px}.posterfoot{padding:0 10px}.posterfoot span:last-child{display:none}}@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<main class="page" id="layout-review">
+<header class="pagehead"><div><div class="eyebrow">DESKTOPUP / 04-L · LR-R1</div><h1>设置整体，直接整理内容</h1><p class="muted">UI 评审稿 · 固定 Item 尺寸，外框只改变排列</p></div><span class="tag">设计原型 · 非生产实现</span></header>
+<div class="board">
+<section class="center" aria-label="控制中心外观片段">
+<div class="chrome">DesktopUp · 控制中心 / 外观片段</div>
+<div class="centerbody">
+<div class="target"><div><h2>游戏收藏</h2><p class="muted">当前海报 · 6 个演示 Item</p></div><button type="button" id="focus">定位</button></div>
+<div class="tabheading"><span>外观</span><small class="muted">不新增“布局”页签</small></div>
+<section class="section"><h3>整体观感</h3><p class="muted">保留每个 Item 的相对大小</p>
+<div class="control"><label for="scale">内容尺度 <output class="value" id="scale-value">1.00×</output></label><div class="rangegroup"><input id="scale" type="range" min="80" max="120" step="1" value="100"><div class="stops"><button type="button" class="stop" style="left:0%" data-scale="80">小</button><button type="button" class="stop" style="left:50%" data-scale="100">标准</button><button type="button" class="stop" style="left:100%" data-scale="120">大</button></div></div></div>
+<div class="control"><label for="spacing">内容疏密 <output class="value" id="spacing-value">标准</output></label><div class="rangegroup"><input id="spacing" type="range" min="4" max="16" step="1" value="10"><div class="stops"><button type="button" class="stop" style="left:0%" data-spacing="4">紧凑</button><button type="button" class="stop" style="left:50%" data-spacing="10">标准</button><button type="button" class="stop" style="left:100%" data-spacing="16">宽松</button></div></div></div>
+</section>
+<section class="section"><h3>排布与浏览</h3><div class="segmented" role="group" aria-label="浏览方向"><button type="button" data-axis="vertical" aria-pressed="true">↕ 纵向</button><button type="button" data-axis="horizontal" aria-pressed="false">↔ 横向</button></div><label class="toggle" for="loop">首尾循环 <input id="loop" type="checkbox"></label><p id="loop-note" class="muted">有限浏览 · 到末尾停止</p><div class="sectionfoot"><p class="muted">移动、固定与单项尺寸，回到海报上操作。</p><button type="button" id="arrange" class="primary">整理内容</button></div></section>
+<p class="help">图钉沿顺序位约束，具体整理手势待评审，本稿暂不实现图钉。无需“应用”；此原型只更新演示内存。</p>
+</div></section>
+<section class="review" aria-label="评审专用桌面演示">
+<div class="reviewhead"><h3>桌面演示</h3><span class="muted">不是产品内的桌面预览</span></div>
+<div class="resize-control"><label for="cross"><span id="cross-label">内容宽度</span><output id="cross-value" class="value"></output></label><input id="cross" type="range" min="180" max="440" value="390" step="1"><p id="boundary" class="muted"></p></div>
+<div class="desktop" id="desktop">
+<div class="poster vertical" id="poster">
+<div class="posterhead"><span>游戏收藏</span><small>COLLECTION / 01</small></div>
+<div class="viewport" id="viewport" role="region" aria-label="演示 Item 单轴浏览"><div class="content" id="content"></div></div>
+<div class="posterfoot"><span>6 DEMO ITEMS</span><span id="posture">BROWSE</span></div>
+<button class="resize-edge" id="edge" type="button" aria-label="拖动调整交叉轴；也可使用上方滑条"></button>
+</div>
+<div class="arrangebar" id="arrangebar" hidden><span class="muted">整理中</span><details><summary>辅助显示</summary><div class="guides"><label><input id="grid" type="checkbox" checked> 基线网格</label><label><input id="spans" type="checkbox" checked> 左上跨度</label></div></details><button id="undo" type="button" disabled>撤销</button><button class="done primary" id="done" type="button">完成整理</button><div class="itemtools" id="itemtools" hidden><span id="selected-name"></span><label for="item-size">占格</label><select id="item-size"><option value="1">1 × 1</option><option value="2">2 × 2</option><option value="3">3 × 3</option><option value="original">原始比例</option></select><button id="auto-size" type="button">恢复原始尺寸</button></div><p class="muted">本稿只演示选中与尺寸；拖动、图钉及循环动画尚未实现。</p></div>
+</div>
+<p class="feedback" id="feedback" aria-live="polite"></p>
+</section>
+</div>
+<footer class="footnotes"><span>缩框只换行/列，保留有效顺序；默认热度序看似大→小，图钉/人工安排可例外。</span><a href="../CONTENT_LAYOUT_UI_REVIEW_V2.md">按钮逻辑与评审边界</a><a href="../CONTENT_LAYOUT_REMEDIATION_DESIGN_V2.md">行为设计</a></footer>
+</main>
+<script>
+(() => {
+  'use strict';
+  const root = document.getElementById('layout-review');
+  const $ = id => root.querySelector('#' + id);
+  // Preset effective order for review, not a real heat calculation or pin resolver.
+  const seed = [
+    {id:'al',name:'Afterlight',symbol:'AL',w:3,h:2},
+    {id:'gs',name:'Ghost Signal',symbol:'GS',w:2,h:3},
+    {id:'iv',name:'Iron Veil',symbol:'IV',w:2,h:2},
+    {id:'sr',name:'Sable Run',symbol:'SR',w:1,h:2},
+    {id:'lo',name:'Last Orbit',symbol:'LO',w:1,h:1},
+    {id:'hc',name:'Hollow Crown',symbol:'HC',w:1,h:1}
+  ];
+  const state = {axis:'vertical',cross:390,scale:1,gap:10,editing:false,selected:null,grid:true,spans:true,loop:false,items:structuredClone(seed),history:[]};
+  const cell = 52;
+  const dimensions = (items,scale,gap) => items.map((item,index) => ({...item,index,width:item.w*cell*scale+(item.w-1)*gap,height:item.h*cell*scale+(item.h-1)*gap}));
+  // Review-only shelf flow: never scales an Item to fit. This is not the production solver.
+  function solve(items,axis,cross,scale,gap) {
+    const vertical = axis === 'vertical';
+    const dim = dimensions(items,scale,gap);
+    const minimum = Math.max(1,...dim.map(i => vertical ? i.width : i.height));
+    const available = Math.max(minimum,cross);
+    const single = available <= minimum + 0.001;
+    // Ranking and pin constraints are resolved upstream. Resize never sorts by area.
+    const order = dim;
+    let across=0,along=0,band=0;
+    const tiles = order.map(item => {
+      const c=vertical ? item.width : item.height, m=vertical ? item.height : item.width;
+      if(across && (single || across+c > available+0.001)) { along+=band+gap; across=0; band=0; }
+      const result={...item,x:vertical?across:along,y:vertical?along:across};
+      across+=c+gap; band=Math.max(band,m); return result;
+    });
+    return {tiles,minimum,cross:available,single,extent:along+band};
+  }
+  function render(message) {
+    const vertical=state.axis==='vertical';
+    // Space for panel padding, poster padding, scrollbar and a narrow resize handle.
+    const available=Math.max(190,$('desktop').clientWidth-82);
+    const minimum=Math.max(...dimensions(state.items,state.scale,state.gap).map(i=>vertical?i.width:i.height));
+    const max=Math.max(minimum,vertical?Math.min(440,available):330);
+    state.cross=Math.max(minimum,Math.min(max,state.cross));
+    const layout=solve(state.items,state.axis,state.cross,state.scale,state.gap);
+    const main=vertical?310:Math.min(440,available);
+    $('cross').min=String(minimum); $('cross').max=String(max); $('cross').value=String(state.cross);
+    $('cross-label').textContent=vertical?'内容宽度（评审操作器）':'内容高度（评审操作器）';
+    $('cross-value').textContent=Math.round(state.cross)+' px';
+    $('boundary').textContent='最小 '+Math.round(minimum)+' px · '+(layout.single?(vertical?'单列，保留有效顺序':'单行，保留有效顺序'):(vertical?'缩窄时换行，尺寸与顺序不变':'压低时换列，尺寸与顺序不变'));
+    $('poster').className='poster '+state.axis;
+    // 16px margins per side, plus 12px reserved for a non-overlay scrollbar.
+    $('poster').style.width=(vertical?state.cross+44:main+32)+'px';
+    $('viewport').style.width=(vertical?state.cross+12:main)+'px';
+    $('viewport').style.height=(vertical?main:state.cross+12)+'px';
+    $('content').style.width=(vertical?state.cross:layout.extent)+'px';
+    $('content').style.height=(vertical?layout.extent:state.cross)+'px';
+    $('content').className='content'+(state.editing&&state.grid?' grid-on':'');
+    $('content').style.backgroundSize=(cell*state.scale+state.gap)+'px '+(cell*state.scale+state.gap)+'px';
+    const beforeOffset=vertical?$('viewport').scrollTop:$('viewport').scrollLeft;
+    $('content').replaceChildren(...layout.tiles.map(item=>{
+      const b=document.createElement('button'); b.type='button'; b.className='tile'+(item.width<80||item.height<70?' compact':'')+(state.editing&&state.selected===item.id?' selected':'');
+      b.dataset.id=item.id; b.setAttribute('aria-label',item.name+'，'+item.w+'乘'+item.h+'格'+(state.editing?'，选择编辑':'，演示卡片'));
+      Object.assign(b.style,{left:item.x+'px',top:item.y+'px',width:item.width+'px',height:item.height+'px'});
+      const hint=document.createElement('span');hint.className='spanhint';hint.textContent=item.w+'×'+item.h;hint.hidden=!(state.editing&&state.spans);
+      const symbol=document.createElement('span');symbol.className='symbol';symbol.textContent=item.symbol;
+      const name=document.createElement('span');name.className='name';name.textContent=item.w===1?item.symbol:item.name;
+      b.append(hint,symbol,name);b.addEventListener('click',()=>{if(state.editing){state.selected=item.id;render('已选择 '+item.name+' · 尺寸入口就近出现');}else $('feedback').textContent='演示内容，不执行真实打开。';});return b;
+    }));
+    if(vertical){$('viewport').scrollLeft=0;$('viewport').scrollTop=beforeOffset;}else{$('viewport').scrollTop=0;$('viewport').scrollLeft=beforeOffset;}
+    root.querySelectorAll('[data-axis]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.axis===state.axis)));
+    $('scale').value=String(state.scale*100);$('scale-value').textContent=state.scale.toFixed(2)+'×';
+    $('spacing').value=String(state.gap);$('spacing-value').textContent=state.gap===10?'标准':state.gap+' px';
+    $('arrangebar').hidden=!state.editing;$('arrange').textContent=state.editing?'正在整理':'整理内容';$('arrange').disabled=state.editing;
+    $('posture').textContent=state.editing?'ARRANGING':'BROWSE';$('undo').disabled=state.history.length===0;
+    $('loop-note').textContent=!state.loop?'有限浏览 · 到末尾停止':state.editing?'偏好已开启 · 整理期间暂停（候选规则）':layout.extent<=main?'偏好已开启 · 内容不足一屏，暂不循环':'偏好已开启 · 原型仅展示资格，不运行循环';
+    const chosen=state.items.find(i=>i.id===state.selected);
+    $('itemtools').hidden=!state.editing||!chosen;
+    if(chosen){$('selected-name').textContent=chosen.name;$('item-size').value=chosen.w===chosen.h?String(chosen.w):'original';}
+    $('feedback').textContent=message||'可拖海报'+(vertical?'右边':'底边')+'，或使用上方滑条。'+(layout.single?' 已到最大 Item 决定的最小边界。':'');
+    window.layoutReviewSnapshot={state:structuredClone(state),layout:structuredClone(layout),main};
+  }
+  root.querySelectorAll('[data-axis]').forEach(b=>b.addEventListener('click',()=>{state.axis=b.dataset.axis;state.cross=state.axis==='vertical'?390:260;$('viewport').scrollTop=0;$('viewport').scrollLeft=0;render('方向已切换 · Item 不旋转；浏览锚点保持尚未在原型实现。');}));
+  $('cross').addEventListener('input',e=>{state.cross=Number(e.target.value);render();});
+  function setScale(v){state.scale=v/100;render('整体尺度已更新（演示内存）· 外框缩放不会触发这项变化。');}
+  function setGap(v){state.gap=v;render('网格间距已更新（演示内存）· 占格不变，跨格总尺寸包含内部格间距。');}
+  $('scale').addEventListener('input',e=>setScale(Number(e.target.value)));$('spacing').addEventListener('input',e=>setGap(Number(e.target.value)));
+  root.querySelectorAll('[data-scale]').forEach(b=>b.addEventListener('click',()=>setScale(Number(b.dataset.scale))));
+  root.querySelectorAll('[data-spacing]').forEach(b=>b.addEventListener('click',()=>setGap(Number(b.dataset.spacing))));
+  $('loop').addEventListener('change',e=>{state.loop=e.target.checked;render();});
+  $('viewport').addEventListener('wheel',e=>{if(state.axis!=='horizontal')return;const factor=e.deltaMode===1?16:e.deltaMode===2?$('viewport').clientWidth:1;const delta=(e.deltaX||e.deltaY)*factor;if(delta){e.preventDefault();$('viewport').scrollLeft+=delta;}},{passive:false});
+  $('arrange').addEventListener('click',()=>{state.editing=true;render('点击海报上的 Item，才出现单项尺寸操作。');});
+  $('done').addEventListener('click',()=>{state.editing=false;state.selected=null;render('已完成整理 · 保留尺寸改动，不额外重排。');});
+  $('grid').addEventListener('change',e=>{state.grid=e.target.checked;render();});$('spans').addEventListener('change',e=>{state.spans=e.target.checked;render();});
+  function resizeItem(value){const item=state.items.find(i=>i.id===state.selected);if(!item)return;const original=seed.find(i=>i.id===item.id);const next=value==='original'?original:{w:Number(value),h:Number(value)};if(item.w===next.w&&item.h===next.h)return;state.history.push(structuredClone(state.items));item.w=next.w;item.h=next.h;render('仅改所选项尺寸（演示内存）。本稿会扩充演示空间；生产仍需空间预检。');}
+  $('item-size').addEventListener('change',e=>resizeItem(e.target.value));$('auto-size').addEventListener('click',()=>resizeItem('original'));
+  $('undo').addEventListener('click',()=>{if(state.history.length){state.items=state.history.pop();render('已撤销一次单项尺寸操作（演示内存）。');}});
+  let focusTimer;
+  $('focus').addEventListener('click',()=>{clearTimeout(focusTimer);$('poster').classList.add('focused');$('poster').scrollIntoView({block:'nearest'});focusTimer=setTimeout(()=>$('poster').classList.remove('focused'),1200);});
+  let drag=null;
+  $('edge').addEventListener('pointerdown',e=>{drag={id:e.pointerId,start:state.axis==='vertical'?e.clientX:e.clientY,cross:state.cross};e.currentTarget.setPointerCapture(e.pointerId);});
+  $('edge').addEventListener('pointermove',e=>{if(drag&&e.pointerId===drag.id){state.cross=drag.cross+(state.axis==='vertical'?e.clientX:e.clientY)-drag.start;render();}});
+  ['pointerup','pointercancel','lostpointercapture'].forEach(type=>$('edge').addEventListener(type,()=>{drag=null;}));
+  $('edge').addEventListener('keydown',e=>{if(['ArrowLeft','ArrowUp','ArrowRight','ArrowDown'].includes(e.key)){e.preventDefault();state.cross+=['ArrowLeft','ArrowUp'].includes(e.key)?-4:4;render();}});
+  root.addEventListener('keydown',e=>{if(e.key==='Escape'&&state.editing){state.selected=null;render('已清除选择 · 整理模式保留。');}});
+  let lastWidth=0;new ResizeObserver(()=>{const width=$('desktop').clientWidth;if(width!==lastWidth){lastWidth=width;render();}}).observe($('desktop'));
+  window.layoutReviewSolve=solve;
+  window.layoutReviewSeed=structuredClone(seed);
+  render();
+})();
+</script>
+</body>
+</html>

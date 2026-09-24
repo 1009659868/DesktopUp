@@ -1,5 +1,67 @@
 # V3-04 代码锚点
 
+## 最新：操作与真实空间不足方案（只读核对，无生产修改）
+
+[操作与空间方案](../../20_Architecture/CONTENT_LAYOUT_OPERATION_SPACE_REVIEW_V1.md)§7对应现源码差距：ContentLayoutSolver.Resolve的squeeze-single-column、ResolveHorizontalLoop的squeeze-single-row/viewport-height-clamped不能当作DEC-011/022实现；Reclip旧轴分支不能证明受限资格/恢复；ContentLayoutFlowPolicy.SetFlowAxis会转换旧Manual→Anchored，不能用它进入临时二维浏览；PosterSpatialRuntime.Effective.ResolveEffectiveBounds继续是外框有效空间入口。未修改上述源码，不关闭旧Bug。
+
+E1仅确认体验任务，尚无受限双轴实现；后续应通过有效浏览策略消费同一布局/呈现快照，不修改保存FlowAxis或创建第二个空间所有者。正式验证矩阵见新文稿OS-01～12，仍NOT RUN。
+
+## 最新：整体体验E1（仅Docs原型，非生产接线）
+
+- [experience.html](../../20_Architecture/Designs/content-layout-experience.html)与[CSS](../../20_Architecture/Designs/content-layout-experience.css)：六任务、基础手势/退出试验条件、最小控制中心、独立海报、预期/实际记录。保持已采纳UI C原稿。
+- [experience.model.js](../../20_Architecture/Designs/content-layout-experience.model.js)：8项DEMO、普通纵向有限投影/局部推让、整图承接、顺序图钉、当前画面切手动及退出A/B；仅候选几何，不调用或替代生产solver。
+- [experience.js](../../20_Architecture/Designs/content-layout-experience.js)：稳定Item节点直接捕获、模拟打开、取消与整次内存撤销、中心关闭继续操作；无真实文件/数据库/网络。试验热度注入在拖动时禁用，不冒充原生调度。
+- [experience.check.cjs](../../20_Architecture/Designs/content-layout-experience.check.cjs)：41项纯演算/无头Edge检查；不是正式合同/原生输入门。
+
+范围与风险归[体验评审](../../20_Architecture/CONTENT_LAYOUT_EXPERIENCE_REVIEW_V1.md)。既有ContentLayout/原生/R4/CAS锚点未变；旧源码问题未修。
+
+## 最新：DEC-020手动构图只读核对（无生产修改）
+
+[手动专项](../../20_Architecture/CONTENT_LAYOUT_MANUAL_COMPOSITION_REVIEW_V1.md)§7记录锚点：ContentLayoutEditing.cs的Mode分支（约80～112行）退出会清Column/Row并按旧ManualExit改覆盖；PushManualPeers（131～170行）按previous.ReadOrder推让，166行只更新Y到blocker.Bottom。ContentLayout.cs的单组Placements不代表已有双模式独立构图记忆，也不应为已被否决的该方案新增仓库。后续要保留单命令/full CAS，当前事实不能冒充DEC-020实现。
+
+DEC-019只读核查补充：`PosterVisualWindow.ContentEditing.HandleContentInput`的canEdit仍以IsEditing门控；`ControlCenterWindow.ContentLayout.cs`仍显示Automatic/Anchored/Manual三类。新目标为两模式＋两入口，须保留旧枚举兼容；不是删判断/改标签即可完成。生产代码本轮未改，组合与安全接线待LR-R1收口。
+
+## 当前：2026-09-24 UI C已采纳，图钉/拖动组合审查（无生产修改）
+
+[组合文稿](../../20_Architecture/CONTENT_LAYOUT_PIN_DRAG_REVIEW_V1.md)对应DEC-017/018。只读复核：`src/DesktopUp.Domain/ContentLayoutEditing.cs`的Apply/Move（坐标固定）与Pinned（顺序锚）仍不同；`src/DesktopUp.App/PosterVisualWindow.ContentEditing.cs`的HandleContentInput/canEdit仍有旧门槛；`src/DesktopUp.Application/ContentLayoutCommand.cs`的Prepare保留单语义版本和完整目标校验。前两者是后续整改锚点，未被本文修复；后者不可放宽。UI C文件未改，原型认可不等于有原生图钉实现。
+
+最新C细化：[c.html](../../20_Architecture/Designs/content-layout-controls-c.html)中folder-body包含template-settings、scene-option和property-section；[c.css](../../20_Architecture/Designs/content-layout-controls-c.css)定义雨云留白/透明材质/风动暂停；[c-scenes.js](../../20_Architecture/Designs/content-layout-controls-c-scenes.js)负责受控云形、DEMO图形、尺寸内约束与逐海报模板动效偏好；[c-model.js](../../20_Architecture/Designs/content-layout-controls-c-model.js)声明cloud.wind。原core不变；检查扩为60组，仅原型。
+
+## 2026-09-24：UI 原型 C（非生产代码）
+
+[页面](../../20_Architecture/Designs/content-layout-controls-c.html)与[设计](../../20_Architecture/CONTENT_TEMPLATE_SCHEMA_UI_C.md)为最新入口。[c-model.js](../../20_Architecture/Designs/content-layout-controls-c-model.js)提供校验/注册/实例值；[c.js](../../20_Architecture/Designs/content-layout-controls-c.js)只有一套 schema 表单工厂，并负责草稿、候选与确认装入；[c-scenes.js](../../20_Architecture/Designs/content-layout-controls-c-scenes.js)消费受控绑定；[c-library.js](../../20_Architecture/Designs/content-layout-controls-c-library.js)替换 C 页固定表单，旧 B+ 库不变。对应 [原型检查](../../20_Architecture/Designs/content-layout-controls-c.check.cjs)与[导入样例](../../20_Architecture/Designs/template-mint-rain.example.json)。不代表生产热更新加载器。
+
+最新雨天修订：[scene CSS](../../20_Architecture/Designs/content-layout-controls-scenes.css)的data-scene=rain去卡片、调整绘制层序；[scene JS](../../20_Architecture/Designs/content-layout-controls-scenes.js)内联云形、全宽固定雨粒、云体占位和副标题显隐。顶灯计算/样式与B+核心几何脚本不变；仅原型。
+
+## 2026-09-24：场景模板探索（非生产代码）
+
+[场景CSS](../../20_Architecture/Designs/content-layout-controls-scenes.css)绘制灯具、局部光池、纸质/玻璃Item、固定雨粒和边框柔光；[场景JS](../../20_Architecture/Designs/content-layout-controls-scenes.js)合并一次性指针帧、静态降级和可见性/整理暂停。[studio](../../20_Architecture/Designs/content-layout-controls-studio.js)增加样片折叠；B+共用模板表单只补可选effect/family保留与缩略图标记，B+不加载新效果。核心几何脚本未修改。设计边界见[场景评审](../../20_Architecture/CONTENT_TEMPLATE_SCENES_REVIEW.md)。
+
+## 2026-09-24：样片夹呈现探索（非生产代码）
+
+[HTML](../../20_Architecture/Designs/content-layout-controls-studio.html)、[CSS](../../20_Architecture/Designs/content-layout-controls-studio.css)、[翻页/样片选择](../../20_Architecture/Designs/content-layout-controls-studio.js)复用B+的模板/主题状态与原缩框脚本。B+仅主题文案、复用选择入口和可选演示初始主题调整；没有生产solver/状态迁移。完整候选范围见[样片夹说明](../../20_Architecture/CONTENT_LAYOUT_UI_REVIEW_STUDIO.md)。
+
+## 2026-09-24：B+模板库/配色原型（非生产代码）
+
+[B+ HTML](../../20_Architecture/Designs/content-layout-controls-bplus.html)、[扩展样式](../../20_Architecture/Designs/content-layout-controls-bplus.css)、[内存模板/配色逻辑](../../20_Architecture/Designs/content-layout-controls-bplus.js)、[缩框演示副本](../../20_Architecture/Designs/content-layout-controls-bplus-core.js)；复用未修改的B基础CSS，solve函数与B一致。不是主题加载器、持久化仓储或生产布局实现。范围与假设归[B+说明](../../20_Architecture/CONTENT_LAYOUT_UI_REVIEW_BPLUS.md)。
+
+## 2026-09-23：UI方案B（非生产代码）
+
+[HTML](../../20_Architecture/Designs/content-layout-controls-v3.html)定义目录/外观/行为/独立演示区，[CSS](../../20_Architecture/Designs/content-layout-controls-v3.css)定义深色面板、节点、按需提示与覆盖式滚动条，[JS](../../20_Architecture/Designs/content-layout-controls-v3.js)仅提供内存状态、提示/滚动与评审用保序排布。范围见[UI V3](../../20_Architecture/CONTENT_LAYOUT_UI_REVIEW_V3.md)。V2原型和生产锚点均未改；不是实施新循环、图钉或自动收展通道。
+
+## 2026-09-23：UI先行原型（非生产代码）
+
+[设计稿](../../20_Architecture/Designs/content-layout-controls-v2.html)的solve/render仅供DEC-011缩框/控制中心控件评审，不是生产Solver修复；[UI映射](../../20_Architecture/CONTENT_LAYOUT_UI_REVIEW_V2.md)限定其范围。生产源码、测试和下方证据锚点本轮未变。下一步LR-R1评审，不把原型JS直接移植为第二引擎。
+
+## 2026-09-23：内容布局审查定位（无生产修改）
+
+当前事实与15个隔离用例见[审查](CONTENT_LAYOUT_REVIEW_2026-09-23.md)，整改后的职责分工为[设计V2](../../20_Architecture/CONTENT_LAYOUT_REMEDIATION_DESIGN_V2.md)草案，不把它当已有代码。
+
+- [Solver](../../../../src/DesktopUp.Domain/ContentLayoutSolver.cs)的ResolveHorizontalLoop/Reclip、[Flow](../../../../src/DesktopUp.Domain/ContentLayoutFlow.cs)和[内容宿主](../../../../src/DesktopUp.App/PosterVisualWindow.Content.cs)的ScrollItems/EnsureContentSnapshot：轴/循环、容量/区域、高度失效和可达性问题。
+- [Editing](../../../../src/DesktopUp.Domain/ContentLayoutEditing.cs)、[生产编辑](../../../../src/DesktopUp.App/PosterVisualWindow.ContentEditing.cs)、[FlowPolicy](../../../../src/DesktopUp.Application/ContentLayoutFlowPolicy.cs)与[Command](../../../../src/DesktopUp.Application/ContentLayoutCommand.cs)：纯模型/鼠标门分叉、恢复自动、切轴+2与单版本校验。
+- [PortableContentLayout](../../../../src/DesktopUp.Application/PortableContentLayout.cs)的留白清空；[ResolveHeat](../../../../src/DesktopUp.Domain/ContentLayoutProposals.cs)缺少新尺寸开关；[FlowTests](../../../../tests/DesktopUp.Contracts.Tests/ContentLayoutFlowTests.cs)与[PolicyTests](../../../../tests/DesktopUp.Contracts.Tests/ContentLayoutFlowPolicyTests.cs)为未提交测试，不足以证明生产链正确。
+- 下方schema10/便携v2/R4记录只属于09-17基线；当前wb实验包含schema11/布局v2/便携v3，不据版本号推定兼容或验收完成。
+
 ## 2026-09-17：04-L跨格实现入口（L01～06自动通过，L07待人工）
 
 - [ContentLayout](../../../../src/DesktopUp.Domain/ContentLayout.cs)、[Solver](../../../../src/DesktopUp.Domain/ContentLayoutSolver.cs)、[Editing](../../../../src/DesktopUp.Domain/ContentLayoutEditing.cs)：稳定身份/跨度/三样例，区域留白、有界求解/裁切/锚，纯编辑与事务确认后移动的RAM历史。

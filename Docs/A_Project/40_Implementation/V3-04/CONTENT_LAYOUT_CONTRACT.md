@@ -1,5 +1,13 @@
 # V3-04-L 内容布局合同
 
+**最新DEC-020（设计决定，非实现修订）**：手动局部让位、每次进入手动取当前完整画面、适配编辑合法提交才承接新图且可撤销。普通投影及退出覆盖候选见[手动专项](../../20_Architecture/CONTENT_LAYOUT_MANUAL_COMPOSITION_REVIEW_V1.md)；下方旧Mode清坐标/Y向推让不作为新合同已实现证据。
+
+**2026-09-24 DEC-019优先**：两种模式（纯手动/热度自动）均可桌面按住移动即拖，不先点整理；手动位置/留白与中心精调已确认。原IsEditing前置/统一顺序拖动方案不再是新目标。[需求§13](../../10_Requirements/CONTENT_ITEM_ACTIVITY_LAYOUT_V1.md#13-两种布局模式与直接操作)与[组合稿](../../20_Architecture/CONTENT_LAYOUT_PIN_DRAG_REVIEW_V1.md)维护新要求；下方是旧实现事实，未修订生产/载荷。旧数据保真不变。
+
+**前一轮DEC-017/018记录**：UI C已采用；当时确认整理拖动固定顺序位。如今由DEC-019取消入口前置并将该规则限定于自动模式。下方Move/FixedPosition/Manual仍是旧产物事实，不是新接线；待LR-R1组合收口冻结新命令/载荷，旧数据保真。
+
+**2026-09-23适用范围**：本文保留旧实现合同及其产物语义，不是当前dirty工作区的完整现状。轴/循环、三模式/位置覆盖、最小边界和数据保真已有分歧，见[审查](CONTENT_LAYOUT_REVIEW_2026-09-23.md)。[整改设计V2](../../20_Architecture/CONTENT_LAYOUT_REMEDIATION_DESIGN_V2.md)仍DRAFT；待产品评审后再逐条修订本合同，不能先实现或以新提案覆盖旧数据含义。
+
 日期：2026-09-17。状态：**L01～06代码与自动门通过；L07人工待验**。验证范围与候选按交付/日志，不将原生输入或视觉预填PASS。
 
 对应[04-L计划](../../30_Plans/V3_04_L_CONTENT_LAYOUT_PLAN.md)、[设计V1](../../20_Architecture/CONTENT_LAYOUT_FOUNDATION_V1.md)。本文记录本轮真实类型和接线边界，不将 HTML 设计稿、旧候选验收或单次纯模型结果替代当前产品验证。最终构建、测试数量、候选指纹和人工状态由当前 VERIFICATION/HANDOFF 统一登记。

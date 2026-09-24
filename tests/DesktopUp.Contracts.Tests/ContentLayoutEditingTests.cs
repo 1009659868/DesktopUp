@@ -10,10 +10,18 @@ public sealed class ContentLayoutEditingTests
     private static ContentLayoutDocument Manual(int count=3) => Edit(Doc(count),new(ContentLayoutEditKind.Mode){Mode=ContentLayoutMode.Manual});
 
     [Fact]
-    public void Automatic_move_requires_explicit_intent_and_rejection_preserves_original()
+    public void Dragging_pins_the_card_instead_of_requiring_manual_mode()
     {
+        // Interaction revision: the drag gesture is itself the intent to pin. One card receives a
+        // position override and the poster moves to anchored+automatic; every other card keeps its
+        // automatic/heat ordering because full manual takeover is never a prerequisite.
         var d=Doc(); var r=ContentLayoutEditing.Apply(d,new(ContentLayoutEditKind.Move,d.Placements[0].ItemId){Column=0,Row=4},View());
-        Assert.False(r.Accepted); Assert.Same(d,r.Document);
+        Assert.True(r.Accepted,r.Error);
+        var moved=r.Document.Placements.Single(p=>p.ItemId==d.Placements[0].ItemId);
+        Assert.True(moved.FixedPosition); Assert.Equal(4,moved.Row);
+        Assert.Equal(ContentLayoutMode.Anchored,r.Document.Mode);
+        Assert.False(r.Document.Placements[1].FixedPosition);
+        Safe(ContentLayoutSolver.Resolve(r.Document,View()));
     }
 
     [Fact]

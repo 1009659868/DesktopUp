@@ -153,9 +153,11 @@ public sealed class ContentLayoutPersistenceTests
     public void V9_migration_keeps_legacy_parameters_null_layout_revision_and_source_backup()
     {
         using var f = new Fixture(); var before = f.Repository.Read();
-        f.Sql("ALTER TABLE posters DROP COLUMN content_layout_json; DELETE FROM schema_migrations WHERE version=10; UPDATE state_head SET schema_version=9; PRAGMA user_version=9;");
+        // Rolling back to v9 must clear every migration ledger row at or above the dropped version,
+        // otherwise re-applying a later migration collides with the retained ledger entry.
+        f.Sql("ALTER TABLE posters DROP COLUMN content_layout_json; DELETE FROM schema_migrations WHERE version>=10; UPDATE state_head SET schema_version=9; PRAGMA user_version=9;");
         using var migrated = new SqliteStateStore(f.Paths); var result = migrated.Initialize();
-        Assert.True(result.Succeeded, result.Error); Assert.Equal(9, result.PreviousSchemaVersion); Assert.Equal(10, result.Head!.SchemaVersion);
+        Assert.True(result.Succeeded, result.Error); Assert.Equal(9, result.PreviousSchemaVersion); Assert.Equal(11, result.Head!.SchemaVersion);
         Assert.Equal(before.Revision, result.Head.Revision);
         var row = new SqlitePosterRepository(migrated).Read("A")!;
         Assert.Equal(before.Catalog.Posters[0].Poster, row.Poster); Assert.Null(row.Poster.ContentLayoutJson);

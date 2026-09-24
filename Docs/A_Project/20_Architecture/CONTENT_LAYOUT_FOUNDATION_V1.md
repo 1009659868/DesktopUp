@@ -1,5 +1,7 @@
 # 可编辑内容布局设计 V1
 
+**2026-09-23历史/适用范围标记**：下文保留L01～06及后补L08/09的设计来源，包含与当前工作区和新提案不一致的缩放/模式规则，不能作为本轮已验能力。当前事实见[审查](../40_Implementation/V3-04/CONTENT_LAYOUT_REVIEW_2026-09-23.md)，待评审替代方案见[设计V2](CONTENT_LAYOUT_REMEDIATION_DESIGN_V2.md)。V2未获批准前不删本稿，不自动改变冻结需求或迁移数据。
+
 日期：2026-09-17。状态：**L01～06 CODE/AUTO PASS；L07 MANUAL PENDING**。产品裁决归DEC-007，排期归DEC-008及[04-L计划](../30_Plans/V3_04_L_CONTENT_LAYOUT_PLAN.md)。[实现合同](../40_Implementation/V3-04/CONTENT_LAYOUT_CONTRACT.md)记录真实类型；[交付](../40_Implementation/V3-04/CONTENT_LAYOUT_DELIVERY.md)记录R4同包35门/资源与人工边界，设计稿和自动门不替代真实输入验收。
 
 ## 1. 要解决什么
@@ -24,7 +26,7 @@ adaptive-grid是历史等尺寸呈现参数基线，不是永久“一图标一�
 
 ## 3. 当前合同及有界数据
 
-- ContentLayoutDocument：SchemaVersion=1、EngineId=span-grid、EngineVersion=1、PosterId、DocumentVersion/ItemSetVersion、Mode、BaseCellDip/BaseGapDip、MaximumColumns、Regions/ReservedSpaces、Placements和两显示偏好；不存在另一个持久化全局revision。
+- ContentLayoutDocument：SchemaVersion=1、EngineId=span-grid、EngineVersion=1、PosterId、DocumentVersion/ItemSetVersion、Mode、BaseCellDip/BaseGapDip、MaximumColumns、Regions/ReservedSpaces、Placements和两显示偏好；不存在另一个持久化全局revision。2026-09-21补录三个逐海报字段：`FlowAxis`（单轴方向，见§4.3/§4.4）、`AllowHeatDrivenSize`（热度是否可改尺寸，默认关，见§5）、`LoopScroll`（循环滚动开关，默认关，见§4.5）。
 - ContentPlacement：稳定ItemId、Version、Order、RegionId、可选区域内Column/Row、ColumnSpan/RowSpan、FixedPosition、ManualSize、全海报1-based PinnedIndex、Contain/Cover。未实施aspectIntent或通用主题脚本字段。
 - LogicalPlacement保存用户意图；ResolvedPlacement保存本次有效格子/矩形及降级原因。窄屏、缺素材、碰撞恢复不反写手动意图。
 - ContentLayoutSnapshot：PosterId、DocumentVersion、ItemSetVersion、ViewportGeneration、ThemeMetricsVersion、cell/gap/columns、每项稳定ID/ReadOrder/Bounds/Clip及区域原点、extent/scroll/diagnostics；Anchor()派生稳定ID＋项内偏移。几何单位DIP，原生投影才换成物理像素。
@@ -65,6 +67,40 @@ cellRect宽度 = columnSpan × cellWidth + (columnSpan−1) × gap；高度同�
 外框resize只改变viewport/列数/有效投影，不修改baseCell、宏观尺度、手动跨度、热度层级或文字字号。Automatic/非固定内容超出可用列宽时临时clamp有效宽跨度，窄区域可向下折叠，保留首选span及原区域；Manual/Fixed保持逻辑位置和宽度，使用水平滚动，不静默夹窄。低于可读最小宽仍保留可滚动占位或明确拒绝；固定位置与最小可读扩张冲突不偷偷重叠。宏观参数及便携输入也须验证组合后的可布局性。
 
 竖向始终可连续滚动；内容可以部分进入/退出viewport，不能要求完整一行可见才渲染/命中。滚动入口独立于是否存在完整卡片。锚点为稳定ID＋项内偏移，重排和热度刷新不无故跳回顶部。
+
+### 4.4 外框缩放的挤压与最小边界（垂直 / 水平对称）
+
+2026-09-21补充。背景：布局与整体海报拖动方案已通过人工验证，**现有拖动/编辑实现保持不变**，本节只补充缩放边界约束。
+
+统一原则：**缩放不裁切、不隐藏**。外框缩小时，容器边界向内“挤压”内容并触发重排（换行或换列），而不是把 Item 裁掉、遮挡或移出可达范围。这与§4.3“低于可读最小宽仍保留可滚动占位或明确拒绝”一致。
+
+| 模式 | 挤压方向 | 重排表现 | 最小缩放下限 | 下限时的形态 |
+| --- | --- | --- | --- | --- |
+| 垂直滚动 `FlowAxis=Vertical` | 水平方向缩小 | 挤压触发**自动换行** | 由当前海报**最大内容 Item 的宽度**决定（含 gap 的完整占位） | **Item 由大到小单列竖排** |
+| 水平滚动 `FlowAxis=HorizontalLoop` | 垂直方向缩小 | 挤压触发**自动换列** | 由当前海报**最大内容 Item 的高度**决定 | **Item 由大到小单行横排** |
+
+约束细节：
+
+- 挤压只改变**有效投影**（列数/行数/换行位置），不写回 baseCell、宏观尺度、手动跨度、热度层级或文字字号。
+- 垂直模式下 Item 在**水平方向永不被遮挡或隐藏**；水平模式下 Item 在**垂直方向永不被遮挡或隐藏**。
+- 到达最小缩放下限后不再改变 Item 尺寸：垂直模式保持单列并继续纵向滚动，水平模式保持单行并继续横向滚动/循环浏览。
+- Manual/Fixed 项在挤压下保持其逻辑位置意图；与最小边界冲突时给出明确原因，不静默夹窄、不偷偷重叠。
+- 单列/单行退化必须**可逆**：外框放大后恢复原有行列结构，用户跨度与上轮意图不丢失。
+- 宏观尺度/疏密与便携输入组合后仍需验证可布局性（沿用§4.3）。
+
+### 4.5 循环滚动开关（独立配置项）
+
+2026-09-21补充，与§4.4正交，且**实施顺序在§4.4之后**（见计划清单）。
+
+- 把“循环排列 / 循环滚动”从轴向中**抽离为独立开关** `LoopScroll`（逐海报持久化，**默认关闭**）。
+- 与轴向正交：`FlowAxis` 决定主轴，`LoopScroll` 决定该主轴上是否首尾相接。两者独立组合——垂直模式可开启循环，水平模式也可关闭循环（关闭后为有限条带，到头即止，不复制卡片）。
+- **不影响**§4.4的挤压、换行与最小缩放约束：循环只改变视口投影的周期与接缝处理，不改变求解出的逻辑占位与保存状态。
+- 契约要求：
+  - 关闭时不复制卡片、不出现无限滚动；
+  - 开启时内容短于一屏仍**不复制**（沿用 `ContentLayoutFlow.IsLooping` 的短内容判定）；
+  - 同一 Item 可在接缝两侧绘制多次，但 `ItemId` 与保存状态唯一；
+  - 拖动/手势期间暂停绕回，避免抓取对象跳到另一端；
+  - 关闭/开启都不得重写用户跨度、顺序与固定意图。
 
 ## 5. 热度模型的接口，不提前偷做公式
 

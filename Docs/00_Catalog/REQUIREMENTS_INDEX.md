@@ -2,7 +2,11 @@
 
 状态：`FROZEN PRODUCT DIRECTION — USER REVISION 2026-09-08`
 
-最后检查：2026-09-16（DEC-005～008导航同步；不新增需求权威）
+最后检查：2026-09-24（DEC-022/023操作基线与受限双轴已确认；不新增需求权威）
+
+先以[体验评审](../A_Project/20_Architecture/CONTENT_LAYOUT_EXPERIENCE_REVIEW_V1.md)检查基础手势和两重点风险，再细化控件。既有DEC-017～020保持；E1反馈后用户明确采用DEC-023基础手势/退出A及DEC-022受限双轴，不是从原型默认值推定。
+
+UI C及DEC-019两模式/直接操作保持；DEC-020确认局部让位、每次进入手动从当前画面建立构图、适配编辑后保存新图并可撤销，需求§13已同步。基础手势/退出A和被动双轴边界已定；具体几何、双入口交接、特殊约束/兼容与循环仍待评审，见[决定索引](../A_Project/10_Requirements/REQUIREMENTS_RISKS_AND_OPEN_QUESTIONS.md)和[整改计划](../A_Project/30_Plans/V3_04_L_REMEDIATION_REVIEW_PLAN.md)，未接生产。
 
 近期明确决定统一查[需求决定索引§3.1](../A_Project/10_Requirements/REQUIREMENTS_RISKS_AND_OPEN_QUESTIONS.md#31-已明确的近期优先级)：DEC-005简洁控制中心/宏观参数与热度分层，DEC-006托盘仅整体操作，DEC-007可编辑跨格布局及两个独立辅助开关，DEC-008前移布局阶段。此处只导航；当前执行状态查[ACTIVE_PATH](ACTIVE_PATH.md)，不在需求索引重建待办或将设计认可算作生产验收。
 

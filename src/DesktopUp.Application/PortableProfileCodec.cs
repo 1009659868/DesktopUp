@@ -22,7 +22,9 @@ public sealed record PortableProfileDocument(string Format, int Version, IReadOn
 public static class PortableProfileCodec
 {
     public const string Format = "DesktopUp.PortableProfile";
-    public const int Version = 2, MaximumBytes = 4 * 1024 * 1024, MaximumPosters = 128,
+    /// <summary>v3 adds the content flow axis (required when claiming v3) and the optional heat-driven
+    /// size switch. v1/v2 archives remain readable; unknown members are still rejected outright.</summary>
+    public const int Version = 3, MinimumVersion = 1, MaximumBytes = 4 * 1024 * 1024, MaximumPosters = 128,
         MaximumDepth = 32, MaximumLayoutBytes = 32768;
     public const double MaximumExtentDip = 32768;
     private static readonly JsonSerializerOptions Options = new()
@@ -79,7 +81,8 @@ public static class PortableProfileCodec
     public static void Validate(PortableProfileDocument document)
     {
         ArgumentNullException.ThrowIfNull(document);
-        if (document.Format != Format || document.Version is not (1 or Version)) throw new ArgumentException("Unknown portable format or version.");
+        if (document.Format != Format || document.Version is < MinimumVersion or > Version)
+            throw new ArgumentException("Unknown portable format or version.");
         if (document.Settings is null || !Enum.IsDefined(document.Settings.PerformanceMode)) throw new ArgumentException("Invalid portable settings.");
         if (document.Posters is null || document.Posters.Count > MaximumPosters) throw new ArgumentException("Portable poster count exceeds 128.");
         var keys = new HashSet<string>(StringComparer.Ordinal);
@@ -97,6 +100,10 @@ public static class PortableProfileCodec
             if (p.ContentLayout is { } content)
             {
                 if (document.Version == 1) throw new ArgumentException("Content layout requires portable format version two.");
+                // Version three promises the axis: an archive that claims it without stating one is
+                // rejected instead of being silently interpreted as vertical.
+                if (document.Version >= 3 && content.FlowAxis is null)
+                    throw new ArgumentException("Content layout requires an explicit flow axis from portable format version three.");
                 var documentLayout = PortableContentLayoutCodec.Import(content, p.Key);
                 var appearance = PosterConfigurationFactory.NewBasicBox("portable-content-validation", "portable-content-validation") with
                 { LayoutParametersJson = p.LayoutParametersJson, TemplateKey = PosterPresentationPolicy.IsBuiltIn(p.TemplateKey) ? p.TemplateKey : "basic-box" };

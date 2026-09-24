@@ -1,19 +1,27 @@
 # DesktopUp V2 V3 文档登记表
 
-最后检查：2026-09-17（04-L交付、R4同包证据和L07入口对齐）
+最后检查：2026-09-24（DEC-022/023操作与空间收敛导航；旧交付按产物保留）
 
 本表只登记文档职责与资料类型，不独立裁决任务状态：当前任务查[细化工作流](../A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md)，运行交接查[HANDOFF](../A_Project/40_Implementation/V3-04/HANDOFF.md)，产品决定查[统一索引](../A_Project/10_Requirements/REQUIREMENTS_RISKS_AND_OPEN_QUESTIONS.md)。HISTORICAL表示对应版本证据，不是新待办；PLANNED不表示已有实现。
 
 | 文档 | 职责 | 状态 |
 | --- | --- | --- |
+| [CONTENT_LAYOUT_EXPERIENCE_REVIEW_V1](../A_Project/20_Architecture/CONTENT_LAYOUT_EXPERIENCE_REVIEW_V1.md) | 五风险/两缺口、基础手势、六任务、整图承接与模式退出对照 | E1六任务反馈收清（06c提示后通过）；非生产合同门 |
+| [CONTENT_LAYOUT_OPERATION_SPACE_REVIEW_V1](../A_Project/20_Architecture/CONTENT_LAYOUT_OPERATION_SPACE_REVIEW_V1.md) | 新操作基线/退出A、被动极端不足时临时双轴、恢复与反例矩阵 | DEC-022/023已确认产品边界；工程待验证，不细化控件 |
+| [CONTENT_TEMPLATE_SCHEMA_UI_C](../A_Project/20_Architecture/CONTENT_TEMPLATE_SCHEMA_UI_C.md) | 已采纳UI C、模板域收纳、动态参数和受控装入边界 | UI BASELINE ACCEPTED / DEC-017；非生产模板平台验收 |
+| [CONTENT_LAYOUT_PIN_DRAG_REVIEW_V1](../A_Project/20_Architecture/CONTENT_LAYOUT_PIN_DRAG_REVIEW_V1.md) | DEC-018～020两模式、直接拖动/中心细调、图钉和PD连续矩阵 | 核心已决；双入口/循环组合待评审，未接生产 |
+| [CONTENT_LAYOUT_MANUAL_COMPOSITION_REVIEW_V1](../A_Project/20_Architecture/CONTENT_LAYOUT_MANUAL_COMPOSITION_REVIEW_V1.md) | 手动局部让位、留白/缩框恢复、适配编辑承接及当前画面进入手动；MC矩阵 | DEC-020选择已确认；候选算法未接生产、未代替旧数据兼容门 |
+| [CONTENT_LAYOUT_REMEDIATION_DESIGN_V2](../A_Project/20_Architecture/CONTENT_LAYOUT_REMEDIATION_DESIGN_V2.md) | 整改后的操作链和模块职责，已决与候选分开 | DESIGN REVIEW；§5由图钉组合稿细化 |
+| [V3_04_L_REMEDIATION_REVIEW_PLAN](../A_Project/30_Plans/V3_04_L_REMEDIATION_REVIEW_PLAN.md) | LR-R0～R8整改门和退回边界 | 当前状态归细化工作流，不把原型认可扩大为实施门通过 |
+| [CONTENT_LAYOUT_REVIEW_2026-09-23](../A_Project/40_Implementation/V3-04/CONTENT_LAYOUT_REVIEW_2026-09-23.md) | 现有源码/隔离审查事实、问题、证据范围 | AUDIT EVIDENCE；Bug状态归统一清单 |
 | [CONTENT_LAYOUT_INTERACTION_REVISION_V1](../A_Project/20_Architecture/CONTENT_LAYOUT_INTERACTION_REVISION_V1.md) | DEC-009单轴/横向循环、空地约束根因、整理入口和操作意图矩阵 | DESIGN DRAFT；L07 NEEDS REVISION，单项人工覆盖建议待讨论 |
 | [V3_04_06_PORTABLE_PROFILE_PLAN](../A_Project/30_Plans/V3_04_06_PORTABLE_PROFILE_PLAN.md) | 便携格式/容量/隐私、追加替换、待安置、显式恢复与A～D执行卡 | 已有分项证据保留；剩余验收DEFERRED，不阻塞04-L |
 | [PORTABLE_PROFILE_DELIVERY](../A_Project/40_Implementation/V3-04/PORTABLE_PROFILE_DELIVERY.md) | 首批交付与分批人工范围；最新修订指向BUG007专门记录 | CURRENT EVIDENCE / P6及P9部分通过保留，BUG-006延期 |
 | [BUG007_NATIVE_PICKER](../A_Project/40_Implementation/V3-04/BUG007_NATIVE_PICKER.md) | 原生取消/退出修订、失败对照、R3指纹与1462合同/29进程门、人工复验 | CODE/AUTO + USER PASS；不扩大未验范围 |
 | [CONTENT_LAYOUT_FOUNDATION_V1](../A_Project/20_Architecture/CONTENT_LAYOUT_FOUNDATION_V1.md) | DEC-007跨格跨度、布局意图/几何/皮肤、热度/编辑/恢复边界与三参考构图 | 已接ContentLayout与span-grid；同包/人工结果归交付，不扩称真实Item |
 | [内容布局设计稿](../A_Project/20_Architecture/Designs/content-layout-v1.html) | 离线三构图、跨度与顺序调整的示意原型 | DEMO / 不是产品或素材能力证明 |
-| [V3_04_L_CONTENT_LAYOUT_PLAN](../A_Project/30_Plans/V3_04_L_CONTENT_LAYOUT_PLAN.md) | DEC-008当前主线L01～07执行卡、前置延期清单与连续矩阵 | L01～06 CODE/AUTO PASS；L07 MANUAL PENDING |
-| [CONTENT_LAYOUT_CONTRACT](../A_Project/40_Implementation/V3-04/CONTENT_LAYOUT_CONTRACT.md)、[CONTENT_LAYOUT_DELIVERY](../A_Project/40_Implementation/V3-04/CONTENT_LAYOUT_DELIVERY.md) | 04-L实际协议、限制、R4候选、资源表和人工矩阵 | 1630合同及35同包门通过；PS5.1/25指纹绑定，真实输入与像素待人工 |
+| [V3_04_L_CONTENT_LAYOUT_PLAN](../A_Project/30_Plans/V3_04_L_CONTENT_LAYOUT_PLAN.md) | DEC-008主线执行卡、前置延期清单与历史连续矩阵 | 原L01～06证据保留；当前整改分解见LR计划，不直接沿旧L07入口 |
+| [CONTENT_LAYOUT_CONTRACT](../A_Project/40_Implementation/V3-04/CONTENT_LAYOUT_CONTRACT.md)、[CONTENT_LAYOUT_DELIVERY](../A_Project/40_Implementation/V3-04/CONTENT_LAYOUT_DELIVERY.md) | 04-L原实际协议、限制、R4候选、资源表和人工矩阵 | HISTORICAL / 1630合同与35门只属对应产物，当前dirty源码不继承PASS |
 | [LAYOUT_UNIFICATION_DELIVERY](../A_Project/40_Implementation/V3-04/LAYOUT_UNIFICATION_DELIVERY.md) | 新建统一、v8窄修复、1315合同/12进程及旧库副本迁移、外观复验 | CURRENT / CODE AUTO + USER PASS |
 | [V3_04_05_TRAY_PLAN](../A_Project/30_Plans/V3_04_05_TRAY_PLAN.md) | DEC-006六类整体菜单、专用入口退役、共享新增/显隐与验证出口 | 05-05原托盘人工USER PASS，新增外观修订USER PASS |
 | [TRAY_DELIVERY](../A_Project/40_Implementation/V3-04/TRAY_DELIVERY.md) | 托盘实际接线、1302合同/12进程门、失败原因、25指纹/PS5.1与人工G1～G8 | 原托盘交付USER PASS；新修订见LAYOUT_UNIFICATION_DELIVERY |

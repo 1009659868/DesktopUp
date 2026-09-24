@@ -10,7 +10,9 @@ public sealed class SqliteStateStore : IStateStore
 {
     private const int ApplicationId = 0x44555033; // "DUP3"
     private const int BusyTimeoutMilliseconds = 5_000;
-    private const int CurrentSchemaVersion = 10;
+    // 11 registers support for content layout document v2 (single flow axis + optional heat-driven
+    // size). It adds no column: those members live inside content_layout_json and are validated on read.
+    private const int CurrentSchemaVersion = 11;
     private const string DatabaseFileName = "desktopup.sqlite3";
     private static readonly Migration[] Migrations =
     [
@@ -213,6 +215,12 @@ public sealed class SqliteStateStore : IStateStore
             """),
         new(10, "poster-content-layout-document", """
             ALTER TABLE posters ADD COLUMN content_layout_json TEXT NULL;
+            """),
+        new(11, "poster-content-layout-v2-axis", """
+            -- Registration only. The single scroll axis and the optional heat-driven size switch are
+            -- carried inside content_layout_json and validated on read by ContentLayoutPolicy, so no
+            -- column is added and no existing document is rewritten by this migration.
+            SELECT 1;
             """)
     ];
 

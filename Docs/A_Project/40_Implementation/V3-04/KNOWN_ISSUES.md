@@ -4,7 +4,7 @@
 
 ## Bug清单
 
-最后核对：2026-09-16。沿用同一编号与详细记录，不重复创建平行台账；计划未实现项不自动算作Bug。
+最后核对：2026-09-23。BUG-008～017来自当前wb工作区审查；尚未修复，不把隔离诊断当原生复验。根因和整改方向统一见[布局审查](CONTENT_LAYOUT_REVIEW_2026-09-23.md)§3/4；后续关闭仍登记本表。旧Bug处置不变，设计取舍不自动算Bug。
 
 | 编号 | 问题 | 状态 | 影响 / 当前处置 |
 | --- | --- | --- | --- |
@@ -15,6 +15,16 @@
 | V3-BUG-005 | 新增海报模板与外观滑块禁用 | CLOSED / CODE AUTO + USER PASS（2026-09-16） | 新建统一adaptive-grid，v8窄范围兼容修复；1315合同/12进程及真实旧库副本迁移通过，见布局统一交付 |
 | V3-BUG-006 | 拖动控制中心后关闭再打开，窗口不恢复到上次位置 | OPEN / DEFERRED BY USER（2026-09-16） | 用户明确仅登记、暂不修复；不阻塞P9其他项，不扩大为跨进程位置持久化承诺 |
 | V3-BUG-007 | 原生文件选择器打开时，托盘退出须等用户手动关闭选择器才继续 | CLOSED / CODE AUTO + USER PASS（2026-09-16） | 独立R3：1462合同、8真实原生及21既有同包门通过；用户随后确认复验通过，按已发步骤关闭退出缺陷，不扩大到未验环境 |
+| V3-BUG-008 | 有限/循环滚动边界与轴向混用，短内容偏移、反向接缝及小增量异常 | OPEN / SOURCE + MODEL CONFIRMED | LRA-01；统一滚动链，未原生验收 |
+| V3-BUG-009 | 横向区域局部坐标误碰撞，容量与纵向不对称 | OPEN / SOURCE + MODEL CONFIRMED | LRA-02；同一100项纵向成功横向耗尽列范围 |
+| V3-BUG-010 | 横向只改变高度时宿主遗漏布局失效 | OPEN / SOURCE CONFIRMED + MODEL CONTRAST | LRA-03；几何键/R4终态需修，未声称实机复现 |
+| V3-BUG-011 | 自动未固定项纯模型可移动，生产鼠标编辑门仍拒绝 | OPEN / SOURCE CONFIRMED | LRA-04；真实首次输入链需复验 |
+| V3-BUG-012 | Anchored恢复自动仍保留位置/尺寸/序号覆盖 | OPEN / SOURCE + MODEL CONFIRMED | LRA-05；按钮语义与结果不一致 |
+| V3-BUG-013 | Manual切方向提案版本+2被真实命令拒绝，并包含清位置固定的转换 | OPEN / COMMAND POLICY CONFIRMED | LRA-06；提案变化未成功提交，不宣称已损坏真实库 |
+| V3-BUG-014 | 便携导出/导入静默清空ReservedSpaces | OPEN / ROUNDTRIP MODEL CONFIRMED | LRA-07；配置保真缺陷，不是文件丢失声明 |
+| V3-BUG-015 | 热度尺寸关闭标记未控制ResolveHeat投影 | OPEN / INJECTED MODEL CONFIRMED | LRA-08；真实统计尚未接入，属于端口缺陷 |
+| V3-BUG-016 | 最小可用高度只限制求解值，真实裁切仍不足；受限跨度规则不一致 | OPEN / SOURCE + MODEL CONFIRMED | LRA-09；先分清主动/被动及批准规则 |
+| V3-BUG-017 | 布局人工候选manifest与实际DLL不匹配 | OPEN / CHECKONLY FAILED | LRA-10；禁止修改指纹绕过，需新同包证据 |
 
 后续新增记录继续分配稳定编号；关闭须写明候选、证据和复测范围，不以一次未复现或纯模型PASS关闭。
 

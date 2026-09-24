@@ -33,11 +33,14 @@ public static class ContentLayoutEditing
             switch (edit.Kind)
             {
                 case ContentLayoutEditKind.Move:
-                    if (document.Mode == ContentLayoutMode.Automatic)
-                        throw new ContentLayoutException("Choose manual mode or explicitly fix this item before moving it.");
                     if (edit.Column is null || edit.Row is null) throw new ContentLayoutException("Move requires a grid position.");
+                    // Dragging a card is itself the intent to pin it, except in full manual mode where the
+                    // authored coordinates are already the user's intent and must not gain a pin as a
+                    // side effect. Automatic moves to anchored+automatic so every other card keeps its
+                    // automatic/heat ordering; entering full manual mode is never a prerequisite.
                     items[index] = source! with { Column = edit.Column, Row = edit.Row,
-                        FixedPosition = document.Mode == ContentLayoutMode.Anchored || source!.FixedPosition };
+                        FixedPosition = document.Mode == ContentLayoutMode.Manual ? source!.FixedPosition : true };
+                    if (candidate.Mode == ContentLayoutMode.Automatic) candidate = candidate with { Mode = ContentLayoutMode.Anchored };
                     break;
                 case ContentLayoutEditKind.Resize:
                     if (edit.ColumnSpan is null || edit.RowSpan is null) throw new ContentLayoutException("Resize requires both integer spans.");
@@ -133,7 +136,10 @@ public static class ContentLayoutEditing
         var previousById = previous.Items.ToDictionary(p => p.ItemId, StringComparer.Ordinal);
         var regions = candidate.Regions.ToDictionary(r => r.Id, StringComparer.Ordinal);
         var pending = candidate.Placements.ToDictionary(p => p.ItemId, StringComparer.Ordinal);
-        var held = candidate.ReservedSpaces.Select(s => new ContentRect(s.Column, s.Row, s.ColumnSpan, s.RowSpan)).ToList();
+        // Only explicitly managed keep-out areas block a drop. Decorative spaces are drawn but never
+        // turn free space into an invisible obstacle, so ordinary empty ground stays droppable.
+        var held = candidate.ReservedSpaces.Where(s => s.Kind == ContentReservedKind.Explicit)
+            .Select(s => new ContentRect(s.Column, s.Row, s.ColumnSpan, s.RowSpan)).ToList();
         ContentRect Rect(ContentPlacement p)
         {
             var r = regions[p.RegionId]; var old = previousById[p.ItemId];
@@ -165,6 +171,41 @@ public static class ContentLayoutEditing
             held.Add(rect);
         }
         return candidate with { Placements = Array.AsReadOnly(candidate.Placements.Select(p => pending[p.ItemId]).ToArray()) };
+    }
+
+    /// <summary>
+    /// Optional/adjunct capability, deferred from the main flow of this batch: no command, UI entry or
+    /// persistence migration is wired for it, and nothing on the normal path creates a region.
+    /// The contract is kept for a later batch: explicit = blocking, visible in the editing state and
+    /// always removable; decorative = drawn but never blocking.
+    /// Agreed creation gesture (recorded here, deliberately not implemented yet): rubber-band selection
+    /// inside the editing state followed by an explicit "keep this area" action; each region stays
+    /// individually removable and no region is authored implicitly.
+    /// These helpers only change intent; persistence still goes through the normal single-revision CAS
+    /// path, and callers must resolve the result before committing.
+    /// </summary>
+    public static ContentLayoutDocument AddReservedSpace(ContentLayoutDocument document, ContentReservedSpace space)
+    {
+        if (space is null) throw new ContentLayoutException("A reserved space is required.");
+        return Commit(document, document with { ReservedSpaces = Array.AsReadOnly(document.ReservedSpaces.Append(space).ToArray()) });
+    }
+    public static ContentLayoutDocument RemoveReservedSpace(ContentLayoutDocument document, ContentReservedSpace space)
+    {
+        if (space is null) throw new ContentLayoutException("A reserved space is required.");
+        var kept = document.ReservedSpaces.Where(s => s != space).ToArray();
+        return kept.Length == document.ReservedSpaces.Count
+            ? document
+            : Commit(document, document with { ReservedSpaces = Array.AsReadOnly(kept) });
+    }
+    public static ContentLayoutDocument ClearReservedSpaces(ContentLayoutDocument document) =>
+        document.ReservedSpaces.Count == 0
+            ? document
+            : Commit(document, document with { ReservedSpaces = Array.Empty<ContentReservedSpace>() });
+
+    private static ContentLayoutDocument Commit(ContentLayoutDocument before, ContentLayoutDocument candidate)
+    {
+        if (ContentLayoutPolicy.Validate(candidate) is { } error) throw new ContentLayoutException(error);
+        return ContentLayoutPolicy.Freeze(candidate with { DocumentVersion = checked(before.DocumentVersion + 1) });
     }
 
     public static bool SameState(ContentLayoutDocument a, ContentLayoutDocument b, bool ignoreVersions = false)

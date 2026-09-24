@@ -161,6 +161,26 @@ internal sealed partial class PosterVisualWindow
         var desired=ReferenceEquals(basis,before)?result.Document:RebaseContentIntent(before,result.Document);
         return CommitContentDocument(before,desired,_posterEntityVersion,_stateRevision);
     }
+    // Per-poster switches committed through the same single-revision content command. A conflicting pin
+    // is reported instead of being relocated, and the switch never reorders or resizes anything.
+    internal string? SetContentFlowAxis(ContentFlowAxis axis)
+    {
+        if (_contentReadOnly || _geometry.IsLocked || HasContentGesture || _transitionLayout is not null || _disposed || _contentPresentationSuspended) return "内容只读、已锁定或正在交互。";
+        var before=ContentDocument;
+        var preference=_presentation.Parameters.Preferences ?? new();
+        var result=ContentLayoutFlowPolicy.SetFlowAxis(before,axis,preference.Scale,preference.Spacing);
+        if(!result.Accepted) return _contentNotice=result.Error;
+        return CommitContentDocument(before,result.Document,_posterEntityVersion,_stateRevision);
+    }
+    internal string? SetContentLoopScroll(bool enabled)
+    {
+        if (_contentReadOnly || _geometry.IsLocked || HasContentGesture || _transitionLayout is not null || _disposed || _contentPresentationSuspended) return "内容只读、已锁定或正在交互。";
+        var before=ContentDocument;
+        var preference=_presentation.Parameters.Preferences ?? new();
+        var result=ContentLayoutFlowPolicy.SetLoopScroll(before,enabled,preference.Scale,preference.Spacing);
+        if(!result.Accepted) return _contentNotice=result.Error;
+        return CommitContentDocument(before,result.Document,_posterEntityVersion,_stateRevision);
+    }
     private string? CommitContentDocument(ContentLayoutDocument before,ContentLayoutDocument desired,long entityVersion,long revision,bool recordHistory=true)
     {
         if (_disposed || _contentPresentationSuspended) return "内容呈现已暂停，请等待恢复。";

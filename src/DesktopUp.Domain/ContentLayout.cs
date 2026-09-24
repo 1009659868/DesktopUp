@@ -6,8 +6,22 @@ namespace DesktopUp.Domain;
 public enum ContentLayoutMode { Automatic, Anchored, Manual }
 public enum ContentImageFit { Contain, Cover }
 public enum ManualLayoutExit { KeepOrder, ConvertToAnchors, RestoreAutomatic }
+
+/// <summary>Single scroll axis, decided per poster and never expressed through Automatic/Anchored/Manual.
+/// Vertical: the content width adapts to the poster and only grows downward.
+/// HorizontalLoop: the content height adapts to the poster and the strip wraps head-to-tail.</summary>
+public enum ContentFlowAxis { Vertical, HorizontalLoop }
+
+/// <summary>Explicit = a user-managed keep-out area: it blocks placement, must be drawn in the
+/// editing state and must be removable. Decorative = presentation only, never blocks a drop.</summary>
+public enum ContentReservedKind { Explicit, Decorative }
+
 public sealed record ContentLayoutRegion(string Id, int Order, int Column = 0, int Columns = 0, int Row = 0);
-public sealed record ContentReservedSpace(int Column, int Row, int ColumnSpan, int RowSpan);
+public sealed record ContentReservedSpace(int Column, int Row, int ColumnSpan, int RowSpan)
+{
+    public ContentReservedKind Kind { get; init; } = ContentReservedKind.Explicit;
+    public string Name { get; init; } = string.Empty;
+}
 public sealed record ContentPlacement(string ItemId, int Order, int ColumnSpan = 4, int RowSpan = 4)
 {
     public long Version { get; init; } = 1;
@@ -23,7 +37,7 @@ public sealed record ContentPlacement(string ItemId, int Order, int ColumnSpan =
 // Intent only. Resolved coordinates, scroll, pixels and native handles never enter this document.
 public sealed record ContentLayoutDocument(string PosterId, IReadOnlyList<ContentPlacement> Placements)
 {
-    public int SchemaVersion { get; init; } = 1;
+    public int SchemaVersion { get; init; } = ContentLayoutPolicy.SupportedSchemaVersion;
     public string EngineId { get; init; } = "span-grid";
     public int EngineVersion { get; init; } = 1;
     public long DocumentVersion { get; init; } = 1;
@@ -36,6 +50,23 @@ public sealed record ContentLayoutDocument(string PosterId, IReadOnlyList<Conten
     public bool ShowSpanLabels { get; init; } = true;
     public IReadOnlyList<ContentLayoutRegion> Regions { get; init; } = Array.AsReadOnly(new[] { new ContentLayoutRegion("main", 0) });
     public IReadOnlyList<ContentReservedSpace> ReservedSpaces { get; init; } = Array.Empty<ContentReservedSpace>();
+    public ContentFlowAxis FlowAxis { get; init; } = ContentFlowAxis.Vertical;
+
+    /// <summary>
+    /// Opt-in heat participation. Ordering/ranking by heat is deliberately not implemented in this
+    /// batch; only card size may optionally follow the heat tier, and it stays off by default so a
+    /// manual or pinned card is never resized silently. Persisted as an explicit flag so the decision
+    /// is recorded and can be enabled later without another schema change.
+    /// </summary>
+    public bool AllowHeatDrivenSize { get; init; }
+
+    /// <summary>
+    /// Loop scrolling, deliberately separated from the flow axis. The axis decides the main scroll
+    /// direction; this switch decides whether that axis wraps head-to-tail. Both axes can enable or
+    /// disable it independently, and it never changes squeezing, wrapping or the minimum-scale limit.
+    /// Off by default, so a poster behaves as a finite strip until the user opts in.
+    /// </summary>
+    public bool LoopScroll { get; init; }
 }
 
 public sealed record ContentItemView(string ItemId, string Name, string Monogram, uint Color, string? AssetKey = null);
@@ -70,6 +101,11 @@ public sealed record ContentLayoutSnapshot(string PosterId, long DocumentVersion
     double ExtentWidthDip, double ExtentHeightDip, double ScrollXDip, double ScrollYDip,
     IReadOnlyList<ContentResolvedPlacement> Items, IReadOnlyList<string> Diagnostics)
 {
+    /// <summary>Single scroll axis captured from the intent document; the presentation layer must
+    /// project through ContentLayoutFlow instead of exposing a second scroll bar.</summary>
+    public ContentFlowAxis FlowAxis { get; init; } = ContentFlowAxis.Vertical;
+    /// <summary>Captured from the intent document; loop projection is off unless the poster opted in.</summary>
+    public bool LoopScroll { get; init; }
     public ContentResolvedPlacement? HitTest(double x, double y) => Items.FirstOrDefault(i => i.Clip.Contains(x, y));
     public ContentScrollAnchor? Anchor() => Items.Where(i => i.Bounds.Bottom > ScrollYDip)
         .OrderBy(i => i.Bounds.Y).ThenBy(i => i.ReadOrder).Select(i => new ContentScrollAnchor(i.ItemId, ScrollYDip - i.Bounds.Y, i.ReadOrder)).FirstOrDefault();
@@ -80,6 +116,10 @@ public static class ContentLayoutPolicy
     public const int MaximumItems = 1000, MaximumSpan = 32, MaximumColumns = 64, MaximumRow = 65535;
     public const int MaximumJsonBytes = 1048576, MaximumRegions = 8;
     public const double MinimumReadableCardDip = 48;
+    /// <summary>v1 = pre-axis documents (read-only compatible, flow defaults to vertical). v2 adds
+    /// the flow axis and the reserved-space kind/name required by the interaction revision.</summary>
+    public const int SupportedSchemaVersion = 2, MinimumSupportedSchemaVersion = 1;
+    public const int MaximumReservedSpaces = 32, MaximumReservedNameLength = 64;
     private static readonly JsonSerializerOptions Json = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -90,10 +130,11 @@ public static class ContentLayoutPolicy
 
     public static string? Validate(ContentLayoutDocument? d)
     {
-        if (d is null || d.SchemaVersion != 1 || d.EngineId != "span-grid" || d.EngineVersion != 1)
+        if (d is null || d.SchemaVersion is < MinimumSupportedSchemaVersion or > SupportedSchemaVersion || d.EngineId != "span-grid" || d.EngineVersion != 1)
             return "Unsupported content layout engine/schema; original document is retained read-only.";
         if (string.IsNullOrWhiteSpace(d.PosterId) || d.PosterId.Length > 128 || d.DocumentVersion < 1 || d.ItemSetVersion < 1 || !Enum.IsDefined(d.Mode))
             return "Invalid layout identity/version/mode.";
+        if (!Enum.IsDefined(d.FlowAxis)) return "Invalid content flow axis.";
         if (!double.IsFinite(d.BaseCellDip) || d.BaseCellDip is < 16 or > 96 || !double.IsFinite(d.BaseGapDip) || d.BaseGapDip is < 0 or > 40 || d.MaximumColumns is < 2 or > MaximumColumns)
             return "Invalid baseline grid metrics.";
         if (d.Placements is null || d.Placements.Count > MaximumItems || d.Regions is null || d.Regions.Count is < 1 or > MaximumRegions)
@@ -102,9 +143,10 @@ public static class ContentLayoutPolicy
         foreach (var r in d.Regions)
             if (r is null || string.IsNullOrWhiteSpace(r.Id) || r.Id.Length > 64 || !regions.Add(r.Id) || r.Order < 0 || r.Column is < 0 or >= MaximumColumns || r.Columns is < 0 or > MaximumColumns || r.Column + r.Columns > MaximumColumns || r.Row is < 0 or > MaximumRow)
                 return "Invalid or duplicate region.";
-        if (d.ReservedSpaces is null || d.ReservedSpaces.Count > 32 || d.ReservedSpaces.Any(s => s is null ||
+        if (d.ReservedSpaces is null || d.ReservedSpaces.Count > MaximumReservedSpaces || d.ReservedSpaces.Any(s => s is null ||
             s.Column is < 0 or >= MaximumColumns || s.Row is < 0 or > MaximumRow || s.ColumnSpan is < 1 or > MaximumColumns ||
-            s.RowSpan is < 1 or > MaximumRow || s.Column + s.ColumnSpan > MaximumColumns || s.Row + s.RowSpan > MaximumRow))
+            s.RowSpan is < 1 or > MaximumRow || s.Column + s.ColumnSpan > MaximumColumns || s.Row + s.RowSpan > MaximumRow ||
+            !Enum.IsDefined(s.Kind) || s.Name.Length > MaximumReservedNameLength))
             return "Invalid reserved space.";
         var ids = new HashSet<string>(StringComparer.Ordinal);
         var pins = new HashSet<int>();
@@ -167,9 +209,10 @@ public static class ContentLayoutSamples
 {
     public static ContentLayoutDocument Equal(string posterId, int count = 6) => new(posterId,
         Array.AsReadOnly(Enumerable.Range(0, count).Select(i => new ContentPlacement(posterId + ":item-" + i.ToString("D4", System.Globalization.CultureInfo.InvariantCulture), i)).ToArray()));
+    // Reference composition only. No hard keep-out area is authored: the right-hand space stays
+    // droppable, and any preserved region must be created explicitly and remain removable.
     public static ContentLayoutDocument Illustration(string id) => Sample(id, 32,
-        [(0,0,8,8),(0,8,6,6),(6,8,6,6),(0,14,4,4),(4,14,4,4),(8,14,4,4),(0,18,4,4),(4,18,4,4),(8,18,4,4)], ContentImageFit.Contain)
-        with { ReservedSpaces = Array.AsReadOnly(new[] { new ContentReservedSpace(8, 0, 4, 8) }) };
+        [(0,0,8,8),(0,8,6,6),(6,8,6,6),(0,14,4,4),(4,14,4,4),(8,14,4,4),(0,18,4,4),(4,18,4,4),(8,18,4,4)], ContentImageFit.Contain);
     public static ContentLayoutDocument Covers(string id) => Sample(id, 32,
         [(0,0,12,6),(0,6,6,5),(6,6,6,5),(0,11,4,4),(4,11,4,4),(8,11,4,4),(0,15,3,3),(3,15,3,3),(6,15,3,3),(9,15,3,3)], ContentImageFit.Cover);
     public static ContentLayoutDocument Landscape(string id)
