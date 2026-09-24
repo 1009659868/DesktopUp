@@ -99,6 +99,7 @@
 | [GENERAL_CONTENT_MULTI_POSTER_CONTRACT_V1](../A_Project/20_Architecture/GENERAL_CONTENT_MULTI_POSTER_CONTRACT_V1.md) | 实例/共享边界、数据/CAS、生命周期与类型能力设计 | DESIGN / STAGED IMPLEMENTATION；分项实现/验收见C层，不是完整产品已完成 |
 | [V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1](../A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md) | 当前子项状态/依赖/验收的任务索引；历史卡单列 | CURRENT — M08-01～05分项PASS，06实现/余门OPEN；不跳过最终环境/视觉门 |
 | [V3-04 HANDOFF](../A_Project/40_Implementation/V3-04/HANDOFF.md) | 已验证范围、未实现缺口与立即下一步 | CURRENT |
+| [V3-04 AGENT_HANDOFF_PROMPT](../A_Project/40_Implementation/V3-04/AGENT_HANDOFF_PROMPT.md) | 可直接交给下一位Agent的接替提示词：工作区、阅读顺序、规则、证据边界和LR-R1下一步 | HANDOFF SNAPSHOT / 不新增需求或实施授权；接手先核对Git及最新决定 |
 | [M04_CONTROL_CENTER_SELECTION](../A_Project/40_Implementation/V3-04/M04_CONTROL_CENTER_SELECTION.md) | 中心目录/目标选择的阶段合同与证据 | HISTORICAL EVIDENCE — 已接入；当前交互/零目录范围见M07 |
 | [M04_SPATIAL_CONTRACT](../A_Project/40_Implementation/V3-04/M04_SPATIAL_CONTRACT.md) | 占位/坐标/连续路径/展开/归位资格与完整读集、迁移登记及243项证据 | AUTO PASS — PURE CONTRACT |
 | [DESKBOX_SPATIAL_REFERENCE](../A_Project/40_Implementation/V3-04/DESKBOX_SPATIAL_REFERENCE.md) | 吸附、组移动和展开计算来源/指纹/测试及适配取舍 | HISTORICAL REFERENCE — 后续空间实现已接，不是待开工 |

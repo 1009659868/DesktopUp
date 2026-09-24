@@ -1,5 +1,11 @@
 # V3-04 当前交接
 
+## 接替入口（2026-09-24）
+
+供下一位Agent直接使用：[接替提示词：04-L / LR-R1](AGENT_HANDOFF_PROMPT.md)。其中集中记录工作区、必读顺序、已确认规则、证据边界及最近下一步；只作交接快照，不新增需求或实施授权。
+
+wb合并及双分支推送已在bd148fb完成并核对远端一致；当前工作分支为impl/poster-redesign-V3。本次仅将提示词和导航追加提交到当前V3，wb保留前次检查点。接手时重新核对Git状态，不能把文稿中的基准提交当永远最新HEAD。此前Git授权不传递给后续任务。
+
 ## 2026-09-24：wb合并与双分支同步检查点
 
 用户授权保存当前impl/poster-redesign-V3-wb工作，合入并切换到impl/poster-redesign-V3，再推送两分支；冲突以wb为准。fetch后两条本地分支及origin/impl/poster-redesign-V3均为9607d4e，远端尚无wb分支；本次可提交后快进合并，无需覆盖目标独有提交。后续工作入口为impl/poster-redesign-V3，实际提交与推送结果以Git记录为准，不触碰main/其他分支，不强推或删分支。
