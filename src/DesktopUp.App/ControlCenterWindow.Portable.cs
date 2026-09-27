@@ -43,7 +43,7 @@ public sealed partial class ControlCenterWindow
     private async Task PortableAction(Func<Task> action)
     {
         if (_portableBusy || _portableStopping || _portable is null || _editingClosed || _catalogDialog is not null || _removalDialog is not null) return;
-        if (_editor.IsDirty || _settings.ProtectsInteraction)
+        if (_editor.IsDirty || _lampColorFlyout is not null || _settings.ProtectsInteraction || IsContentFieldDraftActive)
         {
             StateInfoBar.IsOpen = true; StateInfoBar.Severity = InfoBarSeverity.Warning;
             StateInfoBar.Title = "请先完成或取消当前参数编辑"; StateInfoBar.Message = "配置导入导出只使用已提交状态。"; return;
@@ -75,6 +75,7 @@ public sealed partial class ControlCenterWindow
             PrimaryButtonText = confirm ?? "", CloseButtonText = confirm is null ? "关闭" : "取消",
             DefaultButton = ContentDialogButton.Close
         };
+        ApplyPaperDialogStyle(dialog);
         _portableDialog = dialog;
         try { return await dialog.ShowAsync() == ContentDialogResult.Primary && !_editingClosed && !_portableStopping; }
         finally { if (ReferenceEquals(_portableDialog, dialog)) _portableDialog = null; }
@@ -118,6 +119,7 @@ public sealed partial class ControlCenterWindow
         body.Children.Add(new TextBlock { Text = "下一步先预览，不立即应用。放不下的海报保留配置并列为等待安置；不会缩小、自动收起或推动已有海报。", TextWrapping = TextWrapping.Wrap });
         var options = new ContentDialog { XamlRoot = Content.XamlRoot, Title = "导入配置", Content = body,
             PrimaryButtonText = "生成预览", CloseButtonText = "取消", DefaultButton = ContentDialogButton.Close };
+        ApplyPaperDialogStyle(options);
         _portableDialog = options;
         try { if (await options.ShowAsync() != ContentDialogResult.Primary || _editingClosed || _portableStopping) return; }
         finally { _portableDialog = null; }

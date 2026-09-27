@@ -22,9 +22,9 @@ public sealed record PortableProfileDocument(string Format, int Version, IReadOn
 public static class PortableProfileCodec
 {
     public const string Format = "DesktopUp.PortableProfile";
-    /// <summary>v3 adds the content flow axis (required when claiming v3) and the optional heat-driven
-    /// size switch. v1/v2 archives remain readable; unknown members are still rejected outright.</summary>
-    public const int Version = 3, MinimumVersion = 1, MaximumBytes = 4 * 1024 * 1024, MaximumPosters = 128,
+    /// <summary>v4 carries content schema three, including manual mode's retained automatic state.
+    /// v1-v3 archives remain readable; unknown members and new semantics under old versions reject.</summary>
+    public const int Version = 4, MinimumVersion = 1, MaximumBytes = 4 * 1024 * 1024, MaximumPosters = 128,
         MaximumDepth = 32, MaximumLayoutBytes = 32768;
     public const double MaximumExtentDip = 32768;
     private static readonly JsonSerializerOptions Options = new()
@@ -39,6 +39,9 @@ public static class PortableProfileCodec
         ArgumentNullException.ThrowIfNull(state);
         if (state.Catalog.Revision != state.Settings.Revision)
             throw new ArgumentException("Export requires one committed state snapshot.");
+        if (TemplateRecipeCatalog.Read(state.Settings.Settings.TemplateCatalogJson).Count != 0 || state.Settings.Settings.CenterTheme != "light" ||
+            state.Catalog.Posters.Any(p => PosterPresentationPolicy.Resolve(p.Poster).Parameters.RecipeInstances?.Count > 0))
+            throw new ArgumentException("当前便携格式尚不能携带自定义模板或中心主题；请使用完整数据库备份，配置未被修改。");
         var posters = state.Catalog.Posters.OrderBy(p => p.Poster.StackOrder)
             .ThenBy(p => p.Poster.PosterId, StringComparer.Ordinal).Select((p, index) => FromPoster(p.Poster, $"p{index + 1}")).ToArray();
         var document = new PortableProfileDocument(Format, Version, Array.AsReadOnly(posters),
@@ -104,11 +107,14 @@ public static class PortableProfileCodec
                 // rejected instead of being silently interpreted as vertical.
                 if (document.Version >= 3 && content.FlowAxis is null)
                     throw new ArgumentException("Content layout requires an explicit flow axis from portable format version three.");
+                if (document.Version < 4 && (content.SchemaVersion >= 3 || content.SavedAutomaticMode is not null ||
+                    content.Placements?.Any(p => p?.SavedAutomaticState is not null || p?.AutomaticSizeBasis is not null) == true))
+                    throw new ArgumentException("Content schema three and retained automatic state require portable format version four.");
                 var documentLayout = PortableContentLayoutCodec.Import(content, p.Key);
                 var appearance = PosterConfigurationFactory.NewBasicBox("portable-content-validation", "portable-content-validation") with
                 { LayoutParametersJson = p.LayoutParametersJson, TemplateKey = PosterPresentationPolicy.IsBuiltIn(p.TemplateKey) ? p.TemplateKey : "basic-box" };
                 var preferences = PosterPresentationPolicy.Resolve(appearance).Parameters.Preferences ?? new();
-                ContentLayoutCommandPolicy.ValidateAuthoring(documentLayout, preferences.Scale, preferences.Spacing);
+                _ = ContentLayoutCapabilities.Inspect(documentLayout, preferences.Scale, preferences.Spacing);
             }
         }
         // This also bounds documents constructed programmatically, not only parsed byte streams.

@@ -10,11 +10,6 @@ namespace DesktopUp.Application;
 /// </summary>
 public static class ContentLayoutFlowPolicy
 {
-    // Canonical authoring board used by the command policy; no monitor, scroll or window size enters it.
-    private static ContentLayoutViewport AuthoringViewport(ContentLayoutDocument document, double scale, double spacing) =>
-        new(document.MaximumColumns * (document.BaseCellDip * scale + document.BaseGapDip * spacing) - document.BaseGapDip * spacing,
-            1024, 0, 0, 0, scale, spacing);
-
     /// <summary>True when the axis can be applied without dropping any authored position override.
     /// A failing result is reported as a reason, never resolved by silently clearing the user's pins.</summary>
     public static string? CanSetFlowAxis(ContentLayoutDocument document, ContentFlowAxis axis,
@@ -38,20 +33,9 @@ public static class ContentLayoutFlowPolicy
             if (!Enum.IsDefined(axis)) throw new ContentLayoutException("Unknown content flow axis.");
             // A no-op switch must not consume a document version or create an empty undo entry.
             if (document.FlowAxis == axis) return new(true, document);
-            var candidate = document;
-            // Full-manual coordinates are expressed in the current axis and stop being meaningful once
-            // that axis changes, so switching leaves manual mode first and keeps the order as anchors.
-            // This is an explicit, undoable consequence of the user's own switch, not a silent rewrite.
-            if (candidate.Mode == ContentLayoutMode.Manual)
-            {
-                var exited = ContentLayoutEditing.Apply(candidate,
-                    new ContentLayoutEdit(ContentLayoutEditKind.Mode)
-                    { Mode = ContentLayoutMode.Anchored, ManualExit = ManualLayoutExit.ConvertToAnchors },
-                    AuthoringViewport(candidate, scale, spacing));
-                if (!exited.Accepted) throw new ContentLayoutException(exited.Error ?? "Full manual layout cannot be converted to anchors.");
-                candidate = exited.Document;
-            }
-            candidate = candidate with { FlowAxis = axis, DocumentVersion = checked(candidate.DocumentVersion + 1) };
+            // Axis and loop are independent author choices. Physical positions and both user-mode
+            // and return-state records remain intact; incompatible legacy constraints are rejected.
+            var candidate = document with { FlowAxis = axis, DocumentVersion = checked(document.DocumentVersion + 1) };
             if (ContentLayoutPolicy.Validate(candidate) is { } invalid) throw new ContentLayoutException(invalid);
             // Pinned cards keep their pin: a pin that no longer fits is reported, not relocated and
             // not unpinned behind the user's back.

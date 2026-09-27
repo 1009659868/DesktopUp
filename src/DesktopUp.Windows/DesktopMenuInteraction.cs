@@ -15,7 +15,14 @@ internal interface IDesktopMenuNative
     bool SetInputTransparent(nint window, bool transparent);
     nint FindPopup(nint owner);
     IReadOnlyList<DesktopMenuZWindow> ReadZOrder();
-    bool PlacePopup(nint popup, nint insertAfter);
+    // Optional observations keep fakes/backends compatible and never decide placement.
+    int? LastPlacementError => null;
+    string? LastPlacementFailure => null;
+    object DescribeWindow(nint window) => new { handle = $"0x{window:X}", unavailable = true };
+    bool IsOwnUiWindow(nint window) => false;
+    bool IsOwnedPopup(nint popup, nint owner) => false;
+    bool PlacePopupAfterOwnWindow(nint popup, nint input, nint owner) => false;
+    bool PlaceInputAfterPopup(nint input, nint popup, nint owner) => false;
     IDisposable WatchPopup(nint popup, Action<uint, nint> beforeMessage);
     IReadOnlyList<DesktopMenuHit> SamplePopup(nint popup);
 }
@@ -41,6 +48,8 @@ public sealed class DesktopMenuInteraction : IDisposable
     private bool _disposed;
     private bool _closing;
     private bool _placing;
+    private nint _popupPlacementAnchor;
+    private nint _permittedInput;
 
     private DesktopMenuInteraction(nint owner, DesktopMenuSurface[] surfaces,
         Action closeMenu, Action<Action> enqueue, IStructuredLog log, IDesktopMenuNative native)
@@ -95,7 +104,12 @@ public sealed class DesktopMenuInteraction : IDisposable
     {
         if (!ProtectsSurface(window) || lParam == 0) return false;
         var position = Marshal.PtrToStructure<MenuWindowPos>(lParam);
-        position.Flags |= 0x0004 | 0x0010 | 0x0200; // NOZORDER | NOACTIVATE | NOOWNERZORDER
+        var active = s_active!;
+        bool permitted = active._placing && active._permittedInput == window && position.Window == window &&
+            position.InsertAfter == active._popup && (position.Flags & 0x0003) == 0x0003 &&
+            (position.Flags & (0x0004 | 0x0040 | 0x0080)) == 0; // no geometry, show/hide or no-Z request
+        position.Flags |= 0x0010 | 0x0200; // NOACTIVATE | NOOWNERZORDER
+        if (!permitted) position.Flags |= 0x0004; // Every other surface operation stays frozen.
         Marshal.StructureToPtr(position, lParam, false);
         return true;
     }
@@ -103,12 +117,14 @@ public sealed class DesktopMenuInteraction : IDisposable
     public bool ActivatePopup()
     {
         if (_disposed || !ReferenceEquals(s_active, this)) return false;
-        if (_popupHook is not null) return PlaceAndVerify();
         try
         {
-            _popup = _native.FindPopup(_owner);
-            if (_popup == 0) throw new InvalidOperationException("The owner's WinUI Popup was not found.");
-            _popupHook = _native.WatchPopup(_popup, BeforePopupMessage);
+            if (_popupHook is null)
+            {
+                _popup = _native.FindPopup(_owner);
+                if (_popup == 0) throw new InvalidOperationException("The owner's WinUI Popup was not found.");
+                _popupHook = _native.WatchPopup(_popup, BeforePopupMessage);
+            }
             if (!PlaceAndVerify()) throw new InvalidOperationException("Desktop menu order read-back failed.");
             _log.Write("info", "poster.menu_interaction_active", new { owner = $"0x{_owner:X}", popup = $"0x{_popup:X}", surfaces = _surfaces.Length });
             return true;
@@ -127,16 +143,16 @@ public sealed class DesktopMenuInteraction : IDisposable
         _originalTransparency.Keys.All(w => _native.Exists(w) && _native.IsInputTransparent(w)),
         _native.SamplePopup(_popup));
 
-    // Insert immediately before the frontmost poster, never before an ordinary window
-    // already above the desktop group. Never use a topmost HWND as an insertion anchor.
-    internal static nint? ResolveAnchor(IReadOnlyList<DesktopMenuZWindow> order, IReadOnlySet<nint> surfaces, nint popup)
+    // The first surface must be one of our paired input islands. Foreign windows are never
+    // insertion anchors; a visual-first or protected/topmost group is rejected unchanged.
+    internal static nint? ResolveOwnInputAnchor(IReadOnlyList<DesktopMenuZWindow> order,
+        IReadOnlySet<nint> surfaces, IReadOnlySet<nint> inputs, nint popup)
     {
-        nint anchor = 0; // HWND_TOP only when there is no preceding non-topmost window.
         foreach (var window in order)
         {
             if (window.Handle == popup) continue;
-            if (surfaces.Contains(window.Handle)) return anchor;
-            if (!window.Topmost) anchor = window.Handle;
+            if (surfaces.Contains(window.Handle))
+                return !window.Topmost && inputs.Contains(window.Handle) ? window.Handle : null;
         }
         return null;
     }
@@ -154,20 +170,113 @@ public sealed class DesktopMenuInteraction : IDisposable
 
     private bool PlaceAndVerify()
     {
-        if (_placing || _disposed) return false;
+        if (_placing || _disposed)
+        {
+            _log.Write("warning", "poster.menu_order_readback", new
+            { failure = _disposed ? "disposed" : "reentrant", owner = $"0x{_owner:X}", popup = $"0x{_popup:X}" });
+            return false;
+        }
         _placing = true;
         try
         {
-            nint? anchor = ResolveAnchor(_native.ReadZOrder(), _windows, _popup);
-            return anchor is not null && _native.PlacePopup(_popup, anchor.Value) &&
-                IsOrdered(_native.ReadZOrder(), _windows, _popup);
+            var before = _native.ReadZOrder().ToArray();
+            nint? anchor = ResolveOwnInputAnchor(before, _windows, _surfaces.Select(s => s.Input).ToHashSet(), _popup);
+            var beforeEvidence = CaptureOrderEvidence(before, anchor);
+            object? popupPlacement = null;
+            bool Result(string? failure, string stage, IReadOnlyList<DesktopMenuZWindow> after,
+                bool? placed = null, int? nativeError = null, string? nativeFailure = null)
+            {
+                bool accepted = failure is null;
+                _log.Write(accepted ? "info" : "warning", "poster.menu_order_readback", new
+                {
+                    failure, stage, owner = $"0x{_owner:X}", popup = $"0x{_popup:X}", anchor = anchor is { } a ? $"0x{a:X}" : null,
+                    placementAttempted = placed.HasValue, placed, nativeError, nativeFailure, popupPlacement,
+                    ordered = IsOrdered(after, _windows, _popup), accepted,
+                    outsidePopupOrderUnchanged = SameOutsidePopup(before, after, _popup),
+                    before = beforeEvidence, after = CaptureOrderEvidence(after, anchor)
+                });
+                return accepted;
+            }
+            if (!_native.IsOwnedPopup(_popup, _owner) ||
+                !before.Any(w => w.Handle == _popup && !w.Topmost) ||
+                !_windows.All(w => _native.IsOwnUiWindow(w) && before.Any(z => z.Handle == w && !z.Topmost)) ||
+                !_surfaces.All(s => _native.IsInputTransparent(s.Input)))
+                return Result("own-surface-or-popup-invalid", "preflight", before);
+            if (IsOrdered(before, _windows, _popup)) return Result(null, "already-ordered", before);
+            if (anchor is null) return Result("own-input-anchor-missing", "preflight", before);
+
+            _popupPlacementAnchor = anchor.Value;
+            bool popupPlaced = _native.PlacePopupAfterOwnWindow(_popup, anchor.Value, _owner);
+            int? popupError = _native.LastPlacementError;
+            string? popupFailure = _native.LastPlacementFailure;
+            _popupPlacementAnchor = 0;
+            var middle = _native.ReadZOrder().ToArray();
+            popupPlacement = new { placed = popupPlaced, nativeError = popupError, nativeFailure = popupFailure,
+                outsidePopupOrderUnchanged = SameOutsidePopup(before, middle, _popup),
+                immediatelyAfterInput = ImmediatelyAfter(middle, _popup, anchor.Value) };
+            if (!popupPlaced || !SameOutsidePopup(before, middle, _popup) ||
+                !ImmediatelyAfter(middle, _popup, anchor.Value))
+                return Result(!popupPlaced ? "placement-failed" : "order-mismatch", "popup-after-input", middle,
+                    popupPlaced, popupError, popupFailure);
+
+            // Only this exact input/Popup pair may cross while all other participants stay frozen.
+            _permittedInput = anchor.Value;
+            bool inputPlaced;
+            try { inputPlaced = _native.PlaceInputAfterPopup(anchor.Value, _popup, _owner); }
+            finally { _permittedInput = 0; }
+            int? inputError = _native.LastPlacementError;
+            string? inputFailure = _native.LastPlacementFailure;
+            var after = _native.ReadZOrder().ToArray();
+            return Result(!inputPlaced ? "placement-failed" :
+                !SameOutsidePopup(before, after, _popup) || !IsOrdered(after, _windows, _popup) ? "order-mismatch" : null,
+                "input-after-popup", after, inputPlaced, inputError, inputFailure);
         }
-        finally { _placing = false; }
+        finally { _permittedInput = 0; _popupPlacementAnchor = 0; _placing = false; }
+    }
+
+    private static bool SameOutsidePopup(IReadOnlyList<DesktopMenuZWindow> before,
+        IReadOnlyList<DesktopMenuZWindow> after, nint popup) =>
+        before.Where(w => w.Handle != popup).SequenceEqual(after.Where(w => w.Handle != popup));
+
+    private static bool ImmediatelyAfter(IReadOnlyList<DesktopMenuZWindow> order, nint window, nint anchor)
+    {
+        for (int i = 1; i < order.Count; i++)
+            if (order[i].Handle == window) return !order[i].Topmost && order[i - 1].Handle == anchor;
+        return false;
+    }
+
+    private object CaptureOrderEvidence(IReadOnlyList<DesktopMenuZWindow> order, nint? anchor)
+    {
+        var focused = new HashSet<nint>(_windows) { _owner, _popup };
+        if (anchor is { } a && a != 0) focused.Add(a);
+        var indices = new SortedSet<int>();
+        for (int i = 0; i < order.Count; i++)
+            if (focused.Contains(order[i].Handle))
+                for (int j = Math.Max(0, i - 2); j <= Math.Min(order.Count - 1, i + 2); j++) indices.Add(j);
+        int Index(nint window)
+        {
+            for (int i = 0; i < order.Count; i++) if (order[i].Handle == window) return i;
+            return -1;
+        }
+        return new
+        {
+            count = order.Count, popupIndex = Index(_popup),
+            firstSurfaceIndex = Enumerable.Range(0, order.Count).FirstOrDefault(i => _windows.Contains(order[i].Handle), -1),
+            // Missing focus windows are retained here even when absent from visible Z order.
+            focus = focused.OrderBy(w => w.ToInt64()).Select(w => new
+            { index = Index(w), window = _native.DescribeWindow(w) }).ToArray(),
+            neighbors = indices.Select(i => new
+            {
+                index = i, handle = $"0x{order[i].Handle:X}", order[i].Topmost,
+                popup = order[i].Handle == _popup, owner = order[i].Handle == _owner,
+                surface = _windows.Contains(order[i].Handle), anchor = order[i].Handle == anchor
+            }).ToArray()
+        };
     }
 
     private void BeforePopupMessage(uint message, nint lParam)
     {
-        if (_disposed) return;
+        if (_disposed || _closing) return;
         try
         {
             if (message == 0x0082) { _enqueue(Cancel); return; } // WM_NCDESTROY
@@ -175,14 +284,14 @@ public sealed class DesktopMenuInteraction : IDisposable
             {
                 var position = Marshal.PtrToStructure<MenuWindowPos>(lParam);
                 if ((position.Flags & 0x0080) != 0) return; // allow hide/close
-                nint? anchor = ResolveAnchor(_native.ReadZOrder(), _windows, _popup);
-                if (anchor is null) { position.Flags |= 0x0004; _enqueue(Cancel); }
-                else { position.InsertAfter = anchor.Value; position.Flags &= ~0x0004u; }
+                if (_placing && _popupPlacementAnchor != 0)
+                { position.InsertAfter = _popupPlacementAnchor; position.Flags &= ~0x0004u; }
+                else position.Flags |= 0x0004; // External requests preserve the proven menu position.
                 position.Flags |= 0x0010 | 0x0200;
                 Marshal.StructureToPtr(position, lParam, false);
             }
-            else if (message == 0x0047 && !_placing && // owner/system reorders can also move owned Popup
-                     !IsOrdered(_native.ReadZOrder(), _windows, _popup) && !PlaceAndVerify())
+            else if (message == 0x0047 && !_placing && // Do not fight external ordering with retries.
+                     !IsOrdered(_native.ReadZOrder(), _windows, _popup))
                 _enqueue(Cancel);
         }
         catch (Exception exception)

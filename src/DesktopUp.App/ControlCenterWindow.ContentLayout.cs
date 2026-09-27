@@ -10,151 +10,215 @@ public sealed partial class ControlCenterWindow
 {
     private Func<PosterSpatialRuntime?>? _contentRuntime;
     private bool _renderingContent, _contentFocused;
-    private string? _contentTargetId;
+    private string? _contentTargetId, _contentActivationTargetId;
     private PosterSpatialRuntime? _contentObservedRuntime;
     private bool _contentRefreshQueued;
     internal void ConfigureContentLayout(Func<PosterSpatialRuntime?> runtime)
     {
-        _contentRuntime=runtime;
-        _contentObservedRuntime=runtime();
-        if(_contentObservedRuntime is not null) _contentObservedRuntime.ContentEditorChanged+=ContentEditorChanged;
-        ContentLayoutPanel.GotFocus+=(_,_)=>{_contentFocused=true;SettingsInteractionChanged?.Invoke();};
-        ContentLayoutPanel.LostFocus+=(_,_)=>
+        _contentRuntime = runtime;
+        _contentObservedRuntime = runtime();
+        if (_contentObservedRuntime is not null) _contentObservedRuntime.ContentEditorChanged += ContentEditorChanged;
+        ContentFineTune.RegisterPropertyChangedCallback(Expander.IsExpandedProperty, (_, _) => UpdateContentDraftPresentation());
+        ContentLayoutPanel.GotFocus += (_, _) => { _contentFocused = true; SettingsInteractionChanged?.Invoke(); };
+        ContentLayoutPanel.LostFocus += (_, _) =>
         {
-            DispatcherQueue.TryEnqueue(()=>
+            DispatcherQueue.TryEnqueue(() =>
             {
-                if(_editingClosed || _contentRuntime is null || ContentLayoutPanel.XamlRoot is null) return;
-                var focused=FocusManager.GetFocusedElement(ContentLayoutPanel.XamlRoot) as DependencyObject;
-                bool inside=false;
-                while(focused is not null) {if(ReferenceEquals(focused,ContentLayoutPanel)){inside=true;break;} focused=Microsoft.UI.Xaml.Media.VisualTreeHelper.GetParent(focused);}
-                _contentFocused=inside; SettingsInteractionChanged?.Invoke();
+                if (_editingClosed || _contentRuntime is null || ContentLayoutPanel.XamlRoot is null) return;
+                var focused = FocusManager.GetFocusedElement(ContentLayoutPanel.XamlRoot) as DependencyObject;
+                bool inside = false;
+                while (focused is not null)
+                {
+                    if (ReferenceEquals(focused, ContentLayoutPanel)) { inside = true; break; }
+                    focused = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetParent(focused);
+                }
+                _contentFocused = inside; SettingsInteractionChanged?.Invoke();
             });
         };
-        Closed+=(_,_)=>
+        Closed += (_, _) =>
         {
-            if(_contentObservedRuntime is not null) _contentObservedRuntime.ContentEditorChanged-=ContentEditorChanged;
-            _contentObservedRuntime=null; _contentFocused=false;
-            _contentRuntime?.Invoke()?.CancelContentEditors();_contentRuntime=null;SettingsInteractionChanged?.Invoke();
+            ReleaseContentActivation();
+            ClearContentFieldDraft();
+            if (_contentObservedRuntime is not null) _contentObservedRuntime.ContentEditorChanged -= ContentEditorChanged;
+            _contentObservedRuntime = null; _contentFocused = false;
+            _contentRuntime = null; SettingsInteractionChanged?.Invoke();
         };
     }
-    private void ContentEditorChanged(string id) {if(id==_view?.SelectedPosterId) QueueContentRefresh();}
+    private void ContentEditorChanged(string id) { if (id == _view?.SelectedPosterId) QueueContentRefresh(); }
     private void QueueContentRefresh()
     {
-        if(_contentRefreshQueued || _editingClosed) return;
-        _contentRefreshQueued=true;
-        DispatcherQueue.TryEnqueue(()=>{_contentRefreshQueued=false;if(!_editingClosed && _contentRuntime is not null) RenderContentLayout();});
+        if (_contentRefreshQueued || _editingClosed) return;
+        _contentRefreshQueued = true;
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            _contentRefreshQueued = false;
+            if (!_editingClosed && _contentRuntime is not null) { RenderContentLayout(); RenderEditing(); RenderSettings(); }
+        });
     }
+    private bool OtherContentOwner => _lampColorFlyout is not null || _settings.ProtectsInteraction || _editor.ProtectsInteraction || _portableBusy ||
+        _catalogDialog is not null || _removalDialog is not null;
     private void RenderContentLayout()
     {
-        if(ContentLayoutPanel is null || _editingClosed) return;
-        var id=_view?.SelectedPosterId;
-        if(id!=_contentTargetId) {_contentRuntime?.Invoke()?.CancelContentEditors();_contentTargetId=id;}
-        var view=_contentRuntime?.Invoke()?.ReadContentEditor(id);
-        _renderingContent=true;
+        if (ContentLayoutPanel is null || _editingClosed) return;
+        var id = _view?.SelectedPosterId;
+        if (id != _contentTargetId)
+        {
+            ReleaseContentActivation();
+            ClearContentFieldDraft();
+            _contentTargetId = id;
+        }
+        var view = _contentRuntime?.Invoke()?.ReadContentEditor(id);
+        _renderingContent = true;
         try
         {
-            ContentLayoutHost.IsEnabled=view?.CanEdit==true;
-            ContentLayoutStatus.Text=view is null?"请先显示海报；内容布局不会强行恢复隐藏窗口。":
-                $"{view.Document.Mode switch {ContentLayoutMode.Automatic=>"自动",ContentLayoutMode.Anchored=>"锚定＋自动",_=>"全手动"}} · {view.Document.Placements.Count} 项 · 布局版本 {view.Document.DocumentVersion}";
-            if(view is null) {ContentItemSelector.ItemsSource=null;return;}
-            ContentGridSwitch.IsChecked=view.Document.ShowBaselineGrid;
-            ContentSpanSwitch.IsChecked=view.Document.ShowSpanLabels;
-            // One entry point for tidying: entering shows "整理内容", editing shows "完成整理".
-            ContentEditToggle.Content=view.IsEditing?"完成整理":"整理内容";
-            // Per-poster switches. Both are read back from the committed document so the control always
-            // shows the poster's real state, never a local guess.
-            ContentFlowSelector.SelectedIndex=view.Document.FlowAxis==ContentFlowAxis.HorizontalLoop?1:0;
-            ContentLoopSwitch.IsChecked=view.Document.LoopScroll;
-            var items=new DemoContentItemViewSource().Read(view.Document);
-            if(ContentItemSelector.ItemsSource is not IReadOnlyList<ContentItemView> existing || !existing.SequenceEqual(items)) ContentItemSelector.ItemsSource=items;
-            var source=(IReadOnlyList<ContentItemView>)ContentItemSelector.ItemsSource;
-            ContentItemSelector.SelectedItem=source.FirstOrDefault(p=>p.ItemId==view.SelectedItemId);
-            var placement=view.Document.Placements.FirstOrDefault(p=>p.ItemId==view.SelectedItemId);
-            ContentColumns.IsEnabled=ContentRows.IsEnabled=ContentFixedButton.IsEnabled=ContentKeyboardPad.IsEnabled=placement is not null;
-            ContentColumns.Value=placement?.ColumnSpan??double.NaN;
-            ContentRows.Value=placement?.RowSpan??double.NaN;
-            ContentFixedButton.Content=placement?.FixedPosition==true?"解除位置固定":"固定位置";
-            ContentLayoutNotice.Text=view.Notice??"编辑辅助只在海报编辑态显示；关闭辅助不改变排版与命中。";
+            bool editable = view?.CanEdit == true && !OtherContentOwner;
+            bool idle = editable && !IsContentFieldDraftActive;
+            ContentLayoutStatus.Text = view is null ? "请先显示海报；内容布局不会强行恢复隐藏窗口。" :
+                $"{(view.Document.Mode == ContentLayoutMode.Manual ? "手动排布" : "自动排布")} · {view.Document.Placements.Count} 项";
+            ContentModeSelector.IsEnabled = ContentFlowSelector.IsEnabled = ContentLoopSwitch.IsEnabled = idle;
+            ContentGridSwitch.IsEnabled = ContentSpanSwitch.IsEnabled = idle;
+            ContentItemSelector.IsEnabled = view is not null && !OtherContentOwner && !IsContentFieldDraftActive;
+            ContentUndoButton.IsEnabled = idle && view?.CanUndo == true;
+            ContentRedoButton.IsEnabled = idle && view?.CanRedo == true;
+            foreach (var sample in ContentSamples.Children.OfType<Grid>().SelectMany(grid => grid.Children.OfType<Button>()))
+                sample.IsEnabled = idle && sample.Tag as string != "landscape";
+            var placement = view?.Document.Placements.FirstOrDefault(p => p.ItemId == view.SelectedItemId);
+            ContentFixedButton.IsEnabled = idle && placement is { FixedPosition: false } && view!.Document.Mode != ContentLayoutMode.Manual;
+            ContentFixedButton.Content = placement?.FixedPosition == true ? "旧硬位置 · 保留" : placement?.PinnedIndex is not null ? "解除顺序图钉" : "固定顺序图钉";
+            ContentAutoSizeButton.IsEnabled = idle && placement is { ManualSize: true, AutomaticSizeBasis: not null } && view!.Document.Mode != ContentLayoutMode.Manual;
+            // Locked/read-only layouts may still select and activate content. Mutation commands
+            // retain their own capability checks; disabling the whole host would hide that path.
+            ContentKeyboardPad.IsEnabled = view is not null && !OtherContentOwner && !IsContentFieldDraftActive && placement is not null;
+            if (view is null)
+            {
+                ContentItemSelector.ItemsSource = null;
+                ContentModeSelector.SelectedIndex = ContentFlowSelector.SelectedIndex = -1;
+                ContentLoopSwitch.IsOn = false;
+                ContentGridSwitch.IsChecked = ContentSpanSwitch.IsChecked = false;
+                RenderContentFields(null);
+                ContentLayoutNotice.Text = "选择已显示的海报后，可查看排布与所选卡片。";
+                return;
+            }
+            ContentModeSelector.SelectedIndex = view.Document.Mode == ContentLayoutMode.Manual ? 1 : 0;
+            ContentFlowSelector.SelectedIndex = view.Document.FlowAxis == ContentFlowAxis.HorizontalLoop ? 1 : 0;
+            ContentLoopSwitch.IsOn = view.Document.LoopScroll;
+            ContentGridSwitch.IsChecked = view.Document.ShowBaselineGrid;
+            ContentSpanSwitch.IsChecked = view.Document.ShowSpanLabels;
+            var items = new DemoContentItemViewSource().Read(view.Document);
+            if (ContentItemSelector.ItemsSource is not IReadOnlyList<ContentItemView> existing || !existing.SequenceEqual(items)) ContentItemSelector.ItemsSource = items;
+            ContentItemSelector.SelectedItem = ((IReadOnlyList<ContentItemView>)ContentItemSelector.ItemsSource).FirstOrDefault(p => p.ItemId == view.SelectedItemId);
+            RenderContentFields(view);
+            string? draftError = _contentFieldDraft is { } draft ? ValidateContentFields(draft, view, out _) : null;
+            ContentLayoutNotice.Text = draftError ?? _contentFieldNotice ?? view.Notice ?? (view.Document.Mode == ContentLayoutMode.Manual && view.Document.SavedAutomaticMode is null
+                ? "这份旧手动构图没有原自动配置，暂不能恢复自动；当前构图保留。"
+                : view.Document.Mode == ContentLayoutMode.Anchored ? "旧锚定构图按兼容规则保留；顺序图钉与旧硬位置分别处理。"
+                : "");
         }
-        finally {_renderingContent=false;}
-    }
-    private void ContentAction(Func<PosterSpatialRuntime,string,string?> action)
-    {
-        if(_renderingContent || _editingClosed || _view?.SelectedPosterId is not { } id || _contentRuntime?.Invoke() is not { } runtime) return;
-        if(_settings.ProtectsInteraction || _editor.ProtectsInteraction) {ContentLayoutNotice.Text="请先完成当前外观或几何编辑。";return;}
-        var error=action(runtime,id);
-        RenderContentLayout();
-        if(error is not null) ContentLayoutNotice.Text=error;
-    }
-    private void ContentEdit(ContentLayoutEdit edit)=>ContentAction((r,id)=>edit.ItemId is { } selected && r.ReadContentEditor(id)?.SelectedItemId!=selected
-        ? "海报上的选择已变化；已刷新，请重新操作。" : r.ApplyContentEditor(id,edit));
-    private string? SelectedContentId => (ContentItemSelector.SelectedItem as ContentItemView)?.ItemId;
-    private void ContentEditToggle_Click(object sender,RoutedEventArgs e)=>ContentAction((r,id)=>r.SetContentEditing(id,r.ReadContentEditor(id)?.IsEditing!=true));
-    private void ContentManual_Click(object sender,RoutedEventArgs e)=>ContentEdit(new(ContentLayoutEditKind.Mode){Mode=ContentLayoutMode.Manual});
-    // Independent and explicit: leaving the automatic layout always goes through its own command so it
-    // is never confused with simply finishing a tidy-up session.
-    private void ContentRestoreAuto_Click(object sender,RoutedEventArgs e)
-        =>ContentEdit(new(ContentLayoutEditKind.Mode){Mode=ContentLayoutMode.Automatic,ManualExit=ManualLayoutExit.RestoreAutomatic});
-    private void ContentExitManual_Click(object sender,RoutedEventArgs e)
-    {
-        if(sender is MenuFlyoutItem {Tag:string tag} && Enum.TryParse<ManualLayoutExit>(tag,out var choice))
-            ContentEdit(new(ContentLayoutEditKind.Mode){Mode=ContentLayoutMode.Automatic,ManualExit=choice});
-    }
-    private void ContentFlow_Changed(object sender,SelectionChangedEventArgs e)
-    {
-        if(_renderingContent || ContentFlowSelector is null) return;
-        if((ContentFlowSelector.SelectedItem as ComboBoxItem)?.Tag as string is not { } tag) return;
-        var axis=tag=="horizontal"?ContentFlowAxis.HorizontalLoop:ContentFlowAxis.Vertical;
-        ContentAction((r,id)=>r.SetContentFlowAxis(id,axis));
-    }
-    private void ContentLoop_Changed(object sender,RoutedEventArgs e)
-    {
-        if(_renderingContent || ContentLoopSwitch is null) return;
-        bool enabled=ContentLoopSwitch.IsChecked==true;
-        ContentAction((r,id)=>r.SetContentLoopScroll(id,enabled));
-    }
-    private void ContentGuides_Changed(object sender,RoutedEventArgs e)
-    {
-        if(!_renderingContent && ContentGridSwitch is not null && ContentSpanSwitch is not null)
-            ContentEdit(new(ContentLayoutEditKind.Guides){ShowBaselineGrid=ContentGridSwitch.IsChecked==true,ShowSpanLabels=ContentSpanSwitch.IsChecked==true});
-    }
-    private void ContentItem_Changed(object sender,SelectionChangedEventArgs e)
-    {
-        if(!_renderingContent) {var item=SelectedContentId;ContentAction((r,id)=>r.SelectContentEditor(id,item));}
-    }
-    private void ContentSpan_Changed(NumberBox sender,NumberBoxValueChangedEventArgs e)
-    {
-        if(_renderingContent || SelectedContentId is not { } item || ContentColumns is null || ContentRows is null ||
-            !double.IsFinite(ContentColumns.Value) || !double.IsFinite(ContentRows.Value)) return;
-        ContentEdit(new(ContentLayoutEditKind.Resize,item){ColumnSpan=(int)Math.Round(ContentColumns.Value),RowSpan=(int)Math.Round(ContentRows.Value)});
-    }
-    private void ContentPreset_Click(object sender,RoutedEventArgs e)
-    {
-        if(SelectedContentId is not { } item || sender is not Button {Tag:string tag}) return;
-        ContentEdit(new(ContentLayoutEditKind.Resize,item){ColumnSpan=tag=="wide"?8:4,RowSpan=tag=="tall"?6:4});
-    }
-    private void ContentFixed_Click(object sender,RoutedEventArgs e)
-    {
-        if(SelectedContentId is not { } item) return;
-        bool fixedNow=_contentRuntime?.Invoke()?.ReadContentEditor(_view?.SelectedPosterId)?.Document.Placements.FirstOrDefault(p=>p.ItemId==item)?.FixedPosition==true;
-        ContentEdit(new(ContentLayoutEditKind.Fixed,item){Enabled=!fixedNow});
-    }
-    private void ContentAutoSize_Click(object sender,RoutedEventArgs e)
-    { if(SelectedContentId is { } item) ContentEdit(new(ContentLayoutEditKind.SizeOverride,item){Enabled=false}); }
-    private void ContentUndo_Click(object sender,RoutedEventArgs e)=>ContentAction((r,id)=>r.UndoContentEditor(id,(sender as Button)?.Tag as string=="redo"));
-    private void ContentSample_Click(object sender,RoutedEventArgs e)
-    {if(sender is Button {Tag:string tag}) ContentAction((r,id)=>r.ApplyContentSample(id,tag));}
-    private void ContentKeyboard_KeyDown(object sender,KeyRoutedEventArgs e)
-    {
-        int dx=e.Key==VirtualKey.Left?-1:e.Key==VirtualKey.Right?1:0;
-        int dy=e.Key==VirtualKey.Up?-1:e.Key==VirtualKey.Down?1:0;
-        if(dx!=0 || dy!=0)
+        finally
         {
-            e.Handled=true;
-            var selected=SelectedContentId;
-            ContentAction((r,id)=>selected is null || r.ReadContentEditor(id)?.SelectedItemId!=selected
-                ? "海报上的选择已变化；已刷新，请重新操作。" : r.NudgeContentEditor(id,dx,dy,DesktopUp.Windows.NativeInputKeys.ShiftDown));
+            _renderingContent = false;
+            ContentFineTune.IsEnabled = IsContentFieldDraftActive || view?.SelectedSlot is not null;
+            RenderWorkspaceChoices(); RefreshCenterItemMenu(view);
+            UpdateContentDraftPresentation();
         }
-        else if(e.Key==VirtualKey.Escape) {e.Handled=true;ContentEditToggle.Focus(FocusState.Programmatic);}
+    }
+    private void ContentAction(Func<PosterSpatialRuntime, string, string?> action)
+    {
+        if (_renderingContent || _editingClosed || _view?.SelectedPosterId is not { } id || _contentRuntime?.Invoke() is not { } runtime) return;
+        string? error;
+        if (OtherContentOwner) error = "请先完成或取消当前外观、几何或配置操作。";
+        else if (IsContentFieldDraftActive) error = "请先应用或取消当前卡片字段；原文已保留。";
+        else error = action(runtime, id);
+        RenderContentLayout();
+        if (error is not null) ContentLayoutNotice.Text = error;
+        UpdateContentDraftPresentation();
+    }
+    private void UpdateContentDraftPresentation()
+    {
+        if (ContentDraftSummary is null || _editingClosed) return;
+        ContentDraftSummary.Visibility = IsContentFieldDraftActive && !ContentFineTune.IsExpanded ? Visibility.Visible : Visibility.Collapsed;
+        bool duplicate = IsContentFieldDraftActive && ContentFineTune.IsExpanded && ContentLayoutNotice.Text == ContentFieldStatus.Text;
+        ContentLayoutNotice.Visibility = duplicate || string.IsNullOrEmpty(ContentLayoutNotice.Text) ? Visibility.Collapsed : Visibility.Visible;
+        CommonSettingsNotice.Visibility = IsContentFieldDraftActive && CommonSettingsNotice.Text.StartsWith("已保存", StringComparison.Ordinal)
+            ? Visibility.Collapsed : Visibility.Visible;
+    }
+    private void ContentDraftCancel_Click(object sender, RoutedEventArgs e) => CancelContentFieldDraft();
+    private void ContentEdit(ContentLayoutEdit edit) => ContentAction((r, id) => edit.ItemId is { } selected && r.ReadContentEditor(id)?.SelectedItemId != selected
+        ? "海报上的选择已变化；已刷新，请重新操作。" : r.ApplyContentEditor(id, edit));
+    private string? SelectedContentId => (ContentItemSelector.SelectedItem as ContentItemView)?.ItemId;
+    private void ContentMode_Changed(object sender, SelectionChangedEventArgs e)
+    {
+        if (_renderingContent || ContentModeSelector is null || ContentModeSelector.SelectedIndex < 0) return;
+        ContentEdit(new(ContentLayoutEditKind.Mode) { Mode = ContentModeSelector.SelectedIndex == 1 ? ContentLayoutMode.Manual : ContentLayoutMode.Automatic });
+    }
+    private void ContentFlow_Changed(object sender, SelectionChangedEventArgs e)
+    {
+        if (_renderingContent || ContentFlowSelector is null || (ContentFlowSelector.SelectedItem as ComboBoxItem)?.Tag as string is not { } tag) return;
+        ContentAction((r, id) => r.SetContentFlowAxis(id, tag == "horizontal" ? ContentFlowAxis.HorizontalLoop : ContentFlowAxis.Vertical));
+    }
+    private void ContentLoop_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_renderingContent || ContentLoopSwitch is null) return;
+        bool enabled = ContentLoopSwitch.IsOn;
+        ContentAction((r, id) => r.SetContentLoopScroll(id, enabled));
+    }
+    private void ContentGuides_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!_renderingContent && ContentGridSwitch is not null && ContentSpanSwitch is not null)
+            ContentEdit(new(ContentLayoutEditKind.Guides) { ShowBaselineGrid = ContentGridSwitch.IsChecked == true, ShowSpanLabels = ContentSpanSwitch.IsChecked == true });
+    }
+    private void ContentItem_Changed(object sender, SelectionChangedEventArgs e)
+    { if (!_renderingContent) { var item = SelectedContentId; ContentAction((r, id) => r.SelectContentEditor(id, item)); } }
+    private void ContentFixed_Click(object sender, RoutedEventArgs e)
+    {
+        if (SelectedContentId is not { } item) return;
+        bool pinned = _contentRuntime?.Invoke()?.ReadContentEditor(_view?.SelectedPosterId)?.Document.Placements.FirstOrDefault(p => p.ItemId == item)?.PinnedIndex is not null;
+        ContentEdit(new(ContentLayoutEditKind.Pinned, item) { Enabled = !pinned });
+    }
+    private void ContentAutoSize_Click(object sender, RoutedEventArgs e)
+    { if (SelectedContentId is { } item) ContentEdit(new(ContentLayoutEditKind.SizeOverride, item) { Enabled = false }); }
+    private void ContentUndo_Click(object sender, RoutedEventArgs e) => ContentAction((r, id) => r.UndoContentEditor(id, (sender as Button)?.Tag as string == "redo"));
+    private void ContentSample_Click(object sender, RoutedEventArgs e)
+    { if (sender is Button { Tag: string tag }) ContentAction((r, id) => r.ApplyContentSample(id, tag)); }
+    private bool ContentKeyboardHasFocus => ContentKeyboardPad.XamlRoot is not null && ReferenceEquals(FocusManager.GetFocusedElement(ContentKeyboardPad.XamlRoot), ContentKeyboardPad);
+    private void ContentKeyboard_KeyDown(object sender, KeyRoutedEventArgs e)
+    {
+        if (!ContentKeyboardHasFocus) return;
+        if (e.Key == VirtualKey.F10 && DesktopUp.Windows.NativeInputKeys.ShiftDown)
+        {
+            e.Handled = true;
+            if (ContentKeyboardPad.ContextFlyout is MenuFlyout menu) menu.ShowAt(ContentKeyboardPad);
+            return;
+        }
+        int dx = e.Key == VirtualKey.Left ? -1 : e.Key == VirtualKey.Right ? 1 : 0;
+        int dy = e.Key == VirtualKey.Up ? -1 : e.Key == VirtualKey.Down ? 1 : 0;
+        if (dx != 0 || dy != 0)
+        {
+            e.Handled = true;
+            var selected = SelectedContentId;
+            ContentAction((r, id) => selected is null || r.ReadContentEditor(id)?.SelectedItemId != selected
+                ? "海报上的选择已变化；已刷新，请重新操作。" : r.NudgeContentEditor(id, dx, dy, DesktopUp.Windows.NativeInputKeys.ShiftDown));
+        }
+        else if (e.Key == VirtualKey.Enter)
+        {
+            e.Handled = true;
+            ContentAction((r, id) => { _contentActivationTargetId = id; return r.ActivateContentEditor(id, e.KeyStatus.WasKeyDown); });
+        }
+        else if (e.Key == VirtualKey.Escape)
+        {
+            e.Handled = true;
+            ReleaseContentActivation();
+            CancelContentFieldDraft();
+            ContentItemSelector.Focus(FocusState.Programmatic);
+        }
+    }
+    private void ContentKeyboard_KeyUp(object sender, KeyRoutedEventArgs e)
+    { if (e.Key == VirtualKey.Enter) { e.Handled = true; ReleaseContentActivation(); } }
+    private void ContentKeyboard_LostFocus(object sender, RoutedEventArgs e) => ReleaseContentActivation();
+    private void ReleaseContentActivation()
+    {
+        if (_contentActivationTargetId is not { } id) return;
+        _contentActivationTargetId = null;
+        _contentRuntime?.Invoke()?.ReleaseContentActivationKey(id);
     }
 }

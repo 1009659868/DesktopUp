@@ -1,3 +1,4 @@
+using DesktopUp.Application;
 using DesktopUp.Domain;
 
 namespace DesktopUp;
@@ -6,13 +7,31 @@ internal sealed partial class PosterSpatialRuntime
 {
     internal event Action<string>? ContentEditorChanged;
     internal void NotifyContentEditorChanged(string? id) { if(id is not null) ContentEditorChanged?.Invoke(id); }
+    internal void NotifyCenterContentInteractionChanged()
+    {
+        // Each window wakes only if its own pending proposal was blocked by a center draft.
+        // Merely changing center focus/settings does not enqueue reflows for other posters.
+        foreach(var window in _windows.Values) window.NotifyCenterContentInteractionChanged();
+    }
     internal ContentLayoutEditorView? ReadContentEditor(string? id) => id is not null && !_suspended && _windows.TryGetValue(id,out var window)
         ? window.ReadContentEditor() : null;
+    internal ContentInteractionFeedback? PreviewContentEditor(string id, ContentLayoutEdit edit) =>
+        !_suspended && !IsSpatialBusy && _windows.TryGetValue(id, out var window) ? window.PreviewContentEdit(edit) : null;
     internal string? ApplyContentEditor(string id,ContentLayoutEdit edit)
     {
         if(_suspended || IsSpatialBusy || !_windows.TryGetValue(id,out var window)) return "海报尚未显示或正在交互，请稍后重试。";
         return window.EditContent(edit);
     }
+    internal string? ApplyContentEditorFromCenter(string id, ContentLayoutEdit edit, long expectedEntityVersion, long expectedDocumentVersion)
+    {
+        if (_suspended || IsSpatialBusy || !_windows.TryGetValue(id, out var window) ||
+            !OwnsCenterContentDraft(id, expectedEntityVersion, expectedDocumentVersion)) return "当前内容草稿或海报状态已变化。";
+        return window.EditContent(edit, expectedEntityVersion, expectedDocumentVersion);
+    }
+    internal string? ActivateContentEditor(string id, bool isRepeat) =>
+        !_suspended && _windows.TryGetValue(id, out var window) ? window.ActivateSelectedContent(isRepeat) : "海报尚未就绪。";
+    internal void ReleaseContentActivationKey(string id)
+    { if (_windows.TryGetValue(id, out var window)) window.ReleaseContentActivationKey(); }
     internal string? SelectContentEditor(string id,string? itemId)
     {
         if(_suspended || IsSpatialBusy || !_windows.TryGetValue(id,out var window)) return "海报尚未就绪。";
@@ -48,5 +67,4 @@ internal sealed partial class PosterSpatialRuntime
         if(_suspended || IsSpatialBusy || !_windows.TryGetValue(id,out var window)) return "海报尚未显示或正在交互，请稍后重试。";
         return window.SetContentLoopScroll(enabled);
     }
-    internal void CancelContentEditors() { foreach(var window in _windows.Values) window.CancelContentEditingFromCenter(); }
 }

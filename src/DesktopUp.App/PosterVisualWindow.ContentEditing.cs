@@ -15,30 +15,50 @@ internal sealed partial class PosterVisualWindow
     private PosterInputEventArgs? _contentLatestMotion;
     private bool _contentMotionPending;
     public bool HasContentGesture => _contentGesture is not null;
-    internal void CancelContentEditingFromCenter() => CancelContentGesture("center-selection-or-close");
     internal ContentLayoutEditorView ReadContentEditor() => new(ContentDocument, _posterEntityVersion, _selectedContentItem,
-        IsEditing, !_contentReadOnly && !_geometry.IsLocked && !_disposed && !_contentPresentationSuspended, _contentNotice);
+        IsEditing, !_contentReadOnly && !_geometry.IsLocked && !_disposed && !_contentPresentationSuspended, _contentNotice)
+        { SelectedSlot = _contentSnapshot?.Items.FirstOrDefault(p => p.ItemId == _selectedContentItem),
+          CanUndo = _contentHistory.CanUndo(ContentDocument), CanRedo = _contentHistory.CanRedo(ContentDocument) };
 
     private bool HandleContentInput(PosterInputEventArgs args)
     {
         if (args.TargetKind is not (PosterInputTargetKind.ContentItem or PosterInputTargetKind.ContentSpanHandle or PosterInputTargetKind.ContentViewport)) return false;
-        if (args.EventKind == PosterInputEventKind.Scrolled) { ScrollItems(args.WheelDelta); return true; }
+        if (args.EventKind == PosterInputEventKind.Scrolled) { _contentActivation.Reset(); ScrollItems(args.WheelDelta); return true; }
         if (args.EventKind == PosterInputEventKind.Pressed)
         {
-            args.Handled = true;
+            // Any intervening handle/background press ends a card double-click pair, even if
+            // that press never crosses the drag threshold or is rejected by another owner.
+            if (args.TargetKind != PosterInputTargetKind.ContentItem) _contentActivation.Reset();
+            // A stale/forged handle press cannot resize after editing adornments are hidden.
+            // Ordinary Item presses keep their direct-drag behavior in both operating modes.
+            if (args.TargetKind == PosterInputTargetKind.ContentSpanHandle && !IsEditing) return true;
+            if (PosterId is { } targetId && spatial.HasCenterDraft(targetId))
+            {
+                PublishContentFeedback("控制中心有未完成的修改，请先完成或取消；当前操作未开始。");
+                return true;
+            }
             if (_disposed || _contentPresentationSuspended || _monitor is null || _inputIsland is null || _transitionLayout is not null || spatial.IsSpatialBusy ||
                 _contentSnapshot is null || args.ContentSnapshotGeneration != _contentSnapshot.ViewportGeneration || args.Capture is null) return true;
-            CancelContentGesture("new-press");
+            PublishContentFeedback(null);
             _selectedContentItem = args.ContentItemId;
             spatial.NotifyContentEditorChanged(PosterId);
-            if (args.TargetKind == PosterInputTargetKind.ContentViewport) { RefreshContentSurface(); return true; }
+            if (args.TargetKind == PosterInputTargetKind.ContentViewport)
+            { _contentActivation.Reset(); RefreshContentSurface(); return true; }
             var doc = ContentDocument;
             var slot = _contentSnapshot.Items.FirstOrDefault(p => p.ItemId == args.ContentItemId);
-            if (slot is null) return true;
-            bool canEdit = IsEditing && !_geometry.IsLocked && !_contentReadOnly &&
-                (args.TargetKind == PosterInputTargetKind.ContentSpanHandle || doc.Mode == ContentLayoutMode.Manual || doc.Placements[slot.SourceIndex].FixedPosition);
-            _contentGesture = new(args.Capture, doc, _contentSnapshot, slot, _posterEntityVersion, _stateRevision,
+            var viewport = _contentViewport;
+            if (slot is null || viewport is null) return true;
+            double x = (args.LatestPoint.X - _bounds.X) / _monitor.ScaleX - ContentLeftDip;
+            double y = (args.LatestPoint.Y - _bounds.Y) / _monitor.ScaleY - ContentTopDip;
+            var tile = ContentLayoutFlow.ProjectTiles(_contentSnapshot, viewport)
+                .FirstOrDefault(t => t.ItemId == slot.ItemId && t.Clip.Contains(x, y));
+            if (tile is null) return true;
+            bool canEdit = !_geometry.IsLocked && !_contentReadOnly;
+            _contentGesture = new(args.Capture, doc, _contentSnapshot, viewport, tile, slot,
+                ContentActivationTargetFor(slot.ItemId), _posterEntityVersion, _stateRevision,
                 _bounds, args.TargetKind, _monitor.ScaleX, _monitor.ScaleY, canEdit, ledger.Acquire("content.gesture", "pointer-preview"));
+            args.Handled = true;
+            spatial.NotifyContentEditorChanged(PosterId);
             RefreshContentSurface();
             return true;
         }
@@ -50,6 +70,8 @@ internal sealed partial class PosterVisualWindow
         { CancelContentGesture("basis-expired"); return true; }
         if (args.EventKind is PosterInputEventKind.GesturePreview or PosterInputEventKind.GestureCompleted)
         {
+            _contentActivation.Reset();
+            gesture.IsDragging = true;
             if (gesture.CanEdit)
             {
                 _contentLatestMotion=args; _contentMotionPending=true;
@@ -60,37 +82,53 @@ internal sealed partial class PosterVisualWindow
                 }
                 else StartContentMotion();
             }
-            else if (IsEditing)
+            else
             {
-                _contentNotice = "自动排版不会因拖动改变：请在“…”中进入手动排版，或固定所选卡片。";
-                if (_modeLabel is not null) _modeLabel.Text="先进入手动排版或固定卡片";
+                PublishContentFeedback(_geometry.IsLocked ? "海报已锁定，请先解除锁定。" : "当前内容只读，原配置已保留。");
             }
         }
         if (args.EventKind is PosterInputEventKind.Invoked or PosterInputEventKind.GestureCompleted)
         {
             StopContentMotion();
-            _contentGesture = null; gesture.Lease.Dispose(); _contentDraft = null;
+            _contentGesture = null; gesture.Lease.Dispose(); _contentDraft = _contentDraftProjection = null;
             if (args.EventKind == PosterInputEventKind.GestureCompleted && gesture.Proposal is { } desired)
-                CommitContentDocument(gesture.Document, desired, gesture.EntityVersion, gesture.Revision);
+            {
+                // Derive feedback before the write, from the same accepted proposal. A renderer
+                // diagnostic must never turn a completed write into a thrown failure afterwards.
+                var feedback = gesture.LastEdit is { } edit && gesture.EditResult is { } editResult
+                    ? ContentInteractionFeedbackPolicy.Describe(gesture.Document, gesture.Snapshot,
+                        edit, editResult, ContentFeedbackPhase.Committed) : null;
+                string? error = CommitContentDocument(gesture.Document, desired, gesture.EntityVersion, gesture.Revision);
+                if (error is null && feedback is not null) PublishContentImpact(feedback);
+            }
             else
             {
-                if (!IsEditing) log.Write("info", "poster.test_item_invoked", new { itemId=args.ContentItemId, demo=true });
+                if (args.EventKind == PosterInputEventKind.Invoked && gesture.Target == PosterInputTargetKind.ContentItem)
+                    ClickContent(gesture, args);
+                else if (args.EventKind == PosterInputEventKind.GestureCompleted)
+                    PublishContentFeedback(_contentNotice?.Contains("在此松手", StringComparison.Ordinal) == true
+                        ? "本次位置无效，未保存；请在海报内容区内调整。"
+                        : _contentNotice ?? "位置未改变，本次没有保存。", transient: gesture.Proposal is not null);
                 RefreshContentSurface();
             }
             QueueContentProposalDrain();
+            spatial.NotifyContentEditorChanged(PosterId);
         }
         return true;
     }
     private void CancelContentGesture(string reason)
     {
+        _contentActivation.Reset();
         StopContentMotion();
-        if (_contentGesture is not { } gesture) { _contentDraft=null; return; }
-        _contentGesture=null; _contentDraft=null; gesture.Lease.Dispose();
+        if (_contentGesture is not { } gesture) { _contentDraft=_contentDraftProjection=null; return; }
+        _contentGesture=null; _contentDraft=_contentDraftProjection=null; gesture.Lease.Dispose();
         // Release the existing native owner after clearing RAM; its synchronous cancel cannot recurse.
         _inputIsland?.CancelPointerGesture();
         log.Write("info","content.gesture_cancelled",new { PosterId, reason, itemId=gesture.Slot.ItemId });
+        PublishContentFeedback("已取消本次调整，原布局未改。", transient: true);
         if (!_disposed && _itemsGrid is not null && _bounds.IsUsable) RefreshContentSurface();
         QueueContentProposalDrain();
+        spatial.NotifyContentEditorChanged(PosterId);
     }
     private void StartContentMotion()
     {
@@ -119,30 +157,48 @@ internal sealed partial class PosterVisualWindow
             double y=(motion.LatestPoint.Y-_bounds.Y)/gesture.ScaleY-ContentTopDip;
             double Edge(double point,double extent)=>point < -64 || point > extent+64 ? 0 :
                 point<24 ? -8 : point>extent-24 ? 8 : 0;
-            double nextX=Math.Clamp(_contentScrollX+Edge(x,view.WidthDip),0,Math.Max(0,current.ExtentWidthDip-view.WidthDip));
-            double nextY=Math.Clamp(_itemScrollOffsetDip+Edge(y,view.HeightDip),0,Math.Max(0,current.ExtentHeightDip-view.HeightDip));
+            bool vertical=gesture.Snapshot.FlowAxis==ContentFlowAxis.Vertical;
+            double nextX=vertical?gesture.Snapshot.ScrollXDip:
+                Math.Clamp(_contentScrollX+Edge(x,view.WidthDip),0,Math.Max(0,gesture.Snapshot.ExtentWidthDip-view.WidthDip));
+            double nextY=!vertical?gesture.Snapshot.ScrollYDip:
+                Math.Clamp(_itemScrollOffsetDip+Edge(y,view.HeightDip),0,Math.Max(0,gesture.Snapshot.ExtentHeightDip-view.HeightDip));
             scrolled=nextX!=_contentScrollX || nextY!=_itemScrollOffsetDip;
             _contentScrollX=nextX;_itemScrollOffsetDip=nextY;
         }
         if(!_contentMotionPending && !scrolled) return;
         _contentMotionPending=false;
-        double dx=motion.DeltaX/gesture.ScaleX+_contentScrollX-gesture.Snapshot.ScrollXDip;
-        double dy=motion.DeltaY/gesture.ScaleY+_itemScrollOffsetDip-gesture.Snapshot.ScrollYDip;
-        double pitch=gesture.Snapshot.CellDip+gesture.Snapshot.GapDip;
-        int stepX=(int)Math.Round(dx/pitch,MidpointRounding.AwayFromZero),stepY=(int)Math.Round(dy/pitch,MidpointRounding.AwayFromZero);
-        var original=gesture.Document.Placements[gesture.Slot.SourceIndex];
-        var edit=gesture.Target==PosterInputTargetKind.ContentSpanHandle
-            ? new ContentLayoutEdit(ContentLayoutEditKind.Resize,original.ItemId)
-              {ColumnSpan=Math.Clamp(original.ColumnSpan+stepX,1,ContentLayoutPolicy.MaximumSpan),RowSpan=Math.Clamp(original.RowSpan+stepY,1,ContentLayoutPolicy.MaximumSpan)}
-            : new ContentLayoutEdit(ContentLayoutEditKind.Move,original.ItemId)
-              {Column=Math.Clamp(gesture.Slot.Column-gesture.Slot.RegionColumn+stepX,0,ContentLayoutPolicy.MaximumColumns-1),
-               Row=Math.Clamp(gesture.Slot.Row-gesture.Slot.RegionRow+stepY,0,ContentLayoutPolicy.MaximumRow)};
-        if(gesture.LastEdit==edit && !scrolled) return;
-        gesture.LastEdit=edit;
-        var result=ContentLayoutEditing.Apply(gesture.Document,edit,ContentViewportFor(_bounds));
-        gesture.Proposal=result.Accepted?result.Document:null;
-        _contentDraft=result.Accepted?result.Document:gesture.Document;
-        _contentNotice=result.Accepted?null:result.Error;
+        double dx=motion.DeltaX/gesture.ScaleX, dy=motion.DeltaY/gesture.ScaleY;
+        gesture.GhostX=gesture.Tile.Bounds.X+dx; gesture.GhostY=gesture.Tile.Bounds.Y+dy;
+        double pointerX=(motion.LatestPoint.X-_bounds.X)/gesture.ScaleX-ContentLeftDip;
+        double pointerY=(motion.LatestPoint.Y-_bounds.Y)/gesture.ScaleY-ContentTopDip;
+        var mapped=ContentDragPolicy.Map(gesture.Document,gesture.Snapshot,gesture.Viewport,gesture.Tile,
+            gesture.Target==PosterInputTargetKind.ContentSpanHandle?ContentDragKind.Resize:ContentDragKind.Move,
+            dx,dy,_contentScrollX-gesture.Snapshot.ScrollXDip,_itemScrollOffsetDip-gesture.Snapshot.ScrollYDip);
+        if(!new ContentRect(0,0,gesture.Viewport.WidthDip,gesture.Viewport.HeightDip).Contains(pointerX,pointerY))
+            mapped=new(null,"请移回海报内容区；在此松手不会保存。");
+        if (gesture.LastMapping == mapped && !scrolled) { RefreshContentSurface(); return; }
+        gesture.LastMapping=mapped;
+        gesture.LastEdit=mapped.Edit;
+        var result=!mapped.Accepted ? new ContentLayoutEditResult(false,gesture.Document,mapped.Error)
+            : mapped.NoChange ? new ContentLayoutEditResult(true,gesture.Document)
+            : ContentLayoutEditing.Apply(gesture.Document,mapped.Edit!,gesture.Viewport,gesture.Snapshot);
+        _contentNotice=result.Error;
+        gesture.EditResult = result;
+        ContentLayoutDocument? projected=null;
+        if(result.Accepted)
+        {
+            try
+            {
+                projected=ProjectContentEdit(result.Document);
+                RequireWritableContentProjection(projected,ContentViewportFor(_bounds));
+                if (mapped.NoChange) _contentNotice = "位置未改变，松手不保存。";
+                else SetContentImpact(ContentInteractionFeedbackPolicy.Describe(gesture.Document, gesture.Snapshot, mapped.Edit!, result));
+            }
+            catch(ArgumentException error) { projected=null; _contentNotice=error.Message; }
+        }
+        gesture.Proposal=projected is not null?result.Document:null;
+        _contentDraft=gesture.Proposal;
+        _contentDraftProjection=projected;
         RefreshContentSurface();
     }
     private void RefreshContentSurface()
@@ -151,50 +207,75 @@ internal sealed partial class PosterVisualWindow
         UpdateItemScrollState(_bounds);
         if (_inputIsland is not null) _inputIsland.ApplyLayout(_bounds,BuildInputLayout(_bounds));
     }
-    internal string? EditContent(ContentLayoutEdit edit)
+    internal string? EditContent(ContentLayoutEdit edit, long? centerEntityVersion = null, long? centerDocumentVersion = null)
     {
-        if (_contentReadOnly || _geometry.IsLocked || HasContentGesture || _transitionLayout is not null || _disposed || _contentPresentationSuspended) return "内容只读、已锁定或正在交互。";
+        if (_contentReadOnly || _geometry.IsLocked || HasContentGesture || _transitionLayout is not null || _disposed || _contentPresentationSuspended) return ReportContentFailure("内容只读、已锁定或正在交互。");
         var before=ContentDocument;
-        var basis=edit.Kind==ContentLayoutEditKind.Mode && edit.Mode==ContentLayoutMode.Manual ? EffectiveContentDocument : before;
-        var result=ContentLayoutEditing.Apply(basis,edit,ContentViewportFor(_bounds));
-        if(!result.Accepted) return _contentNotice=result.Error;
-        var desired=ReferenceEquals(basis,before)?result.Document:RebaseContentIntent(before,result.Document);
-        return CommitContentDocument(before,desired,_posterEntityVersion,_stateRevision);
+        bool centerOwner = centerEntityVersion.HasValue && centerDocumentVersion.HasValue &&
+            spatial.OwnsCenterContentDraft(before.PosterId, centerEntityVersion.Value, centerDocumentVersion.Value);
+        if (centerEntityVersion.HasValue && (!centerOwner || centerEntityVersion != _posterEntityVersion ||
+            centerDocumentVersion != before.DocumentVersion)) return ReportContentFailure("海报或内容版本已变化，草稿保留；请取消后重新调整。");
+        var presented = _contentSnapshot ?? EnsureContentSnapshot(_bounds);
+        var result=ContentLayoutEditing.Apply(before,edit,ContentViewportFor(_bounds),presented);
+        if(!result.Accepted) return ReportContentFailure(result.Error ?? "这次调整未能完成，原布局已保留。");
+        var feedback = ContentInteractionFeedbackPolicy.Describe(before, presented, edit, result, ContentFeedbackPhase.Committed);
+        string? error = CommitContentDocument(before,result.Document,_posterEntityVersion,_stateRevision, centerOwner: centerOwner);
+        if (error is null) PublishContentImpact(feedback);
+        return error;
+    }
+    internal ContentInteractionFeedback? PreviewContentEdit(ContentLayoutEdit edit)
+    {
+        if (_disposed || _contentPresentationSuspended || _contentReadOnly || _geometry.IsLocked ||
+            HasContentGesture || _transitionLayout is not null || _contentSnapshot is not { } presented) return null;
+        var before = ContentDocument;
+        var result = ContentLayoutEditing.Apply(before, edit, ContentViewportFor(_bounds), presented);
+        if (result.Accepted)
+        {
+            try { RequireWritableContentProjection(ProjectContentEdit(result.Document), ContentViewportFor(_bounds)); }
+            catch (ArgumentException error) { return ContentInteractionFeedbackPolicy.Rejected(error.Message); }
+        }
+        // Pure existing editor result: no draft projection, generation, notice, history or DB mutation.
+        return ContentInteractionFeedbackPolicy.Describe(before, presented, edit, result);
     }
     // Per-poster switches committed through the same single-revision content command. A conflicting pin
     // is reported instead of being relocated, and the switch never reorders or resizes anything.
     internal string? SetContentFlowAxis(ContentFlowAxis axis)
     {
-        if (_contentReadOnly || _geometry.IsLocked || HasContentGesture || _transitionLayout is not null || _disposed || _contentPresentationSuspended) return "内容只读、已锁定或正在交互。";
+        if (_contentReadOnly || _geometry.IsLocked || HasContentGesture || _transitionLayout is not null || _disposed || _contentPresentationSuspended) return ReportContentFailure("内容只读、已锁定或正在交互。");
         var before=ContentDocument;
         var preference=_presentation.Parameters.Preferences ?? new();
         var result=ContentLayoutFlowPolicy.SetFlowAxis(before,axis,preference.Scale,preference.Spacing);
-        if(!result.Accepted) return _contentNotice=result.Error;
+        if(!result.Accepted) return ReportContentFailure(result.Error ?? "浏览方向未改变，原布局已保留。");
         return CommitContentDocument(before,result.Document,_posterEntityVersion,_stateRevision);
     }
     internal string? SetContentLoopScroll(bool enabled)
     {
-        if (_contentReadOnly || _geometry.IsLocked || HasContentGesture || _transitionLayout is not null || _disposed || _contentPresentationSuspended) return "内容只读、已锁定或正在交互。";
+        if (_contentReadOnly || _geometry.IsLocked || HasContentGesture || _transitionLayout is not null || _disposed || _contentPresentationSuspended) return ReportContentFailure("内容只读、已锁定或正在交互。");
         var before=ContentDocument;
         var preference=_presentation.Parameters.Preferences ?? new();
         var result=ContentLayoutFlowPolicy.SetLoopScroll(before,enabled,preference.Scale,preference.Spacing);
-        if(!result.Accepted) return _contentNotice=result.Error;
+        if(!result.Accepted) return ReportContentFailure(result.Error ?? "循环设置未改变，原布局已保留。");
         return CommitContentDocument(before,result.Document,_posterEntityVersion,_stateRevision);
     }
-    private string? CommitContentDocument(ContentLayoutDocument before,ContentLayoutDocument desired,long entityVersion,long revision,bool recordHistory=true)
+    private string? CommitContentDocument(ContentLayoutDocument before,ContentLayoutDocument desired,long entityVersion,long revision,bool recordHistory=true,bool centerOwner=false)
     {
-        if (_disposed || _contentPresentationSuspended) return "内容呈现已暂停，请等待恢复。";
-        if (ContentLayoutPolicy.Serialize(before)==ContentLayoutPolicy.Serialize(desired)) { RefreshContentSurface(); return null; }
+        if (spatial.HasCenterDraft(before.PosterId) && !(centerOwner && spatial.OwnsCenterContentDraft(before.PosterId, entityVersion, before.DocumentVersion)))
+            return RefuseContentCommit("控制中心有未完成的修改，请先完成或取消。");
+        if (_disposed || _contentPresentationSuspended) return ReportContentFailure("内容呈现已暂停，请等待恢复。");
+        try { RequireWritableContentProjection(ProjectContentEdit(desired), ContentViewportFor(_bounds)); }
+        catch (ArgumentException error) { return RefuseContentCommit(error.Message); }
+        if (ContentLayoutPolicy.Serialize(before)==ContentLayoutPolicy.Serialize(desired))
+        { PublishContentFeedback("内容未改变，本次没有保存。", transient: true); RefreshContentSurface(); return null; }
         var result=stateCommands.Execute(new ContentLayoutCommand("content-"+Guid.NewGuid().ToString("N"), StateCommandSource.Poster,
             revision,before.PosterId,StateReadSet.ForPoster(before.PosterId,entityVersion),before.DocumentVersion,before.ItemSetVersion,desired,
             !before.Placements.Select(p=>p.ItemId).ToHashSet(StringComparer.Ordinal).SetEquals(desired.Placements.Select(p=>p.ItemId))));
-        _contentDraft=null;
+        _contentDraft=_contentDraftProjection=null;
         if(result.Succeeded && result.Status==StateCommandStatus.Committed)
         {
             if(recordHistory) _contentHistory.Record(before,desired);
-            _contentNotice="布局已保存";
+            PublishContentFeedback("布局已保存，可撤销。", transient: true);
         }
-        else _contentNotice=result.Succeeded ? null : result.Error ?? "布局未保存，已恢复当前权威状态。";
+        else PublishContentFeedback(result.Succeeded ? null : result.Error ?? "布局未保存，已恢复当前状态。");
         if(result.Projection?.PostersById.TryGetValue(before.PosterId,out var current)==true)
         {
             _authoritativePoster=current.Poster; _posterEntityVersion=current.EntityVersion;
@@ -204,11 +285,22 @@ internal sealed partial class PosterVisualWindow
         spatial.NotifyContentEditorChanged(PosterId);
         return result.Succeeded ? null : _contentNotice;
     }
+    private string RefuseContentCommit(string message)
+    {
+        PublishContentFeedback(message);
+        _contentDraft=_contentDraftProjection=null;
+        _solvedDocument=null;
+        RefreshContentSurface();
+        spatial.NotifyContentEditorChanged(PosterId);
+        return message;
+    }
     internal string? SelectContentItem(string? id)
     {
         if (_disposed || _contentPresentationSuspended) return "内容呈现已暂停，请等待恢复。";
-        CancelContentGesture("explicit-selection");
+        if (HasContentGesture || spatial.IsSpatialBusy || PosterId is { } posterId && spatial.HasCenterDraft(posterId))
+            return "请先完成或取消当前修改，再切换项目。";
         if(id is not null && !ContentDocument.Placements.Any(p=>p.ItemId==id)) return "内容已变化，请重新选择。";
+        _contentActivation.Reset();
         _selectedContentItem=id; RefreshContentSurface(); spatial.NotifyContentEditorChanged(PosterId); return null;
     }
     internal string? NudgeContent(int x,int y,bool resize)
@@ -218,10 +310,15 @@ internal sealed partial class PosterVisualWindow
         var slot=EnsureContentSnapshot(_bounds).Items.FirstOrDefault(p=>p.ItemId==id);
         var placement=ContentDocument.Placements.FirstOrDefault(p=>p.ItemId==id);
         if(slot is null || placement is null) return "所选卡片已变化。";
-        return EditContent(resize ? new(ContentLayoutEditKind.Resize,id)
-            {ColumnSpan=Math.Clamp(placement.ColumnSpan+x,1,ContentLayoutPolicy.MaximumSpan),RowSpan=Math.Clamp(placement.RowSpan+y,1,ContentLayoutPolicy.MaximumSpan)}
-            : new(ContentLayoutEditKind.Move,id)
-            {Column=Math.Clamp(slot.Column-slot.RegionColumn+x,0,ContentLayoutPolicy.MaximumColumns-1),Row=Math.Clamp(slot.Row-slot.RegionRow+y,0,ContentLayoutPolicy.MaximumRow)});
+        if (resize) return EditContent(new(ContentLayoutEditKind.Resize,id)
+            {ColumnSpan=slot.ColumnSpan+x,RowSpan=slot.RowSpan+y});
+        if (ContentDocument.Mode != ContentLayoutMode.Manual && !placement.FixedPosition)
+        {
+            int delta=ContentDocument.FlowAxis==ContentFlowAxis.Vertical ? (y!=0?y:x) : (x!=0?x:y);
+            return EditContent(new(ContentLayoutEditKind.Move,id) {TargetReadOrder=slot.ReadOrder+delta});
+        }
+        return EditContent(new(ContentLayoutEditKind.Move,id)
+            {Column=slot.Column-slot.RegionColumn+x,Row=slot.Row-slot.RegionRow+y});
     }
     internal string? UseContentSample(string sample)
     {
@@ -241,53 +338,31 @@ internal sealed partial class PosterVisualWindow
             Placements=intent.Placements.Select(p=>p with { Version=old.TryGetValue(p.ItemId,out var previous)
                 ? previous.Version + (p with { Version=previous.Version } != previous ? 1 : 0) : 1 }).ToArray() });
     }
-    private void AddContentMenu(MenuFlyout flyout,Func<string,bool> current)
-    {
-        void Add(string title,Action action,bool enabled=true)
-        {
-            var item=StyleMenuItem(new MenuFlyoutItem {Text=title,IsEnabled=enabled});
-            item.Click+=(_,_)=>{if(current("content-"+title)){flyout.Hide();action();}};
-            flyout.Items.Add(item);
-        }
-        if(!IsEditing || _geometry.IsCollapsed || _disposed || _contentPresentationSuspended) return;
-        var d=ContentDocument;
-        Add(d.ShowBaselineGrid?"隐藏基线网格":"显示基线网格",()=>EditContent(new(ContentLayoutEditKind.Guides){ShowBaselineGrid=!d.ShowBaselineGrid}),!_contentReadOnly);
-        Add(d.ShowSpanLabels?"隐藏跨度提示":"显示跨度提示",()=>EditContent(new(ContentLayoutEditKind.Guides){ShowSpanLabels=!d.ShowSpanLabels}),!_contentReadOnly);
-        if(d.Mode!=ContentLayoutMode.Manual) Add("进入手动排版",()=>EditContent(new(ContentLayoutEditKind.Mode){Mode=ContentLayoutMode.Manual}),!_contentReadOnly);
-        else
-        {
-            var exit=StyleMenuItem(new MenuFlyoutSubItem {Text="退出手动排版…"});
-            foreach(var choice in new[]{("保留当前顺序",ManualLayoutExit.KeepOrder),("转为顺序锚",ManualLayoutExit.ConvertToAnchors),("恢复自动排列",ManualLayoutExit.RestoreAutomatic)})
-            {
-                var item=StyleMenuItem(new MenuFlyoutItem{Text=choice.Item1});
-                item.Click+=(_,_)=>{if(current("content-mode")){flyout.Hide();EditContent(new(ContentLayoutEditKind.Mode){Mode=ContentLayoutMode.Automatic,ManualExit=choice.Item2});}};
-                exit.Items.Add(item);
-            }
-            flyout.Items.Add(exit);
-        }
-        if(_selectedContentItem is { } selected && d.Placements.FirstOrDefault(p=>p.ItemId==selected) is { } placement)
-            Add(placement.FixedPosition?"解除所选卡片固定":"固定所选卡片位置",()=>EditContent(new(ContentLayoutEditKind.Fixed,selected){Enabled=!placement.FixedPosition}),!_contentReadOnly);
-        Add("撤销布局",()=>UndoContent(false),!_contentReadOnly);
-        Add("重做布局",()=>UndoContent(true),!_contentReadOnly);
-        flyout.Items.Add(new MenuFlyoutSeparator());
-    }
     internal string? UndoContent(bool redo)
     {
-        if(_contentReadOnly || _geometry.IsLocked || HasContentGesture || _transitionLayout is not null || _disposed || _contentPresentationSuspended) return "当前不能撤销布局。";
+        if(_contentReadOnly || _geometry.IsLocked || HasContentGesture || _transitionLayout is not null || _disposed || _contentPresentationSuspended) return ReportContentFailure("当前不能撤销布局。请先结束正在进行的操作或解除锁定。");
         var before=ContentDocument;
         var proposal=redo?_contentHistory.ProposeRedo(before):_contentHistory.ProposeUndo(before);
-        if(proposal is null) return "没有可用的布局历史，或当前版本已被外部修改。";
+        if(proposal is null) return ReportContentFailure("没有可用的布局历史，或当前版本已被外部修改。");
         string? error=CommitContentDocument(before,proposal.Document,_posterEntityVersion,_stateRevision,false);
-        if(error is null) _contentHistory.Confirm(proposal,ContentDocument);
+        if(error is null)
+        {
+            _contentHistory.Confirm(proposal,ContentDocument);
+            PublishContentFeedback(redo ? "已重做本次操作。" : "已撤销本次操作，海报大小保持不变。", transient: true);
+        }
         else _contentHistory.CancelProposal();
         return error;
     }
     private sealed class ContentGesture(PosterInputCapture capture,ContentLayoutDocument document,ContentLayoutSnapshot snapshot,
-        ContentResolvedPlacement slot,long entityVersion,long revision,DesktopPixelRect frame,PosterInputTargetKind target,double scaleX,double scaleY,bool canEdit,IDisposable lease)
+        ContentLayoutViewport viewport, ContentLayoutTile tile, ContentResolvedPlacement slot, ContentActivationTarget? activationTarget,
+        long entityVersion,long revision,DesktopPixelRect frame,PosterInputTargetKind target,double scaleX,double scaleY,bool canEdit,IDisposable lease)
     {
         public PosterInputCapture Capture {get;}=capture;
         public ContentLayoutDocument Document {get;}=document;
         public ContentLayoutSnapshot Snapshot {get;}=snapshot;
+        public ContentLayoutViewport Viewport {get;}=viewport;
+        public ContentLayoutTile Tile {get;}=tile;
+        public ContentActivationTarget? ActivationTarget {get;}=activationTarget;
         public ContentResolvedPlacement Slot {get;}=slot;
         public long EntityVersion {get;}=entityVersion;
         public long Revision {get;}=revision;
@@ -299,7 +374,17 @@ internal sealed partial class PosterVisualWindow
         public IDisposable Lease {get;}=lease;
         public ContentLayoutDocument? Proposal {get;set;}
         public ContentLayoutEdit? LastEdit {get;set;}
+        public ContentLayoutEditResult? EditResult {get;set;}
+        public ContentDragResult? LastMapping {get;set;}
+        public bool IsDragging {get;set;}
+        public double GhostX {get;set;}=tile.Bounds.X;
+        public double GhostY {get;set;}=tile.Bounds.Y;
     }
 }
 
-internal sealed record ContentLayoutEditorView(ContentLayoutDocument Document,long EntityVersion,string? SelectedItemId,bool IsEditing,bool CanEdit,string? Notice);
+internal sealed record ContentLayoutEditorView(ContentLayoutDocument Document,long EntityVersion,string? SelectedItemId,bool IsEditing,bool CanEdit,string? Notice)
+{
+    public ContentResolvedPlacement? SelectedSlot { get; init; }
+    public bool CanUndo { get; init; }
+    public bool CanRedo { get; init; }
+}

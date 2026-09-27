@@ -10,8 +10,9 @@ internal sealed partial class PosterVisualWindow
     private IReadOnlyDictionary<string,int>? _contentHeatTiers;
     private ContentThemeProposalBuffer? _contentThemeBuffer;
     private bool _contentProposalDrainQueued;
+    private bool _contentAwaitingCenterRelease;
     private long _contentProposalDrainEpoch, _contentHighestThemeVersion;
-    private bool ContentProposalsProtected => HasContentGesture || IsEditing || _posterMenu is not null ||
+    private bool ContentProposalsProtected => HasContentGesture || IsEditing || PosterId is { } id && spatial.HasCenterDraft(id) || _posterMenu is not null ||
         _transitionLayout is not null || _activeCommandRequestId is not null || _disposed || _contentPresentationSuspended;
 
     // Future heat/theme owners submit proposals here. No scores, per-item timers or implicit persistence.
@@ -29,13 +30,19 @@ internal sealed partial class PosterVisualWindow
             PosterPresentationPolicy.Validate(proposal.Parameters) is not null) return false;
         _contentThemeBuffer??=new(_presentation.Parameters);
         var p=proposal.Parameters.Preferences??new();
-        try { DesktopUp.Application.ContentLayoutCommandPolicy.ValidateAuthoring(ContentDocument,p.Scale,p.Spacing); }
+        try
+        {
+            DesktopUp.Application.ContentLayoutCommandPolicy.ValidateAuthoring(ContentDocument,p.Scale,p.Spacing);
+            RequireWritableContentProjection(EffectiveContentDocument, ContentViewportFor(_bounds) with { Scale = p.Scale, Spacing = p.Spacing });
+        }
         catch(ArgumentException) {return false;}
         bool accepted=_contentThemeBuffer.Offer(proposal,ContentProposalsProtected);
         if(accepted) {_contentHighestThemeVersion=proposal.Version;QueueContentProposalDrain();}
         return accepted;
     }
-    private ContentLayoutDocument EffectiveContentDocument => _contentDraft ?? _contentHeatProjection ?? ContentDocument;
+    private ContentLayoutDocument EffectiveContentDocument => _contentDraftProjection ?? _contentDraft ?? _contentHeatProjection ?? ContentDocument;
+    private ContentLayoutDocument ProjectContentEdit(ContentLayoutDocument author) => _contentActiveHeat is { } heat
+        ? ContentLayoutProposals.ResolveHeat(author, heat, _contentHeatTiers).Document : author;
     private void ResetContentProposals(ContentLayoutDocument? previous,ContentLayoutDocument current)
     {
         if(previous is null || previous.PosterId!=current.PosterId || previous.ItemSetVersion!=current.ItemSetVersion)
@@ -48,7 +55,7 @@ internal sealed partial class PosterVisualWindow
             try
             {
                 var resolved=ContentLayoutProposals.ResolveHeat(current,active,_contentHeatTiers);
-                ContentLayoutSolver.Resolve(resolved.Document,ContentViewportFor(_bounds));
+                RequireWritableContentProjection(resolved.Document,ContentViewportFor(_bounds));
                 _contentHeatProjection=resolved.Document;_contentHeatTiers=resolved.Tiers;
             }
             catch(ArgumentException) {_contentHeatProjection=null;_contentHeatTiers=null;}
@@ -68,11 +75,26 @@ internal sealed partial class PosterVisualWindow
         {
             if(epoch!=_contentProposalDrainEpoch) return;
             _contentProposalDrainQueued=false;
-            if(ContentProposalsProtected || _window is null) return;
+            if(ContentProposalsProtected || _window is null)
+            {
+                // A center draft may outlive this dispatcher turn. Its explicit ownership-change
+                // notification is the safe-point wake-up; do not poll or drain while it owns input.
+                if(_window is not null && PosterId is { } id && spatial.HasCenterDraft(id))
+                    _contentAwaitingCenterRelease=true;
+                return;
+            }
+            _contentAwaitingCenterRelease=false;
             try { DrainContentProposals(); }
             catch(Exception error)
             { log.Write("warning","content.proposal_drain_failed",new{PosterId,error.Message}); }
         })) _contentProposalDrainQueued=false;
+    }
+    internal void NotifyCenterContentInteractionChanged()
+    {
+        if(!_contentAwaitingCenterRelease || PosterId is not { } id || spatial.HasCenterDraft(id)) return;
+        _contentAwaitingCenterRelease=false;
+        // Reuse the ordinary gate and revalidation. Other owners may still defer this proposal.
+        QueueContentProposalDrain();
     }
     private void DrainContentProposals()
     {
@@ -83,7 +105,7 @@ internal sealed partial class PosterVisualWindow
             try
             {
                 var resolved=ContentLayoutProposals.ResolveHeat(ContentDocument,heat,_contentHeatTiers);
-                ContentLayoutSolver.Resolve(resolved.Document,ContentViewportFor(_bounds));
+                RequireWritableContentProjection(resolved.Document,ContentViewportFor(_bounds));
                 _contentActiveHeat=heat;_contentHeatProjection=resolved.Document;_contentHeatTiers=resolved.Tiers;
                 changed=true;
             }
@@ -100,6 +122,8 @@ internal sealed partial class PosterVisualWindow
                     // The document may have changed while a metrics proposal was buffered.
                     var preferences=theme.Current.Preferences??new();
                     DesktopUp.Application.ContentLayoutCommandPolicy.ValidateAuthoring(EffectiveContentDocument,preferences.Scale,preferences.Spacing);
+                    RequireWritableContentProjection(EffectiveContentDocument, ContentViewportFor(_bounds) with
+                        { Scale = preferences.Scale, Spacing = preferences.Spacing });
                     var desired=poster with {LayoutParametersJson=PosterPresentationPolicy.Serialize(theme.Current,poster.LayoutParametersJson)};
                     ApplyPresentation(PosterPresentationPolicy.Resolve(desired));
                     changed=true;
@@ -111,13 +135,23 @@ internal sealed partial class PosterVisualWindow
                 }
             }
         }
-        if(changed) {_solvedDocument=null;RefreshContentSurface();}
+        if(changed)
+        {
+            _solvedDocument=null;RefreshContentSurface();
+            spatial.NotifyContentEditorChanged(PosterId);
+        }
     }
     private void ReleaseContentProposals()
     {
         _contentProposalDrainEpoch=unchecked(_contentProposalDrainEpoch+1);_contentProposalDrainQueued=false;
+        _contentAwaitingCenterRelease=false;
         _contentHeatBuffer?.Invalidate();_contentHeatBuffer=null;_contentActiveHeat=null;
         _contentHeatProjection=null;_contentHeatTiers=null;_contentThemeBuffer=null;
         _contentHighestThemeVersion=0;
+    }
+    private static void RequireWritableContentProjection(ContentLayoutDocument document, ContentLayoutViewport viewport)
+    {
+        var snapshot = ContentLayoutSolver.Resolve(document, viewport);
+        if (snapshot.IsLayoutReadOnly) throw new ContentLayoutException("当前内容空间不支持这次主动布局变化：" + snapshot.SpaceStatus);
     }
 }

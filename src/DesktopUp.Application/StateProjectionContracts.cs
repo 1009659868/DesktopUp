@@ -26,7 +26,8 @@ public enum SettingsStateCommandKind
 {
     SetDynamicEffectsPaused = 0,
     SetPerformanceMode = 1,
-    SetLaunchAtStartupRequested = 2
+    SetLaunchAtStartupRequested = 2,
+    SetCenterTheme = 3
 }
 
 public sealed record PosterStateCommand(
@@ -181,6 +182,7 @@ public interface IStateProjectionCoordinator
 
 public interface IStateCommandService
 {
+    StateCommandResult Execute(RegisterTemplateCommand command) => throw new NotSupportedException("Template registration is not supported by this adapter.");
     StateCommandResult Execute(ContentLayoutCommand command) => throw new NotSupportedException("Content layout commands are not supported by this test adapter.");
     StateCommandResult Execute(PosterStateCommand command);
     StateCommandResult Execute(SettingsStateCommand command);

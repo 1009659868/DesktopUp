@@ -13,22 +13,32 @@ public sealed class ContentLayoutStressTests
     public void Fixed_seed_continuous_sequences_are_safe_deterministic_and_do_not_drift(int seed)
     {
         // 240 different sequences, each replayed from its starting state to prove whole-sequence determinism.
+        int semanticEdits = 0, rejectedEdits = 0, geometryEdits = 0;
         for (int sequence = 0; sequence < 24; sequence++)
         {
             int currentSeed = unchecked(seed * 397 + sequence);
-            string first = Run(currentSeed, sequence % 6, 40);
+            var first = Run(currentSeed, sequence % 6, 40);
             Assert.Equal(first, Run(currentSeed, sequence % 6, 40));
+            semanticEdits += first.SemanticEdits; rejectedEdits += first.RejectedEdits; geometryEdits += first.GeometryEdits;
         }
+        // Invalid proposals are useful, but a workload that only rejects obsolete actions cannot
+        // demonstrate undo, collision or revision safety for the current interaction contract.
+        Assert.True(semanticEdits > 0, "The deterministic workload must commit real semantic changes.");
+        Assert.True(geometryEdits > 0, "The deterministic workload must accept movement or resize changes.");
+        Assert.True(rejectedEdits > 0, "The deterministic workload must also exercise whole-edit rejection.");
     }
 
-    private static string Run(int seed, int scene, int steps)
+    private sealed record SequenceResult(string Digest, int SemanticEdits, int RejectedEdits, int GeometryEdits);
+    private static SequenceResult Run(int seed, int scene, int steps)
     {
         var random = new Random(seed);
-        var document = Scene(scene);
+        // Half the scenes explicitly exercise heat sizes; the other half retain authored spans.
+        var document = Scene(scene) with { AllowHeatDrivenSize = scene % 2 == 0 };
         var viewport = new ContentLayoutViewport(354, 160);
         var history = new ContentLayoutHistory();
         var heat = new ContentHeatProposalBuffer(document.PosterId, document.ItemSetVersion);
         var trace = new StringBuilder();
+        int semanticEdits = 0, rejectedEdits = 0, geometryEdits = 0;
         for (int step = 0; step < steps; step++)
         {
             string beforeJson = ContentLayoutPolicy.Serialize(document);
@@ -48,17 +58,20 @@ public sealed class ContentLayoutStressTests
                         ScrollXDip = random.Next(0, 800), ScrollYDip = random.Next(0, 1500), Generation = step + 1 };
                     break;
                 case 1:
-                    CommitEdit(new(ContentLayoutEditKind.Mode) { Mode = (ContentLayoutMode)random.Next(3),
-                        ManualExit = random.Next(4) == 0 ? null : (ManualLayoutExit)random.Next(3) });
+                    CommitEdit(new(ContentLayoutEditKind.Mode) { Mode = random.Next(2) == 0
+                        ? ContentLayoutMode.Automatic : ContentLayoutMode.Manual });
                     break;
                 case 2:
-                    CommitEdit(new(ContentLayoutEditKind.Move, target) { Column = random.Next(-1, 17), Row = random.Next(0, 24) });
+                    if (document.Mode == ContentLayoutMode.Manual || document.Placements.Any(p => p.ItemId == target && p.FixedPosition))
+                        CommitEdit(new(ContentLayoutEditKind.Move, target) { Column = random.Next(-1, 17), Row = random.Next(0, 24) });
+                    else
+                        CommitEdit(new(ContentLayoutEditKind.Move, target) { TargetReadOrder = random.Next(-1, Math.Max(1, ids.Length + 1)) });
                     break;
                 case 3:
                     CommitEdit(new(ContentLayoutEditKind.Resize, target) { ColumnSpan = random.Next(0, 14), RowSpan = random.Next(1, 12) });
                     break;
                 case 4:
-                    CommitEdit(new(ContentLayoutEditKind.Fixed, target) { Enabled = random.Next(2) == 0 });
+                    CommitEdit(new(ContentLayoutEditKind.Pinned, target) { Enabled = random.Next(2) == 0 });
                     break;
                 case 5:
                     CommitEdit(new(ContentLayoutEditKind.Pinned, target) { Enabled = random.Next(2) == 0,
@@ -102,6 +115,9 @@ public sealed class ContentLayoutStressTests
                     Assert.Null(heat.Take(true)); var ready = heat.Take(false)!;
                     Assert.Equal(latest.Version, ready.Version); Assert.Null(heat.Take(false));
                     var projected = ContentLayoutProposals.ResolveHeat(document, ready).Document;
+                    if (!document.AllowHeatDrivenSize || document.Mode == ContentLayoutMode.Manual)
+                        Assert.Equal(document.Placements.Select(p => (p.ColumnSpan, p.RowSpan)), projected.Placements.Select(p => (p.ColumnSpan, p.RowSpan)));
+                    if (document.Mode == ContentLayoutMode.Manual) Assert.True(ContentLayoutEditing.SameState(document, projected));
                     try { AssertSnapshot(ContentLayoutSolver.Resolve(projected, viewport), viewport, projected); }
                     catch (ContentLayoutException) { /* Fixed/manual constraints reject the proposal; author intent is last-good. */ }
                     Assert.Equal(beforeJson, ContentLayoutPolicy.Serialize(document));
@@ -136,15 +152,21 @@ public sealed class ContentLayoutStressTests
                 Assert.True(ContentLayoutEditing.SameState(a.Document, b.Document));
                 if (a.Accepted)
                 {
+                    if (!ContentLayoutEditing.SameState(document, a.Document))
+                    {
+                        semanticEdits++;
+                        if (edit.Kind is ContentLayoutEditKind.Move or ContentLayoutEditKind.Resize) geometryEdits++;
+                    }
                     history.Record(document, a.Document); document = a.Document;
                 }
                 else
                 {
+                    rejectedEdits++;
                     Assert.Same(document, a.Document); Assert.Equal(beforeJson, ContentLayoutPolicy.Serialize(document));
                 }
             }
         }
-        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(trace.ToString())));
+        return new(Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(trace.ToString()))), semanticEdits, rejectedEdits, geometryEdits);
     }
 
     private static ContentLayoutDocument Scene(int scene)
@@ -192,7 +214,12 @@ public sealed class ContentLayoutStressTests
         {
             var p = s.Items[i];
             Assert.True(p.Bounds.Width >= 48 && p.Bounds.Height >= 48);
-            Assert.InRange(p.Column, 0, 63); Assert.InRange(p.Row, 0, 65535);
+            bool vertical = s.FlowAxis == ContentFlowAxis.Vertical;
+            int cross = vertical ? p.Column : p.Row, main = vertical ? p.Row : p.Column;
+            int crossSpan = vertical ? p.ColumnSpan : p.RowSpan, mainSpan = vertical ? p.RowSpan : p.ColumnSpan;
+            Assert.InRange(cross, 0, ContentLayoutPolicy.MaximumColumns - 1);
+            Assert.InRange(main, 0, ContentLayoutPolicy.MaximumRow);
+            Assert.True(cross + crossSpan <= ContentLayoutPolicy.MaximumColumns && main + mainSpan <= ContentLayoutPolicy.MaximumRow + 1);
             Assert.True(p.Bounds.Right <= s.ExtentWidthDip + 1e-7 && p.Bounds.Bottom <= s.ExtentHeightDip + 1e-7);
             if (!p.Clip.IsEmpty)
             {
@@ -200,7 +227,7 @@ public sealed class ContentLayoutStressTests
                 Assert.Equal(p.ItemId, s.HitTest(p.Clip.X + p.Clip.Width / 2, p.Clip.Y + p.Clip.Height / 2)!.ItemId);
             }
             for (int j = i + 1; j < s.Items.Count; j++) Assert.False(p.Bounds.Intersects(s.Items[j].Bounds));
-            foreach (var blank in d.ReservedSpaces)
+            foreach (var blank in d.ReservedSpaces.Where(space => space.Kind == ContentReservedKind.Explicit))
             {
                 double pitch = s.CellDip + s.GapDip;
                 Assert.False(p.Bounds.Intersects(new(blank.Column * pitch, blank.Row * pitch, blank.ColumnSpan * pitch - s.GapDip, blank.RowSpan * pitch - s.GapDip)));

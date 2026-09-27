@@ -10,7 +10,7 @@ namespace DesktopUp;
 internal sealed partial class PosterVisualWindow
 {
     private Canvas? _contentCanvas;
-    private ContentLayoutDocument? _contentDocument, _contentDraft;
+    private ContentLayoutDocument? _contentDocument, _contentDraft, _contentDraftProjection;
     private string? _contentRaw, _contentOwner, _selectedContentItem;
     private bool _contentReadOnly;
     private bool _contentParseReadOnly, _contentProjectionFault;
@@ -21,6 +21,7 @@ internal sealed partial class PosterVisualWindow
     private double _contentScrollX;
     private readonly Dictionary<string, FrameworkElement> _contentCards = new(StringComparer.Ordinal);
     private string? _contentPaintKey;
+    private ContentLayoutDocument? _contentPaintDocument;
     private readonly DemoContentItemViewSource _contentSource = new();
 
     private ContentLayoutDocument ContentDocument
@@ -38,7 +39,7 @@ internal sealed partial class PosterVisualWindow
                 // Unknown raw bytes remain authoritative. Empty read-only fallback never overwrites them.
                 _contentDocument ??= ContentLayoutSamples.Equal(owner, 0);
                 ResetContentProposals(previous,_contentDocument);
-                _contentDraft = null; _solvedDocument = null;
+                _contentDraft = _contentDraftProjection = null; _solvedDocument = null;
                 if (_contentReadOnly) log.Write("warning", "content.layout_read_only", new { PosterId, error });
                 if (_selectedContentItem is { } selected && !_contentDocument.Placements.Any(p => p.ItemId == selected)) _selectedContentItem = null;
             }
@@ -64,17 +65,30 @@ internal sealed partial class PosterVisualWindow
         var viewport = ContentViewportFor(frame);
         if (ReferenceEquals(_solvedDocument, doc) && _contentViewport == viewport && _contentSnapshot is not null) return _contentSnapshot;
         bool geometryChanged = _contentProjectionFault || !ReferenceEquals(_solvedDocument, doc) || _contentViewport?.WidthDip != viewport.WidthDip ||
-            _contentViewport?.Scale != viewport.Scale || _contentViewport?.Spacing != viewport.Spacing;
-        var anchor = geometryChanged && !HasContentGesture ? _contentSnapshot?.Anchor() : null;
+            _contentViewport?.HeightDip != viewport.HeightDip ||
+            _contentViewport?.Scale != viewport.Scale || _contentViewport?.Spacing != viewport.Spacing ||
+            _contentViewport?.ThemeMetricsVersion != viewport.ThemeMetricsVersion;
         viewport = viewport with { Generation = checked(++_contentGeneration) };
         ContentLayoutSnapshot next;
         try
         {
+            var anchor = geometryChanged && !HasContentGesture && !_contentProjectionFault &&
+                _contentSnapshot is not null && _contentViewport is not null
+                ? ContentLayoutFlow.CaptureAnchor(_contentSnapshot, _contentViewport) : null;
             next = geometryChanged || _contentSnapshot is null
-                ? ContentLayoutSolver.Resolve(doc, viewport, anchor)
+                ? ContentLayoutSolver.Resolve(doc, viewport)
                 : ContentLayoutSolver.Reclip(_contentSnapshot, viewport);
-            if(_contentProjectionFault) _contentNotice=null;
-            _contentProjectionFault=false; _contentReadOnly=_contentParseReadOnly;
+            if (anchor is not null)
+            {
+                var restored = ContentLayoutFlow.RestoreAnchor(next, viewport, anchor);
+                next = ContentLayoutSolver.Reclip(next, viewport with { ScrollXDip = restored.ScrollXDip, ScrollYDip = restored.ScrollYDip });
+            }
+            if(_contentProjectionFault || _contentSnapshot?.IsLayoutReadOnly == true) _contentNotice=null;
+            _contentProjectionFault=false; _contentReadOnly=_contentParseReadOnly || next.IsLayoutReadOnly;
+            if (next.IsLayoutReadOnly)
+                _contentNotice = next.SpaceStatus == ContentLayoutSpaceStatus.LegacyConstraintConflict
+                    ? "旧布局约束超出当前内容空间，原配置已保留；暂不可编辑。"
+                    : "当前内容空间不足，卡片尺寸和原布局已保留；暂不可编辑。";
         }
         catch (ArgumentException error)
         {
@@ -107,11 +121,14 @@ internal sealed partial class PosterVisualWindow
         var doc = ContentDocument;
         if (_footer?.Children.OfType<TextBlock>().FirstOrDefault() is { } count) count.Text=$"{doc.Placements.Count} DEMO ITEMS";
         if (_metaPanel?.Children.OfType<TextBlock>().LastOrDefault() is { } metaCount) metaCount.Text=$"{doc.Placements.Count:00} DEMO ITEMS";
-        string paintKey = $"{doc.DocumentVersion}/{_mode}/{_selectedContentItem}/{_presentation}/{doc.ShowBaselineGrid}/{doc.ShowSpanLabels}";
-        if (_contentPaintKey != paintKey) { _contentCards.Clear(); _contentPaintKey = paintKey; }
+        // Lamp values update existing brushes and never invalidate card identity or solver geometry.
+        var cardPresentation = _presentation with { Parameters = _presentation.Parameters with { Lamp = null } };
+        string paintKey = $"{doc.DocumentVersion}/{_mode}/{_selectedContentItem}/{cardPresentation}/{doc.ShowBaselineGrid}/{doc.ShowSpanLabels}";
+        if (_contentPaintKey != paintKey || !ReferenceEquals(_contentPaintDocument, doc))
+        { _contentCards.Clear(); _contentPaintKey = paintKey; _contentPaintDocument = doc; }
         _contentCanvas.Children.Clear();
         double pitch = snapshot.CellDip + snapshot.GapDip;
-        if (IsEditing && doc.ShowBaselineGrid)
+        if (doc.ShowBaselineGrid)
         {
             double x0 = -(snapshot.ScrollXDip % pitch), y0 = -(snapshot.ScrollYDip % pitch);
             for (double x = x0; x <= viewport.WidthDip; x += pitch) _contentCanvas.Children.Add(new Line
@@ -139,6 +156,17 @@ internal sealed partial class PosterVisualWindow
             _contentCanvas.Children.Add(card);
         }
         foreach (string id in _contentCards.Keys.Where(id => !retained.Contains(id)).ToArray()) _contentCards.Remove(id);
+        if (_contentGesture is { IsDragging: true, CanEdit: true, Target: PosterInputTargetKind.ContentItem } gesture &&
+            source.TryGetValue(gesture.Slot.ItemId, out var dragged))
+        {
+            // One non-interactive transient copy follows the actual grabbed tile. The snapped
+            // layout below it is the candidate; this shadow never adds a member or hit region.
+            var shadow = CreateContentCard(dragged, gesture.Document.Placements[gesture.Slot.SourceIndex], gesture.Slot);
+            shadow.Opacity = .62;
+            Canvas.SetLeft(shadow, gesture.GhostX); Canvas.SetTop(shadow, gesture.GhostY);
+            _contentCanvas.Children.Add(shadow);
+        }
+        RenderContentFeedback();
         // No scrollbar chrome on either edge. Content stays reachable through the wheel, the drag-edge
         // auto-scroll and the clamped extent; hiding a bar is never used to make content unreachable.
         if (_contentReadOnly || doc.Placements.Count == 0)
@@ -147,6 +175,8 @@ internal sealed partial class PosterVisualWindow
 
     private FrameworkElement CreateContentCard(ContentItemView item, ContentPlacement placement, ContentResolvedPlacement slot)
     {
+        // Selection remains available for opening and direct dragging in daily use. Only the
+        // editing adornments depend on the mode; card bounds and content identity do not.
         bool selected = IsEditing && _selectedContentItem == item.ItemId;
         var cell = new Grid { Width=slot.Bounds.Width, Height=slot.Bounds.Height, IsHitTestVisible=false };
         double labelHeight = Math.Max(20, ContentParameters.LabelHeightDip+7);
@@ -174,11 +204,12 @@ internal sealed partial class PosterVisualWindow
         imageHost.Clip = new RectangleGeometry { Rect=new global::Windows.Foundation.Rect(0,0,Math.Max(0,slot.Bounds.Width-2),Math.Max(0,slot.Bounds.Height-labelHeight-2)) };
         var card = new Border { Background=Brush(228,22,24,29), BorderThickness=new Thickness(selected ? 2 : .8),
             BorderBrush=selected ? ColorBrush(_presentation.Parameters.Theme.Accent) : Brush(32,255,255,255), CornerRadius=new CornerRadius(5), Child=imageHost };
+        ApplyTemplateCardPaint(card, selected);
         cell.Children.Add(card);
         var name = new TextBlock { Text=item.Name, FontSize=ContentParameters.LabelFontSizeDip, MaxLines=1, TextTrimming=TextTrimming.CharacterEllipsis,
             VerticalAlignment=VerticalAlignment.Center, Foreground=ColorBrush(_presentation.Parameters.Theme.Foreground,210) };
         Grid.SetRow(name,1); cell.Children.Add(name);
-        if (IsEditing && ContentDocument.ShowSpanLabels)
+        if (ContentDocument.ShowSpanLabels)
         {
             var badge = new Border { Background=Brush(215,15,20,27), Padding=new Thickness(4,2,4,2), HorizontalAlignment=HorizontalAlignment.Left, VerticalAlignment=VerticalAlignment.Top,
                 Child=new TextBlock { Text=$"{slot.ColumnSpan} × {slot.RowSpan}" +
@@ -186,7 +217,20 @@ internal sealed partial class PosterVisualWindow
                     (placement.FixedPosition ? " · 固" : ""), FontSize=10, Foreground=Brush(255,235,240,246) }, IsHitTestVisible=false };
             cell.Children.Add(badge);
         }
-        if (selected)
+        if (ContentPinPresentationPolicy.Adornment(ContentDocument, placement) is var adornment && adornment != ContentPinAdornment.None)
+        {
+            var pinBounds = ContentPinPresentationPolicy.Bounds(new(0, 0, cell.Width, cell.Height));
+            var pin = new Border { Background=Brush(230,22,28,34), Width=pinBounds.Width, Height=pinBounds.Height,
+                Margin=new Thickness(0,pinBounds.Y,cell.Width-pinBounds.Right,0), CornerRadius=new CornerRadius(3),
+                HorizontalAlignment=HorizontalAlignment.Right, VerticalAlignment=VerticalAlignment.Top, IsHitTestVisible=false,
+                Child=new Viewbox { Width=14, Height=14, IsHitTestVisible=false,
+                    Child=new FontIcon { FontFamily=new FontFamily("Segoe Fluent Icons"), Glyph=adornment==ContentPinAdornment.LegacyLock?"\uE72E":"\uE718",
+                        Foreground=ColorBrush(_presentation.Parameters.Theme.Accent), IsHitTestVisible=false } } };
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(pin, adornment==ContentPinAdornment.LegacyLock
+                ? "旧硬位置，需兼容转换后才能解除" : $"顺序图钉，第 {placement.PinnedIndex} 位；右键图钉解除");
+            cell.Children.Add(pin);
+        }
+        if (selected && !_geometry.IsLocked && !_contentReadOnly)
         {
             var handle = new Border { Width=14, Height=14, Background=ColorBrush(_presentation.Parameters.Theme.Accent), CornerRadius=new CornerRadius(2),
                 HorizontalAlignment=HorizontalAlignment.Right, VerticalAlignment=VerticalAlignment.Bottom, IsHitTestVisible=false };
@@ -209,6 +253,7 @@ internal sealed partial class PosterVisualWindow
     {
         var snapshot = EnsureContentSnapshot(frame);
         DrawContentSnapshot(snapshot,_contentViewport!);
+        UpdateLampScene();
     }
     private void ScrollItems(int wheelDelta)
     {
@@ -216,29 +261,11 @@ internal sealed partial class PosterVisualWindow
         // One scroll axis, chosen by the poster. Shift never exposes a second axis, and a gesture in
         // progress is already rejected above, so the loop cannot run away under the user's hand.
         var flowSnapshot = EnsureContentSnapshot(_bounds);
-        // One notch moves exactly one grid step and the offset stays aligned to that step, so scrolling
-        // advances cell by cell instead of jumping by a fractional number of cards.
-        double step = Math.Max(1, flowSnapshot.CellDip + flowSnapshot.GapDip);
-        double delta = -wheelDelta / 120d * step;
-        // The axis decides which way the wheel scrolls; the independent LoopScroll switch decides only
-        // whether that axis wraps. With looping off the strip stays finite and simply stops at its end.
-        double loopPeriod = ContentLayoutFlow.LoopPeriodDip(flowSnapshot, _contentViewport!);
-        if (flowSnapshot.FlowAxis == ContentFlowAxis.HorizontalLoop)
-        {
-            double target = Math.Round(Math.Max(0, _contentScrollX + delta) / step) * step;
-            _contentScrollX = flowSnapshot.LoopScroll
-                ? ContentLayoutFlow.AdvanceScrollX(target, 0, loopPeriod) : target;
-        }
-        else if (flowSnapshot.LoopScroll)
-            _itemScrollOffsetDip = ContentLayoutFlow.AdvanceScrollY(
-                Math.Round(Math.Max(0, _itemScrollOffsetDip + delta) / step) * step, 0, loopPeriod);
-        else
-        {
-            // Vertical content only grows downward. A manual card that overflows the current width
-            // keeps its reach through the drag-edge auto-scroll and the clamped extent, not through a
-            // second wheel axis, so the retained horizontal offset is never reset here.
-            _itemScrollOffsetDip = Math.Round(Math.Max(0, _itemScrollOffsetDip + delta) / step) * step;
-        }
+        // One full notch remains one grid pitch. Signed and fractional input reaches the shared
+        // finite/loop policy before clamping, so the head can wrap backward and small deltas add up.
+        var offsets = ContentWheelScrollPolicy.Advance(flowSnapshot, _contentViewport!, wheelDelta);
+        _contentScrollX = offsets.ScrollXDip;
+        _itemScrollOffsetDip = offsets.ScrollYDip;
         UpdateItemScrollState(_bounds);
         _inputIsland.ApplyLayout(_bounds,BuildInputLayout(_bounds));
     }
@@ -271,6 +298,7 @@ internal sealed partial class PosterVisualWindow
     }
     private void ClearContentVisuals()
     {
+        ReleaseLampScene();
         CancelContentGesture("surface-release");
         ReleaseContentAssets();
         _contentCanvas=null; _contentCards.Clear(); _contentSnapshot=null; _contentViewport=null; _solvedDocument=null;

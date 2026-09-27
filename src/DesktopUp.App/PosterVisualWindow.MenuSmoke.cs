@@ -17,6 +17,8 @@ internal sealed partial class PosterVisualWindow
     internal void OpenForMenuSmoke() => ShowPosterMenu();
     internal void CloseForMenuSmoke() => _menuInteraction?.Cancel();
     internal DesktopMenuProbe? ReadMenuProbe() => _menuInteraction?.ReadProbe();
+    internal string[] ReadPosterMenuCommandsForProbe() => _posterMenu?.Items
+        .OfType<Microsoft.UI.Xaml.Controls.MenuFlyoutItem>().Select(item => item.Text).ToArray() ?? [];
     internal bool MenuInputRestored() => _inputIsland is not null &&
         !_inputIsland.IsNativeInputTransparent &&
         !DesktopMenuInteraction.BlocksInput(_inputIsland.WindowHandle) &&

@@ -83,7 +83,7 @@ public sealed partial class AutoPostureSettingsTests
         AddV7Layout(f); AddV7Layout(f, "B", receiptPrefix: "tray-create-");
         string receipts = Rows(f, "state_command_receipts"), profile = Rows(f, "poster_profile");
         var result = f.Store.Initialize(); Assert.True(result.Succeeded, result.Error);
-        Assert.Equal(11, result.Head!.SchemaVersion); Assert.Equal(5, result.Head.Revision);
+        Assert.Equal(12, result.Head!.SchemaVersion); Assert.Equal(5, result.Head.Revision);
         string backup = Path.Combine(f.Paths.Backups, result.PreMigrationBackupFileName!);
         // The migration validates its source schema before committing; public ValidateBackup expects current schema.
         Assert.Equal(7, f.Store.ValidateBackup(backup).SchemaVersion);

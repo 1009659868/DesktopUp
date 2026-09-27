@@ -36,7 +36,7 @@ public partial class App
         _spatialRuntime.ActivityChanged += ObserveAutoPosture;
         _spatialRuntime.ManualIntent += OnAutoManualIntent;
         _controlCenter!.RemovalInteractionChanged += ObserveAutoPosture;
-        _controlCenter.SettingsInteractionChanged += ObserveAutoPosture;
+        _controlCenter.SettingsInteractionChanged += OnCenterSettingsInteractionChanged;
     }
 
     private void OnTitleRearm(TitleAutoRearmSuppression suppression)
@@ -55,6 +55,12 @@ public partial class App
     }
 
     private void ObserveAutoPosture() => _autoPosture?.Observe();
+
+    private void OnCenterSettingsInteractionChanged()
+    {
+        _spatialRuntime?.NotifyCenterContentInteractionChanged();
+        ObserveAutoPosture();
+    }
 
     private AutoPostureSample ReadAutoPosture()
     {
@@ -128,7 +134,7 @@ public partial class App
             _spatialRuntime.TitleEnvironmentEpoch = null;
         }
         if (_controlCenter is not null) _controlCenter.RemovalInteractionChanged -= ObserveAutoPosture;
-        if (_controlCenter is not null) _controlCenter.SettingsInteractionChanged -= ObserveAutoPosture;
+        if (_controlCenter is not null) _controlCenter.SettingsInteractionChanged -= OnCenterSettingsInteractionChanged;
         _passivePointer = null;
     }
 }

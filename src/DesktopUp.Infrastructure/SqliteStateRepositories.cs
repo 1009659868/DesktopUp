@@ -488,6 +488,7 @@ public sealed class SqliteSettingsRepository(
                         SET dynamic_effects_paused = $dynamicEffectsPaused,
                             performance_mode = $performanceMode,
                             launch_at_startup_requested = $launchAtStartupRequested,
+                            center_theme = $centerTheme, template_catalog_json = $templateCatalog,
                             state_revision = $stateRevision,
                             entity_version = entity_version + 1,
                             updated_utc = $updatedUtc
@@ -503,6 +504,8 @@ public sealed class SqliteSettingsRepository(
                         "$launchAtStartupRequested",
                         settings.LaunchAtStartupRequested ? 1 : 0);
                     command.Parameters.AddWithValue("$stateRevision", committedRevision);
+                    command.Parameters.AddWithValue("$centerTheme", settings.CenterTheme);
+                    command.Parameters.AddWithValue("$templateCatalog", settings.TemplateCatalogJson);
                     command.Parameters.AddWithValue(
                         "$updatedUtc",
                         SqlitePosterRepository.TimestampNow());
@@ -586,7 +589,9 @@ public sealed class SqliteSettingsRepository(
                 launch_at_startup_requested,
                 state_revision,
                 updated_utc,
-                entity_version
+                entity_version,
+                center_theme,
+                template_catalog_json
             FROM app_settings
             WHERE singleton_id = 1;
             """;
@@ -598,7 +603,7 @@ public sealed class SqliteSettingsRepository(
         var settings = new DesktopUpSettings(
             reader.GetInt64(0) != 0,
             FromStorage(reader.GetString(1)),
-            reader.GetInt64(2) != 0);
+            reader.GetInt64(2) != 0) { CenterTheme = reader.GetString(6), TemplateCatalogJson = reader.GetString(7) };
         return new SettingsStateSnapshot(
             revision,
             reader.GetInt64(3),
@@ -614,12 +619,14 @@ public sealed class SqliteSettingsRepository(
         command.Transaction = transaction;
         command.CommandText = """
             UPDATE app_settings SET dynamic_effects_paused = $paused, performance_mode = $mode,
-                launch_at_startup_requested = $startup, state_revision = $revision,
+                launch_at_startup_requested = $startup, center_theme = $centerTheme, template_catalog_json = $templateCatalog, state_revision = $revision,
                 entity_version = entity_version + 1, updated_utc = $utc WHERE singleton_id = 1;
             """;
         command.Parameters.AddWithValue("$paused", settings.DynamicEffectsPaused ? 1 : 0);
         command.Parameters.AddWithValue("$mode", ToStorage(settings.PerformanceMode));
         command.Parameters.AddWithValue("$startup", settings.LaunchAtStartupRequested ? 1 : 0);
+        command.Parameters.AddWithValue("$centerTheme", settings.CenterTheme);
+        command.Parameters.AddWithValue("$templateCatalog", settings.TemplateCatalogJson);
         command.Parameters.AddWithValue("$revision", revision);
         command.Parameters.AddWithValue("$utc", SqlitePosterRepository.TimestampNow());
         if (command.ExecuteNonQuery() != 1) throw new InvalidDataException("Settings row missing.");

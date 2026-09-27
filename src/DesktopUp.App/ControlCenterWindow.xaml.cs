@@ -30,8 +30,20 @@ public sealed partial class ControlCenterWindow : Window
     internal void InitializeView()
     {
         InitializeComponent();
+        // Use the native caption once; the workspace does not draw a second application titlebar.
+        ExtendsContentIntoTitleBar = false;
+        Title = "DesktopUp · 控制中心";
+        // Closed notices must release their layout space as well as hide their content.
+        StateInfoBar.Visibility = Visibility.Collapsed;
+        StateInfoBar.RegisterPropertyChangedCallback(InfoBar.IsOpenProperty, (_, _) =>
+            StateInfoBar.Visibility = StateInfoBar.IsOpen ? Visibility.Visible : Visibility.Collapsed);
+        LocateNotice.Visibility = Visibility.Collapsed;
+        LocateNotice.RegisterPropertyChangedCallback(TextBlock.TextProperty, (_, _) =>
+            LocateNotice.Visibility = string.IsNullOrEmpty(LocateNotice.Text) ? Visibility.Collapsed : Visibility.Visible);
         InitializeEditing();
         InitializeSettings();
+        InitializeUiCSample();
+        InitializeTemplateParameters();
         AppWindow.Resize(new global::Windows.Graphics.SizeInt32(980, 640));
         AppWindow.IsShownInSwitchers = true;
         if (AppWindow.Presenter is OverlappedPresenter presenter)
@@ -51,8 +63,11 @@ public sealed partial class ControlCenterWindow : Window
     {
         if (_view?.SelectedPosterId != view.SelectedPosterId) CancelSettingsPreview();
         _view = view;
+        RefreshTemplateCatalog();
+        RenderCenterTheme();
         SynchronizeEditing(view);
         RenderSettings();
+        RenderUiCTemplateSummary();
         RenderContentLayout();
         QueueContentRefresh();
         _applyingView = true;
@@ -78,7 +93,7 @@ public sealed partial class ControlCenterWindow : Window
         SettingsProjection settings = view.Projection.Settings;
         SettingsDetailText.Text = $"动态效果：{(settings.Settings.DynamicEffectsPaused ? "已暂停" : "运行中")} · 性能模式：{settings.Settings.PerformanceMode}";
         PauseButton.Content = settings.Settings.DynamicEffectsPaused ? "恢复提示动效" : "暂停提示动效";
-        SettingsDetailText.Text += " · 当前仅空间不足提示；不暂停自动收展动画";
+        SettingsDetailText.Text += " · 场景装饰与提示；不改变自动收展设置";
         PauseButton.IsEnabled = true;
         RevisionText.Text = $"committed revision {view.Projection.Revision} · settings {settings.EntityVersion}";
         StateInfoBar.Severity = commandError is null ? InfoBarSeverity.Informational : InfoBarSeverity.Warning;
@@ -121,6 +136,8 @@ public sealed partial class ControlCenterWindow : Window
 
     private void Send(PosterStateCommandKind kind)
     {
+        if (_view?.SelectedPosterId is { } id && (HasPosterDraft(id) || DesktopInteractionConflicts(id)))
+        { CommonSettingsNotice.Text = "请先完成或取消当前海报操作。"; return; }
         if (_view?.CreatePosterCommand(kind, $"controlcenter-{kind}-{Guid.NewGuid():N}") is { } command)
             _posterCommand(command);
     }
@@ -132,6 +149,8 @@ public sealed partial class ControlCenterWindow : Window
 
     private void RemoveButton_Click(object sender, RoutedEventArgs args)
     {
+        if (_view?.SelectedPosterId is { } id && (HasPosterDraft(id) || DesktopInteractionConflicts(id)))
+        { CommonSettingsNotice.Text = "请先完成或取消当前海报操作。"; return; }
         if (_view?.SelectedPoster is { } target)
             _requestRemoval(new(target.Poster.PosterId, target.EntityVersion, StateCommandSource.ControlCenter));
     }
@@ -145,6 +164,7 @@ public sealed partial class ControlCenterWindow : Window
             Content = new ScrollViewer { MaxHeight = 360, Content = new TextBlock
                 { Text = ticket.Message, TextWrapping = TextWrapping.Wrap, IsTextSelectionEnabled = true } }
         };
+        ApplyPaperDialogStyle(dialog);
         _removalDialog = dialog;
         try { return await dialog.ShowAsync() == ContentDialogResult.Primary; }
         finally { if (ReferenceEquals(_removalDialog, dialog)) _removalDialog = null; }

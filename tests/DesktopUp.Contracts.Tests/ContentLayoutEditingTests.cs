@@ -10,17 +10,16 @@ public sealed class ContentLayoutEditingTests
     private static ContentLayoutDocument Manual(int count=3) => Edit(Doc(count),new(ContentLayoutEditKind.Mode){Mode=ContentLayoutMode.Manual});
 
     [Fact]
-    public void Dragging_pins_the_card_instead_of_requiring_manual_mode()
+    public void Automatic_drag_pins_only_the_final_read_position_without_changing_mode_or_hard_geometry()
     {
-        // Interaction revision: the drag gesture is itself the intent to pin. One card receives a
-        // position override and the poster moves to anchored+automatic; every other card keeps its
-        // automatic/heat ordering because full manual takeover is never a prerequisite.
-        var d=Doc(); var r=ContentLayoutEditing.Apply(d,new(ContentLayoutEditKind.Move,d.Placements[0].ItemId){Column=0,Row=4},View());
+        // DEC-018/019: the selected card receives an order pin, while other automatic authors remain intact.
+        var d=Doc(); var r=ContentLayoutEditing.Apply(d,new(ContentLayoutEditKind.Move,d.Placements[0].ItemId){TargetReadOrder=1},View());
         Assert.True(r.Accepted,r.Error);
         var moved=r.Document.Placements.Single(p=>p.ItemId==d.Placements[0].ItemId);
-        Assert.True(moved.FixedPosition); Assert.Equal(4,moved.Row);
-        Assert.Equal(ContentLayoutMode.Anchored,r.Document.Mode);
-        Assert.False(r.Document.Placements[1].FixedPosition);
+        Assert.Equal(2,moved.PinnedIndex); Assert.False(moved.FixedPosition); Assert.Null(moved.Column); Assert.Null(moved.Row);
+        Assert.Equal(ContentLayoutMode.Automatic,r.Document.Mode);
+        Assert.Equal(d.Placements.Skip(1),r.Document.Placements.Skip(1));
+        Assert.Equal(moved.ItemId,ContentLayoutSolver.Resolve(r.Document,View()).Items[1].ItemId);
         Safe(ContentLayoutSolver.Resolve(r.Document,View()));
     }
 
@@ -43,13 +42,31 @@ public sealed class ContentLayoutEditingTests
     }
 
     [Fact]
-    public void Fixed_obstacle_rejects_whole_edit_and_is_independent_of_size_override()
+    public void Compatible_legacy_hard_obstacle_rejects_manual_collision_and_survives_independent_automatic_size_restore()
     {
-        var d=Manual(); d=Edit(d,new(ContentLayoutEditKind.Fixed,d.Placements[1].ItemId){Enabled=true});
+        var automatic=Doc(3) with {SchemaVersion=2,Mode=ContentLayoutMode.Anchored};
+        automatic=automatic with {Placements=automatic.Placements.Select((p,i)=>i==1
+            ?p with {Column=4,Row=0,FixedPosition=true}:p).ToArray()};
+        var d=Edit(automatic,new(ContentLayoutEditKind.Mode){Mode=ContentLayoutMode.Manual});
         var rejected=ContentLayoutEditing.Apply(d,new(ContentLayoutEditKind.Move,d.Placements[0].ItemId){Column=4,Row=0},View());
         Assert.False(rejected.Accepted); Assert.Same(d,rejected.Document);
-        d=Edit(d,new(ContentLayoutEditKind.SizeOverride,d.Placements[1].ItemId){Enabled=false});
-        Assert.True(d.Placements[1].FixedPosition); Assert.False(d.Placements[1].ManualSize);
+        var resized=Edit(automatic,new(ContentLayoutEditKind.Resize,automatic.Placements[1].ItemId){ColumnSpan=6,RowSpan=4});
+        var restored=Edit(resized,new(ContentLayoutEditKind.SizeOverride,resized.Placements[1].ItemId){Enabled=false});
+        Assert.True(restored.Placements[1].FixedPosition); Assert.False(restored.Placements[1].ManualSize);
+        Assert.Equal(4,restored.Placements[1].Column); Assert.Equal(0,restored.Placements[1].Row);
+        Assert.Equal(automatic.Placements[1].ColumnSpan,restored.Placements[1].ColumnSpan);
+    }
+
+    [Fact]
+    public void New_hard_position_creation_and_legacy_hard_position_release_require_an_explicit_conversion_contract()
+    {
+        var automatic=Doc(1);
+        var creation=ContentLayoutEditing.Apply(automatic,new(ContentLayoutEditKind.Fixed,automatic.Placements[0].ItemId){Enabled=true},View());
+        Assert.False(creation.Accepted); Assert.Same(automatic,creation.Document);
+        var legacy=automatic with {SchemaVersion=2,Mode=ContentLayoutMode.Anchored,
+            Placements=[automatic.Placements[0] with {Column=0,Row=0,FixedPosition=true}]};
+        var release=ContentLayoutEditing.Apply(legacy,new(ContentLayoutEditKind.Fixed,legacy.Placements[0].ItemId){Enabled=false},View());
+        Assert.False(release.Accepted); Assert.Same(legacy,release.Document);
     }
 
     [Theory]
@@ -71,40 +88,60 @@ public sealed class ContentLayoutEditingTests
     }
 
     [Fact]
-    public void Manual_exit_without_choice_is_rejected()
+    public void Legacy_manual_without_saved_automatic_intent_cannot_invent_exit_A()
     {
-        var d=Manual(); var r=ContentLayoutEditing.Apply(d,new(ContentLayoutEditKind.Mode){Mode=ContentLayoutMode.Automatic},View());
+        var d=Manual();
+        d=d with {SchemaVersion=2,SavedAutomaticMode=null,Placements=d.Placements.Select(p=>p with {SavedAutomaticState=null}).ToArray()};
+        var r=ContentLayoutEditing.Apply(d,new(ContentLayoutEditKind.Mode){Mode=ContentLayoutMode.Automatic},View());
         Assert.False(r.Accepted); Assert.Same(d,r.Document);
     }
 
     [Theory]
-    [InlineData(ManualLayoutExit.KeepOrder,ContentLayoutMode.Automatic,true)]
-    [InlineData(ManualLayoutExit.ConvertToAnchors,ContentLayoutMode.Anchored,true)]
-    [InlineData(ManualLayoutExit.RestoreAutomatic,ContentLayoutMode.Automatic,false)]
-    public void Three_exit_choices_are_distinct_and_all_leave_manual(ManualLayoutExit exit,ContentLayoutMode mode,bool size)
+    [InlineData(ManualLayoutExit.KeepOrder)]
+    [InlineData(ManualLayoutExit.ConvertToAnchors)]
+    [InlineData(ManualLayoutExit.RestoreAutomatic)]
+    public void Legacy_exit_strategies_are_rejected_without_erasing_manual_or_return_intent(ManualLayoutExit exit)
     {
         var d=Manual(); d=Edit(d,new(ContentLayoutEditKind.Resize,d.Placements[0].ItemId){ColumnSpan=6,RowSpan=6});
-        var after=Edit(d,new(ContentLayoutEditKind.Mode){Mode=ContentLayoutMode.Automatic,ManualExit=exit});
-        Assert.Equal(mode,after.Mode); Assert.All(after.Placements,p=>{Assert.Null(p.Column);Assert.Null(p.Row);Assert.False(p.FixedPosition);Assert.Equal(size,p.ManualSize);});
-        Assert.Equal(size?6:4,after.Placements[0].ColumnSpan);
-        Assert.Equal(exit==ManualLayoutExit.ConvertToAnchors?1:null,after.Placements[0].PinnedIndex);
+        var after=ContentLayoutEditing.Apply(d,new(ContentLayoutEditKind.Mode){Mode=ContentLayoutMode.Automatic,ManualExit=exit},View());
+        Assert.False(after.Accepted); Assert.Same(d,after.Document);
+        Assert.Equal(ContentLayoutMode.Manual,after.Document.Mode);
+        Assert.Equal(6,after.Document.Placements[0].ColumnSpan);
+        Assert.All(after.Document.Placements,p=>Assert.NotNull(p.SavedAutomaticState));
     }
 
     [Fact]
-    public void Releasing_size_override_restores_neutral_span_then_heat_can_resize()
+    public void Exit_A_restores_saved_automatic_pin_and_size_instead_of_carrying_manual_changes()
     {
-        var d=Doc(1); d=Edit(d,new(ContentLayoutEditKind.Resize,d.Placements[0].ItemId){ColumnSpan=8,RowSpan=6});
+        var automatic=Edit(Doc(3),new(ContentLayoutEditKind.Pinned,Doc(3).Placements[0].ItemId){Enabled=true,PinnedIndex=1});
+        automatic=Edit(automatic,new(ContentLayoutEditKind.Resize,automatic.Placements[0].ItemId){ColumnSpan=5,RowSpan=4});
+        var manual=Edit(automatic,new(ContentLayoutEditKind.Mode){Mode=ContentLayoutMode.Manual});
+        manual=Edit(manual,new(ContentLayoutEditKind.Resize,manual.Placements[0].ItemId){ColumnSpan=6,RowSpan=6});
+        var after=Edit(manual,new(ContentLayoutEditKind.Mode){Mode=ContentLayoutMode.Automatic});
+        Assert.Equal(ContentLayoutMode.Automatic,after.Mode); Assert.Null(after.SavedAutomaticMode);
+        Assert.Equal(5,after.Placements[0].ColumnSpan); Assert.Equal(4,after.Placements[0].RowSpan);
+        Assert.Equal(1,after.Placements[0].PinnedIndex); Assert.True(after.Placements[0].ManualSize);
+        Assert.Equal(automatic.Placements[0].AutomaticSizeBasis,after.Placements[0].AutomaticSizeBasis);
+        Assert.All(after.Placements,p=>{Assert.Null(p.Column);Assert.Null(p.Row);Assert.False(p.FixedPosition);Assert.Null(p.SavedAutomaticState);});
+    }
+
+    [Fact]
+    public void Releasing_size_override_restores_original_author_basis_then_heat_can_resize()
+    {
+        var d=Doc(1) with {AllowHeatDrivenSize=true}; d=d with {Placements=[d.Placements[0] with {ColumnSpan=3,RowSpan=2}]};
+        d=Edit(d,new(ContentLayoutEditKind.Resize,d.Placements[0].ItemId){ColumnSpan=8,RowSpan=6});
         d=Edit(d,new(ContentLayoutEditKind.SizeOverride,d.Placements[0].ItemId){Enabled=false});
-        Assert.Equal(4,d.Placements[0].ColumnSpan); Assert.Equal(4,d.Placements[0].RowSpan); Assert.False(d.Placements[0].ManualSize);
+        Assert.Equal(3,d.Placements[0].ColumnSpan); Assert.Equal(2,d.Placements[0].RowSpan); Assert.False(d.Placements[0].ManualSize);
+        Assert.Null(d.Placements[0].AutomaticSizeBasis);
         var p=new ContentHeatProposal("A",1,1,[new(d.Placements[0].ItemId,0,1.5)]);
-        Assert.Equal(6,ContentLayoutProposals.ResolveHeat(d,p).Document.Placements[0].ColumnSpan);
+        Assert.Equal(5,ContentLayoutProposals.ResolveHeat(d,p).Document.Placements[0].ColumnSpan);
     }
 
     [Theory]
     [InlineData("foreign")] [InlineData("span")] [InlineData("row")] [InlineData("no-pin-slot")] [InlineData("missing-value")]
     public void Invalid_edits_never_partially_change_document(string kind)
     {
-        var d=Manual(); string id=d.Placements[0].ItemId;
+        var d=kind=="no-pin-slot"?Doc(3):Manual(); string id=d.Placements[0].ItemId;
         var edit=kind switch {
             "foreign"=>new ContentLayoutEdit(ContentLayoutEditKind.Resize,"B:x"){ColumnSpan=2,RowSpan=2},
             "span"=>new(ContentLayoutEditKind.Resize,id){ColumnSpan=33,RowSpan=2},
@@ -134,12 +171,12 @@ public sealed class ContentLayoutEditingTests
     [Fact]
     public void History_waits_for_successful_cas_and_stale_confirmation_cannot_consume_entry()
     {
-        var before=Doc();var after=Edit(before,new(ContentLayoutEditKind.Guides){ShowBaselineGrid=false}); var h=new ContentLayoutHistory();h.Record(before,after);
+        var before=Doc();var after=Edit(before,new(ContentLayoutEditKind.Guides){ShowBaselineGrid=!before.ShowBaselineGrid}); var h=new ContentLayoutHistory();h.Record(before,after);
         var p=h.ProposeUndo(after)!;Assert.Equal(1,h.UndoCount);Assert.Equal(0,h.RedoCount);
         Assert.False(h.Confirm(p,after));h.CancelProposal();Assert.False(h.Confirm(p,p.Document));Assert.Equal(1,h.UndoCount);
-        Assert.Null(h.ProposeUndo(after with { ShowSpanLabels=false }));
+        Assert.Null(h.ProposeUndo(after with { ShowSpanLabels=!after.ShowSpanLabels }));
         p=h.ProposeUndo(after)!;Assert.True(h.Confirm(p,p.Document));Assert.Equal(0,h.UndoCount);Assert.Equal(1,h.RedoCount);
-        var changed=Edit(p.Document,new(ContentLayoutEditKind.Guides){ShowSpanLabels=false});h.Record(p.Document,changed);Assert.Equal(0,h.RedoCount);
+        var changed=Edit(p.Document,new(ContentLayoutEditKind.Guides){ShowSpanLabels=!p.Document.ShowSpanLabels});h.Record(p.Document,changed);Assert.Equal(0,h.RedoCount);
     }
 
     [Fact]

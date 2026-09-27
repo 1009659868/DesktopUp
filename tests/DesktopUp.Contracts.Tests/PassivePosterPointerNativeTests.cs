@@ -6,6 +6,72 @@ namespace DesktopUp.Contracts.Tests;
 
 public sealed class PassivePosterPointerNativeTests(Xunit.Abstractions.ITestOutputHelper output)
 {
+    [Theory]
+    [InlineData(0, 2u, true, false)]
+    [InlineData(0, 2u, false, false)]
+    [InlineData(1, 2u, true, true)]
+    [InlineData(255, 2u, true, true)]
+    [InlineData(0, 1u, true, true)] // Color-key alone does not prove transparency at this pixel.
+    [InlineData(0, 3u, true, false)]
+    [InlineData(1, 2u, false, true)] // Visible disabled overlays remain occluders.
+    public void Native_layered_opacity_controls_occlusion_without_a_process_or_class_allowlist(
+        int alpha, uint flags, bool enabled, bool expectedCover)
+    {
+        nint context = SetThreadDpiAwarenessContext(new(-4));
+        nint foreground = GetForegroundWindow();
+        int x = GetSystemMetrics(76) + GetSystemMetrics(78) + 320;
+        int y = GetSystemMetrics(77) + 160;
+        nint overlay = CreateWindowEx(0x08080080, "STATIC", "layered occlusion fixture",
+            0x80000000, x, y, 100, 100, 0, 0, 0, 0);
+        try
+        {
+            Assert.NotEqual(0, overlay);
+            Assert.True(SetLayeredWindowAttributes(overlay, 0, (byte)alpha, flags));
+            Assert.True(GetLayeredWindowAttributes(overlay, out _, out byte actualAlpha, out uint actualFlags));
+            Assert.Equal(flags, actualFlags);
+            if ((flags & 2) != 0) Assert.Equal(alpha, actualAlpha);
+            ShowWindow(overlay, 4); EnableWindow(overlay, enabled);
+            Assert.Equal(expectedCover, new NativeDesktopPointerPlatform().CoversPoint(overlay, new(x+20, y+20)));
+            Assert.True(GetLayeredWindowAttributes(overlay, out _, out byte afterAlpha, out uint afterFlags));
+            Assert.Equal(actualAlpha, afterAlpha); Assert.Equal(actualFlags, afterFlags);
+            if (!expectedCover)
+            {
+                Assert.True(SetLayeredWindowAttributes(overlay, 0, 255, 2));
+                Assert.True(new NativeDesktopPointerPlatform().CoversPoint(overlay, new(x+20, y+20)));
+                Assert.True(SetLayeredWindowAttributes(overlay, 0, 0, 2));
+                Assert.False(new NativeDesktopPointerPlatform().CoversPoint(overlay, new(x+20, y+20)));
+            }
+            Assert.Equal(foreground, GetForegroundWindow());
+        }
+        finally
+        {
+            if (overlay != 0) DestroyWindow(overlay);
+            if (context != 0) SetThreadDpiAwarenessContext(context);
+        }
+    }
+
+    [Fact]
+    public void Unavailable_layered_attributes_do_not_grant_an_occlusion_exception()
+    {
+        nint context = SetThreadDpiAwarenessContext(new(-4));
+        int x = GetSystemMetrics(76) + GetSystemMetrics(78) + 320;
+        int y = GetSystemMetrics(77) + 160;
+        nint overlay = CreateWindowEx(0x08080080, "STATIC", "unknown layered fixture",
+            0x80000000, x, y, 100, 100, 0, 0, 0, 0);
+        try
+        {
+            Assert.NotEqual(0, overlay); ShowWindow(overlay, 4);
+            // No SetLayeredWindowAttributes call: a failed read must not treat its zero outputs as opacity.
+            Assert.False(GetLayeredWindowAttributes(overlay, out _, out _, out _));
+            Assert.True(new NativeDesktopPointerPlatform().CoversPoint(overlay, new(x+20, y+20)));
+        }
+        finally
+        {
+            if (overlay != 0) DestroyWindow(overlay);
+            if (context != 0) SetThreadDpiAwarenessContext(context);
+        }
+    }
+
     [Fact]
     public void Real_offscreen_hwnds_preserve_input_shape_focus_bounds_and_order()
     {
@@ -98,6 +164,8 @@ public sealed class PassivePosterPointerNativeTests(Xunit.Abstractions.ITestOutp
     [DllImport("user32.dll")] private static extern bool ShowWindow(nint hwnd, int command);
     [DllImport("user32.dll")] private static extern bool EnableWindow(nint hwnd, bool enable);
     [DllImport("user32.dll")] private static extern bool IsWindowEnabled(nint hwnd);
+    [DllImport("user32.dll")] private static extern bool SetLayeredWindowAttributes(nint hwnd, uint colorKey, byte alpha, uint flags);
+    [DllImport("user32.dll")] private static extern bool GetLayeredWindowAttributes(nint hwnd, out uint colorKey, out byte alpha, out uint flags);
     [DllImport("user32.dll")] private static extern bool DestroyWindow(nint hwnd);
     [DllImport("user32.dll")] private static extern bool GetWindowRect(nint hwnd, out Rect rect);
     [DllImport("gdi32.dll")] private static extern nint CreateRectRgn(int left, int top, int right, int bottom);

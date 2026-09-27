@@ -26,7 +26,7 @@ public sealed partial class ControlCenterWindow
     internal void CancelCatalogForProbe() => _catalogDialog?.Hide();
     internal void EditFieldForProbe(bool style, string key, string text)
     {
-        SettingsTabs.SelectedIndex = 2;
+        ShowWorkspacePage(false); AdvancedSettings.IsExpanded = true;
         if (style) foreach (var expander in EditorSections.Children.OfType<Expander>()) expander.IsExpanded = true;
         Content.UpdateLayout();
         var field = (style ? _styleFields : _geometryFields)[key];
@@ -44,5 +44,5 @@ public sealed partial class ControlCenterWindow
             throw new InvalidOperationException("No Invoke provider: " + action);
         invoke.Invoke();
     }
-    internal void RevealEditorForProbe() { SettingsTabs.SelectedIndex = 2; _geometryApply.StartBringIntoView(new BringIntoViewOptions { AnimationDesired = false }); }
+    internal void RevealEditorForProbe() { ShowWorkspacePage(false); AdvancedSettings.IsExpanded = true; _geometryApply.StartBringIntoView(new BringIntoViewOptions { AnimationDesired = false }); }
 }

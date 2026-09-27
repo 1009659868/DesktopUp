@@ -6,8 +6,40 @@ using Microsoft.Data.Sqlite;
 
 namespace DesktopUp.Contracts.Tests;
 
-public sealed class ContentLayoutPersistenceTests
+public sealed partial class ContentLayoutPersistenceTests
 {
+    [Theory]
+    [InlineData(ContentFlowAxis.Vertical, false)]
+    [InlineData(ContentFlowAxis.HorizontalLoop, false)]
+    [InlineData(ContentFlowAxis.Vertical, true)]
+    [InlineData(ContentFlowAxis.HorizontalLoop, true)]
+    public void Read_only_canonical_projection_cannot_write_a_content_command(ContentFlowAxis axis, bool legacyOverflow)
+    {
+        using var f = new Fixture();
+        var before = f.Repository.Read();
+        var command = f.Edit();
+        var desired = command.DesiredDocument with { FlowAxis = axis, MaximumColumns = legacyOverflow ? 8 : 2 };
+        if (legacyOverflow)
+            desired = desired with
+            {
+                Placements = desired.Placements.Select((p, index) => index == 0 ? p with
+                {
+                    FixedPosition = true,
+                    Column = axis == ContentFlowAxis.Vertical ? 7 : 0,
+                    Row = axis == ContentFlowAxis.Vertical ? 0 : 7
+                } : p).ToArray()
+            };
+        var result = f.Coordinator.Execute(command with { DesiredDocument = desired });
+        Assert.Equal(StateCommandStatus.ValidationFailed, result.Status);
+        var after = f.Repository.Read();
+        Assert.Equal(before.Revision, after.Revision);
+        Assert.Equal(before.Catalog.Posters[0], after.Catalog.Posters[0]);
+        using var reopened = new SqliteStateStore(f.Paths);
+        Assert.True(reopened.Initialize().Succeeded);
+        Assert.Equal(before.Catalog.Posters[0].Poster.ContentLayoutJson,
+            new SqlitePosterRepository(reopened).Read("A")!.Poster.ContentLayoutJson);
+    }
+
     [Fact]
     public void Legacy_null_reads_are_virtual_stable_and_do_not_write_or_change_old_fingerprint()
     {
@@ -155,9 +187,9 @@ public sealed class ContentLayoutPersistenceTests
         using var f = new Fixture(); var before = f.Repository.Read();
         // Rolling back to v9 must clear every migration ledger row at or above the dropped version,
         // otherwise re-applying a later migration collides with the retained ledger entry.
-        f.Sql("ALTER TABLE posters DROP COLUMN content_layout_json; DELETE FROM schema_migrations WHERE version>=10; UPDATE state_head SET schema_version=9; PRAGMA user_version=9;");
+        f.Sql("ALTER TABLE posters DROP COLUMN content_layout_json; ALTER TABLE app_settings DROP COLUMN center_theme; ALTER TABLE app_settings DROP COLUMN template_catalog_json; DELETE FROM schema_migrations WHERE version>=10; UPDATE state_head SET schema_version=9; PRAGMA user_version=9;");
         using var migrated = new SqliteStateStore(f.Paths); var result = migrated.Initialize();
-        Assert.True(result.Succeeded, result.Error); Assert.Equal(9, result.PreviousSchemaVersion); Assert.Equal(11, result.Head!.SchemaVersion);
+        Assert.True(result.Succeeded, result.Error); Assert.Equal(9, result.PreviousSchemaVersion); Assert.Equal(12, result.Head!.SchemaVersion);
         Assert.Equal(before.Revision, result.Head.Revision);
         var row = new SqlitePosterRepository(migrated).Read("A")!;
         Assert.Equal(before.Catalog.Posters[0].Poster, row.Poster); Assert.Null(row.Poster.ContentLayoutJson);
@@ -184,8 +216,10 @@ public sealed class ContentLayoutPersistenceTests
         {
             var state = Repository.Read(); var entry = state.Catalog.Posters[0];
             Assert.True(ContentLayoutPolicy.TryRead(entry.Poster.ContentLayoutJson, "A", out var d, out _));
-            var desired = d! with { DocumentVersion = d.DocumentVersion + 1,
-                Placements = d.Placements.Select((p, i) => i == 0 ? p with { ColumnSpan = p.ColumnSpan + 1, Version = p.Version + 1 } : p).ToArray() };
+            var edit = ContentLayoutEditing.Apply(d!, new(ContentLayoutEditKind.Resize, d!.Placements[0].ItemId)
+                { ColumnSpan = d.Placements[0].ColumnSpan + 1, RowSpan = d.Placements[0].RowSpan }, new(1024, 1024));
+            Assert.True(edit.Accepted, edit.Error);
+            var desired = edit.Document;
             return new("content-edit", StateCommandSource.Poster, state.Revision, "A", StateReadSet.ForPoster("A", entry.EntityVersion),
                 d.DocumentVersion, d.ItemSetVersion, desired);
         }

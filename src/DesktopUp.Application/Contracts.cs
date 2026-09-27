@@ -101,6 +101,9 @@ public interface IDesktopLayerAttachment
     bool ApplyPreparedBoundsBatch(IReadOnlyDictionary<nint, DesktopPixelRect> bounds, DesktopFramePhase phase) =>
         phase == DesktopFramePhase.Regular && ApplyPreparedBoundsBatch(bounds);
     bool CompletePreparedVisualFrame(IReadOnlyCollection<nint> windows) => false;
+    // Only after native capacity and the new visible HRGN are installed. Clears the newly
+    // exposed native underlay without synchronously repainting XAML or touching input HWNDs.
+    bool ClearExposedVisualBackground(nint window, DesktopRoundedRegion previous, DesktopRoundedRegion current) => false;
     bool VerifyVisualSurface(nint window, DesktopPixelRect surface, DesktopPixelRect visible) => false;
     DesktopVisualSurfaceReadback InspectVisualSurface(nint window, DesktopPixelRect surface, DesktopPixelRect visible) =>
         new(false, "surface-inspection-unsupported");

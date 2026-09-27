@@ -47,7 +47,11 @@ public enum DesktopUpPerformanceMode
 public sealed record DesktopUpSettings(
     bool DynamicEffectsPaused,
     DesktopUpPerformanceMode PerformanceMode,
-    bool LaunchAtStartupRequested);
+    bool LaunchAtStartupRequested)
+{
+    public string CenterTheme { get; init; } = "light";
+    public string TemplateCatalogJson { get; init; } = "[]";
+}
 
 public static class AuthoritativeStateValidationPolicy
 {
@@ -103,6 +107,9 @@ public static class AuthoritativeStateValidationPolicy
     public static string? Validate(DesktopUpSettings settings)
     {
         ArgumentNullException.ThrowIfNull(settings);
+        if (settings.CenterTheme is not ("light" or "ink" or "blue" or "system")) return "Unknown control-center theme.";
+        try { TemplateRecipeCatalog.Read(settings.TemplateCatalogJson); }
+        catch (ArgumentException e) { return e.Message; }
         return Enum.IsDefined(settings.PerformanceMode)
             ? null
             : "Performance mode is invalid.";

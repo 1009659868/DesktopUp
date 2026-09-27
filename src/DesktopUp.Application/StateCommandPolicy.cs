@@ -29,6 +29,14 @@ internal static class StateCommandPolicy
             if (command.ReadSet is null || command.SpatialGesture is not null || command.SpatialPosture is not null)
                 return Invalid("Presentation edit requires entity CAS and cannot contain a spatial gesture.");
             if (PosterPresentationPolicy.ValidateEdit(current, command.DesiredState) is { } error) return Invalid(error);
+            var recipeInstances = PosterPresentationPolicy.Resolve(command.DesiredState).Parameters.RecipeInstances;
+            if (recipeInstances is not null)
+            {
+                var registered = TemplateRecipeCatalog.Read(state.Settings.Settings.TemplateCatalogJson).ToDictionary(r => r.Id, StringComparer.Ordinal);
+                if (recipeInstances.Values.Any(i => !registered.TryGetValue(i.Recipe.Id, out var r) ||
+                    TemplateRecipeCodec.Serialize(r) != TemplateRecipeCodec.Serialize(i.Recipe)))
+                    return Invalid("Recipe definition is not registered or does not match the catalog.");
+            }
             // Macro presentation changes must remain compatible with the independent authored grid.
             // Unknown documents stay exact read-only raw text; they are never guessed or rewritten here.
             if (ContentLayoutPolicy.TryRead(current.ContentLayoutJson, current.PosterId, out var content, out _))
@@ -81,6 +89,7 @@ internal static class StateCommandPolicy
         {
             SettingsStateCommandKind.SetDynamicEffectsPaused => current with { DynamicEffectsPaused = command.DesiredState.DynamicEffectsPaused },
             SettingsStateCommandKind.SetPerformanceMode => current with { PerformanceMode = command.DesiredState.PerformanceMode },
+            SettingsStateCommandKind.SetCenterTheme => current with { CenterTheme = command.DesiredState.CenterTheme },
             _ => current with { LaunchAtStartupRequested = command.DesiredState.LaunchAtStartupRequested }
         };
         if (allowed != command.DesiredState) return Invalid("The command changed unrelated settings.");

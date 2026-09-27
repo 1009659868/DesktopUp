@@ -40,15 +40,28 @@ internal sealed partial class PosterVisualWindow
         _locateLease?.Dispose(); _locateLease = null;
         if (_locateOutline is not null) _locateOutline.Visibility = Visibility.Collapsed;
     }
-    internal bool PreviewCenterPresentation(PosterSettingEdit edit)
+    internal string? ValidateCenterPresentation(PosterSettingEdit edit)
     {
         if (_disposed || _window is null || _activeCommandRequestId is not null || edit.Basis.EntityVersion != _posterEntityVersion ||
-            edit.PosterId != PosterId || _authoritativePoster?.IsVisible != true) return false;
-        var desired = edit.Command("visual-preview-only").DesiredState;
-        var next=PosterPresentationPolicy.Resolve(desired);
-        var preferences=next.Parameters.Preferences??new();
-        try { ContentLayoutCommandPolicy.ValidateAuthoring(ContentDocument,preferences.Scale,preferences.Spacing); }
-        catch(ArgumentException) {return false;}
+            edit.PosterId != PosterId) return "海报版本或宿主已变化，请重新开始这次调节。";
+        try
+        {
+            var next = PosterPresentationPolicy.Resolve(edit.Command("validate-preview-only").DesiredState);
+            if (edit.Setting is not (PosterSetting.Scale or PosterSetting.Spacing or PosterSetting.Content or PosterSetting.Template)) return null;
+            var preferences = next.Parameters.Preferences ?? new();
+            ContentLayoutCommandPolicy.ValidateAuthoring(ContentDocument, preferences.Scale, preferences.Spacing);
+            if (_authoritativePoster?.IsVisible == true && _monitor is not null && _bounds.IsUsable)
+                RequireWritableContentProjection(EffectiveContentDocument, ContentViewportFor(_bounds) with
+                    { Scale = preferences.Scale, Spacing = preferences.Spacing,
+                      HeightDip = Math.Max(0, ContentViewportFor(_bounds).HeightDip + _presentation.MetaHeightDip - next.MetaHeightDip) });
+            return null;
+        }
+        catch (ArgumentException error) { return error.Message; }
+    }
+    internal bool PreviewCenterPresentation(PosterSettingEdit edit)
+    {
+        if (ValidateCenterPresentation(edit) is not null || _authoritativePoster?.IsVisible != true) return false;
+        var next = PosterPresentationPolicy.Resolve(edit.Command("visual-preview-only").DesiredState);
         _centerPresentation = next;
         _centerPresentationVersion = _posterEntityVersion;
         ApplyPresentation(_centerPresentation);

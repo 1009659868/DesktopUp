@@ -24,6 +24,7 @@ internal interface IDesktopWindowApi
     bool ApplyPreparedBoundsBatch(IReadOnlyDictionary<nint, DesktopPixelRect> bounds) => false;
     bool ApplyPreparedBoundsBatch(IReadOnlyDictionary<nint, DesktopPixelRect> bounds, IReadOnlyDictionary<nint, uint> flags) => false;
     bool RequestFrameRedraw(nint windowHandle) => false;
+    bool ClearExposedBackground(nint window, DesktopRoundedRegion previous, DesktopRoundedRegion current) => false;
     bool VerifyVisualSurface(nint window, DesktopPixelRect surface, DesktopPixelRect visible) => false;
     DesktopVisualSurfaceReadback InspectVisualSurface(nint window, DesktopPixelRect surface, DesktopPixelRect visible) =>
         new(false, "surface-inspection-unsupported");
@@ -276,6 +277,18 @@ public sealed class DesktopLayerAttachment : IDesktopLayerAttachment
         }
     }
 
+    public bool ClearExposedVisualBackground(nint window, DesktopRoundedRegion previous, DesktopRoundedRegion current)
+    {
+        lock (_gate)
+        {
+            if ((!previous.IsEmpty && !previous.IsValid) || !current.IsValid ||
+                !_original.ContainsKey(window) || !_inputTransparentWindows.Contains(window) || !_windows.IsWindow(window)) return false;
+            // Equal local clips include ordinary desktop translation. Exact region subtraction
+            // in the native adapter also excludes shrink-only changes and handles corner growth.
+            return previous == current || _windows.ClearExposedBackground(window, previous, current);
+        }
+    }
+
     public bool VerifyVisualSurface(nint window, DesktopPixelRect surface, DesktopPixelRect visible)
         => InspectVisualSurface(window, surface, visible).Verified;
 
@@ -507,7 +520,37 @@ internal sealed class DesktopWindowNativeApi : IDesktopWindowApi
     }
 
     public bool RequestFrameRedraw(nint windowHandle) => RedrawWindow(windowHandle, 0, 0,
-        0x0001 /* INVALIDATE */ | 0x0080 /* ALLCHILDREN */ | 0x0100 /* UPDATENOW */);
+        // Surface preparation grows behind the old HRGN. TransparentTintBackdrop's GDI
+        // clear is clipped to that region, so newly revealed pixels also need WM_ERASEBKGND
+        // after the final HRGN is installed. Invalidating alone leaves a white native
+        // underlay visible through a translucent composition brush after collapse/expand.
+        0x0001 /* INVALIDATE */ | 0x0004 /* ERASE */ | 0x0080 /* ALLCHILDREN */ | 0x0100 /* UPDATENOW */);
+
+    public bool ClearExposedBackground(nint window, DesktopRoundedRegion previous, DesktopRoundedRegion current)
+    {
+        nint before = 0, after = 0, exposed = 0;
+        try
+        {
+            static nint Region(DesktopRoundedRegion value) => value.IsEmpty ? CreateRectRgn(0, 0, 0, 0) :
+                CreateRoundRectRgn(0, 0, checked(value.Width + 1), checked(value.Height + 1),
+                    checked(value.CornerRadius * 2), checked(value.CornerRadius * 2));
+            before = Region(previous); after = Region(current); exposed = CreateRectRgn(0, 0, 0, 0);
+            if (before == 0 || after == 0 || exposed == 0) return false;
+            int kind = CombineRgn(exposed, after, before, 4 /* RGN_DIFF */);
+            if (kind == 0) return false;
+            if (kind == 1 /* NULLREGION */) return true;
+            // The live HRGN is already installed. Erase synchronously before the next UI turn;
+            // leave WM_PAINT on its ordinary schedule and never invalidate XAML child HWNDs.
+            return RedrawWindow(window, 0, exposed,
+                0x0001 /* INVALIDATE */ | 0x0004 /* ERASE */ | 0x0040 /* NOCHILDREN */ | 0x0200 /* ERASENOW */);
+        }
+        finally
+        {
+            if (exposed != 0) _ = DeleteObject(exposed);
+            if (after != 0) _ = DeleteObject(after);
+            if (before != 0) _ = DeleteObject(before);
+        }
+    }
 
     public bool VerifyVisualSurface(nint window, DesktopPixelRect surface, DesktopPixelRect visible)
         => InspectVisualSurface(window, surface, visible).Verified;
@@ -545,6 +588,7 @@ internal sealed class DesktopWindowNativeApi : IDesktopWindowApi
     private static extern bool GetClientRect(nint window, out SurfaceRect rect);
     [DllImport("user32.dll")] private static extern int GetWindowRgn(nint window, nint region);
     [DllImport("gdi32.dll")] private static extern nint CreateRectRgn(int left, int top, int right, int bottom);
+    [DllImport("gdi32.dll")] private static extern int CombineRgn(nint result, nint first, nint second, int mode);
     [DllImport("gdi32.dll")] private static extern int GetRgnBox(nint region, out SurfaceRect rect);
 
     [DllImport("user32.dll", SetLastError = true)]

@@ -16,6 +16,7 @@ internal sealed partial class PosterSpatialRuntime
 
     public void BeginTitle(PosterVisualWindow owner, TitleNativeInputEventArgs input)
     {
+        if (owner.PosterId is { } id && HasCenterDraft(id)) return;
         if (_suspended || _title is not null || _owner is not null ||
             commands is not ITitleSpatialCommitter port || !owner.OwnsTitleCapture(input.Capture)) return;
         // A different source's group retains ownership. Never graft an unrelated animation

@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "posture": {
-    "maximumStepPixels": 12,
-    "frameIntervalMs": 16,
-    "durationMs": 240,
+    "maximumStepPixels": 4,
+    "frameIntervalMs": 8,
+    "durationMs": 160,
     "easing": "ease-in-out"
   }
 }

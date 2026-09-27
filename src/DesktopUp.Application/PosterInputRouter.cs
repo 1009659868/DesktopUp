@@ -68,14 +68,30 @@ public sealed class PosterInputRouter
             int x = screenX - s.Frame.X, y = screenY - s.Frame.Y;
             if (!PosterInputGeometry.InsideRoundedFrame(x, y, layout)) continue;
             foreach (var r in layout.Regions)
-                if (Contains(r.Bounds, x, y)) return new(key, layout.Revision, s.Frame, r);
+                if (PosterInputGeometry.CapturesPointer(r) && Contains(r.Bounds, x, y)) return new(key, layout.Revision, s.Frame, r);
         }
         return null;
     }
 
+    // A right-button release must retain the exact published region from its press. A new
+    // region for the same ItemId (including a different loop tile) is not the same intent.
+    // Native callers supply current physical ordering and independently reject occlusion.
+    // This does not acquire, end or replace any left-button capture.
+    public PosterContentContextRequest? ResolveContext(PosterInputHit press, PointerScreenPoint release,
+        IEnumerable<PosterInputSessionKey> frontToBack, PointerScreenPoint? pressScreenPoint = null)
+    {
+        var order = frontToBack.ToArray();
+        if (press.Region.Kind != PosterInputTargetKind.ContentItem ||
+            !PosterContentInputPolicy.HasValidIdentity(press.Region) ||
+            !IsCurrent(press.Session, press.LayoutRevision) ||
+            Resolve(release.X, release.Y, order) != press ||
+            (pressScreenPoint is { } start && Resolve(start.X, start.Y, order) != press)) return null;
+        return new(press, release) { PressScreenPoint = pressScreenPoint };
+    }
+
     public PosterInputCapture? Begin(PosterInputHit hit)
     {
-        if (Capture is not null || !IsCurrent(hit.Session, hit.LayoutRevision) ||
+        if (Capture is not null || !PosterInputGeometry.CapturesPointer(hit.Region) || !IsCurrent(hit.Session, hit.LayoutRevision) ||
             _surfaces[hit.Session.PosterId].Frame != hit.Frame ||
             !_surfaces[hit.Session.PosterId].Layout!.Regions.Contains(hit.Region)) return null;
         return Capture = new(Guid.NewGuid(), hit);
@@ -108,6 +124,10 @@ public sealed record PosterInputSurfaceSnapshot(PosterInputSessionKey Session, D
 // Shared by active routing and passive observation. No second set of title/edge constants.
 public static class PosterInputGeometry
 {
+    // A viewport describes scrolling/observation geometry, not a mouse-receiving surface.
+    // The native HRGN and button router must apply the same sparse region policy.
+    public static bool CapturesPointer(PosterInputRegion region) => region.Kind != PosterInputTargetKind.ContentViewport;
+
     public static bool Contains(PosterInputSurfaceSnapshot surface, PointerScreenPoint point) =>
         InsideRoundedFrame(point.X - surface.Frame.X, point.Y - surface.Frame.Y, surface.Layout);
 
@@ -117,7 +137,7 @@ public static class PosterInputGeometry
         int x = point.X - surface.Frame.X, y = point.Y - surface.Frame.Y;
         // Same ordered regions as actual routing; buttons and resize edges precede TitleBar.
         foreach (var region in surface.Layout.Regions)
-            if (x >= region.Bounds.X && y >= region.Bounds.Y && x < region.Bounds.Right && y < region.Bounds.Bottom)
+            if (CapturesPointer(region) && x >= region.Bounds.X && y >= region.Bounds.Y && x < region.Bounds.Right && y < region.Bounds.Bottom)
                 return region.Kind == PosterInputTargetKind.TitleBar;
         return false;
     }

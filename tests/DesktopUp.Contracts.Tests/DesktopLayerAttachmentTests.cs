@@ -253,6 +253,54 @@ public sealed class DesktopLayerAttachmentTests
         Assert.False(attachment.CompletePreparedVisualFrame([100]));
     }
 
+    [Fact]
+    public void ExposedBackdropRejectsInputForeignAndDetachedWindowsBeforeCallingNative()
+    {
+        var windows = new FakeDesktopWindowApi();
+        var attachment = new DesktopLayerAttachment(windows, new FakeExplorerDesktopApi());
+        var before = new DesktopRoundedRegion(400, 60, 8);
+        var after = new DesktopRoundedRegion(400, 300, 8);
+        Assert.True(attachment.Attach(100, Host, inputTransparent: true).Succeeded);
+        Assert.True(attachment.Attach(101, Host).Succeeded);
+        Assert.False(attachment.ClearExposedVisualBackground(101, before, after));
+        Assert.False(attachment.ClearExposedVisualBackground(999, before, after));
+        Assert.True(attachment.Detach(100));
+        Assert.False(attachment.ClearExposedVisualBackground(100, before, after));
+        Assert.Empty(windows.BackgroundClears);
+    }
+
+    [Fact]
+    public void ExposedBackdropForwardsMixedResizeAndCornersAndPropagatesFailure()
+    {
+        var windows = new FakeDesktopWindowApi();
+        var attachment = new DesktopLayerAttachment(windows, new FakeExplorerDesktopApi());
+        Assert.True(attachment.Attach(100, Host, inputTransparent: true).Succeeded);
+        var before = new DesktopRoundedRegion(400, 600, 8);
+        var after = new DesktopRoundedRegion(500, 300, 4); // Less area, but new right/round-corner pixels.
+        Assert.True(attachment.ClearExposedVisualBackground(100, before, after));
+        Assert.Equal((new nint(100), before, after), Assert.Single(windows.BackgroundClears));
+        windows.FailRedraw = true;
+        Assert.False(attachment.ClearExposedVisualBackground(100, after, before));
+        Assert.Empty(windows.Redrawn); // No full synchronous XAML repaint.
+    }
+
+    [Fact]
+    public void ExposedBackdropSkipsTranslationAndRejectsMalformedClips()
+    {
+        var windows = new FakeDesktopWindowApi();
+        var attachment = new DesktopLayerAttachment(windows, new FakeExplorerDesktopApi());
+        Assert.True(attachment.Attach(100, Host, inputTransparent: true).Succeeded);
+        var clip = new DesktopRoundedRegion(400, 600, 8);
+        Assert.True(attachment.ClearExposedVisualBackground(100, clip, clip));
+        Assert.False(attachment.ClearExposedVisualBackground(100, clip, new(0, 600, 8)));
+        Assert.False(attachment.ClearExposedVisualBackground(100, new(-1, 20, 0), clip));
+        Assert.False(attachment.ClearExposedVisualBackground(100, clip, new(int.MaxValue, 600, 0)));
+        Assert.False(attachment.ClearExposedVisualBackground(100, clip, new(10, 20, 6)));
+        Assert.Empty(windows.BackgroundClears);
+        Assert.True(attachment.ClearExposedVisualBackground(100, default, clip));
+        Assert.Single(windows.BackgroundClears);
+    }
+
     private sealed class FakeExplorerDesktopApi : IExplorerDesktopApi
     {
         public bool Valid { get; set; } = true;
@@ -284,6 +332,9 @@ public sealed class DesktopLayerAttachmentTests
         public bool FailRedraw { get; set; }
         public IReadOnlyDictionary<nint, uint>? LastBatchFlags { get; private set; }
         public List<nint> Redrawn { get; } = [];
+        public List<(nint Window, DesktopRoundedRegion Previous, DesktopRoundedRegion Current)> BackgroundClears { get; } = [];
+        public bool ClearExposedBackground(nint window, DesktopRoundedRegion previous, DesktopRoundedRegion current)
+        { BackgroundClears.Add((window, previous, current)); return !FailRedraw; }
         public bool ApplyPreparedBoundsBatch(IReadOnlyDictionary<nint, DesktopPixelRect> bounds, IReadOnlyDictionary<nint, uint> flags)
         { LastBatchFlags = flags; BatchCount++; return !FailBatch; }
         public bool RequestFrameRedraw(nint windowHandle) { Redrawn.Add(windowHandle); return !FailRedraw; }

@@ -5,17 +5,22 @@ namespace DesktopUp;
 
 // Physical readback/gesture lease only. Committed state remains in StateProjectionCoordinator.
 internal sealed partial class PosterSpatialRuntime(IStateProjectionCoordinator state, IStateCommandService commands, IStructuredLog log,
-    PosterAnimationOptions animationOptions, Func<bool>? globallyHidden = null) : ITitleRuntimeReadback
+    PosterAnimationOptions animationOptions, Func<bool>? globallyHidden = null, Func<string, bool>? hasCenterDraft = null,
+    Func<string, long, long, bool>? ownsCenterContentDraft = null) : ITitleRuntimeReadback
 {
     private readonly Dictionary<string, PosterVisualWindow> _windows = new(StringComparer.Ordinal);
     private readonly Guid _runtimeId = Guid.NewGuid();
     private PosterVisualWindow? _owner;
     private SpatialGestureSession? _gesture;
     private bool _suspended = true;
+    internal bool HasCenterDraft(string id) => hasCenterDraft?.Invoke(id) == true;
+    internal bool OwnsCenterContentDraft(string id, long entityVersion, long documentVersion) =>
+        ownsCenterContentDraft?.Invoke(id, entityVersion, documentVersion) == true;
     public bool TryGetProjection(out DesktopUpProjection? projection) => state.TryGetCurrent(out projection);
     public void Register(PosterVisualWindow window)
     {
         _windows[window.PosterId!] = window;
+        RefreshLampMotionSurfaces();
         ActivityChanged?.Invoke();
     }
     public void Remove(PosterVisualWindow window)
@@ -37,9 +42,10 @@ internal sealed partial class PosterSpatialRuntime(IStateProjectionCoordinator s
         _owner?.CancelSpatialGesture("environment-invalidated");
         foreach (var window in _windows.Values.ToArray()) window.SuspendInput();
     }
-    public void Resume() { _suspended = false; ActivityChanged?.Invoke(); }
+    public void Resume() { _suspended = false; RefreshLampMotionSurfaces(); ActivityChanged?.Invoke(); }
     public void OnProjection(StateProjectionChangedEventArgs change)
     {
+        RefreshLampMotionSurfaces();
         _effective.RemoveMissing(change.Projection);
         if (_title is { } title && title.Session.Intent.Token.OperationId != change.RequestId &&
             !TitleReadsCurrent(title.Reads, change.Projection)) CancelTitle("catalog-or-entity-changed");
@@ -53,6 +59,7 @@ internal sealed partial class PosterSpatialRuntime(IStateProjectionCoordinator s
     public SpatialGestureSession? Begin(PosterVisualWindow owner, DesktopPixelRect pressFrame,
         PosterGestureKind kind, PosterOperatingMode mode, int minWidth, int minHeight)
     {
+        if (owner.PosterId is { } targetId && HasCenterDraft(targetId)) return null;
         BeforeManualIntent(owner.PosterId!);
         if (_title is not null || _posture is not null || _owner is not null && !ReferenceEquals(_owner, owner)) return null;
         if (!TrySnapshot(owner, out var snapshot, out var projection) ||

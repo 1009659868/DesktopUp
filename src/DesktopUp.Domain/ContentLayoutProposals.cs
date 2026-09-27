@@ -48,8 +48,9 @@ public static class ContentLayoutProposals
             tiers[p.ItemId] = tier;
             if (authorIntent.Mode == ContentLayoutMode.Manual) return p;
             int Scale(int span) => Math.Clamp((int)Math.Round(span * TierScales[tier], MidpointRounding.AwayFromZero), 1, ContentLayoutPolicy.MaximumSpan);
-            return p with { Order = h.Rank, ColumnSpan = p.ManualSize ? p.ColumnSpan : Scale(p.ColumnSpan),
-                RowSpan = p.ManualSize ? p.RowSpan : Scale(p.RowSpan) };
+            bool resize = authorIntent.AllowHeatDrivenSize && !p.ManualSize;
+            return p with { Order = h.Rank, ColumnSpan = resize ? Scale(p.ColumnSpan) : p.ColumnSpan,
+                RowSpan = resize ? Scale(p.RowSpan) : p.RowSpan };
         }).ToArray();
         // Always re-derive from AUTHOR intent; passing the previous effective document would compound heat.
         return new(ContentLayoutPolicy.Freeze(authorIntent with { Placements = placements }), proposal.Version,

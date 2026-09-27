@@ -15,7 +15,7 @@ public sealed partial class ControlCenterWindow
 {
     internal bool SettingsControlsEnabledForProbe => AutoPostureSwitch.IsEnabled && AutoPostureDelay.IsEnabled;
     internal bool AppearanceControlsEnabledForProbe => _template.IsEnabled && ScaleSlider.IsEnabled && SpacingSlider.IsEnabled;
-    internal void TemplateForProbe(string key) => _template.SelectedItem = key;
+    internal void TemplateForProbe(string key) => SelectTemplateKey(key);
     internal void SpacingForProbe(double value) { _settingsHeld = true; SpacingSlider.Value = value; }
     internal object PresetDiagnosticsForProbe() => new { scaleMinimum = ScaleSlider.Minimum, scaleMaximum = ScaleSlider.Maximum,
         scaleValue = ScaleSlider.Value, spacingMinimum = SpacingSlider.Minimum, spacingValue = SpacingSlider.Value };
@@ -26,8 +26,8 @@ public sealed partial class ControlCenterWindow
     internal void FinishSettingsForProbe() { _settingsHeld = false; FinishSettings(); }
     internal void DelayForProbe(double value) => AutoPostureDelay.Value = value;
     internal void ToggleForProbe(bool value) => AutoPostureSwitch.IsOn = value;
-    internal void RevealSettingsForProbe() => SettingsTabs.SelectedIndex = 0;
-    internal void RevealBehaviorForProbe() => SettingsTabs.SelectedIndex = 1;
+    internal void RevealSettingsForProbe() => ShowWorkspacePage(false);
+    internal void RevealBehaviorForProbe() => ShowWorkspacePage(true);
     internal void PresetForProbe(bool spacing, int index)
     {
         var marks = spacing ? _spacingMarks! : _scaleMarks!;

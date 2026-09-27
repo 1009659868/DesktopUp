@@ -88,6 +88,13 @@ internal sealed class NativeDesktopPointerPlatform : IDesktopPointerNative
     {
         if (!IsPresented(window) || !GetWindowRect(window, out var r) ||
             point.X < r.Left || point.Y < r.Top || point.X >= r.Right || point.Y >= r.Bottom) return false;
+        // Some overlays retain a full-screen visible HWND while their global alpha is zero.
+        // Only a successful, explicit whole-window opacity read proves there is no occlusion.
+        // Alpha=1, color-key-only and unknown/per-pixel attributes remain conservative blockers.
+        // Read on every sample so making the same overlay visible restores occlusion immediately.
+        if ((GetWindowLongPtrW(window, -20).ToInt64() & 0x00080000L) != 0 &&
+            GetLayeredWindowAttributes(window, out _, out byte alpha, out uint flags) &&
+            (flags & 0x00000002) != 0 && alpha == 0) return false;
         nint region = CreateRectRgn(0, 0, 0, 0);
         if (region == 0) return true; // unknown shape conservatively occludes
         try
@@ -126,6 +133,8 @@ internal sealed class NativeDesktopPointerPlatform : IDesktopPointerNative
     [DllImport("user32.dll")] private static extern bool IsWindowVisible(nint hwnd);
     [DllImport("user32.dll")] private static extern bool IsIconic(nint hwnd);
     [DllImport("user32.dll")] private static extern bool GetWindowRect(nint hwnd, out Rect rect);
+    [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW")] private static extern nint GetWindowLongPtrW(nint hwnd, int index);
+    [DllImport("user32.dll")] private static extern bool GetLayeredWindowAttributes(nint hwnd, out uint colorKey, out byte alpha, out uint flags);
     [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(nint hwnd, out uint process);
     [DllImport("user32.dll")] private static extern nint GetTopWindow(nint parent);
     [DllImport("user32.dll")] private static extern nint GetWindow(nint hwnd, uint command);

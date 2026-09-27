@@ -23,6 +23,8 @@ public sealed class PosterInputIslandManager : IInputRegionHost
     private const uint WmCancelMode = 0x001F;
     private const uint WmLButtonDown = 0x0201;
     private const uint WmLButtonUp = 0x0202;
+    private const uint WmRButtonDown = 0x0204;
+    private const uint WmRButtonUp = 0x0205;
     private const uint WmMouseMove = 0x0200;
     private const uint WmMouseLeave = 0x02A3;
     private const uint WmMouseWheel = 0x020A;
@@ -30,6 +32,8 @@ public sealed class PosterInputIslandManager : IInputRegionHost
     private const uint WmTimer = 0x0113;
     private const uint ContentEscapeTimerId = 0xD04;
     private const int VkEscape = 0x1B;
+    private const int VkLButton = 0x01;
+    private const int VkRButton = 0x02;
     private const int MaNoActivate = 3;
     private const int HtClient = 1;
     private const int RgnAnd = 1;
@@ -58,6 +62,10 @@ public sealed class PosterInputIslandManager : IInputRegionHost
     private readonly PosterInputRouter _router;
     private readonly PosterInputSessionKey _session;
     private readonly nint _visualHandle;
+    private readonly NativeDesktopPointerPlatform _contextNative = new();
+    private PosterInputHit? _contextPress;
+    private PointerScreenPoint? _contextPressPoint;
+    private DesktopShellHostSnapshot? _contextDesktopHost;
     private PosterInputCapture? _capture;
     private bool _routingSuspended;
     private PosterInputLayoutSnapshot? _layout;
@@ -99,6 +107,7 @@ public sealed class PosterInputIslandManager : IInputRegionHost
     public bool IsNativeInputTransparent => new NativeDesktopMenuPlatform().IsInputTransparent(WindowHandle);
 
     public event EventHandler<PosterInputEventArgs>? Input;
+    public event EventHandler<PosterContentContextEventArgs>? ContextRequested;
     public event EventHandler<TitleNativeInputEventArgs>? TitleInput;
     private bool _titleClaimed;
     private long _titleSequence;
@@ -119,7 +128,11 @@ public sealed class PosterInputIslandManager : IInputRegionHost
     }
 
     // Reuse the existing capture-cancel path for stale spatial/environment work.
-    public void CancelPointerGesture() => EndPointerGesture(cancelled: true);
+    public void CancelPointerGesture()
+    {
+        _contextPress = null; _contextPressPoint = null;
+        EndPointerGesture(cancelled: true);
+    }
 
     public void SuspendRouting()
     {
@@ -130,6 +143,7 @@ public sealed class PosterInputIslandManager : IInputRegionHost
 
     private void DisableRoutingNative()
     {
+        _contextPress = null; _contextPressPoint = null;
         _router.Invalidate(_session);
         _routingSuspended = true;
         if (_disposed || WindowHandle == 0) return;
@@ -208,6 +222,7 @@ public sealed class PosterInputIslandManager : IInputRegionHost
         }
 
         _desktopGeneration = desktopHost.Generation;
+        _contextDesktopHost = desktopHost;
         _windowLease = _ledger.Acquire(
             "window.poster-input-island",
             "desktop-owned-shaped-native-window");
@@ -288,6 +303,7 @@ public sealed class PosterInputIslandManager : IInputRegionHost
         if (result.Succeeded)
         {
             _desktopGeneration = desktopHost.Generation;
+            _contextDesktopHost = desktopHost;
         }
         return result.Succeeded;
     }
@@ -311,7 +327,11 @@ public sealed class PosterInputIslandManager : IInputRegionHost
         nint lParam)
     {
         MenuInputDiagnostics.Observe(windowHandle, message, lParam, "input-island");
-        if (message == WmMouseLeave) _trackingPointerLeave = false;
+        if (message == WmMouseLeave)
+        {
+            _trackingPointerLeave = false;
+            _contextPress = null; _contextPressPoint = null;
+        }
         if (message == WmMouseMove && !_trackingPointerLeave && _router.HasPointerObservers)
         {
             var tracking = new PointerLeaveTracking { Size = (uint)Marshal.SizeOf<PointerLeaveTracking>(), Flags = 2, Window = windowHandle };
@@ -334,9 +354,18 @@ public sealed class PosterInputIslandManager : IInputRegionHost
                 if (!DesktopMenuInteraction.PreserveSurfaceZOrder(windowHandle, lParam)) ConstrainZOrder(lParam);
                 break;
             case WmLButtonDown:
+                _contextPress = null; _contextPressPoint = null;
+                // A chord with the right button must not convert a context press into a drag.
+                if ((GetAsyncKeyState(VkRButton) & 0x8000) != 0) return 0;
                 BeginPointerGesture(lParam);
                 // Title arbitration precedes automatic observation of this capture.
                 _router.NotifyPointerActivity(_session, AppliedLayoutRevision);
+                return 0;
+            case WmRButtonDown:
+                BeginContentContext(lParam);
+                return 0;
+            case WmRButtonUp:
+                CompleteContentContext(lParam);
                 return 0;
             case WmMouseMove:
                 ContinuePointerGesture();
@@ -356,9 +385,11 @@ public sealed class PosterInputIslandManager : IInputRegionHost
                 }
                 break;
             case WmCancelMode:
+                _contextPress = null; _contextPressPoint = null;
                 EndPointerGesture(cancelled: true, cause: TitleNativeEndReason.CancelMode);
                 return 0;
             case WmCaptureChanged:
+                _contextPress = null; _contextPressPoint = null;
                 if (_pressedRegion is not null && GetCapture() != windowHandle)
                 {
                     EndPointerGesture(cancelled: true, releaseCapture: false, cause: TitleNativeEndReason.CaptureTransferred);
@@ -376,6 +407,7 @@ public sealed class PosterInputIslandManager : IInputRegionHost
                 PaintTransparentInputSurface(windowHandle);
                 return 0;
             case WmDestroy:
+                _contextPress = null; _contextPressPoint = null;
                 if (_contentClaimed) EndPointerGesture(cancelled: true, cause: TitleNativeEndReason.RouteInvalidated);
                 StopContentCaptureTimer();
                 _contentClaimed = false;
@@ -390,6 +422,67 @@ public sealed class PosterInputIslandManager : IInputRegionHost
         }
 
         return DefWindowProc(windowHandle, message, wParam, lParam);
+    }
+
+    private void BeginContentContext(nint messagePoint)
+    {
+        _contextPress = null; _contextPressPoint = null;
+        if (!TryReadContentContextHit(messagePoint, out var hit, out var point)) return;
+        _contextPress = hit;
+        _contextPressPoint = point;
+        if (!_trackingPointerLeave)
+        {
+            var tracking = new PointerLeaveTracking
+                { Size = (uint)Marshal.SizeOf<PointerLeaveTracking>(), Flags = 2, Window = WindowHandle };
+            _trackingPointerLeave = TrackMouseEvent(ref tracking);
+            if (!_trackingPointerLeave) { _contextPress = null; _contextPressPoint = null; }
+        }
+    }
+
+    private void CompleteContentContext(nint messagePoint)
+    {
+        var press = _contextPress;
+        var pressPoint = _contextPressPoint;
+        _contextPress = null; _contextPressPoint = null; // Consume once before any callback, including a re-entrant menu open.
+        if (press is null || !TryReadContentContextHit(messagePoint, out var release, out var point) || release != press ||
+            _router.ResolveContext(press, point, new[] { _session }, pressPoint) is not { } request) return;
+        ContextRequested?.Invoke(this, new(request));
+    }
+
+    private bool TryReadContentContextHit(nint messagePoint, out PosterInputHit? hit, out PointerScreenPoint point)
+    {
+        hit = null;
+        point = default;
+        // Context intent has no capture lease, timer, focus transfer or global listener. Check
+        // native capture as well as the router, including another foreground thread's capture.
+        if (_disposed || _routingSuspended || WindowHandle == 0 || _pressedRegion is not null ||
+            _capture is not null || _router.Capture is not null || GetCapture() != 0 ||
+            (GetAsyncKeyState(VkLButton) & 0x8000) != 0 ||
+            !_contextNative.TryReadProtection(out var protection) ||
+            (protection & (AutoPostureProtection.PointerCapture | AutoPostureProtection.Menu)) != 0 ||
+            !ContentContextMessagePoint.TryRead(WindowHandle, messagePoint, _frame, out point) ||
+            !_contextNative.TryReadCursor(out var currentPoint) || _contextNative.ReceiverRoot(currentPoint) != WindowHandle ||
+            _contextNative.ReceiverRoot(point) != WindowHandle ||
+            _contextDesktopHost is not { } host || !_attachment.IsAttached(WindowHandle, host) ||
+            !_contextNative.IsDesktopReceiver(host.Identity.ContainerHandle, host) ||
+            !_contextNative.IsSurfaceCurrent(_visualHandle, WindowHandle, _frame) ||
+            ResolveRoute(new NativePoint { X = point.X, Y = point.Y }) is not { } route ||
+            !ReferenceEquals(route.Owner, this) || route.Hit.Region.Kind != PosterInputTargetKind.ContentItem ||
+            !PosterContentInputPolicy.HasValidIdentity(route.Hit.Region) ||
+            _contextNative.ReadWindowOrder() is not { } order) return false;
+        foreach (nint window in order)
+        {
+            if (window == WindowHandle)
+            {
+                hit = route.Hit;
+                return true;
+            }
+            if (window == _visualHandle || window == host.Identity.ContainerHandle) continue;
+            // WindowFromPhysicalPoint skips disabled windows. The existing observer's
+            // region-aware check also rejects visible occluders above this input HWND.
+            if (_contextNative.CoversPoint(window, point)) return false;
+        }
+        return false;
     }
 
     private void BeginPointerGesture(nint lParam)
@@ -684,6 +777,7 @@ public sealed class PosterInputIslandManager : IInputRegionHost
         }
         foreach (PosterInputRegion region in _layout.Regions)
         {
+            if (!PosterInputGeometry.CapturesPointer(region)) continue;
             DesktopPixelRect bounds = region.Bounds;
             if (x >= bounds.X && x < bounds.Right &&
                 y >= bounds.Y && y < bounds.Bottom)
@@ -748,7 +842,7 @@ public sealed class PosterInputIslandManager : IInputRegionHost
             region.Bounds.Right <= layout.FrameWidth &&
             region.Bounds.Bottom <= layout.FrameHeight);
 
-    private static nint BuildWindowRegion(PosterInputLayoutSnapshot layout)
+    internal static nint BuildWindowRegion(PosterInputLayoutSnapshot layout)
     {
         nint combined = CreateRectRgn(0, 0, 0, 0);
         if (combined == 0)
@@ -758,6 +852,7 @@ public sealed class PosterInputIslandManager : IInputRegionHost
 
         foreach (PosterInputRegion input in layout.Regions)
         {
+            if (!PosterInputGeometry.CapturesPointer(input)) continue;
             DesktopPixelRect bounds = input.Bounds;
             nint part = CreateRectRgn(bounds.X, bounds.Y, bounds.Right, bounds.Bottom);
             if (part == 0 || CombineRgn(combined, combined, part, RgnOr) == 0)
@@ -874,9 +969,12 @@ public sealed class PosterInputIslandManager : IInputRegionHost
         StopContentCaptureTimer();
         _contentClaimed = false;
         _disposed = true;
+        _contextPress = null; _contextPressPoint = null;
+        _contextDesktopHost = null;
         _router.Remove(_session);
         _capture = null;
         Input = null;
+        ContextRequested = null;
         _pressedRegion = null;
 
         nint windowHandle = WindowHandle;

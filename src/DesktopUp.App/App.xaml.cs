@@ -145,8 +145,10 @@ public partial class App : Microsoft.UI.Xaml.Application
             requestedExecutionLevel = "asInvoker"
         });
         _spatialRuntime = new PosterSpatialRuntime(_stateCoordinator, _stateCommands, _log, animationOptions,
-            () => _posterSessions?.GloballyHidden == true);
+            () => _posterSessions?.GloballyHidden == true, id => _controlCenter?.HasPosterDraft(id) == true,
+            (id, entity, document) => _controlCenter?.OwnsContentFieldDraft(id, entity, document) == true);
         _spatialRuntime.EffectiveLayoutChanged += RefreshControlCenterRuntime;
+        _spatialRuntime.ConfigureLampMotionLedger(_ledger);
         StartAutoPosture();
         _spatialRuntime.RecoveryRequired += () => QueueDesktopRecovery(
             DesktopEnvironmentChangeKind.DesktopShell | DesktopEnvironmentChangeKind.DisplayTopology,
@@ -166,13 +168,13 @@ public partial class App : Microsoft.UI.Xaml.Application
         }
 
         ScheduleSmokeExitIfRequested(_startupIntent.Arguments);
-        string[] smokeFlags = ["--content-layout-smoke", "--content-layout-restart", "--picker-smoke", "--portable-smoke", "--tray-smoke", "--control-center-smoke", "--title-surface-smoke", "--auto-measurement", "--auto-lifetime-smoke", "--auto-settings-smoke", "--auto-posture-smoke", "--continuity-smoke", "--continuity-arrange", "--menu-smoke", "--presentation-smoke", "--spatial-smoke", "--input-confirmation-smoke", "--multi-instance-smoke", "--multi-instance-restart"];
+        string[] smokeFlags = ["--content-browse-probe", "--backdrop-probe", "--lamp-pointer-probe", "--template-recipe-probe", "--template-recipe-restart", "--content-composition-probe", "--content-fields-probe", "--content-rejected-heat-probe", "--content-protocol-probe", "--content-native-probe", "--content-native-mouse-probe", "--content-interaction-restart", "--lamp-parameter-probe", "--ui-c-sample-probe", "--content-layout-smoke", "--content-layout-restart", "--picker-smoke", "--portable-smoke", "--tray-smoke", "--control-center-smoke", "--title-surface-smoke", "--auto-measurement", "--auto-lifetime-smoke", "--auto-settings-smoke", "--auto-posture-smoke", "--continuity-smoke", "--continuity-arrange", "--menu-smoke", "--presentation-smoke", "--spatial-smoke", "--input-confirmation-smoke", "--multi-instance-smoke", "--multi-instance-restart"];
         if (_startupIntent.Arguments.Count(a => smokeFlags.Contains(a, StringComparer.OrdinalIgnoreCase)) > 1)
         {
             _log.Write("error", "contract.smoke_refused", new { reason = "one-smoke-per-process" });
             return;
         }
-        if (_startupIntent.Arguments.Any(a => a is "--content-layout-smoke" or "--content-layout-restart" or "--picker-smoke" or "--portable-smoke" or "--tray-smoke" or "--control-center-smoke" or "--title-surface-smoke" or "--auto-posture-smoke" or "--auto-settings-smoke" or "--auto-lifetime-smoke" or "--auto-measurement"))
+        if (_startupIntent.Arguments.Any(a => a is "--content-browse-probe" or "--backdrop-probe" or "--lamp-pointer-probe" or "--template-recipe-probe" or "--template-recipe-restart" or "--content-composition-probe" or "--content-fields-probe" or "--content-rejected-heat-probe" or "--content-protocol-probe" or "--content-native-probe" or "--content-native-mouse-probe" or "--content-interaction-restart" or "--lamp-parameter-probe" or "--ui-c-sample-probe" or "--content-layout-smoke" or "--content-layout-restart" or "--picker-smoke" or "--portable-smoke" or "--tray-smoke" or "--control-center-smoke" or "--title-surface-smoke" or "--auto-posture-smoke" or "--auto-settings-smoke" or "--auto-lifetime-smoke" or "--auto-measurement"))
         {
             string? testRoot = Environment.GetEnvironmentVariable("DESKTOPUP_V3_TEST_DATA_ROOT");
             string normalRoot = Path.GetFullPath(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DesktopUp", "V3"));
@@ -180,6 +182,20 @@ public partial class App : Microsoft.UI.Xaml.Application
             if (string.IsNullOrWhiteSpace(testRoot) || actual.Equals(normalRoot, StringComparison.OrdinalIgnoreCase) ||
                 actual.StartsWith(normalRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
                 _log.Write("error", "auto_posture.smoke_refused", new { reason = "isolated-profile-required" });
+            else if (_startupIntent.Arguments.Contains("--content-browse-probe", StringComparer.Ordinal)) RunContentBrowseProbe(actual);
+            else if (_startupIntent.Arguments.Contains("--backdrop-probe", StringComparer.Ordinal)) RunBackdropProbe(actual);
+            else if (_startupIntent.Arguments.Contains("--lamp-pointer-probe", StringComparer.Ordinal)) RunLampPointerProbe(actual);
+            else if (_startupIntent.Arguments.Contains("--template-recipe-probe", StringComparer.Ordinal)) RunTemplateRecipeProbe(actual, false);
+            else if (_startupIntent.Arguments.Contains("--template-recipe-restart", StringComparer.Ordinal)) RunTemplateRecipeProbe(actual, true);
+            else if (_startupIntent.Arguments.Contains("--content-composition-probe", StringComparer.Ordinal)) RunContentCompositionProbe(actual);
+            else if (_startupIntent.Arguments.Contains("--content-fields-probe", StringComparer.Ordinal)) RunContentFieldsProbe(actual);
+            else if (_startupIntent.Arguments.Contains("--content-protocol-probe", StringComparer.Ordinal)) RunContentInteractionProbe(actual,"protocol");
+            else if (_startupIntent.Arguments.Contains("--content-rejected-heat-probe", StringComparer.Ordinal)) RunContentInteractionProbe(actual,"rejected-heat");
+            else if (_startupIntent.Arguments.Contains("--content-native-probe", StringComparer.Ordinal)) RunContentInteractionProbe(actual,"native");
+            else if (_startupIntent.Arguments.Contains("--content-native-mouse-probe", StringComparer.Ordinal)) RunContentInteractionProbe(actual,"native-mouse");
+            else if (_startupIntent.Arguments.Contains("--content-interaction-restart", StringComparer.Ordinal)) RunContentInteractionProbe(actual,"restart");
+            else if (_startupIntent.Arguments.Contains("--lamp-parameter-probe", StringComparer.Ordinal)) RunLampParameterProbe(actual);
+            else if (_startupIntent.Arguments.Contains("--ui-c-sample-probe", StringComparer.Ordinal)) RunUiCSampleProbe(actual);
             else if (_startupIntent.Arguments.Any(a => a is "--content-layout-smoke" or "--content-layout-restart")) RunContentLayoutSmoke(actual);
             else if (_startupIntent.Arguments.Contains("--picker-smoke", StringComparer.Ordinal)) RunPickerSmoke(actual);
             else if (_startupIntent.Arguments.Contains("--portable-smoke", StringComparer.Ordinal)) RunPortableSmoke(actual);
