@@ -1,6 +1,10 @@
 # 手动构图：局部让位、缩框恢复与模式切换评审 V1
 
+2026-09-27当前优先说明：DEC-024/025已收清Q1/Q2及默认，R1可实施合同齐全；新建纵向/循环关，方向与Loop独立，旧显式值保持；兼容按操作能力保真，双入口保留当前草稿。用户已授权里程碑实施。下文此前“待选择/未授权/下一步核对”按历史理解，其余未决工程候选仍须证明。当前R1～R4达到对应出口，R5基础操作组获人工正向反馈，但用户明确UI/操作意图未对齐已确认E1与UI C；R5仍IN PROGRESS，先按[六任务对齐记录](../40_Implementation/V3-04/LR_R5_UI_C_INTENT_ALIGNMENT.md)及主计划§4.2.1纠偏，R6尚未实施。范围/分工见[执行记录](../40_Implementation/V3-04/LR_MILESTONE_EXECUTION.md)与[需求决定](../10_Requirements/REQUIREMENTS_RISKS_AND_OPEN_QUESTIONS.md)，原型不是生产PASS。
+
 日期：2026-09-24。状态：**LR-R1 / DEC-020 PRODUCT CHOICES CONFIRMED，工程规则待验证，未接生产**。
+
+2026-09-26后续：[手势/行为映射与三组组合核对](CONTENT_LAYOUT_COMBINATION_AUDIT_V1.md)§4～5补旧硬坐标/区域/显式留白的不可满足反例及双入口单所有者；Q1/Q2尚待用户选择。本文普通构图候选和MC门仍未获生产证明；最新下一步按该核对收清边界，不重复原“待核对”工作。
 
 本文细化[两模式与图钉组合稿](CONTENT_LAYOUT_PIN_DRAG_REVIEW_V1.md)§4.3，不另建布局路线。产品决定只归[DEC-020](../10_Requirements/REQUIREMENTS_RISKS_AND_OPEN_QUESTIONS.md)，排期归[LR计划](../30_Plans/V3_04_L_REMEDIATION_REVIEW_PLAN.md)。以下明确区分用户选择、工程候选和未决边界；原型/内存演算不是生产验收。
 

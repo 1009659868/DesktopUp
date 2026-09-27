@@ -23,7 +23,7 @@
 | 逻辑范围外、R4额外容量、圆角外、可靠普通窗口遮挡 | Outside；边界采用半开区间，贴边不归属两张海报 |
 | 原生查询失败、无接收根、无当前窗口配对、输入读回不匹配、路由失效/挂起、过期Shell身份或其他未验证Progman/WorkerW根 | Unknown；不得把不确定性冒充真实离开，类名相似只可撤销信任，不能授权悬停 |
 | 原生接收根 | 只接受自己的Visual/Input，或共享定位器提供且再次校验存活/类/父子/PID的桌面容器；不用ROOTOWNER，不信“同属explorer.exe”或旧路由事件的覆盖权 |
-| 上方遮挡 | 额外核对物理层级及可见窗口形状，排除最小化/cloaked；外部窗口透明但无法证明可穿透时保守阻挡。其他海报只使用逻辑可见范围，不用容量 |
+| 上方遮挡 | 额外核对物理层级及可见窗口形状，排除最小化/cloaked；外部窗口透明但无法证明可穿透时保守阻挡。候选20补充：仅当分层窗口属性读取成功、含LWA_ALPHA且alpha=0，才排除已证明全透明的窗口；不缓存，未知/色键独用/非零alpha仍阻挡，见[输入报告§4.2](LR_R5_POINTER_AND_MODULE_REVIEW.md#42-真实复现与修复候选20)。其他海报只使用逻辑可见范围，不用容量 |
 | 按键/capture/原生菜单和移动缩放 | 当前5种物理鼠标键只取GetAsyncKeyState高位；GetCapture及GetGUIThreadInfo读取当前/前台交互。R1分类为PointerCapture/PointerButton/Menu；router按下capture也为PointerCapture，真正空间手势才是Gesture。阶段行为见[R1](M08_ANIMATION_INPUT_R1.md) |
 | 已有海报菜单/删除确认/编辑/恢复 | 分别复用DesktopMenuInteraction.IsActive、完整异步确认标志、会话编辑态及空间恢复状态；锁定未被改成禁止自身自动收展 |
 

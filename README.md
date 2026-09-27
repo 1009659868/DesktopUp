@@ -1,10 +1,12 @@
 # DesktopUp V2 — Poster Redesign V3
 
-当前分支：`impl/poster-redesign-V3`
+当前工作分支：`impl/poster-redesign-V3-wb`
 
-状态：`V3-04-M07 IN PROGRESS — CONTRACT/BUILD PASS；CURRENT-ENVIRONMENT / MANUAL PENDING`
+状态（2026-09-27）：`LR-R5 CORE CLOSED；R6 READY / NOT STARTED`。当前仍为DEMO内容；R5核心收口不等于最终可靠性验收或真实文件接入完成。
 
-当前[M07测量与安全门](Docs/A_Project/40_Implementation/V3-04/M07_MEASUREMENT_AND_SAFETY.md)：按用户决定直接在当前环境推进，入口兼容Windows PowerShell 5.1/PowerShell 7，权限只记录不拦截。5.1真实三海报/单中心/单托盘启动与干净退出通过，合同411/411；先运行人工入口完成S1～S5，不要求先跑资源矩阵。M07尚未关闭，完整基线待补；M05/M06结论保留，动画与性能优化延期。
+先读[当前执行入口](Docs/00_Catalog/ACTIVE_PATH.md)、[R5收口与代码/计划审计](Docs/A_Project/40_Implementation/V3-04/LR_R5_CLOSEOUT_AND_PLAN_AUDIT.md)和[交接](Docs/A_Project/40_Implementation/V3-04/HANDOFF.md)。已批准顺序为R6组合→最小模块解耦→雨夜窗边→R7可靠性/配置保真→R8接入交接→V3-05真实内容。BUG-026停顿后续滚按用户决定延期。
+
+历史[M07测量与安全门](Docs/A_Project/40_Implementation/V3-04/M07_MEASUREMENT_AND_SAFETY.md)保留对应版本证据；下方M03/M04测试数量和安排均为历史，不覆盖上述当前进度。现版验证范围、候选绑定和未验项以交接及验证记录为准。
 
 历史自动基线：M04-06已接共享输入身份/唯一capture、实际HWND顺序路由及中心/海报共用删除确认；313/313、Release0警告0错误，真实确认框取消/关闭/带框退出与链式77帧回归通过。见 [输入与确认合同](Docs/A_Project/40_Implementation/V3-04/M04_INPUT_CONFIRMATION.md)。旧M04固定验证包不覆盖。
 
@@ -31,18 +33,20 @@
 ## 构建与运行
 
 ```powershell
-& "G:\A_\Tools\DesktopUp_V2\scripts\build.ps1" -Configuration Release
-& "G:\A_\Tools\DesktopUp_V2\scripts\test.ps1" -Configuration Release
-& "G:\A_\Tools\DesktopUp_V2\scripts\run.ps1"
+& .\scripts\build.ps1 -Configuration Release
+& .\scripts\test.ps1 -Configuration Release
+& .\scripts\run.ps1
 ```
 
-M03 已接目录驱动的0..N真实会话：无配置首次一张，既有配置按数量/ID恢复，已初始化空目录保持零张；一个控制中心、一个托盘。163/163 合同测试与 Release 通过，最终产物已验证首次1张/已有3张/已初始化0张及恢复等待中退出。短人工交互/Explorer重建待确认；新增/删除管理 UI、多 cluster 输入层序和独立主题参数仍由后续任务实现。
+在项目根目录执行上述命令，需满足`global.json`的.NET SDK及Windows构建依赖。当前机器的隔离工具链/候选运行方式见交接；`out/`验证包、日志和体验数据库仅保留本机，不随Git分发。
+
+M03历史：已接目录驱动的0..N真实会话，无配置首次一张、既有目录恢复、已初始化空目录保持零张；一个控制中心、一个托盘。163/163合同和对应Release结果属于该早期版本；新增/删除管理UI、多海报输入和主题参数的后续进度见当前文档。
 
 自定义 Release 输出目录请使用脚本，以保证 WinUI XBF/PRI 的资源名称正确：
 
 ```powershell
-& "G:\A_\Tools\DesktopUp_V2\scripts\build.ps1" -Configuration Release -OutputDirectory "out\verify\v3-04-m02\app"
-& "G:\A_\Tools\DesktopUp_V2\scripts\smoke-control-center.ps1" -ExecutablePath "G:\A_\Tools\DesktopUp_V2\out\verify\v3-04-m02\app\DesktopUp.exe" -DataRoot "G:\A_\Tools\DesktopUp_V2\out\verify\v3-04-m02\smoke-data"
+& .\scripts\build.ps1 -Configuration Release -OutputDirectory "out\local-build\app"
+& .\scripts\smoke-control-center.ps1 -ExecutablePath "$PWD\out\local-build\app\DesktopUp.exe" -DataRoot "$PWD\out\local-build\smoke-data"
 ```
 
 直接使用 `dotnet build -o` 时，路径必须以目录分隔符结尾；不符合时构建报 `DUV3001`，避免生成可以启动但无法打开控制中心的产物。
@@ -51,7 +55,7 @@ smoke 现强制 DataRoot，通过子进程测试环境变量隔离数据库/日�
 
 ## 正式产品方向与下一步
 
-最新执行顺序：M05/M06已完成→M07测量与剩余安全门（当前）→原04-04完整管理入口→V3-05真实Item。下方M03/M04记述为历史安排，不是当前任务。
+最新执行顺序与里程碑见[LR计划§8](Docs/A_Project/30_Plans/V3_04_L_REMEDIATION_REVIEW_PLAN.md#8-当前出口和最近下一步)。下方M03/M04记述为历史安排，不是当前任务。
 
 通用桌面内容收纳、多海报、一个控制中心、一个托盘、自定义独立风格化主题、热度排版、AI 辅助定制。游戏图标海报保留为特色用途，不限制应用、文件、文件夹和 Shell 桌面入口。
 

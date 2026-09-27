@@ -1,14 +1,26 @@
 # DesktopUp V2 当前执行入口
 
-## 当前（2026-09-24）：整体体验闭环验证优先
+当前（2026-09-27，DEC-029）：**R5核心已收口，R6就绪但未实施**。用户将停顿续滚BUG-026延期，批准最小解耦及其后的Rain，并恢复推进。先读[需求决定](../A_Project/10_Requirements/REQUIREMENTS_RISKS_AND_OPEN_QUESTIONS.md#31-已明确的近期优先级)→[计划§8](../A_Project/30_Plans/V3_04_L_REMEDIATION_REVIEW_PLAN.md#8-当前出口和最近下一步)→[R5收口/代码审计](../A_Project/40_Implementation/V3-04/LR_R5_CLOSEOUT_AND_PLAN_AUDIT.md)→[HANDOFF](../A_Project/40_Implementation/V3-04/HANDOFF.md)。顺序为R6→模块B/C/D→雨夜窗边→R7→R8→V3-05；候选仍25，445源码/402产物绑定复核成功。真实Item未接，R7可靠性未验。以下较早“最新/当前/待审”均为对应阶段历史，不覆盖本段状态。
+
+最新（2026-09-27，展开过程补验）：先读[输入报告§8](../A_Project/40_Implementation/V3-04/LR_R5_POINTER_AND_MODULE_REVIEW.md#8-候选24展开过程灰底与ab不透明度对照)。仅交换A/B不透明度即可转移灰底；候选24将清底提前到每次原生区域扩大后，四组中间阶段像素均恢复。候选23只修终态，以下记录不能外推为动画过程通过。当前交付及验证见[HANDOFF](../A_Project/40_Implementation/V3-04/HANDOFF.md)，R5仍IN PROGRESS。
+
+最新（2026-09-27）：候选23原生复现并修复半透明海报收展灰底；Windows动画关闭解释追光/闲置双停，未改系统设置。先读[输入报告§7](../A_Project/40_Implementation/V3-04/LR_R5_POINTER_AND_MODULE_REVIEW.md#7-候选23半透明收展灰底与系统动画策略)及[HANDOFF](../A_Project/40_Implementation/V3-04/HANDOFF.md)。四组原生终态/八组同包门通过，独立体验入口start-backdrop-review.ps1；R5 IN PROGRESS，模块拆分待审，以下候选21及更早为历史。
+
+最新实测补充（2026-09-27）：用户对候选20其他样式、灯光和图钉交互给出正向反馈；候选21修复控制中心默认黑底，四主题/保存system重启与八组同包门通过。优先读[输入与主题报告§6](../A_Project/40_Implementation/V3-04/LR_R5_POINTER_AND_MODULE_REVIEW.md#6-候选21默认黑底与主题资源隔离)与[解耦提案](../A_Project/20_Architecture/CONTENT_SCENE_MODULE_DECOUPLING_PROPOSAL.md)。桌面空白手势未逐项确认、模块方案待审阅。R5 IN PROGRESS / R6 NOT STARTED，以下较早状态按历史证据理解。
+
+2026-09-27当前节点：R1～R4达到对应出口；R5基础操作组获人工正向反馈，但用户明确UI/操作意图未对齐已采纳C及已有E1测试。**R5 IN PROGRESS，先按主计划§4.2.1纠偏，R6 NOT STARTED**。先读[六任务与UI C对齐记录](../A_Project/40_Implementation/V3-04/LR_R5_UI_C_INTENT_ALIGNMENT.md)及其E1后续确认入口，再查[执行分工](../A_Project/40_Implementation/V3-04/LR_MILESTONE_EXECUTION.md)；不得用模型/控件PASS替代生产体验。
+
+## 当前（2026-09-26）：LR里程碑goal启动，R1合同齐全、R2～R4完成，R5实施中
+
+用户已授权以[LR-R1～R8](../A_Project/30_Plans/V3_04_L_REMEDIATION_REVIEW_PLAN.md)为goal推进实施/文档/测试及必要子agent。DEC-024/025收清Q1/Q2、新建纵向/循环关；R1实施合同齐全，R2～R4完成、R5实施中。先读[里程碑执行记录](../A_Project/40_Implementation/V3-04/LR_MILESTONE_EXECUTION.md)的分工、兼容矩阵、工具链与证据；不要再沿下方历史“仅文档”或旧分支同步指令阻止/扩大当前工作。
 
 DEC-021：保留既有决定，先验证基础手势与两重点风险，不直接细化控件。[E1与评审](../A_Project/20_Architecture/CONTENT_LAYOUT_EXPERIENCE_REVIEW_V1.md)六任务反馈收清，06c保留提示后通过标签；DEC-023已定double/退出A，DEC-022批准临时受限双轴，详见[操作/空间收敛](../A_Project/20_Architecture/CONTENT_LAYOUT_OPERATION_SPACE_REVIEW_V1.md)。新双轴未实现/验证。
 
 DEC-019确认：纯手动/热度自动两模式；按住移动即拖、无整理按钮/定时长按前置；手动网格位置/留白与中心精细调整。DEC-018顺序图钉规则保留于自动模式。UI C视觉已采纳，入口语义需随新决定定向修订。
 
-A→B→C：[DEC-019/020与需求§13](../A_Project/10_Requirements/REQUIREMENTS_RISKS_AND_OPEN_QUESTIONS.md) → [手动构图专项](../A_Project/20_Architecture/CONTENT_LAYOUT_MANUAL_COMPOSITION_REVIEW_V1.md)及[两模式组合稿](../A_Project/20_Architecture/CONTENT_LAYOUT_PIN_DRAG_REVIEW_V1.md) → [LR-R1计划](../A_Project/30_Plans/V3_04_L_REMEDIATION_REVIEW_PLAN.md)。局部让位、每次进入手动取当前画面、适配后编辑承接已确认；下一分项为操作/空间组合反例、循环/受限恢复、旧约束兼容及双入口草稿交接；暂不细化控件。
+A→B→C：[DEC-019～025与需求§13](../A_Project/10_Requirements/REQUIREMENTS_RISKS_AND_OPEN_QUESTIONS.md) → [组合核对](../A_Project/20_Architecture/CONTENT_LAYOUT_COMBINATION_AUDIT_V1.md) → [LR计划](../A_Project/30_Plans/V3_04_L_REMEDIATION_REVIEW_PLAN.md)及执行记录。产品边界已收清，R2保全/构建/保真出口已取得，当前实施R5直接操作，R4保真报告与原生绑定证据已登记。
 
-当前仍设计评审，不进LR-R2或V3-05。2026-09-24用户授权以impl/poster-redesign-V3-wb保存现有代码实验、测试与设计文稿，合入并切换至impl/poster-redesign-V3，再推送两分支；后续工作入口为impl/poster-redesign-V3。本次仅开发检查点，未修复既有实验缺陷；旧CheckOnly指纹失败，不能继承旧PASS。后续状态归细化工作流，历史记录按产物理解。
+当前工作分支为`impl/poster-redesign-V3-wb`；R5收口后用户已明确授权同步远程，源码检查点`e9a3320…`，文档随独立提交保存，过程见[HANDOFF](../A_Project/40_Implementation/V3-04/HANDOFF.md)。`bd148fb…＋dirty`是此前候选构建时的历史基线。此次只沿当前跟踪分支同步，不继承2026-09-24的合并/切换其他分支指令；远端结果以push与SHA核对为准。旧CheckOnly失败不因新Git提交或构建自动获人工PASS。
 
 ## 历史阶段摘要
 
@@ -20,15 +32,15 @@ A→B→C：[DEC-019/020与需求§13](../A_Project/10_Requirements/REQUIREMENTS
 
 历史（04-04滑块交付）：[滑块修订](../A_Project/40_Implementation/V3-04/CONTROL_CENTER_SLIDER_REFINEMENT.md)1283/六组自动门PASS，点选/微调待复验；当时的列表排查/暂缓05指令已由用户后续进入05替代。运行事实及证据只查最新[HANDOFF](../A_Project/40_Implementation/V3-04/HANDOFF.md)，不沿用旧PID。
 
-最后检查：2026-09-24；DEC-021整体体验优先，E1六任务反馈收清，操作/空间基线已定、组合待评审；不启动旧L07候选。
+最后检查：2026-09-27；R1～R4出口保持，R5核心收口；E1旧反馈及遗留项保留，当前候选25，不启动旧L07候选。
 
 | 层级 | 权威入口 | 当前状态 |
 | --- | --- | --- |
 | A 需求 | [七份需求](REQUIREMENTS_INDEX.md) | 通用内容、多海报、唯一中心/托盘、独立主题、热度与 AI |
 | A 架构 | [总体架构](../A_Project/20_Architecture/DESKTOPUP_V2_V3_ARCHITECTURE_V1.md)、[多海报合同](../A_Project/20_Architecture/GENERAL_CONTENT_MULTI_POSTER_CONTRACT_V1.md) | 当前设计基线 |
 | B 模块 | [模块分类](../A_Project/20_Architecture/DESKTOPUP_V2_V3_MODULE_CATALOG_V1.md) | 共享宿主恢复、独立海报会话 |
-| C 总计划/任务索引 | [制作计划](../A_Project/30_Plans/DESKTOPUP_V2_V3_IMPLEMENTATION_PLAN_V1.md)、[细化工作流](../A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md)、[04-L整改评审](../A_Project/30_Plans/V3_04_L_REMEDIATION_REVIEW_PLAN.md) | LR-R1：整体体验评审，E1六任务反馈收清，操作/空间基线已定、组合待评审；生产未整改 |
-| C 当前工作/携带门 | [布局审查](../A_Project/40_Implementation/V3-04/CONTENT_LAYOUT_REVIEW_2026-09-23.md)、[旧04-L交付](../A_Project/40_Implementation/V3-04/CONTENT_LAYOUT_DELIVERY.md)、[缺陷清单](../A_Project/40_Implementation/V3-04/KNOWN_ISSUES.md) | BUG-008～017登记未修；旧Bug/专项延期保留，旧35门不转授当前工作区 |
+| C 总计划/任务索引 | [制作计划](../A_Project/30_Plans/DESKTOPUP_V2_V3_IMPLEMENTATION_PLAN_V1.md)、[细化工作流](../A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md)、[04-L整改评审](../A_Project/30_Plans/V3_04_L_REMEDIATION_REVIEW_PLAN.md) | R1～R4出口保持，R5核心收口，R6下一实施；模块/Rain已批准未制作 |
+| C 当前工作/携带门 | [R5收口审计](../A_Project/40_Implementation/V3-04/LR_R5_CLOSEOUT_AND_PLAN_AUDIT.md)、[布局审查](../A_Project/40_Implementation/V3-04/CONTENT_LAYOUT_REVIEW_2026-09-23.md)、[缺陷清单](../A_Project/40_Implementation/V3-04/KNOWN_ISSUES.md) | 008～017已逐项核对现代码，非全部未修；026延期，019～022等边界保留，旧35门不转授当前工作区 |
 | C 历史呈现修复 | [R4](../A_Project/40_Implementation/V3-04/M07_ANIMATION_R4.md) | 白条人工确认；保留方法论与历史证据，非本轮修改 |
 | C 交接/代码/证据 | [HANDOFF](../A_Project/40_Implementation/V3-04/HANDOFF.md)、[CODE_ANCHORS](../A_Project/40_Implementation/V3-04/CODE_ANCHORS.md)、[VERIFICATION](../A_Project/40_Implementation/V3-04/VERIFICATION.md) | 当前事实与历史证据分开 |
 
@@ -43,7 +55,7 @@ ABC资料归属见[文档入口](../README.md#abc归属与历史记录)；当前
 
 ## 最近步骤
 
-1. [04-L专项计划](../A_Project/30_Plans/V3_04_L_CONTENT_LAYOUT_PLAN.md)保留L01～06历史证据；当前下一步[LR-R1设计评审](../A_Project/30_Plans/V3_04_L_REMEDIATION_REVIEW_PLAN.md)，先判断规则再决定是否制作，不运行指纹失配的旧人工候选。
+1. [04-L专项计划](../A_Project/30_Plans/V3_04_L_CONTENT_LAYOUT_PLAN.md)保留L01～06历史证据；当前按[LR计划§8](../A_Project/30_Plans/V3_04_L_REMEDIATION_REVIEW_PLAN.md#8-当前出口和最近下一步)从R5收口进入R6组合，不重做已交付R4/R5或运行指纹失配旧候选。
 2. 原05-03单张目标子菜单由V2-DEC-006取消，不改号另派任务；旧合同测试不作为当前托盘交付。
 3. 05-02/04已接原通道；TBD-020保持隐藏新增已实现，05-05人工用户通过。新增外观链路另验，不扩大旧PASS范围。
 4. DEC-008直接推进04-L01～07 → V3-05真实内容纵向闭环；原04-06剩余验收和04-07/08收口延期。04-06已有版本化便携外壳，L03补跨格载荷/映射及针对性兼容验证；L新增输入/资源随本阶段验收，不预先补全旧阶段。磁盘执行仍以前置恢复账本为门。
