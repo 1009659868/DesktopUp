@@ -1,5 +1,7 @@
 # DesktopUp V2 当前执行入口
 
+新agent先读[冷启动提示词](AGENT_COLD_START.md)，再按本页当前入口核对；文档中的旧分支、旧PID和下方历史“待审”不直接当作执行指令。
+
 当前（2026-09-27，DEC-029）：**R5核心已收口，R6就绪但未实施**。用户将停顿续滚BUG-026延期，批准最小解耦及其后的Rain，并恢复推进。先读[需求决定](../A_Project/10_Requirements/REQUIREMENTS_RISKS_AND_OPEN_QUESTIONS.md#31-已明确的近期优先级)→[计划§8](../A_Project/30_Plans/V3_04_L_REMEDIATION_REVIEW_PLAN.md#8-当前出口和最近下一步)→[R5收口/代码审计](../A_Project/40_Implementation/V3-04/LR_R5_CLOSEOUT_AND_PLAN_AUDIT.md)→[HANDOFF](../A_Project/40_Implementation/V3-04/HANDOFF.md)。顺序为R6→模块B/C/D→雨夜窗边→R7→R8→V3-05；候选仍25，445源码/402产物绑定复核成功。真实Item未接，R7可靠性未验。以下较早“最新/当前/待审”均为对应阶段历史，不覆盖本段状态。
 
 最新（2026-09-27，展开过程补验）：先读[输入报告§8](../A_Project/40_Implementation/V3-04/LR_R5_POINTER_AND_MODULE_REVIEW.md#8-候选24展开过程灰底与ab不透明度对照)。仅交换A/B不透明度即可转移灰底；候选24将清底提前到每次原生区域扩大后，四组中间阶段像素均恢复。候选23只修终态，以下记录不能外推为动画过程通过。当前交付及验证见[HANDOFF](../A_Project/40_Implementation/V3-04/HANDOFF.md)，R5仍IN PROGRESS。

@@ -6,13 +6,14 @@
 
 | 文档 | 职责 | 状态 |
 | --- | --- | --- |
+| [AGENT_COLD_START](AGENT_COLD_START.md) | 可复制的agent冷启动入口、当前Git/阶段快照、分层阅读、实现核对、协作与证据边界 | 当前接手入口；只导航/核对，不独立裁决产品状态 |
 | [LR_R5_CLOSEOUT_AND_PLAN_AUDIT](../A_Project/40_Implementation/V3-04/LR_R5_CLOSEOUT_AND_PLAN_AUDIT.md) | R5原出口证据、用户认可边界、现源码与旧计划差异、遗留项和R6入口 | CORE CLOSED / 携带明确限制；不是R7验收 |
 | [CONTENT_SCENE_MODULE_DECOUPLING_PROPOSAL](../A_Project/20_Architecture/CONTENT_SCENE_MODULE_DECOUPLING_PROPOSAL.md) | 通用宿主/可删除Lamp/配置保留与恢复；解耦后Rain验证标准 | DEC-029 APPROVED / NOT STARTED；排期归LR计划§8 |
-| [LR_R5_POINTER_AND_MODULE_REVIEW](../A_Project/40_Implementation/V3-04/LR_R5_POINTER_AND_MODULE_REVIEW.md) | 候选18～25输入/主题/背景/循环根因、红绿与运行证据 | R5收口核对中；UI/动画已获认可，反向循环APP PASS；OS滚轮/复杂组合及模块边界分列 |
-| [LR_R5_UI_C_INTENT_ALIGNMENT](../A_Project/40_Implementation/V3-04/LR_R5_UI_C_INTENT_ALIGNMENT.md) | 2026-09-27用户反馈后，将E1六任务/最终决定/UI C与当前代码和可见结果逐项对齐 | 已有生产纠偏及分项证据；后续实测归pointer/module记录，R5不能因基础操作人工通过收口 |
+| [LR_R5_POINTER_AND_MODULE_REVIEW](../A_Project/40_Implementation/V3-04/LR_R5_POINTER_AND_MODULE_REVIEW.md) | 候选18～25输入/主题/背景/循环根因、红绿与运行证据 | 分项证据保留；R5核心出口归收口报告，BUG-026延期，复杂组合及模块未完成 |
+| [LR_R5_UI_C_INTENT_ALIGNMENT](../A_Project/40_Implementation/V3-04/LR_R5_UI_C_INTENT_ALIGNMENT.md) | E1六任务/最终决定/UI C与生产纠偏的追溯 | 审查起点及迭代历史；当前R5核心收口不由早期缺口表重新否决，也不扩大到R7 |
 | [CONTENT_LAYOUT_COMBINATION_AUDIT_V1](../A_Project/20_Architecture/CONTENT_LAYOUT_COMBINATION_AUDIT_V1.md) | 已决手势、BM行为映射、循环/旧约束/双入口19条反例及源码差异 | R1 DESIGN CONTRACT READY；DEC-024/025收清选择，正式工程门仍待验证 |
 | [LR_R4_CONFIGURATION_FIDELITY](../A_Project/40_Implementation/V3-04/LR_R4_CONFIGURATION_FIDELITY.md) | 配置字段/能力、真实事务与代表模板原生绑定证据；限制与后续进程/视觉门 | R4 SAVE CONTRACT + SAMPLE READY，非R7同包验收 |
-| [LR_MILESTONE_EXECUTION](../A_Project/40_Implementation/V3-04/LR_MILESTONE_EXECUTION.md) | 当前里程碑、协作文件归属、兼容矩阵、恢复材料与工具链 | R1合同齐全 / R2～R4完成 / R5实施中；不是R7验收 |
+| [LR_MILESTONE_EXECUTION](../A_Project/40_Implementation/V3-04/LR_MILESTONE_EXECUTION.md) | 当前里程碑、协作文件归属、兼容矩阵、恢复材料与工具链 | R1～R4出口保持 / R5核心收口 / R6就绪未实施；旧agent分工已交回，后续重新分派 |
 | [CONTENT_LAYOUT_EXPERIENCE_REVIEW_V1](../A_Project/20_Architecture/CONTENT_LAYOUT_EXPERIENCE_REVIEW_V1.md) | 五风险/两缺口、基础手势、六任务、整图承接与模式退出对照 | E1六任务反馈收清（06c提示后通过）；非生产合同门 |
 | [CONTENT_LAYOUT_OPERATION_SPACE_REVIEW_V1](../A_Project/20_Architecture/CONTENT_LAYOUT_OPERATION_SPACE_REVIEW_V1.md) | 新操作基线/退出A、被动极端不足时临时双轴、恢复与反例矩阵 | DEC-022/023已确认产品边界；工程待验证，不细化控件 |
 | [CONTENT_TEMPLATE_SCHEMA_UI_C](../A_Project/20_Architecture/CONTENT_TEMPLATE_SCHEMA_UI_C.md) | 已采纳UI C、模板域收纳、动态参数和受控装入边界；生产落地导航 | UI BASELINE ACCEPTED / DEC-017；排期归LR计划§4.2，非生产验收 |

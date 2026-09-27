@@ -14,6 +14,8 @@
 
 ## 阅读顺序
 
+新agent可复制[冷启动提示词](Docs/00_Catalog/AGENT_COLD_START.md)中的启动段，按其当前阶段阅读顺序接手；以下为项目全貌资料入口。
+
 1. [完整需求索引](Docs/00_Catalog/REQUIREMENTS_INDEX.md)
 2. [V3 技术路线与总体架构](Docs/A_Project/20_Architecture/DESKTOPUP_V2_V3_ARCHITECTURE_V1.md)
 3. [V3 模块分类与端口目录](Docs/A_Project/20_Architecture/DESKTOPUP_V2_V3_MODULE_CATALOG_V1.md)

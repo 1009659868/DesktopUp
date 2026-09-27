@@ -1,5 +1,7 @@
 # DesktopUp V2 文档入口
 
+新agent从[冷启动提示词](00_Catalog/AGENT_COLD_START.md)开始：包含可复制入口、当前基线和分层核对步骤；实际阶段以当前决定/计划/交接为准。
+
 2026-09-27最新（DEC-029）：R5核心已收口，用户延期BUG-026并批准继续、最小解耦及解耦后的雨夜窗边。先读[R5收口与代码/计划审计](A_Project/40_Implementation/V3-04/LR_R5_CLOSEOUT_AND_PLAN_AUDIT.md)，后续里程碑看[LR计划§8](A_Project/30_Plans/V3_04_L_REMEDIATION_REVIEW_PLAN.md#8-当前出口和最近下一步)，候选/验证看[HANDOFF](A_Project/40_Implementation/V3-04/HANDOFF.md)。R6就绪但实现未开始，模块/Rain/R7/R8及真实Item未完成；下方较早阶段为历史。
 
 2026-09-26当前节点：R1合同齐全、R2基线完成；R3统一几何/浏览/手动投影/空间资格模型及UI C最小原生样板完成，248项相关/1758项全量回归通过，R4安全保存合同及代表模板原生绑定完成（1868项合同）；进入R5首次直接操作。阶段证据与分工见[执行记录](A_Project/40_Implementation/V3-04/LR_MILESTONE_EXECUTION.md)。
