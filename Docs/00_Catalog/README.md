@@ -1,5 +1,6 @@
 # DesktopUp V2 文档目录
 
+- [Agent冷启动提示词](AGENT_COLD_START.md)：可复制启动入口、当前基线、阅读顺序及接手边界。
 - [需求索引](REQUIREMENTS_INDEX.md)
 - [当前执行入口](ACTIVE_PATH.md)
 - [文档登记表](DOCUMENT_REGISTRY.md)

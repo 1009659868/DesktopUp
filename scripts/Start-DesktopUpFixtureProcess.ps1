@@ -8,7 +8,8 @@ function Start-DesktopUpFixtureProcess {
         [Parameter(Mandatory)][string]$DataRoot,
         [string]$Arguments = '',
         [ValidateSet('Hidden','Normal')][string]$WindowStyle = 'Hidden',
-        [switch]$MenuDiagnostics
+        [switch]$MenuDiagnostics,
+        [switch]$ContentFeedbackDiagnostics
     )
     $taskStart = New-Object System.Diagnostics.ProcessStartInfo
     $taskStart.FileName = $ExecutablePath
@@ -18,6 +19,8 @@ function Start-DesktopUpFixtureProcess {
     $taskStart.WindowStyle = [System.Diagnostics.ProcessWindowStyle]$WindowStyle
     $taskStart.EnvironmentVariables['DESKTOPUP_V3_TEST_DATA_ROOT'] = $DataRoot
     $taskStart.EnvironmentVariables['DESKTOPUP_V3_MENU_DIAGNOSTICS'] = $(if ($MenuDiagnostics) { '1' } else { '0' })
+    # Test-only poster footer/callout. Explicitly clear inherited opt-in for human review.
+    $taskStart.EnvironmentVariables['DESKTOPUP_TEST_CONTENT_FEEDBACK'] = $(if ($ContentFeedbackDiagnostics) { '1' } else { '0' })
     # No RunAs/UAC change and no parent environment mutation.
     $taskStarted = [System.Diagnostics.Process]::Start($taskStart)
     if ($null -eq $taskStarted) { throw 'DesktopUp process creation returned no process.' }

@@ -103,7 +103,7 @@ public sealed class PosterContentInputContractTests
         Assert.True(router.Publish(Session, new(0, 0, 300, 400), Layout(1, handle, Item(), viewport)));
         Assert.Equal(PosterInputTargetKind.ContentSpanHandle, router.Resolve(105, 145, [Session])!.Region.Kind);
         Assert.Equal(PosterInputTargetKind.ContentItem, router.Resolve(30, 80, [Session])!.Region.Kind);
-        Assert.Equal(PosterInputTargetKind.ContentViewport, router.Resolve(250, 250, [Session])!.Region.Kind);
+        Assert.Null(router.Resolve(250, 250, [Session])); // viewport is observation metadata, not desktop ownership
         Assert.Null(router.Resolve(250, 390, [Session]));
     }
 

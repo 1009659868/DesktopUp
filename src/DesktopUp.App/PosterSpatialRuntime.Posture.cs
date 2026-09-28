@@ -24,6 +24,8 @@ internal sealed partial class PosterSpatialRuntime
 
     public void SetCollapsed(PosterStateCommand request, Action<StateCommandResult> completed)
     {
+        if (HasCenterDraft(request.PosterId))
+        { completed(Failure(request, "控制中心存在未完成修改，请先完成或取消。")); return; }
         if (request.Source != StateCommandSource.System) BeforeManualIntent(request.PosterId, request.DesiredState.IsCollapsed);
         if (_title is not null || _posture is not null || _owner is not null || !_windows.TryGetValue(request.PosterId, out var owner) ||
             !TrySnapshot(owner, out var scene, out var projection))
@@ -131,6 +133,14 @@ internal sealed partial class PosterSpatialRuntime
         if (!ReferenceEquals(_posture, run)) return;
         if (!TrySnapshot(run.Owner, out var scene, out var current) || scene!.Environment != run.Initial.Environment || !run.ReadsCurrent(current!))
         { CancelPosture("environment-or-read-set-stale"); return; }
+        // Only the explicit isolated backdrop probe installs this observer. Keep the native
+        // frame stable while its own-HWND capture completes; the existing watchdog remains on.
+        if (run.BackdropObservation is { } observation)
+        {
+            if (!observation.IsCompleted) return;
+            run.BackdropObservation = null;
+            observation.GetAwaiter().GetResult();
+        }
         if (!run.Cursor.Complete)
         {
             if (run.AnimationOriginMs is null)
@@ -160,7 +170,19 @@ internal sealed partial class PosterSpatialRuntime
                 prepareAndCommitMs = System.Diagnostics.Stopwatch.GetElapsedTime(probeStart).TotalMilliseconds });
             if (!applied)
                 CancelPosture("native-batch-failed");
-            else run.AcceptedFrames++;
+            else
+            {
+                run.AcceptedFrames++;
+                if (BackdropFrameObserverForProbe is { } observer &&
+                    prepared.FirstOrDefault(p => p!.Owner == run.Owner) is { } source)
+                {
+                    var initial = run.Initial.Posters.Single(p => p.PosterId == run.Owner.PosterId).Bounds;
+                    var final = run.Changes.Single(p => p.PosterId == run.Owner.PosterId).After;
+                    run.BackdropObservation = observer(new(run.Command.RequestId, run.Owner.PosterId!,
+                        run.Command.DesiredState.IsCollapsed, run.AcceptedFrames, run.Frames.Count,
+                        Pixels(initial), Pixels(final), source.Bounds));
+                }
+            }
             return;
         }
         run.Timer.Stop();
@@ -260,6 +282,7 @@ internal sealed partial class PosterSpatialRuntime
         public Stopwatch Clock { get; } = new();
         public int ReadyCallbacks { get; set; }
         public int AcceptedFrames { get; set; }
+        public Task? BackdropObservation { get; set; }
         public double? AnimationOriginMs { get; set; }
         public EventHandler<object>? RenderingHandler { get; set; }
         public IReadOnlyList<PosterVisualWindow> Participants { get; } = participants;

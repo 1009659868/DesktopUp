@@ -23,6 +23,21 @@ public static class PortableProfilePlanner
         document = PortableProfileCodec.Freeze(document);
         if (!Enum.IsDefined(mode)) throw new ArgumentException("Unknown import mode.");
         topology = FreezeTopology(topology);
+        // Decoding an archive proves preservation, not permission to instantiate its contents.
+        // Check every member before allocating identities; ExecutePortable repeats this same plan.
+        foreach (var portable in document.Posters)
+        {
+            if (portable.ContentLayout is not { } content) continue;
+            var layout = PortableContentLayoutCodec.Import(content, portable.Key);
+            ContentLayoutCapabilities.RequireApplicable(layout);
+            var appearance = PosterConfigurationFactory.NewBasicBox("portable-application-validation", "portable-application-validation") with
+            {
+                LayoutParametersJson = portable.LayoutParametersJson,
+                TemplateKey = PosterPresentationPolicy.IsBuiltIn(portable.TemplateKey) ? portable.TemplateKey : "basic-box"
+            };
+            var preferences = PosterPresentationPolicy.Resolve(appearance).Parameters.Preferences ?? new();
+            ContentLayoutCapabilities.RequireApplicable(layout, preferences.Scale, preferences.Spacing);
+        }
         idFactory ??= () => Guid.NewGuid().ToString("N");
         var occupied = BuildObstacles(mode == PortableImportMode.Replace ? [] : current.Catalog.Posters.Select(p => p.Poster), topology);
         var ids = current.Catalog.Posters.Select(p => p.Poster.PosterId).ToHashSet(StringComparer.Ordinal);

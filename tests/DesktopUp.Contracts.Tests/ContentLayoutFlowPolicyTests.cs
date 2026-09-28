@@ -65,13 +65,13 @@ public sealed class ContentLayoutFlowPolicyTests
     }
 
     [Fact]
-    public void Manual_axis_switch_converts_to_anchors_and_keeps_the_order()
+    public void Manual_axis_switch_preserves_mode_physical_authoring_and_independent_loop_in_one_version()
     {
-        // Full-manual coordinates only mean something on the axis they were authored for, so switching
-        // leaves manual mode and keeps the reading order as anchors. Explicit and undoable.
+        // DEC-025: axis changes do not convert mode, rotate physical cards or alter loop preference.
         var d = Doc() with
         {
             Mode = ContentLayoutMode.Manual,
+            LoopScroll = true,
             Placements = Array.AsReadOnly(new[]
             {
                 new ContentPlacement("p:item-0000", 0) { Column = 0, Row = 0, ColumnSpan = 4, RowSpan = 4 },
@@ -83,14 +83,18 @@ public sealed class ContentLayoutFlowPolicyTests
         var result = ContentLayoutFlowPolicy.SetFlowAxis(d, ContentFlowAxis.HorizontalLoop);
         Assert.True(result.Accepted, result.Error);
         Assert.Equal(ContentFlowAxis.HorizontalLoop, result.Document.FlowAxis);
-        Assert.Equal(ContentLayoutMode.Anchored, result.Document.Mode);
-        Assert.All(result.Document.Placements, p => Assert.False(p.FixedPosition));
+        Assert.Equal(ContentLayoutMode.Manual, result.Document.Mode);
+        Assert.Equal(d.Placements, result.Document.Placements);
+        Assert.Equal(d.SavedAutomaticMode, result.Document.SavedAutomaticMode);
+        Assert.Equal(d.DocumentVersion + 1, result.Document.DocumentVersion);
+        Assert.Equal(d.ItemSetVersion, result.Document.ItemSetVersion);
+        Assert.True(result.Document.LoopScroll);
     }
 
     [Fact]
     public void Axis_switch_reports_conflicting_pins_instead_of_clearing_them()
     {
-        // Pinned rows beyond the horizontal strip's usable height: an anchored pin is an explicit
+        // Fixed rows beyond the canonical 64-cell cross-axis capacity: a hard position is an explicit
         // intent, so the switch is reported rather than relocating or unpinning the user's cards.
         var d = Doc() with
         {
@@ -98,8 +102,8 @@ public sealed class ContentLayoutFlowPolicyTests
             Placements = Array.AsReadOnly(new[]
             {
                 new ContentPlacement("p:item-0000", 0) { Column = 0, Row = 50, FixedPosition = true },
-                new ContentPlacement("p:item-0001", 1) { Column = 0, Row = 54, FixedPosition = true },
-                new ContentPlacement("p:item-0002", 2) { Column = 0, Row = 58, FixedPosition = true }
+                new ContentPlacement("p:item-0001", 1) { Column = 0, Row = 58, FixedPosition = true },
+                new ContentPlacement("p:item-0002", 2) { Column = 0, Row = 63, FixedPosition = true }
             })
         };
 
@@ -110,5 +114,24 @@ public sealed class ContentLayoutFlowPolicyTests
         Assert.Equal(d.FlowAxis, result.Document.FlowAxis);
         Assert.Equal(d.DocumentVersion, result.Document.DocumentVersion);
         Assert.All(result.Document.Placements, p => Assert.True(p.FixedPosition));
+    }
+
+    [Fact]
+    public void Axis_switch_preserves_complete_manual_return_intent_without_consuming_item_versions()
+    {
+        var automatic = Doc();
+        var entered = ContentLayoutEditing.Apply(automatic, new(ContentLayoutEditKind.Mode)
+            { Mode = ContentLayoutMode.Manual }, new(354, 180));
+        Assert.True(entered.Accepted, entered.Error);
+        var before = entered.Document;
+        Assert.NotNull(before.SavedAutomaticMode);
+        Assert.All(before.Placements, p => Assert.NotNull(p.SavedAutomaticState));
+        var changed = ContentLayoutFlowPolicy.SetFlowAxis(before, ContentFlowAxis.HorizontalLoop);
+        Assert.True(changed.Accepted, changed.Error);
+        Assert.Equal(ContentLayoutMode.Manual, changed.Document.Mode);
+        Assert.Equal(before.Placements, changed.Document.Placements);
+        Assert.Equal(before.SavedAutomaticMode, changed.Document.SavedAutomaticMode);
+        Assert.Equal(before.DocumentVersion + 1, changed.Document.DocumentVersion);
+        Assert.Equal(before.LoopScroll, changed.Document.LoopScroll);
     }
 }

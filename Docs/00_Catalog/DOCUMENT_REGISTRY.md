@@ -1,18 +1,26 @@
 # DesktopUp V2 V3 文档登记表
 
-最后检查：2026-09-24（DEC-022/023操作与空间收敛导航；旧交付按产物保留）
+最后检查：2026-09-27（DEC-029恢复推进，R5核心收口与代码/计划审计；BUG-026延期；最小模块/Rain获准但未制作；旧交付按产物保留）
 
 本表只登记文档职责与资料类型，不独立裁决任务状态：当前任务查[细化工作流](../A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md)，运行交接查[HANDOFF](../A_Project/40_Implementation/V3-04/HANDOFF.md)，产品决定查[统一索引](../A_Project/10_Requirements/REQUIREMENTS_RISKS_AND_OPEN_QUESTIONS.md)。HISTORICAL表示对应版本证据，不是新待办；PLANNED不表示已有实现。
 
 | 文档 | 职责 | 状态 |
 | --- | --- | --- |
+| [AGENT_COLD_START](AGENT_COLD_START.md) | 可复制的agent冷启动入口、当前Git/阶段快照、分层阅读、实现核对、协作与证据边界 | 当前接手入口；只导航/核对，不独立裁决产品状态 |
+| [LR_R5_CLOSEOUT_AND_PLAN_AUDIT](../A_Project/40_Implementation/V3-04/LR_R5_CLOSEOUT_AND_PLAN_AUDIT.md) | R5原出口证据、用户认可边界、现源码与旧计划差异、遗留项和R6入口 | CORE CLOSED / 携带明确限制；不是R7验收 |
+| [CONTENT_SCENE_MODULE_DECOUPLING_PROPOSAL](../A_Project/20_Architecture/CONTENT_SCENE_MODULE_DECOUPLING_PROPOSAL.md) | 通用宿主/可删除Lamp/配置保留与恢复；解耦后Rain验证标准 | DEC-029 APPROVED / NOT STARTED；排期归LR计划§8 |
+| [LR_R5_POINTER_AND_MODULE_REVIEW](../A_Project/40_Implementation/V3-04/LR_R5_POINTER_AND_MODULE_REVIEW.md) | 候选18～25输入/主题/背景/循环根因、红绿与运行证据 | 分项证据保留；R5核心出口归收口报告，BUG-026延期，复杂组合及模块未完成 |
+| [LR_R5_UI_C_INTENT_ALIGNMENT](../A_Project/40_Implementation/V3-04/LR_R5_UI_C_INTENT_ALIGNMENT.md) | E1六任务/最终决定/UI C与生产纠偏的追溯 | 审查起点及迭代历史；当前R5核心收口不由早期缺口表重新否决，也不扩大到R7 |
+| [CONTENT_LAYOUT_COMBINATION_AUDIT_V1](../A_Project/20_Architecture/CONTENT_LAYOUT_COMBINATION_AUDIT_V1.md) | 已决手势、BM行为映射、循环/旧约束/双入口19条反例及源码差异 | R1 DESIGN CONTRACT READY；DEC-024/025收清选择，正式工程门仍待验证 |
+| [LR_R4_CONFIGURATION_FIDELITY](../A_Project/40_Implementation/V3-04/LR_R4_CONFIGURATION_FIDELITY.md) | 配置字段/能力、真实事务与代表模板原生绑定证据；限制与后续进程/视觉门 | R4 SAVE CONTRACT + SAMPLE READY，非R7同包验收 |
+| [LR_MILESTONE_EXECUTION](../A_Project/40_Implementation/V3-04/LR_MILESTONE_EXECUTION.md) | 当前里程碑、协作文件归属、兼容矩阵、恢复材料与工具链 | R1～R4出口保持 / R5核心收口 / R6就绪未实施；旧agent分工已交回，后续重新分派 |
 | [CONTENT_LAYOUT_EXPERIENCE_REVIEW_V1](../A_Project/20_Architecture/CONTENT_LAYOUT_EXPERIENCE_REVIEW_V1.md) | 五风险/两缺口、基础手势、六任务、整图承接与模式退出对照 | E1六任务反馈收清（06c提示后通过）；非生产合同门 |
 | [CONTENT_LAYOUT_OPERATION_SPACE_REVIEW_V1](../A_Project/20_Architecture/CONTENT_LAYOUT_OPERATION_SPACE_REVIEW_V1.md) | 新操作基线/退出A、被动极端不足时临时双轴、恢复与反例矩阵 | DEC-022/023已确认产品边界；工程待验证，不细化控件 |
-| [CONTENT_TEMPLATE_SCHEMA_UI_C](../A_Project/20_Architecture/CONTENT_TEMPLATE_SCHEMA_UI_C.md) | 已采纳UI C、模板域收纳、动态参数和受控装入边界 | UI BASELINE ACCEPTED / DEC-017；非生产模板平台验收 |
+| [CONTENT_TEMPLATE_SCHEMA_UI_C](../A_Project/20_Architecture/CONTENT_TEMPLATE_SCHEMA_UI_C.md) | 已采纳UI C、模板域收纳、动态参数和受控装入边界；生产落地导航 | UI BASELINE ACCEPTED / DEC-017；排期归LR计划§4.2，非生产验收 |
 | [CONTENT_LAYOUT_PIN_DRAG_REVIEW_V1](../A_Project/20_Architecture/CONTENT_LAYOUT_PIN_DRAG_REVIEW_V1.md) | DEC-018～020两模式、直接拖动/中心细调、图钉和PD连续矩阵 | 核心已决；双入口/循环组合待评审，未接生产 |
 | [CONTENT_LAYOUT_MANUAL_COMPOSITION_REVIEW_V1](../A_Project/20_Architecture/CONTENT_LAYOUT_MANUAL_COMPOSITION_REVIEW_V1.md) | 手动局部让位、留白/缩框恢复、适配编辑承接及当前画面进入手动；MC矩阵 | DEC-020选择已确认；候选算法未接生产、未代替旧数据兼容门 |
 | [CONTENT_LAYOUT_REMEDIATION_DESIGN_V2](../A_Project/20_Architecture/CONTENT_LAYOUT_REMEDIATION_DESIGN_V2.md) | 整改后的操作链和模块职责，已决与候选分开 | DESIGN REVIEW；§5由图钉组合稿细化 |
-| [V3_04_L_REMEDIATION_REVIEW_PLAN](../A_Project/30_Plans/V3_04_L_REMEDIATION_REVIEW_PLAN.md) | LR-R0～R8整改门和退回边界 | 当前状态归细化工作流，不把原型认可扩大为实施门通过 |
+| [V3_04_L_REMEDIATION_REVIEW_PLAN](../A_Project/30_Plans/V3_04_L_REMEDIATION_REVIEW_PLAN.md) | LR-R0～R8整改门/里程碑、UI C落地、配置保真与真实Item接入出口 | 2026-09-26计划补强；当前状态归细化工作流，计划成文不等于实施或验收 |
 | [CONTENT_LAYOUT_REVIEW_2026-09-23](../A_Project/40_Implementation/V3-04/CONTENT_LAYOUT_REVIEW_2026-09-23.md) | 现有源码/隔离审查事实、问题、证据范围 | AUDIT EVIDENCE；Bug状态归统一清单 |
 | [CONTENT_LAYOUT_INTERACTION_REVISION_V1](../A_Project/20_Architecture/CONTENT_LAYOUT_INTERACTION_REVISION_V1.md) | DEC-009单轴/横向循环、空地约束根因、整理入口和操作意图矩阵 | DESIGN DRAFT；L07 NEEDS REVISION，单项人工覆盖建议待讨论 |
 | [V3_04_06_PORTABLE_PROFILE_PLAN](../A_Project/30_Plans/V3_04_06_PORTABLE_PROFILE_PLAN.md) | 便携格式/容量/隐私、追加替换、待安置、显式恢复与A～D执行卡 | 已有分项证据保留；剩余验收DEFERRED，不阻塞04-L |
@@ -99,7 +107,7 @@
 | [GENERAL_CONTENT_MULTI_POSTER_CONTRACT_V1](../A_Project/20_Architecture/GENERAL_CONTENT_MULTI_POSTER_CONTRACT_V1.md) | 实例/共享边界、数据/CAS、生命周期与类型能力设计 | DESIGN / STAGED IMPLEMENTATION；分项实现/验收见C层，不是完整产品已完成 |
 | [V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1](../A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md) | 当前子项状态/依赖/验收的任务索引；历史卡单列 | CURRENT — M08-01～05分项PASS，06实现/余门OPEN；不跳过最终环境/视觉门 |
 | [V3-04 HANDOFF](../A_Project/40_Implementation/V3-04/HANDOFF.md) | 已验证范围、未实现缺口与立即下一步 | CURRENT |
-| [V3-04 AGENT_HANDOFF_PROMPT](../A_Project/40_Implementation/V3-04/AGENT_HANDOFF_PROMPT.md) | 可直接交给下一位Agent的接替提示词：工作区、阅读顺序、规则、证据边界和LR-R1下一步 | HANDOFF SNAPSHOT / 不新增需求或实施授权；接手先核对Git及最新决定 |
+| [V3-04 AGENT_HANDOFF_PROMPT](../A_Project/40_Implementation/V3-04/AGENT_HANDOFF_PROMPT.md) | 保留2026-09-24的LR-R1接替提示词和当时证据边界 | HISTORICAL / 当前入口为AGENT_COLD_START，不按旧快照重启已结束阶段 |
 | [M04_CONTROL_CENTER_SELECTION](../A_Project/40_Implementation/V3-04/M04_CONTROL_CENTER_SELECTION.md) | 中心目录/目标选择的阶段合同与证据 | HISTORICAL EVIDENCE — 已接入；当前交互/零目录范围见M07 |
 | [M04_SPATIAL_CONTRACT](../A_Project/40_Implementation/V3-04/M04_SPATIAL_CONTRACT.md) | 占位/坐标/连续路径/展开/归位资格与完整读集、迁移登记及243项证据 | AUTO PASS — PURE CONTRACT |
 | [DESKBOX_SPATIAL_REFERENCE](../A_Project/40_Implementation/V3-04/DESKBOX_SPATIAL_REFERENCE.md) | 吸附、组移动和展开计算来源/指纹/测试及适配取舍 | HISTORICAL REFERENCE — 后续空间实现已接，不是待开工 |

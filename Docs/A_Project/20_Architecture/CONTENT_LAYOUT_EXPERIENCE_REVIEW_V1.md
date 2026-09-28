@@ -2,6 +2,8 @@
 
 日期：2026-09-24。状态：**LR-R1 / E1六任务反馈收清，06c提示后恢复成功；操作基线及受限二维浏览已确认，非生产实现**。
 
+2026-09-27生产对齐入口：用户指出R5未完整落实本页已确认操作意图。历史反馈与DEC保持不变，生产实现/可见反馈缺口逐项见[R5对齐记录](../40_Implementation/V3-04/LR_R5_UI_C_INTENT_ALIGNMENT.md)，纠偏顺序归主计划§4.2.1。本页§6.2已收清§6.1的历史待答项，不要求重做E1规则比选；生产版仍需相应回归。
+
 依据[DEC-021](../10_Requirements/REQUIREMENTS_RISKS_AND_OPEN_QUESTIONS.md)：先判断整套操作是否自然、可预测、可恢复，再细化控件。既有DEC-017～020暂不推翻，“适配后整图承接”和“模式退出覆盖处置”列为重点。当前计划归[LR-R1](../30_Plans/V3_04_L_REMEDIATION_REVIEW_PLAN.md)，不是另开产品路线。
 
 [打开体验试验 E1](Designs/content-layout-experience.html) · [已采纳UI C原稿](Designs/content-layout-controls-c.html) · [手动构图专项](CONTENT_LAYOUT_MANUAL_COMPOSITION_REVIEW_V1.md) · [图钉组合规则](CONTENT_LAYOUT_PIN_DRAG_REVIEW_V1.md)

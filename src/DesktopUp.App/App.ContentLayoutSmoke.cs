@@ -321,7 +321,7 @@ public partial class App
                             _spatialRuntime.ScrollContentForSmoke(target,0,0); guideBasis=Probe(target);
                             cases.Add("horizontal-scroll-offset-nonnative-shift-wheel-equivalent");
                         });
-                        foreach(var flags in new[]{(false,false),(true,false),(true,true),(false,true)})
+                        foreach(var flags in new[]{(true,false),(true,true),(false,true),(false,false)})
                         {
                             var captured=flags;
                             operations.Enqueue(()=>

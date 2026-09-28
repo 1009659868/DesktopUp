@@ -4,6 +4,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using WinRT;
+using DesktopUp.Domain;
 
 namespace DesktopUp;
 
@@ -18,7 +19,7 @@ internal sealed partial class PosterVisualWindow
 
     private void ApplyWindowBackdrop(Window window)
     {
-        var color = ColorBrush(_presentation.Parameters.Theme.Background, 245).Color;
+        var color = BackdropColor();
         if (_windowBackdrop is null) _windowBackdrop = new WinUIEx.TransparentTintBackdrop(color);
         else _windowBackdrop.TintColor = color;
         if (!ReferenceEquals(window.SystemBackdrop, _windowBackdrop)) window.SystemBackdrop = _windowBackdrop;
@@ -35,9 +36,12 @@ internal sealed partial class PosterVisualWindow
     internal bool VerifyWindowBackdrop()
     {
         return HasWindowBackdrop &&
-            _windowBackdrop!.TintColor == ColorBrush(_presentation.Parameters.Theme.Background, 245).Color &&
+            _windowBackdrop!.TintColor == BackdropColor() &&
             _window!.Content is Grid { Background: SolidColorBrush background } &&
             background.Color == Colors.Transparent &&
             _window.As<ICompositionSupportsSystemBackdrop>().SystemBackdrop is not null;
     }
+    private global::Windows.UI.Color BackdropColor() => _presentation.EffectiveTemplateKey == LampTemplatePolicy.TemplateKey || HasSelectedRecipePaint
+        ? ColorBrush(CurrentLamp.Background, (byte)Math.Round(CurrentLamp.BackgroundOpacity * 255 / 100)).Color
+        : ColorBrush(_presentation.Parameters.Theme.Background, 245).Color;
 }

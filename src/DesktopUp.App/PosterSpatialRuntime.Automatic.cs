@@ -12,14 +12,14 @@ internal sealed partial class PosterSpatialRuntime
 
     public void BeforeManualIntent(string posterId, bool? collapse = null)
     {
-        CancelControlCenterVisuals();
+        if (!HasCenterDraft(posterId) && _windows.TryGetValue(posterId, out var target)) target.ClearCenterPresentation();
         ManualIntent?.Invoke(posterId, collapse);
         if (_automatic is { } active) CancelAutomatic(active);
     }
 
     public void StartAutomatic(AutoPostureRequest request, Action<AutoPostureOutcome> completed)
     {
-        CancelControlCenterVisuals();
+        if (HasCenterDraft(request.Session.PosterId)) { completed(AutoPostureOutcome.Cancelled); return; }
         if (_suspended || IsSpatialBusy || !_windows.TryGetValue(request.Session.PosterId, out var window) ||
             window.ReadPointerTarget().Session != request.Session ||
             !state.TryGetCurrent(out var current) || current?.PostersById.GetValueOrDefault(request.Session.PosterId) is not { } target)

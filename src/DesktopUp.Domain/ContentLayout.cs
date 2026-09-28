@@ -12,6 +12,9 @@ public enum ManualLayoutExit { KeepOrder, ConvertToAnchors, RestoreAutomatic }
 /// HorizontalLoop: the content height adapts to the poster and the strip wraps head-to-tail.</summary>
 public enum ContentFlowAxis { Vertical, HorizontalLoop }
 
+/// <summary>Derived geometry capability, not a saved mode or permission to enter passive recovery.</summary>
+public enum ContentLayoutSpaceStatus { Normal, InsufficientCrossAxis, LegacyConstraintConflict }
+
 /// <summary>Explicit = a user-managed keep-out area: it blocks placement, must be drawn in the
 /// editing state and must be removable. Decorative = presentation only, never blocks a drop.</summary>
 public enum ContentReservedKind { Explicit, Decorative }
@@ -21,6 +24,15 @@ public sealed record ContentReservedSpace(int Column, int Row, int ColumnSpan, i
 {
     public ContentReservedKind Kind { get; init; } = ContentReservedKind.Explicit;
     public string Name { get; init; } = string.Empty;
+}
+/// <summary>Automatic author intent retained only while editing a manual composition. It is not a
+/// cache of a prior manual picture, rendered heat proposal, or separate persistent document.</summary>
+public sealed record ContentAutomaticSizeBasis(int ColumnSpan, int RowSpan);
+public sealed record ContentAutomaticPlacementState(int Order, int ColumnSpan, int RowSpan,
+    bool ManualSize, int? PinnedIndex, int? Column = null, int? Row = null, bool FixedPosition = false)
+{
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public ContentAutomaticSizeBasis? AutomaticSizeBasis { get; init; }
 }
 public sealed record ContentPlacement(string ItemId, int Order, int ColumnSpan = 4, int RowSpan = 4)
 {
@@ -32,6 +44,10 @@ public sealed record ContentPlacement(string ItemId, int Order, int ColumnSpan =
     public bool ManualSize { get; init; }
     public int? PinnedIndex { get; init; }
     public ContentImageFit ImageFit { get; init; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public ContentAutomaticPlacementState? SavedAutomaticState { get; init; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public ContentAutomaticSizeBasis? AutomaticSizeBasis { get; init; }
 }
 
 // Intent only. Resolved coordinates, scroll, pixels and native handles never enter this document.
@@ -46,8 +62,9 @@ public sealed record ContentLayoutDocument(string PosterId, IReadOnlyList<Conten
     public double BaseCellDip { get; init; } = 24;
     public double BaseGapDip { get; init; } = 6;
     public int MaximumColumns { get; init; } = 64;
-    public bool ShowBaselineGrid { get; init; } = true;
-    public bool ShowSpanLabels { get; init; } = true;
+    // New posters keep editing aids opt-in. Explicit values in saved documents still win.
+    public bool ShowBaselineGrid { get; init; }
+    public bool ShowSpanLabels { get; init; }
     public IReadOnlyList<ContentLayoutRegion> Regions { get; init; } = Array.AsReadOnly(new[] { new ContentLayoutRegion("main", 0) });
     public IReadOnlyList<ContentReservedSpace> ReservedSpaces { get; init; } = Array.Empty<ContentReservedSpace>();
     public ContentFlowAxis FlowAxis { get; init; } = ContentFlowAxis.Vertical;
@@ -67,6 +84,8 @@ public sealed record ContentLayoutDocument(string PosterId, IReadOnlyList<Conten
     /// Off by default, so a poster behaves as a finite strip until the user opts in.
     /// </summary>
     public bool LoopScroll { get; init; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public ContentLayoutMode? SavedAutomaticMode { get; init; }
 }
 
 public sealed record ContentItemView(string ItemId, string Name, string Monogram, uint Color, string? AssetKey = null);
@@ -106,6 +125,16 @@ public sealed record ContentLayoutSnapshot(string PosterId, long DocumentVersion
     public ContentFlowAxis FlowAxis { get; init; } = ContentFlowAxis.Vertical;
     /// <summary>Captured from the intent document; loop projection is off unless the poster opted in.</summary>
     public bool LoopScroll { get; init; }
+    /// <summary>Capacity used by the normalized cross-axis solver; independent of physical X/Y.</summary>
+    public int CrossAxisCells { get; init; }
+    /// <summary>Largest complete effective item on the cross axis; zero for an empty poster.</summary>
+    public double MinimumCrossAxisDip { get; init; }
+    public double AvailableCrossAxisDip { get; init; }
+    /// <summary>Derived geometry witness. Null only for explicitly constructed legacy snapshots.</summary>
+    public double? ResolvedScale { get; init; }
+    public double? ResolvedSpacing { get; init; }
+    public ContentLayoutSpaceStatus SpaceStatus { get; init; }
+    public bool IsLayoutReadOnly => SpaceStatus != ContentLayoutSpaceStatus.Normal;
     public ContentResolvedPlacement? HitTest(double x, double y) => Items.FirstOrDefault(i => i.Clip.Contains(x, y));
     public ContentScrollAnchor? Anchor() => Items.Where(i => i.Bounds.Bottom > ScrollYDip)
         .OrderBy(i => i.Bounds.Y).ThenBy(i => i.ReadOrder).Select(i => new ContentScrollAnchor(i.ItemId, ScrollYDip - i.Bounds.Y, i.ReadOrder)).FirstOrDefault();
@@ -117,8 +146,9 @@ public static class ContentLayoutPolicy
     public const int MaximumJsonBytes = 1048576, MaximumRegions = 8;
     public const double MinimumReadableCardDip = 48;
     /// <summary>v1 = pre-axis documents (read-only compatible, flow defaults to vertical). v2 adds
-    /// the flow axis and the reserved-space kind/name required by the interaction revision.</summary>
-    public const int SupportedSchemaVersion = 2, MinimumSupportedSchemaVersion = 1;
+    /// the flow axis and reserved-space kind/name. v3 adds automatic return intent and symmetric
+    /// long main-axis coordinates; older automatic documents keep their original pin semantics.</summary>
+    public const int SupportedSchemaVersion = 3, MinimumSupportedSchemaVersion = 1;
     public const int MaximumReservedSpaces = 32, MaximumReservedNameLength = 64;
     private static readonly JsonSerializerOptions Json = new()
     {
@@ -146,20 +176,43 @@ public static class ContentLayoutPolicy
         if (d.ReservedSpaces is null || d.ReservedSpaces.Count > MaximumReservedSpaces || d.ReservedSpaces.Any(s => s is null ||
             s.Column is < 0 or >= MaximumColumns || s.Row is < 0 or > MaximumRow || s.ColumnSpan is < 1 or > MaximumColumns ||
             s.RowSpan is < 1 or > MaximumRow || s.Column + s.ColumnSpan > MaximumColumns || s.Row + s.RowSpan > MaximumRow ||
-            !Enum.IsDefined(s.Kind) || s.Name.Length > MaximumReservedNameLength))
+            !Enum.IsDefined(s.Kind) || s.Name is null || s.Name.Length > MaximumReservedNameLength))
             return "Invalid reserved space.";
         var ids = new HashSet<string>(StringComparer.Ordinal);
         var pins = new HashSet<int>();
+        var savedPins = new HashSet<int>();
+        bool hasReturnState = d.SavedAutomaticMode.HasValue;
+        if (d.SchemaVersion < 3 && (hasReturnState || d.Placements.Any(p => p?.SavedAutomaticState is not null || p?.AutomaticSizeBasis is not null)))
+            return "Automatic return intent requires content layout schema three.";
+        if (hasReturnState && (d.Mode != ContentLayoutMode.Manual ||
+            d.SavedAutomaticMode is not (ContentLayoutMode.Automatic or ContentLayoutMode.Anchored)))
+            return "Automatic return intent belongs only to a manual composition.";
+        int maximumColumn = d.SchemaVersion >= 3 ? MaximumRow : MaximumColumns - 1;
         foreach (var p in d.Placements)
         {
             if (p is null || string.IsNullOrWhiteSpace(p.ItemId) || p.ItemId.Length > 192 || !p.ItemId.StartsWith(d.PosterId + ":", StringComparison.Ordinal) || !ids.Add(p.ItemId) || p.Version < 1 || p.Order < 0 || !regions.Contains(p.RegionId) || !Enum.IsDefined(p.ImageFit))
                 return "Invalid, foreign or duplicate placement identity.";
-            if (p.ColumnSpan is < 1 or > MaximumSpan || p.RowSpan is < 1 or > MaximumSpan || p.Column is < 0 or >= MaximumColumns || p.Row is < 0 or > MaximumRow || p.Column.HasValue != p.Row.HasValue || p.FixedPosition && !p.Column.HasValue)
+            if (p.ColumnSpan is < 1 or > MaximumSpan || p.RowSpan is < 1 or > MaximumSpan || p.Column < 0 || p.Column > maximumColumn || p.Row is < 0 or > MaximumRow || p.Column.HasValue != p.Row.HasValue || p.FixedPosition && !p.Column.HasValue)
                 return "Invalid span or logical position.";
             if (p.PinnedIndex is { } pin && (pin < 1 || pin > d.Placements.Count || !pins.Add(pin))) return "Invalid or duplicate order anchor.";
+            if (!ValidSizeBasis(p.AutomaticSizeBasis, p.ManualSize)) return "Invalid automatic size basis.";
+            if (hasReturnState != (p.SavedAutomaticState is not null))
+                return "Automatic return intent must cover the complete manual member set.";
+            if (p.SavedAutomaticState is { } saved)
+            {
+                if (saved.Order < 0 || saved.ColumnSpan is < 1 or > MaximumSpan || saved.RowSpan is < 1 or > MaximumSpan ||
+                    saved.Column is < 0 or > MaximumRow || saved.Row is < 0 or > MaximumRow ||
+                    saved.Column.HasValue != saved.Row.HasValue || saved.FixedPosition && !saved.Column.HasValue)
+                    return "Invalid saved automatic placement intent.";
+                if (!ValidSizeBasis(saved.AutomaticSizeBasis, saved.ManualSize)) return "Invalid saved automatic size basis.";
+                if (saved.PinnedIndex is { } savedPin && (savedPin < 1 || savedPin > d.Placements.Count || !savedPins.Add(savedPin)))
+                    return "Invalid or duplicate saved automatic order anchor.";
+            }
         }
         return null;
     }
+    private static bool ValidSizeBasis(ContentAutomaticSizeBasis? basis, bool manualSize) => basis is null ||
+        manualSize && basis.ColumnSpan is >= 1 and <= MaximumSpan && basis.RowSpan is >= 1 and <= MaximumSpan;
     public static ContentLayoutDocument Freeze(ContentLayoutDocument d) => d with
     {
         Placements = Array.AsReadOnly(d.Placements.ToArray()), Regions = Array.AsReadOnly(d.Regions.ToArray()),
@@ -179,7 +232,13 @@ public static class ContentLayoutPolicy
         try
         {
             if (System.Text.Encoding.UTF8.GetByteCount(text) > MaximumJsonBytes) throw new ArgumentException("Layout JSON exceeds capacity.");
-            using (var tree = JsonDocument.Parse(text, new JsonDocumentOptions { MaxDepth = 24 })) RejectDuplicates(tree.RootElement);
+            using (var tree = JsonDocument.Parse(text, new JsonDocumentOptions { MaxDepth = 24 }))
+            {
+                RejectDuplicates(tree.RootElement);
+                if (tree.RootElement.ValueKind != JsonValueKind.Object ||
+                    !tree.RootElement.TryGetProperty("schemaVersion", out var schema) || schema.ValueKind != JsonValueKind.Number || !schema.TryGetInt32(out _))
+                    throw new ArgumentException("An explicit content layout schema version is required.");
+            }
             var d = JsonSerializer.Deserialize<ContentLayoutDocument>(text, Json);
             error = Validate(d);
             if (error is null && d!.PosterId != posterId) error = "Layout owner does not match poster.";

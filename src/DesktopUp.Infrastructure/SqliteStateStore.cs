@@ -12,7 +12,7 @@ public sealed class SqliteStateStore : IStateStore
     private const int BusyTimeoutMilliseconds = 5_000;
     // 11 registers support for content layout document v2 (single flow axis + optional heat-driven
     // size). It adds no column: those members live inside content_layout_json and are validated on read.
-    private const int CurrentSchemaVersion = 11;
+    private const int CurrentSchemaVersion = 12;
     private const string DatabaseFileName = "desktopup.sqlite3";
     private static readonly Migration[] Migrations =
     [
@@ -221,6 +221,12 @@ public sealed class SqliteStateStore : IStateStore
             -- carried inside content_layout_json and validated on read by ContentLayoutPolicy, so no
             -- column is added and no existing document is rewritten by this migration.
             SELECT 1;
+            """),
+        new(12, "declarative-template-catalog-and-center-theme", """
+            ALTER TABLE app_settings ADD COLUMN center_theme TEXT NOT NULL DEFAULT 'light'
+                CHECK (center_theme IN ('light', 'ink', 'blue', 'system'));
+            ALTER TABLE app_settings ADD COLUMN template_catalog_json TEXT NOT NULL DEFAULT '[]'
+                CHECK (json_valid(template_catalog_json));
             """)
     ];
 
@@ -604,6 +610,7 @@ public sealed class SqliteStateStore : IStateStore
             if (migration.Version >= 7) VerifyAutoPostureSchema(connection, transaction);
             if (migration.Version >= 9) VerifyPendingPlacementSchema(connection, transaction);
             if (migration.Version >= 10) VerifyContentLayoutSchema(connection, transaction);
+            if (migration.Version >= 12) VerifyTemplateSettingsSchema(connection, transaction);
 
             string appliedUtc = DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture);
             using (SqliteCommand ledger = connection.CreateCommand())
@@ -716,12 +723,24 @@ public sealed class SqliteStateStore : IStateStore
         if (expectedVersion >= 7) VerifyAutoPostureSchema(connection, null);
         if (expectedVersion >= 9) VerifyPendingPlacementSchema(connection, null);
         if (expectedVersion >= 10) VerifyContentLayoutSchema(connection, null);
+        if (expectedVersion >= 12) VerifyTemplateSettingsSchema(connection, null);
         if (head.SchemaVersion != version)
         {
             throw new InvalidDataException(
                 $"State head schema {head.SchemaVersion} does not match user_version {version}.");
         }
         return head;
+    }
+
+    private static void VerifyTemplateSettingsSchema(SqliteConnection connection, SqliteTransaction? transaction)
+    {
+        using var command = connection.CreateCommand(); command.Transaction = transaction;
+        command.CommandText = "SELECT center_theme, template_catalog_json FROM app_settings WHERE singleton_id = 1;";
+        using var reader = command.ExecuteReader();
+        if (!reader.Read() || reader.GetString(0) is not ("light" or "ink" or "blue" or "system"))
+            throw new InvalidDataException("Invalid control-center theme.");
+        try { DesktopUp.Domain.TemplateRecipeCatalog.Read(reader.GetString(1)); }
+        catch (ArgumentException e) { throw new InvalidDataException("Invalid stored template catalog.", e); }
     }
 
     private static void VerifyContentLayoutSchema(SqliteConnection connection, SqliteTransaction? transaction)

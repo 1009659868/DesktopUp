@@ -19,6 +19,15 @@ public static class StateRequestFingerprint
         var resolver = new DefaultJsonTypeInfoResolver();
         resolver.Modifiers.Add(info =>
         {
+            if (info.Type == typeof(DesktopUpSettings))
+            {
+                // v11 settings had neither center theme nor a recipe catalog. Preserve receipt
+                // hashes only for those exact semantic defaults; changed values remain hashed.
+                info.Properties.Single(p => p.Name == nameof(DesktopUpSettings.CenterTheme)).ShouldSerialize =
+                    (_, value) => value is not string theme || theme != "light";
+                info.Properties.Single(p => p.Name == nameof(DesktopUpSettings.TemplateCatalogJson)).ShouldSerialize =
+                    (_, value) => value is not string catalog || catalog != "[]";
+            }
             if (info.Type != typeof(PosterDefinition)) return;
             info.Properties.Single(p => p.Name == nameof(PosterDefinition.AutoCollapseDelaySeconds)).ShouldSerialize =
                 (_, value) => value is not int seconds || seconds != PosterAutoPosturePolicy.DefaultDelaySeconds;

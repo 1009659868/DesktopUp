@@ -1,5 +1,172 @@
 # V3-04 验证记录
 
+## 2026-09-28：远端wb合入当前V3（LOCAL MERGE / BUILD + CONTRACTS）
+
+- 授权范围：fetch远端impl/poster-redesign-V3-wb并合入当前impl/poster-redesign-V3，不推送。合并前当前0e37d9d、远端wb fc8c920；双方分别有1/3个独有提交，使用普通合并保留双方历史。
+- 唯一文本冲突为HANDOFF顶部追加记录，保留双方记录；最新AGENT_COLD_START作为当前入口，旧AGENT_HANDOFF_PROMPT标HISTORICAL并同步登记。未按整侧覆盖，生产代码无冲突。合并结果的src/tests/scripts/config与远端wb无差异。
+- 本机scripts/test.ps1 -Configuration Release：2115通过、0失败、0跳过，exit0；scripts/build.ps1 -Configuration Release：0警告/0错误，exit0。默认bin/obj输出，未覆盖out旧候选，未启动DesktopUp或运行原生输入/同包进程门，不扩张R5/R6验收。
+- 4份合并交接/导航文件的116个本地链接目标均存在；未解决冲突条目为0。完整暂存空白检查仅发现远端已有scripts/probe-content-fields.ps1:90的EOF空行，保持该已验证脚本字节；排除该单文件后检查exit0。本轮文档无新增空白错误。
+- 合并前后.workbuddy/memory的两份本地笔记SHA-256一致，未暂存、删除或覆盖。日常库、运行包、旧失败证据不进入本次合并；原远端验证记录保留为历史证据，不冒充本机本轮重跑。
+
+最新（2026-09-27，冷启动提示词同步）：实际搜索Docs（含隐藏/忽略文件）未发现独立旧提示词，新增[AGENT_COLD_START](../../../00_Catalog/AGENT_COLD_START.md)并接入导航；按维护前HEAD/upstream `67559b4…`、DEC-029、R5收口及执行记录§9核对当前状态，修正登记表遗留的R5实施中描述。链接和文档空白检查通过；重算候选25的445源码零漂移。仅文档修改，没有构建、启动App或重跑合同；维护完成后用户另行授权本次文档提交推送，Git同步不扩大既有证据范围。
+
+最新（2026-09-27，R5收口文档审计）：[收口报告](LR_R5_CLOSEOUT_AND_PLAN_AUDIT.md)逐项区分原出口、用户反馈及遗留范围。DEC-029恢复推进，BUG-026延期。**本次仅文档改动和只读复核**：重新计算`source-loop-wheel-v25.json`的445源码，零漂移；运行`out/lr-r5-evidence/start-loop-wheel-review.ps1 -CheckOnly`成功，候选/八组证据绑定有效。18份相关文档的842个本地链接可定位，`git -c core.safecrlf=false diff --check`通过。没有新构建、OS输入或App进程门，没有重跑下方2115合同；自动报告的产品/里程碑旗标保持原值。R5核心收口不是R7验收，下方“主线待审”等按当时阶段理解。
+
+最新（候选25）：[报告§9](LR_R5_POINTER_AND_MODULE_REVIEW.md#9-候选25循环起点反向滚动与主线审阅节点)。用户认可候选24 UI/动画后，本轮仅修反向循环输入。旧算式8/10红测、旧App实际共享处理器第一次+120应到2970却为0；修正后47相关/2115全量、两轴12场景102事件/984检查通过，XAML卡片/发布input逐次一致、滚动raw/revision不变。八组`loop-wheel-v25-*`同包门全部通过、PS5.1/7启动绑定通过、445源码/402产物一致、资源0。截图是XAML，不含原生背景；没有OS滚轮注入或R6循环拖动认证。原human-review-08未改，使用新09副本；主线按DEC-028待用户审阅。
+
+最新（候选24）：[报告§8](LR_R5_POINTER_AND_MODULE_REVIEW.md#8-候选24展开过程灰底与ab不透明度对照)。A25/B100与仅交换透明度的A100/B25四组因果对照：旧行为只有25%两组中间灰底、最大差191，100%两组正常；新包四组三阶段24点最大差0、ARGB始终不变、源快照/产物稳定、退出0/资源0。2105/2105合同、App/fixture构建0警告错误。证据为`poster-animation-background-v24/red-*`和`final-*`，保持HRGN捕获，不宣称原速所有GPU帧。八组`frame-backdrop-v24-*`同包门、PS5.1/7交付预检通过，441源码/402产物指纹一致、无常驻实例；旧候选23只能认证终态。
+
+最新（候选23）：[报告§7](LR_R5_POINTER_AND_MODULE_REVIEW.md#7-候选23半透明收展灰底与系统动画策略)。灰底原生红测18/24点失败、最大差191；修正后0/25/100%及冷启动收纳四组90点差值0，使用自身HWND合成捕获而非XAML。2102合同、App/fixture构建0警告错误，八组backdrop-v23同包门及PS5.1/7启动预检通过，439源码/402产物冻结。UISettings=false时灯光计时器0的实际分支已验证，之后true时真实计时帧/合成处理器通过；不是本轮OS鼠标认证。v22 recipes单次颜色失败保留，新增逐状态connected/actualTheme诊断后v23连同重启通过，不据此声称已证明旧失败原因。源体验库未改、无常驻实例；稳定终态证据不外推逐帧/多屏。
+
+最新结果（候选21）：`theme-v21-red-system`实际复现浅色默认按钮深灰、悬停恢复；资源隔离修正后，`theme-v21-recipes`四主题及保存system重启共378状态读回通过。2102/2102、构建0警告错误、八组`theme-v21-{recipes,daily,protocol,fields,rejected,ui,lamp,composition}`同包门全部通过，437源码指纹一致，PS5.1/7体验预检通过。已实际查看中心/颜色弹窗/重启PNG；状态切换由VisualStateManager驱动，不冒称OS鼠标或高对比测试。[报告§6](LR_R5_POINTER_AND_MODULE_REVIEW.md#6-候选21默认黑底与主题资源隔离)记录用户对其他样式、灯光与图钉交互的正向反馈，R5不整体关闭。以下较早“最新结果”为历史。
+
+最新结果（候选20）：全透明窗口误挡观察已真实复现并修复，`pointer-v20-real`真实两点跟随/离开轻摆通过；`pointer-v20-native-mouse`实际单击/双击/拖动/编辑缩放/条目右键菜单与重启通过。2102/2102全量、构建0警告错误、八组`pointer-v20-{daily,protocol,fields,rejected,ui,lamp,recipes,composition}`同包门通过；PS5.1/7体验预检通过。新原生alpha测试先红后绿、旧失败材料保留，详见[报告§4.2](LR_R5_POINTER_AND_MODULE_REVIEW.md#42-真实复现与修复候选20)。直接右击图钉、桌面空白手势与人工视觉仍未宣称通过，R5未收口。
+
+历史真实指针续测：候选19 `pointer-v19-real-exposed-02` / `real-exposed-delayed` / `real-after-uncovered` / `real-visible-wait`均BLOCKED，首点HRGN包含但实际接收是Codex窗口；0移动/按钮，退出0/资源0、产物稳定。最后一组另保存20次零输入等待。新增脚本等待并未跳过输入守卫，App未修改；PS语法/证据和可复用手动入口见[报告§5](LR_R5_POINTER_AND_MODULE_REVIEW.md#5-下一步与协作交接)。当时没有真实追光、图钉OS右键或桌面手势通过声明。
+
+最新补正（候选19）：右键DOWN/UP保留原消息点，避免积压时按下点被当前光标覆盖；新增隐藏HWND坐标/图钉语义测试。2094/2094、0跳过，App/fixture构建0警告/错误；审查P2已解决，八组同包脚本门通过。最终候选/hash/同包运行见[报告§4.1](LR_R5_POINTER_AND_MODULE_REVIEW.md#41-复审补正候选19)；不是实际系统右键或真实追光PASS。以下v18证据保留。
+
+## 2026-09-27 最新：候选18输入/图钉与真实追光证据分离
+
+完整候选、hash、失败材料及逐门范围见[输入与模块报告§4](LR_R5_POINTER_AND_MODULE_REVIEW.md#4-候选与证据)。全量2093/2093，App/fixture构建0警告/错误；稀疏输入新测试先红后绿。日常/协议15场景及重启通过，实际应用HRGN排除243空白点、包含216交互点；图钉实际处理器只写一次、旧请求拒绝且可撤销，未发送OS右键。
+
+真实追光 `pointer-v18-real` BLOCKED：第一点不在指定输入窗，0鼠标移动/0按钮；候选正常退出、资源0。此时指针在海报外，既不是跟随PASS，也不能据此断言用户问题源于遮挡。原33步Lamp门是合成跟随/真实闲置/资源证据。待用户露出桌面后用新目录补真实链，不修改旧失败证据、放松接收检查或最小化他窗。模块提案仅源码分析，不是可移除构建验证。
+
+## 2026-09-27 最新：候选17八组同包检查及新体验启动
+
+用户“已关闭旧实例，请继续”后确认进程0，串行运行隔离GUI。v16 UI/配方/字段/拒绝/构图通过；Daily因0.8严格浮点比较失败，Lamp因共享timer误登记poster ledger导致全局唯一计数0失败。保留v16材料；v17修正probe有限数值1e-6 DIP容差、先读回再断言，handle计数仍严格；生产共享timer/settings订阅改为根ledger。v17实际厚度为0.800000011920929，日常可见/发布handle均0，编辑厚度2且handle各1，退出再回0。Lamp读回帧211→225、全局timer恰1，编辑/暂停/收纳/挂起释放通过。
+
+当前候选`candidate17-ui-c-feedback`及[八门汇总](../../../../out/lr-r5-evidence/alignment-v17-summary.json)：427源码/401产物一致，App `4BBBC824BCD4A19D93EB985E0742D44B655FDC2A1CCB63CB58CCC91C35F6637A`，manifest `4E275E30EF7D26DD2E4E98D451607EF79817ADB9C98172371BE6B1A48F179FE0`。`app-local-ui-c-feedback-v17.log`0警告/错误；全量合同仍采用`ui-c-feedback-full-final-01`2065/2065，后续仅7份App/probe/启动脚本变化，合同输入及fixture未变，不声称重复跑过全量。
+
+| 同候选目录（均在out/lr-r5-evidence） | 结果与限制 |
+| --- | --- |
+| alignment-v17-daily / protocol | 各14场景、14图及第二进程保真；Daily无提示/常规footer，Protocol显式开启诊断提示；实际生产handler，非OS输入 |
+| alignment-v17-fields | 337检查、4图，参数草稿/应用/取消/过期保护 |
+| alignment-v17-rejected | 非法有效热度预览拒绝、第二进程保真 |
+| alignment-v17-ui | 5个宽窄/收展/行为状态、5图；客户区XAML |
+| alignment-v17-lamp | 33步、9图；10参数、真实共享帧、生产追光/离开处理器、暂停与资源释放；不冒充系统鼠标 |
+| alignment-v17-recipes | 7图、2进程：实际按钮/控件→校验/导入/副本/分页/主题→保存和重启；未驱动原生文件选择器 |
+| alignment-v17-composition-recheck | 100项缩窄/宽度往返/整图承接/撤销、5图及重启；首轮失败另见下文 |
+
+以上通过记录共13个进程退出0、错误0、资源0，全部产物保持。实际看过日常海报（无高亮/锚点/提示）、宽窄样片夹、纸面配方/副本/模板册、灯光参数、墨色主题与重启图；系统背板不含于XAML，原生鼠标/键盘/文件选择器/完整高DPI及产品审美未据此通过。
+
+保留`alignment-v17-composition`首轮失败：第一个Animation逻辑528×720、预分配540×720时`GetWindowRgn=0/window-region-read-failed`，尺寸/输入/内容匹配，但表面门拒绝，`native-batch-failed`后恢复成功、未提交几何、退出资源0。相同DLL独立复跑全链通过，只支持间歇未再现；登记BUG-021 OPEN，不能写已根治，也不能用v16或复查覆盖失败。
+
+启动器新增成对Daily/Recipe证据校验，旧候选六参数调用兼容。PS7 `alignment-v17-review-check-ps7.json`与PS5.1 CheckOnly成功，后者实际启动`human-review-03/data`、PID26864；见`human-review-03-launch.json`。旧体验库不修改，当前实例留给用户。R5保持IN PROGRESS。
+
+## 2026-09-27 最新：六项反馈候选16构建/合同完成，GUI尚未执行
+
+候选15是此前构建快照并原样保留；随后补齐新增/重命名/删除/配置导入弹窗的共同纸面样式与主按钮色，最终以候选16为准。此后仅App样式变动，Domain/Application/测试输入未再改，不重复无关合同；最终App再构建通过。新配方探针`-CheckOnly`仅证明路径/文件/哈希就绪，输出`ui-c-feedback-recipe-preflight-v16.json`明确NOT EXECUTED。
+
+新改动和界限见[对齐记录§8](LR_R5_UI_C_INTENT_ALIGNMENT.md#8-2026-09-27-六项实机反馈候选16已构建原生验证待旧实例退出)。最终`ui-c-feedback-full-final-01`2065/2065、0跳过、无警告；`app-local-ui-c-feedback-final-03`与`ui-c-feedback-fixture-final-01`0警告/错误。`candidate16-ui-c-feedback`固定包427源码/401产物逐项复核一致；App SHA256 `70705C6B5E3525DFA37DF154AB6A77CD113706C223A6E99D819E109D7CA23432`，manifest `9A373589390511897C11A55E1C81DA791C4BB0F57ADC38FCC0E0D1255977B72C`，汇总`ui-c-feedback-build-summary-v16.json`。
+
+新合同涵盖默认辅助与旧显式值、配方错误/上限/重复/过期及CAS原子保存、两海报/逐模板覆盖、取消/副本/重启、v11→v12保真/备份、旧receipt默认哈希、动效数学/指针样本以及23项paint-only判定。启动助手的显式测试反馈开关在PS5.1/7各4种父/子环境组合通过，见`everyday-feedback-launcher-ps51-01`及`everyday-feedback-launcher-ps7-01`。日常启动强制关，不继承父进程开启状态。
+
+保留失败：`ui-c-feedback-contracts-01`141/142（测试夹具伪降v9未去掉新增列，修夹具后定向150/150）；`app-local-ui-c-feedback-01.log`初次App接线4处C#错误及后续XAML级联错误，修正后02和最终构建均通过。没有修改历史证据。
+
+尚未执行candidate16任何GUI探针、截图或App进程重启。旧用户体验PID9460仍在运行，退出问题已发出未回复；没有自动关闭/迁移体验库。新探针准备完成但不是通过：Daily/Protocol各14case、Lamp33步、recipes实际按钮/7图+重启及原有字段/构图/拒绝/UI门。完整产品、人类审美、系统鼠标键盘、深色/高对比/实际DPI仍需对应证据。R5不关闭。
+
+## 2026-09-27 补充：体验启动器的 PS5.1 兼容修复
+
+用户命令实际在Windows PowerShell 5.1失败；此前PS7的`-CheckOnly`未覆盖此环境。复现确认：直接把`ConvertFrom-Json`数组管道送入筛选时，PS5.1将整包当一个对象，399个运行产物误计为1。修复为先接收数组再枚举；所有JSON/JSONL读取显式`-Encoding UTF8`，另修复PS5.1默认ANSI读取中文JSON的解析失败。候选内容/哈希本身匹配，没有绕过或放宽绑定校验。
+
+证据目录：`out/lr-r5-evidence/launcher-ps51-fix/`。
+
+- Windows PowerShell **5.1.26100.9444**与PowerShell **7.6.5**执行原候选及六证据目录的`-CheckOnly`，均exit0，见`check-results.json`与两份日志。
+- 独立复制协议产物清单，分别删1个运行产物、改1个SHA256；原始证据不改。两种Shell共4个负例均exit1，分别命中`expected 399, found 398`及`Evidence artifact binding differs`，见`negative-results.json`及对应日志。
+- 使用PS5.1实际启动原命令，复用`human-review-02/data`，PID **9460**；日志确认`isElevated=false/asInvoker`、中心created/shown各1、启动错误0，进程响应正常。见`launch-ps51.json`、`launch-verification.json`及该数据目录日志。不重建体验数据，不关闭他窗，实例留给用户。
+- 对冻结源码指纹复核，唯一差异为非编译脚本`scripts/start-lr-r5-review.ps1`；App SHA256与manifest仍为下方候选14值。原冻结清单和历史证据保留，不再声称当前412源码全部一致。本轮不重建App、不重跑与启动器无关的合同或GUI门；产品验收和菜单原生命中仍待完成。
+
+## 2026-09-27 最终：候选14的UI C纠偏回归完成，产品与遮挡下的原生命中待验
+
+当前以`out/lr-r5-evidence/candidate14-app-local`为准，App.dll SHA256=`B42B923EFE35C869FE7C8E1A14BE0BD5817A1BCA5801BE89A700AF91513D7221`，manifest=`6560962C272AFC8B2B33A939DE03D1D5B2BCD9F3CC1ACFEDA2555A57CD6D372C`。412源码/配置指纹与当前一致，401产物均绑定。`app-local-menu-fix-01.log`0警告/错误；`alignment-menu-contracts-01`32/32，后续断言风格清理后`alignment-menu-full`2001/2001、0跳过、无警告。新增17例针对菜单两步/失败恢复，不扩大成产品PASS。
+
+`alignment-v14-{ui,fields,protocol,rejected,lamp,composition}`六组全部通过：五UI状态/5图、字段338检查/4图、协议13组/13图+重启、非法热度拒绝+重启、Lamp26步/9图、100项构图/整图预告/保存/放宽/撤销+重启/5图。所有进程退出0、错误0、资源0、产物不变；`alignment-v14-review-check.json`已逐文件核对六组与候选，`alignment-v14-summary.json`同时核对源码。实际查看最终宽屏样片夹、行为页及窄海报预告图；没有把状态门当系统输入门。
+
+菜单原生红→定位→修复：candidate12的`alignment-menu-diagnostic-01`确认SetWindowPos error5；candidate13显式单次`alignment-menu-own-anchor-01`以自身input锚点成功，外部序不变、正常恢复，实验不作为生产PASS。candidate14去掉该实验分支、正式仅用自身Popup/Input两步，32菜单合同及独立只读复审通过。`alignment-v14-menu`的两步原生调用、最终严格层级、输入透明、外部/其他表面顺序、实际四命令均正确；随后15/15采样被外进程遮挡，完整六状态门仍FAIL/OCCLUDED，不冒称完整原生通过。退出0/资源0、输入恢复，不提权、不置顶、不关闭他窗。完整诊断细节、文档/源码入口和人工范围见[对齐记录§7.3](LR_R5_UI_C_INTENT_ALIGNMENT.md#73-当前交付候选14菜单修复集成同包回归完成)。
+
+当前R5 IN PROGRESS/R6 NOT STARTED。已请求露出桌面再验，未收到新环境确认前不重试；新的UI体验及模板册/配方/AI说明弹窗实操仍待用户核对。旧基础“人工体验通过”不迁移到本候选。旧SQLite并发首启BUG-019仍OPEN，未用本次全绿关闭。
+
+体验实例已打开：`human-review-02/data`，PID6356，日志确认`isElevated=false/asInvoker`、control_center.created/shown，无启动错误，进程响应正常；留给用户，不再运行自动GUI门。最终`git diff --check`通过；19份改动/登记文档776链接、另补三份执行报告41链接均0缺失（不作去重总数）；412源码指纹仍一致，记录`alignment-v14-final-check.json`。原分支`impl/poster-redesign-V3-wb`/HEAD `bd148fb4641bccb18d75777ae6645149e3ff9cfc`未变，没有提交/推送。临时原型页及本轮只读HTTP服务已清理，原型文件未改。
+
+## 2026-09-27：用户截图后的R5第二轮纠偏，候选11六组通过，原生菜单待修
+
+本条为当前结果，下方同日“未修生产”保留为审查历史。实际打开原型C、展开样片夹/参数并查看用户截图后，已实施行为分组、单原生标题、纸质样片夹/画面字、菜单减项、声明参数基础和本地配方/AI说明入口；同时补完桌面影响/结果反馈与整图承接。原型HTML未改，完整范围见[对齐记录§7](LR_R5_UI_C_INTENT_ALIGNMENT.md#7-用户截图反馈后的实际c核对与第二轮纠偏)。
+
+- 源码/包：`out/lr-r5-evidence/candidate11-app-local`，412源码/配置指纹、401产物记录，App.dll SHA256 `7F84414726B77DBF8D0D7762BD44EAD23B3A4E4FDF0695FA19D370569F704CD4`。`app-local-alignment-13.log`构建0警告/错误；solution `alignment-build-03`及fixture `alignment-fixture-02`也0警告/错误。未改系统SDK/运行时或日常数据库。
+- 合同：`alignment-extensions-first`新增几何9项/声明参数15项，共24/24；`alignment-extensions-full`1984/1984。后续App/UI/probe不影响这些合同源码，未反复重跑无变化的全量。第一轮`alignment-contracts-01`1959/1960，既有并发SQLite首启表锁失败仍保留为BUG-019；后来单项及全量通过不能证明竞态修复。
+- 同包：下表所有App/fixture文件均由`artifacts.json`逐项核对候选manifest。构图组先运行原构建输出，其全套产物与冻结候选相同；不是借用其他版本的PASS。
+
+| 证据目录（均在`out/lr-r5-evidence/`） | 实际结果 |
+| --- | --- |
+| `alignment-v11-ui` | 五个宽/窄/折叠/展开/行为状态与5张真实XAML截图；分组、无重复品牌标题、入口接线、控件边界、配置未改通过 |
+| `alignment-v11-fields` | 338检查、4图；真实TextBox/ComboBox/原处理器、非法草稿/目标/冲突/取消和一次提交通过 |
+| `alignment-v11-protocol` | 13组/13图；发布命中→生产处理器、拖动/选择/DEMO打开/取消/历史/反馈、同库进程重启通过 |
+| `alignment-v11-rejected` | 非法effective热度预览拒绝、原状态保留及同库重启通过 |
+| `alignment-v11-lamp` | 26步/9图；六声明参数、实际色板、取消/复位/两海报隔离通过，仍静态Lamp |
+| `alignment-feedback-fit` | 100项作者图：540→240→540不编辑还原，再缩窄→预告整图/屏外→单笔保存→放宽保持新图→一次撤销→同库进程重启；5图通过 |
+
+六组退出0、日志无错误、资源归零、产物未变。UI旧证据格式没有Cleanup摘要，review启动脚本改为读取同processId原始`application.stopped`，仍要求唯一事件/资源0/无错误。此脚本为冻结后唯一非文档源码差异，App/fixture未变；`-CheckOnly`完整绑定通过，缺失/重复退出事件两个负夹具均拒绝，记录`review-gate-negative-results.json`。未把缺失字段默认成成功，也未改原始证据。
+
+保留失败：旧宽度动画误用等宽收展合同（BUG-018已修）、构图probe自己等待持有中的gesture、UI未加载Parent误判、样片夹页签裁切、窄海报footer两行裁切均有原始日志/截图。footer最终在截图后检查`IsTextTrimmed=false`与两行边界；实际承接、撤销图已查看。详情见对齐记录，不删除或覆盖失败目录。
+
+补充原生菜单`alignment-final-menu`失败：创建弹层后native层级读回失败并安全关闭，退出0/资源0但存在错误，不能当PASS或简单归为遮挡。候选9的`alignment-v9-native-mouse`则是Occluded导致零move/down/up，二者严格分开；不强抢前景或关闭其他窗口。菜单定位中，R5仍IN PROGRESS/R6未开始；新的产品人工出口、系统键鼠、深色/高对比/实际高DPI、完整桌面合成及模板册/配方弹窗操作尚未通过。
+
+## 2026-09-27：R5 UI C及E1意图对齐审查（未修生产）
+
+用户对早期基础操作组回复“人工体验通过”，之后明确UI/操作意图偏离已采纳C并要求依据已有意图测试对齐。仅前者对应的组级反馈登记为正向；不补写UI C、六任务生产版、NativeMouse/Keyboard或R5整体PASS。
+
+本轮完整阅读E1六任务及§6.1/6.2后续确认、DEC、C/E1的HTML/CSS/交互源码，追踪App输入→提案→显示→提交/取消→恢复路径，并实际查看候选3宽屏字段、Lamp中心/海报XAML图。旧C临时截图未找到，未重跑浏览器。三agent独立只读审查与root复核一致：存在结果反馈、右键目标入口、整图影响预告及中心结构缺口，详见[追溯表](LR_R5_UI_C_INTENT_ALIGNMENT.md)。
+
+本轮仅文档追溯/排期修正，未改生产/测试/原型、未构建或运行新测试、未启动/关闭App或修改体验库；R6未开工。既有1921合同及候选3协议/字段/重启证据范围不变。文档链接与差异格式检查单独记录，不当作工程验证。
+
+文档检查：`python out/lr-tools/check-doc-links.py`检查19份当前改动/新增文档、766个本地链接，0缺失；另补查两份R5报告的32个本地链接，0缺失（两组不作去重总数）。`git diff --check -- Docs`退出0；只有既有LF/CRLF规范化提示，没有差异格式错误。
+
+## 2026-09-26：R5 固定候选通过协议/控件验证，早期人工 PENDING
+
+R5 仍 IN PROGRESS。候选3的13组真实处理器协议、同库进程重启、字段事务/提案唤醒、非法有效预览拒绝及Lamp回归通过；全量合同为1921/1921。四张最新宽窄截图已查看。系统鼠标尝试因遮挡零输入停止，不能称为NativeMouse通过。已打开独立 `human-review-01/data`（启动PID2812）并请用户体验；人工结果尚未收到，不准自动进入R6出口。源码/包/证据、运行入口与具体限制见[核心交互记录](LR_R5_CORE_INTERACTION.md)。
+
+所有子agent文件已移交root，未提交/推送/迁移日常数据；正在运行的体验实例不得被自动测试关闭或重建。R6只读接线地图在[执行记录§9](LR_MILESTONE_EXECUTION.md)，尚未实施。下方为历史阶段事实。
+
+## 2026-09-26：R4保存合同/代表模板完成，进入R5
+
+当前R1合同齐全，R2/R3完成，**R4 SAVE CONTRACT + SAMPLE READY / R5 IN PROGRESS**。1868项合同全部通过；完整CAS、逐操作保真、模式返回态、尺寸覆盖、Portable v4和草稿仲裁已有真实SQLite证据。独立原生候选完成Lamp六参数/取消/冲突/两海报/中心重开验证，退出资源0。详见[执行记录§7～8](LR_MILESTONE_EXECUTION.md)及[配置保真报告](LR_R4_CONFIGURATION_FIDELITY.md)。
+
+R5入口为ContentEditing首按拖动、点击/打开仲裁和UI C操作接线。当前仍DEMO，未提供真实文件操作。原生鼠标/键盘/滚轮、App同库进程重启、光池截图异常与最终UI C视觉尚未通过；不要沿用下方历史PASS。原有工作区/数据不覆盖，不自动Git提交/推送。
+
+## 2026-09-26：LR-R3 MODEL + SAMPLE READY（CODE / AUTO / NATIVE SAMPLE，非产品PASS）
+
+- 定向红绿、审查和限制详见[执行记录§6](LR_MILESTONE_EXECUTION.md#6-r3证据与后续约束)。最终相关248/248，全量1758/1758、0跳过；根目录`out/lr-tools/run-check.ps1 -Evidence full`调用本地SDK10.0.112和正式Contracts项目。TRX在`out/lr-r3-evidence/full/full.trx`。标准Release解决方案和单独SessionFixture构建均0警告/0错误。
+- 实际原生最终执行：正常桌面权限、项目根、DOTNET_ROOT指向本地SDK，`scripts/probe-ui-c-sample.ps1 -AppDirectory out/lr-r3-evidence/candidate3-app-local/app -FixtureDirectory out/lr-r3-evidence/candidate3-app-local/fixture -OutputRoot out/lr-r3-evidence/ui-native-05`。新DataRoot、PID36976、exit0、error0、revision1及配置指纹不变，包hash前后一致、退出activeResources0。
+- 四状态宽/窄×折叠/展开均读取真实控件和海报Canvas/Input/Clip，并保存四张RenderTargetBitmap PNG，root实际查看。客户区964×681/664×781水平边界正常；展开后下方参数处于可滚动区。末项未滚入当帧，不能把6成员/4可见的结构观测称为原生末项可达。未执行鼠标/键盘/滚轮、GPU桌面像素或产品人工验收；深色/高对比/高DPI还未覆盖。
+- 默认框架依赖包缺WinAppRuntime2.4（bootstrap `0x80670016`）；命令行WindowsAppSDKSelfContained=true产生新的应用内置运行时包，未安装系统运行时、未改默认csproj。沙箱启动失败、正常桌面启动发现根局部资源UiCPanelBrush提前引用，均保留失败目录；修复后最终包通过。仅最后XAML背景变化不影响此前1758合同源码。
+- 最终候选源码363文件，SHA256及完整manifest见执行记录；此为R3样板，不覆盖旧人工候选、不授予BUG-017或R7 PASS。R4的旧只读配置存档能力、当前空间编辑闸及真实事务仍待实现。
+
+## 2026-09-26：LR-R2 BASELINE READY（CODE / AUTO / BUILD，非原生PASS）
+
+- 恢复材料：`out/lr-r2-baseline-20260926-203107/`；552个材料文件包含全部527个tracked文件，解压逐项SHA256一致，Git bundle验证通过。排除依赖/构建缓存；当时无日常V3库、无旧out包、无DesktopUp进程。材料边界与恢复步骤见[执行记录§3](LR_MILESTONE_EXECUTION.md#3-r2基线与环境证据)。未修改Git refs/index或日常库。
+- 环境：保持global.json 10.0.103/latestPatch；官方SDK10.0.112校验SHA512后安装到`out/toolchains/dotnet-10.0.112`，CLI/NuGet路径全在out。`dotnet restore DesktopUp.sln -p:Platform=x64 --source https://api.nuget.org/v3/index.json --verbosity minimal`成功；日志`out/lr-r2-evidence/restore.log`。首次CLI报告生成开发证书，未trust，后续禁用生成。
+- 红：`dotnet test tests/DesktopUp.Contracts.Tests/DesktopUp.Contracts.Tests.csproj -c Release -p:Platform=x64 --no-restore --filter FullyQualifiedName~ContentLayoutPortableTests --logger trx;LogFileName=r2-red.trx --results-directory out/lr-r2-evidence/red`，25项中原15通过、新10失败；`red.log`与`red/r2-red.trx`保留。实际执行时logger参数作为单个带引号字符串传入。
+- 绿：相同过滤器，`green/r2-green.trx`及`green.log`，25/25。覆盖完整作者字段、外部注入的v2/v3档案、数组隔离、7类非法留白拒绝、身份重映射；真实SQLite追加/替换各一revision，重复请求不再写，销毁/重建store后读取同一库并再次导出字段一致。没有做App进程重启或断电测试。
+- 全量：同项目`-c Release -p:Platform=x64 --no-restore --no-build`，1664通过/0失败/0跳过；`full.log`与`full/r2-full.trx`。解决方案`dotnet build DesktopUp.sln -c Release -p:Platform=x64 --no-restore`，0警告/0错误；`build.log`。所有命令执行目录为项目根，使用上述本地SDK。
+- 独立审查：r2_review只读审查3个变更文件，未发现阻塞BUG-014合入的缺陷；确认两端集合快照、空Name拒绝、SQLite真实保存/store重开与Q1保真边界。没有由审查agent重复运行测试。
+- 固定构建副本：`out/lr-r2-evidence/app/`，73文件/49,451,534字节；`app-manifest.json`、355项`source-manifest.json`与`workspace-at-r2.patch`绑定源码。source-manifest SHA256=`1fa0744918d2d9d7ad9cb4e0d640fa00819988fbb368c07459b38d8a64366c4b`；App.exe=`99bbe7cfae81e1505c22953e30c88af827c3963e9a0c8bd8f7426e81da20fd20`；App.dll=`2b60087e043bc35856cbf4cbaa389766ac12d05f8a296754a6317d36eac496fb`；Application.dll=`a61e9e5944c958f9b45de97a097a5fc47df2ccda47c1f05b230ff9ca975a2bea`。未启动此包，未改旧人工候选manifest，不为BUG-017或R7补PASS。
+- 结论：R2可恢复、可构建与已知丢字段底线通过；BUG-014标FIXED / CODE+AUTO。R4兼容/迁移全链、R5/R6原生交互、R7同包产品验收仍待执行。
+
+## 2026-09-26：三组组合反例与行为映射（DESIGN AUDIT / NO RUNTIME PASS）
+
+- 用户要求解释手势/行为映射并完成三组核对。产物：[组合核对](../../20_Architecture/CONTENT_LAYOUT_COMBINATION_AUDIT_V1.md)的BM-01～12和19条反例轨迹；同步计划/工作流/相关文稿与导航。Q1旧约束范围、Q2草稿冲突处置待用户回复，未写成新DEC；R1未关闭，R2～R8未开始。
+- 只读核对DEC-019～023、PD/MC/OS矩阵、ContentLayoutFlow/Editing/Solver、输入tile/gesture、ControlCenter内容入口、Prepare及Portable codec/代表测试。确认旧测试`V3_never_carries_reserved_regions`与现行保真目标冲突；未修改或运行该测试，BUG-014未关闭。
+- functions工具内存算例9项断言完成：接缝副本70→强制有限后−660（跳730）、保持70需非法offset−50、抓取移动25、有限锚−170夹0、两类硬约束反例、受限双轴边界、共同文档读版本、迟到手势token。算式见核对§3～5；后两项仅演示身份/版本区别，未证明真实调度或并发安全。没有调用项目solver/Prepare/SQLite，没有新增测试脚本，不据此给PD/MC/OS或原生门PASS。
+- 文档检查通过：覆盖13份有改动/新增文稿，50处新增本地Markdown链接（含所用标题锚）无缺失，表格列数无不一致；新文稿BM行12条、CA/CB/CC行19条；`git diff --check`通过。仅Docs修改，旧未跟踪目录保留。未构建/启动App、跑浏览器、修改配置、提交或推送；此前SDK/候选包限制本轮未复验。
+
+## 2026-09-26：LR-R1～R8制作计划补强（DOCUMENTATION ONLY）
+
+- 用户要求小范围补强现有计划并列明里程碑；已在[整改计划](../../30_Plans/V3_04_L_REMEDIATION_REVIEW_PLAN.md)原R1～R8内明确UI C原生样板/核心界面/同包验收、配置语义保真、延期缺陷影响及真实Item接入出口。同步工作流、UI C说明、入口/登记和HANDOFF；未新增需求决定或阶段编号。
+- R1三组组合反例与UI C行为映射仍待完成，R2～R8均NOT STARTED。此次没有关闭BUG、迁移数据、修改生产/测试/原型/配置、构建新包或启动DesktopUp；没有运行.NET、浏览器、原生或人工功能门，历史PASS不转授。
+- 文档检查：新增本地Markdown链接目标存在；主计划表格列数一致，R0～R8共9条阶段卡，R2～R8共7条NOT STARTED；核对UI C阶段、V3-05前置、V3-07能力归属和当前状态导航一致。
+- `git diff --check`通过，仅Git既有LF/CRLF转换提示。改动范围仅Docs；原有6个未跟踪目录保留，分支/HEAD未改，未提交或推送。此记录只证明文档和范围检查，不证明任何新制作里程碑完成。
+
 ## 2026-09-24：wb同步前检查（DEVELOPMENT CHECKPOINT ONLY）
 
 - 用户授权保存wb工作、合并/切换V3并推送两分支。fetch后两本地分支和origin/V3均9607d4e；没有目标独有提交。只做开发检查点，不修复既有缺陷，不修改已确认产品规则。

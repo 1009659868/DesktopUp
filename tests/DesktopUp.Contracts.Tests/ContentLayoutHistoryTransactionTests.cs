@@ -13,7 +13,7 @@ public sealed class ContentLayoutHistoryTransactionTests
     {
         using var f=new Fixture();var before=f.Read();var h=new ContentLayoutHistory();
         var desired=kind=="membership"?Rebase(before,ContentLayoutSamples.Covers("A")):
-            ContentLayoutEditing.Apply(before,kind=="guides"?new(ContentLayoutEditKind.Guides){ShowBaselineGrid=false}:
+            ContentLayoutEditing.Apply(before,kind=="guides"?new(ContentLayoutEditKind.Guides){ShowBaselineGrid=!before.ShowBaselineGrid}:
                 new(ContentLayoutEditKind.Resize,before.Placements[0].ItemId){ColumnSpan=6,RowSpan=4},new(354,300)).Document;
         long revision=f.Coordinator.Refresh().Revision;
         Assert.Equal(StateCommandStatus.Committed,f.Commit(before,desired).Status);Assert.Equal(revision+1,f.Coordinator.Refresh().Revision);
@@ -36,7 +36,7 @@ public sealed class ContentLayoutHistoryTransactionTests
     [Fact]
     public void Failed_transaction_does_not_consume_history_or_partial_versions()
     {
-        using var f=new Fixture();var before=f.Read();var after=ContentLayoutEditing.Apply(before,new(ContentLayoutEditKind.Guides){ShowBaselineGrid=false},new(354,300)).Document;
+        using var f=new Fixture();var before=f.Read();var after=ContentLayoutEditing.Apply(before,new(ContentLayoutEditKind.Guides){ShowBaselineGrid=!before.ShowBaselineGrid},new(354,300)).Document;
         Assert.True(f.Commit(before,after).Succeeded);var h=new ContentLayoutHistory();h.Record(before,f.Read());var p=h.ProposeUndo(f.Read())!;
         using(var connection=new SqliteConnection($"Data Source={Path.Combine(f.Paths.State,"desktopup.sqlite3")};Pooling=False"))
         {connection.Open();using var command=connection.CreateCommand();command.CommandText="CREATE TRIGGER undo_fault BEFORE UPDATE ON posters BEGIN SELECT RAISE(ABORT,'undo fault'); END;";command.ExecuteNonQuery();}

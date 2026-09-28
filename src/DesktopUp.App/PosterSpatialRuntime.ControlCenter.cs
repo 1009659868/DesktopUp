@@ -51,7 +51,10 @@ internal sealed partial class PosterSpatialRuntime
             };
             var before = plan.Changes[0].Before; var after = plan.Changes[0].After;
             var capacity = before with { Width = Math.Max(before.Width, after.Width), Height = Math.Max(before.Height, after.Height) };
-            owner.BeginPosturePreview(command.RequestId, Pixels(capacity), false);
+            if (before.Width != after.Width || before.Height != after.Height)
+                owner.BeginGeometryPreview(command.RequestId, Pixels(capacity));
+            else
+                owner.BeginPosturePreview(command.RequestId, Pixels(capacity), false);
             var prepared = owner.PrepareSpatialFrame(Pixels(before));
             if (prepared is null || !owner.CommitSpatialFrames(new[] { prepared }, DesktopFramePhase.SurfacePreparation))
                 throw new InvalidOperationException("几何呈现准备失败。");

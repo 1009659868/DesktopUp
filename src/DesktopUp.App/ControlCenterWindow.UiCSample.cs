@@ -1,0 +1,117 @@
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
+
+namespace DesktopUp;
+
+internal sealed record UiCSampleObservation(double ContentWidth, double ContentHeight, bool Compact,
+    bool FolderExpanded, bool ControlsConnected, bool MacrosOutsideFolder, bool HorizontalBoundsValid,
+    string TemplateKey, string TemplateSummary, string? SelectedPosterId, int PosterCount, long Revision)
+{
+    public int VisualSampleCount { get; init; }
+    public bool ParallelMacros { get; init; }
+    public bool BrowsingInAppearance { get; init; }
+    public bool FineTuneCollapsed { get; init; }
+    public bool AdvancedCollapsed { get; init; }
+    public bool GlobalControlsSeparated { get; init; }
+    public bool BehaviorActionsGrouped { get; init; }
+    public bool BehaviorSelected { get; init; }
+    public bool NativeTitleWithoutBrandHeader { get; init; }
+    public bool RecipeEntrypointsConnected { get; init; }
+}
+
+public sealed partial class ControlCenterWindow
+{
+    // Presentation only. Selection, template edits and sliders retain their existing command owners.
+    private bool? _uiCCompact;
+
+    private void InitializeUiCSample()
+    {
+        _template.HorizontalAlignment = HorizontalAlignment.Stretch;
+        _template.MaxWidth = 320;
+        _template.SelectionChanged += (_, _) => { RenderUiCTemplateSummary(); RenderTemplateSamples(); };
+        InitializeUiCWorkspace();
+        UiCRoot.SizeChanged += (_, _) => ArrangeUiCShell();
+        UiCRoot.Loaded += (_, _) => ArrangeUiCShell();
+        RenderUiCTemplateSummary();
+    }
+
+    private void RenderUiCTemplateSummary()
+    {
+        string? key = SelectedTemplateKey ?? _view?.SelectedPoster?.Poster.TemplateKey;
+        UiCTemplateSummary.Text = _view?.SelectedPoster is null ? "请选择海报" : _templateCatalog.FirstOrDefault(r => r.Id == key)?.Name ?? "模板暂不可用";
+        ToolTipService.SetToolTip(UiCTemplateSummary, "样式只作用于当前海报；折叠样片夹会保留设置。");
+    }
+
+    private void ArrangeUiCShell()
+    {
+        double width = UiCRoot.ActualWidth;
+        if (width <= 0) return;
+        bool compact = width < 720;
+        if (_uiCCompact == compact) return;
+        _uiCCompact = compact;
+        UiCSidebarColumn.Width = new GridLength(compact ? 0 : 170);
+        // Preserve one complete title/summary row; the collapsed middle row still consumes spacing.
+        UiCSidebarRow.Height = compact ? new GridLength(126) : new GridLength(1, GridUnitType.Star);
+        UiCSidebarPanel.RowSpacing = compact ? 6 : 10;
+        UiCInspectorRow.Height = compact ? new GridLength(1, GridUnitType.Star) : new GridLength(0);
+        Grid.SetColumnSpan(UiCSidebar, compact ? 2 : 1);
+        UiCSidebar.BorderThickness = compact ? new Thickness(0, 0, 0, 1) : new Thickness(0, 0, 1, 0);
+        UiCSidebar.Padding = compact ? new Thickness(16, 10, 16, 8) : new Thickness(14, 22, 14, 12);
+        UiCSidebarPanel.RowDefinitions[1].Height = compact ? new GridLength(0) : GridLength.Auto;
+        Grid.SetRow(CreatePosterButton, compact ? 0 : 1);
+        CreatePosterButton.HorizontalAlignment = compact ? HorizontalAlignment.Right : HorizontalAlignment.Stretch;
+        Grid.SetRow(UiCInspector, compact ? 1 : 0);
+        Grid.SetColumn(UiCInspector, compact ? 0 : 1);
+        Grid.SetColumnSpan(UiCInspector, compact ? 2 : 1);
+        UiCInspector.Margin = compact ? new Thickness(16, 12, 16, 8) : new Thickness(26, 22, 22, 12);
+    }
+
+    // Isolated App probes call this, then wait for layout before reusing CaptureSettingsForProbeAsync.
+    // Width/height are native pixels; this does not synthesize input or write a user preference.
+    internal void PrepareUiCSampleForProbe(bool folderExpanded, int widthPixels, int heightPixels, bool behavior = false)
+    {
+        if (widthPixels is < 320 or > 4096 || heightPixels is < 320 or > 4096)
+            throw new ArgumentOutOfRangeException(nameof(widthPixels), "Sample window bounds must be 320..4096 pixels.");
+        ShowWorkspacePage(behavior);
+        UiCTemplateFolder.IsExpanded = folderExpanded;
+        AppWindow.Resize(new global::Windows.Graphics.SizeInt32(widthPixels, heightPixels));
+    }
+
+    internal UiCSampleObservation ReadUiCSampleForProbe()
+    {
+        static bool FitsHorizontally(FrameworkElement child, FrameworkElement parent)
+        {
+            if (!child.IsLoaded || !parent.IsLoaded || child.ActualWidth <= 0 || parent.ActualWidth <= 0) return false;
+            double left = child.TransformToVisual(parent).TransformPoint(new(0, 0)).X;
+            return double.IsFinite(left) && left >= -1 && left + child.ActualWidth <= parent.ActualWidth + 1;
+        }
+        bool bounds = FitsHorizontally(UiCSidebar, UiCRoot) && FitsHorizontally(UiCInspector, UiCRoot) &&
+            FitsHorizontally(PosterSelector, UiCSidebar) && FitsHorizontally(CreatePosterButton, UiCSidebar) &&
+            FitsHorizontally(PosterTitleText, UiCInspector) && FitsHorizontally(LocateButton, UiCInspector) &&
+            FitsHorizontally(MoreActionsButton, UiCInspector) && (IsAppearanceWorkspace ? FitsHorizontally(UiCTemplateFolder, UiCInspector) &&
+            FitsHorizontally(ScaleHost, UiCInspector) && FitsHorizontally(SpacingHost, UiCInspector) &&
+            (!UiCTemplateFolder.IsExpanded || _templateSamples.Values.All(button => FitsHorizontally(button, UiCTemplateFolder))) :
+            FitsHorizontally(LockButton, UiCInspector) && FitsHorizontally(CollapseButton, UiCInspector) && FitsHorizontally(VisibilityButton, UiCInspector));
+        return new(UiCRoot.ActualWidth, UiCRoot.ActualHeight, _uiCCompact == true,
+            UiCTemplateFolder.IsExpanded, TemplateSection.Children.Contains(_template) &&
+            ScaleSlider.Parent is Grid && SpacingSlider.Parent is Grid && _templateSamples.Count == 3 && AppearanceTab.Parent == BehaviorTab.Parent,
+            MacroPair.Children.Contains(ScaleHost) && MacroPair.Children.Contains(SpacingHost) && MacroPair.Parent == AppearanceSection, bounds,
+            SelectedTemplateKey ?? _view?.SelectedPoster?.Poster.TemplateKey ?? "",
+            UiCTemplateSummary.Text, _view?.SelectedPosterId, _view?.Posters.Count ?? 0,
+            _view?.Projection.Revision ?? 0)
+        {
+            VisualSampleCount = _templateSamples.Count,
+            ParallelMacros = Grid.GetColumn(ScaleHost) == 0 && Grid.GetColumn(SpacingHost) == 1 && ScaleHost.Parent == SpacingHost.Parent,
+            BrowsingInAppearance = ContentLayoutHost.Parent == AppearanceSection && ContentLoopSwitch.Parent is not null,
+            FineTuneCollapsed = !ContentFineTune.IsExpanded,
+            AdvancedCollapsed = !AdvancedSettings.IsExpanded,
+            // A closed Flyout has no connected visual Parent; inspect its declared content.
+            GlobalControlsSeparated = UiCGlobalPanel.Children.Contains(SettingsDetailText) && UiCGlobalPanel.Children.Contains(PauseButton),
+            BehaviorActionsGrouped = BehaviorScroll.Content is Panel behavior &&
+                new[] { LockButton, CollapseButton, VisibilityButton }.All(button => behavior.Children.OfType<Panel>().Any(row => row.Children.Contains(button))),
+            BehaviorSelected = !IsAppearanceWorkspace,
+            NativeTitleWithoutBrandHeader = !ExtendsContentIntoTitleBar && Title == "DesktopUp · 控制中心" && UiCRoot.FindName("UiCCaption") is null,
+            RecipeEntrypointsConnected = TemplateActionsHost.Children.Count == 2 && TemplateLibraryActionsHost.Children.Count == 1
+        };
+    }
+}

@@ -15,6 +15,8 @@ internal sealed partial class PosterVisualWindow
     private double ItemGapDip => ContentParameters.GapDip;
     private double ItemCardHeightDip => ContentParameters.ItemHeightDip;
     private double ItemRowHeightDip => ContentParameters.RowHeightDip;
+    private bool HasSelectedRecipePaint => _presentation.SelectedRecipeId is { } id &&
+        _presentation.Parameters.RecipeInstances?.ContainsKey(id) == true;
 
     private void ApplyPresentation(ResolvedPosterPresentation next)
     {
@@ -23,12 +25,21 @@ internal sealed partial class PosterVisualWindow
             if (_centerPresentationVersion == _posterEntityVersion) next = _centerPresentation;
             else _centerPresentation = null;
         }
+        var previous = _presentation;
+        bool paintOnlyTemplate = TemplatePresentationRefreshPolicy.CanPaint(previous, next,
+            _renderedTitle, _authoritativePoster?.Title, _renderedSubtitle, _authoritativePoster?.Subtitle);
         bool changed = _presentation != next || _renderedTitle != _authoritativePoster?.Title ||
             _renderedSubtitle != _authoritativePoster?.Subtitle;
         _presentation = next;
         _renderedTitle = _authoritativePoster?.Title;
         _renderedSubtitle = _authoritativePoster?.Subtitle;
         if (!changed || _window is null) return;
+        if (paintOnlyTemplate)
+        {
+            ApplyWindowBackdrop(_window); RefreshTemplatePaint();
+            return;
+        }
+        ReleaseLampScene();
         CancelContentGesture("presentation-changed");
         StopLocate();
         RestoreTransitionLayout();

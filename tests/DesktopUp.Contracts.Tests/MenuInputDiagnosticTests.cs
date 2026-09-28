@@ -34,7 +34,8 @@ public sealed class MenuInputDiagnosticTests
         Assert.Contains("NativeMessage -= Native", menu, StringComparison.Ordinal);
         Assert.Contains("_records >= 1200", menu, StringComparison.Ordinal);
         string poster = Read("src/DesktopUp.App/PosterVisualWindow.cs");
-        Assert.Contains("bool accepted = !_disposed && _posterEntityVersion == menuEntity && inputRouter.IsCurrent(inputSession, menuLayout);", poster, StringComparison.Ordinal);
+        Assert.Contains("bool accepted = !_disposed && _posterEntityVersion == menuEntity && inputRouter.IsCurrent(inputSession, menuLayout) &&", poster, StringComparison.Ordinal);
+        Assert.Contains("!spatial.HasCenterDraft(inputSession.PosterId)", poster, StringComparison.Ordinal);
         Assert.Contains("inputTransparent: true", poster, StringComparison.Ordinal);
     }
 }

@@ -19,7 +19,9 @@ public sealed partial class ControlCenterWindow
     private readonly Dictionary<string, TextBox> _geometryFields = new(), _styleFields = new();
     private readonly InfoBar _editNotice = new() { IsOpen = true, IsClosable = false };
     private readonly TextBlock _geometryStatus = new() { TextWrapping = TextWrapping.Wrap }, _styleStatus = new() { TextWrapping = TextWrapping.Wrap };
-    private readonly ComboBox _template = new() { Header = "内置模板", ItemsSource = new[] { "basic-box", "night-ops" } };
+    private readonly ComboBox _template = new() { Header = "内置模板", HorizontalAlignment = HorizontalAlignment.Stretch };
+    private string? SelectedTemplateKey => (_template.SelectedItem as ComboBoxItem)?.Tag as string;
+    private void SelectTemplateKey(string? key) => _template.SelectedItem = _template.Items.OfType<ComboBoxItem>().FirstOrDefault(item => item.Tag as string == key);
     private readonly Button _geometryApply = new() { Content = "应用位置/尺寸" }, _geometryCancel = new() { Content = "取消几何修改" },
         _styleApply = new() { Content = "应用内容/主题" }, _styleCancel = new() { Content = "取消参数修改" };
     private bool _renderingEditor, _editingProtection, _editingClosed;
@@ -38,8 +40,10 @@ public sealed partial class ControlCenterWindow
         geometry.Children.Add(_geometryStatus);
         AddActions(geometry, _geometryApply, _geometryCancel);
         var style = Section("精细基准参数 · DEMO ITEMS", true);
+        foreach (var (key, label) in new[] { ("basic-box", "基础收纳"), ("night-ops", "夜航"), ("lamp", "深夜书桌") })
+            _template.Items.Add(new ComboBoxItem { Content = label, Tag = key });
         TemplateSection.Children.Add(_template);
-        _template.SelectionChanged += (_, _) => { if (!_renderingEditor && !_renderingSettings && _template.SelectedItem is string key) ChangeSetting(PosterSetting.Template, text: key, finish: true); };
+        _template.SelectionChanged += (_, _) => { if (!_renderingEditor && !_renderingSettings && SelectedTemplateKey is { } key) ChangeSetting(PosterSetting.Template, text: key, finish: true); };
         foreach (var (key, label) in new[] { ("Subtitle", "副标题"), ("ItemWidth", "单元宽 72～320 DIP"), ("ItemHeight", "图标区高 48～240 DIP"),
             ("Icon", "图标大小 16～128 DIP"), ("Gap", "间距 0～40 DIP"), ("Label", "标签字号 9～24 DIP"), ("Title", "大标题字号 18～48 DIP"),
             ("Background", "背景色 #RRGGBB"), ("Foreground", "文字色 #RRGGBB"), ("Accent", "强调色 #RRGGBB") })
@@ -86,16 +90,18 @@ public sealed partial class ControlCenterWindow
     private void CaptureGeometry()
     {
         if (_renderingEditor || _geometryFields.Count != 4) return;
-        if (_settings.ProtectsInteraction) CancelSettingsPreview();
+        if (_lampColorFlyout is not null || _settings.ProtectsInteraction || IsContentFieldDraftActive || _view?.SelectedPosterId is { } id && DesktopInteractionConflicts(id))
+        { _geometryStatus.Text = "请先完成或取消当前海报操作；原草稿已保留。"; return; }
         _editor.EditGeometry(new(_geometryFields["X"].Text, _geometryFields["Y"].Text, _geometryFields["Width"].Text, _geometryFields["Height"].Text));
     }
     private void CaptureStyle()
     {
         if (_renderingEditor || _styleFields.Count != 10 || _editor.Presentation is not { } draft) return;
-        if (_settings.ProtectsInteraction) CancelSettingsPreview();
+        if (_lampColorFlyout is not null || _settings.ProtectsInteraction || IsContentFieldDraftActive || _view?.SelectedPosterId is { } id && DesktopInteractionConflicts(id))
+        { _styleStatus.Text = "请先完成或取消当前海报操作；原草稿已保留。"; return; }
         double Number(string key) => double.TryParse(_styleFields[key].Text, NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint,
             CultureInfo.InvariantCulture, out double n) && double.IsFinite(n) ? n : double.NaN;
-        _editor.EditPresentation(draft.Title, _styleFields["Subtitle"].Text, _template.SelectedItem as string ?? draft.TemplateKey,
+        _editor.EditPresentation(draft.Title, _styleFields["Subtitle"].Text, SelectedTemplateKey ?? draft.TemplateKey,
             draft.Parameters with { Content = new(Number("ItemWidth"), Number("ItemHeight"), Number("Icon"), Number("Gap"), Number("Label"), Number("Title")),
                 Theme = new(_styleFields["Background"].Text, _styleFields["Foreground"].Text, _styleFields["Accent"].Text) });
     }
@@ -127,7 +133,7 @@ public sealed partial class ControlCenterWindow
             else foreach (var field in _geometryFields.Values) field.Text = "";
             if ((!_editor.IsDirty || !style) && _editor.Presentation is { } p)
             {
-                _template.SelectedItem = p.TemplateKey;
+                SelectTemplateKey(p.TemplateKey);
                 Set(_styleFields, "Subtitle", p.Subtitle);
                 var c = p.Parameters.Content; var t = p.Parameters.Theme;
                 Set(_styleFields, "ItemWidth", N(c.ItemWidthDip)); Set(_styleFields, "ItemHeight", N(c.ItemHeightDip));
@@ -136,15 +142,16 @@ public sealed partial class ControlCenterWindow
                 Set(_styleFields, "Background", t.Background); Set(_styleFields, "Foreground", t.Foreground); Set(_styleFields, "Accent", t.Accent);
             }
             bool movable = target && _editor.HasActualGeometry && _editor.LatestCommitted?.CanMove == true && _editor.LatestCommitted.Poster.IsVisible;
-            foreach (var (key, field) in _geometryFields) field.IsEnabled = geometry && !pending && movable &&
+            bool otherDraft = _lampColorFlyout is not null || _settings.ProtectsInteraction || IsContentFieldDraftActive || _editor.PosterId is { } targetId && DesktopInteractionConflicts(targetId);
+            foreach (var (key, field) in _geometryFields) field.IsEnabled = geometry && !pending && !otherDraft && movable &&
                 (key is "X" or "Y" || _editor.LatestCommitted?.CanResize == true);
-            foreach (var field in _styleFields.Values) field.IsEnabled = style && !pending && _editor.Presentation is not null;
+            foreach (var field in _styleFields.Values) field.IsEnabled = style && !pending && !otherDraft && _editor.Presentation is not null;
             foreach (string key in new[] { "ItemWidth", "ItemHeight", "Gap" })
             {
                 _styleFields[key].IsEnabled=false;
                 ToolTipService.SetToolTip(_styleFields[key],"旧等格兼容值，只读保留。当前卡片由内容布局的跨度/基线控制；宏观疏密在外观页调整。");
             }
-            _template.IsEnabled = style && !pending && !_editor.IsDirty && _editor.Presentation is not null;
+            _template.IsEnabled = style && !pending && !otherDraft && !_editor.IsDirty && _editor.Presentation is not null;
             _geometryApply.IsEnabled = geometry && _editor.CanApply;
             _styleApply.IsEnabled = style && _editor.CanApply;
             _geometryCancel.IsEnabled = geometry && _editor.CanCancel;
@@ -181,6 +188,8 @@ public sealed partial class ControlCenterWindow
     private async void ShowCatalogDialog(string kind)
     {
         if (_catalogDialog is not null || _editor.IsPending || _readCommitted?.Invoke() is not { } basis) return;
+        if (_lampColorFlyout is not null || _settings.ProtectsInteraction || _editor.ProtectsInteraction || IsContentFieldDraftActive || _view?.SelectedPosterId is { } selectedId && DesktopInteractionConflicts(selectedId))
+        { CommonSettingsNotice.Text = "请先完成或取消当前海报操作。"; return; }
         var target = _view?.SelectedPoster;
         if (kind != "create" && target is null) return;
         var input = new TextBox { Header = "海报名称", MaxLength = 256,
@@ -191,6 +200,7 @@ public sealed partial class ControlCenterWindow
         var dialog = new ContentDialog { XamlRoot = Content.XamlRoot, Title = kind == "create" ? "新增海报" : kind == "clone" ? "复制配置" : "重命名",
             Content = body, PrimaryButtonText = "确认", CloseButtonText = "取消", DefaultButton = ContentDialogButton.Close };
         input.TextChanged += (_, _) => dialog.IsPrimaryButtonEnabled = !string.IsNullOrWhiteSpace(input.Text);
+        ApplyPaperDialogStyle(dialog);
         _catalogDialog = dialog; SettingsInteractionChanged?.Invoke();
         try
         {

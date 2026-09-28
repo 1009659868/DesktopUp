@@ -1,5 +1,48 @@
 # V3-04 代码锚点
 
+当前阶段/修改入口（2026-09-27）：[R5收口及代码/计划审计§3～4](LR_R5_CLOSEOUT_AND_PLAN_AUDIT.md)汇总已修旧机制与R6真缺口。R6先接`ContentDragPolicy.Map`、`PosterVisualWindow.ContentEditing.FlushContentMotion`的循环抓点/累计导航/结束锚，再接`ContentSpacePolicy`、主动MinimumCrossAxisDip、ReadOnlyOverflow和tile资源集；候选25已有wheel/TileKey探针不重复制作。模块解耦与Rain排在R6后，当前`TemplateRecipeInstance`/`PosterVisualWindow`仍依赖Lamp；Portable v4拒绝自定义目录/实例和非light中心主题，不能据R4旧报告称全配置可导出。
+
+最新循环反向修正：[报告§9](LR_R5_POINTER_AND_MODULE_REVIEW.md#9-候选25循环起点反向滚动与主线审阅节点)。生产入口`PosterVisualWindow.Content.cs/ScrollItems`→`Application/ContentWheelScrollPolicy.Advance`→既有Flow规范化/取模→Reclip、绘制和Input发布；只保留RAM偏移，不提交布局。合同`ContentWheelScrollPolicyTests`覆盖两轴/小增量/长序列/边界；`App.ContentBrowseProbe`与`scripts/probe-content-browse.ps1`检查真实共享Scrolled处理器/XAML/发布区域。App.xaml.cs新旗标受单探针与隔离DataRoot守卫，日常启动不运行测试。
+
+最新展开过程修正：[报告§8](LR_R5_POINTER_AND_MODULE_REVIEW.md#8-候选24展开过程灰底与ab不透明度对照)。`DesktopRoundedRegion`定义物理局部圆角区域；`DesktopLayerAttachment.ClearExposedVisualBackground`守护视觉HWND归属，native `ClearExposedBackground`以RGN_DIFF及ERASENOW清新区域；`PosterVisualWindow.CommitSpatialFrames/ApplyFrame`在容量/HRGN就绪后调用，失败清缓存，FinalRestore完整擦底保留。`App.BackdropProbe`、`PosterSpatialRuntime.Posture`隔离采样钩子、`scripts/probe-poster-backdrop-motion.ps1`提供A/B及三个中间HRGN原生像素对照；普通运行钩子为空。
+
+最新灰底/灯光诊断：[报告§7](LR_R5_POINTER_AND_MODULE_REVIEW.md#7-候选23半透明收展灰底与系统动画策略)。生产修正`DesktopLayerAttachment.cs/RequestFrameRedraw`在FinalRestore后加入RDW_ERASE；App.BackdropProbe.cs与scripts/probe-poster-backdrop.ps1提供自身HWND原生截图及终态像素回归。灯光系统策略入口`PosterSpatialRuntime.LampMotion.cs/SetLampMotionDemand/ArmLampMotion/LampAnimationsEnabledChanged`未改；ControlCenterWindow.ThemeProbe.cs补逐状态连接和实际主题证据，避免把卸载弹窗当可见主题验收。
+
+最新修改入口见[本页输入与模块小节](#2026-09-27-最新输入与模块入口)，状态见[输入报告](LR_R5_POINTER_AND_MODULE_REVIEW.md)。以下较早“只读/未接”按其当时阶段理解。
+
+## 2026-09-27：R5意图与UI C纠偏入口
+
+[对齐记录](LR_R5_UI_C_INTENT_ALIGNMENT.md)逐项连接E1六任务、用户确认及代码。优先入口：`PosterVisualWindow.Content.cs/DrawContentSnapshot`与`ContentEditing.cs/FlushContentMotion/CancelContentGesture/CommitContentDocument/AddContentMenu`（结果/预告/恢复），`ContentActivation.cs/DispatchContentOpen`（DEMO可见结果），`PosterInputIslandManager.HandleMessage`与`PosterVisualWindow.HandleInvocation`（Item就近管理）；`ContentLayoutEditResult.AdoptsProjection`已有模型但App未消费。
+
+中心纠偏入口为`ControlCenterWindow.xaml`、`.UiCSample.cs`、`.Editing.cs`、`.TemplateParameters.cs`和`.ContentLayout.cs`。保留`.ContentFields.cs`的唯一草稿/成组事务，不能为减少表单改成逐字符保存。当前仅只读定位、未改源码；R5 IN PROGRESS，执行次序归主计划§4.2.1，不沿下方历史PENDING推导新状态。
+
+## 2026-09-26：R5 固定候选通过协议/控件验证，早期人工 PENDING
+
+R5 仍 IN PROGRESS。候选3的13组真实处理器协议、同库进程重启、字段事务/提案唤醒、非法有效预览拒绝及Lamp回归通过；全量合同为1921/1921。四张最新宽窄截图已查看。系统鼠标尝试因遮挡零输入停止，不能称为NativeMouse通过。已打开独立 `human-review-01/data`（启动PID2812）并请用户体验；人工结果尚未收到，不准自动进入R6出口。源码/包/证据、运行入口与具体限制见[核心交互记录](LR_R5_CORE_INTERACTION.md)。
+
+所有子agent文件已移交root，未提交/推送/迁移日常数据；正在运行的体验实例不得被自动测试关闭或重建。R6只读接线地图在[执行记录§9](LR_MILESTONE_EXECUTION.md)，尚未实施。下方为历史阶段事实。
+
+## 2026-09-26：R4保存合同/代表模板完成，进入R5
+
+当前R1合同齐全，R2/R3完成，**R4 SAVE CONTRACT + SAMPLE READY / R5 IN PROGRESS**。1868项合同全部通过；完整CAS、逐操作保真、模式返回态、尺寸覆盖、Portable v4和草稿仲裁已有真实SQLite证据。独立原生候选完成Lamp六参数/取消/冲突/两海报/中心重开验证，退出资源0。详见[执行记录§7～8](LR_MILESTONE_EXECUTION.md)及[配置保真报告](LR_R4_CONFIGURATION_FIDELITY.md)。
+
+R5入口为ContentEditing首按拖动、点击/打开仲裁和UI C操作接线。当前仍DEMO，未提供真实文件操作。原生鼠标/键盘/滚轮、App同库进程重启、光池截图异常与最终UI C视觉尚未通过；不要沿用下方历史PASS。原有工作区/数据不覆盖，不自动Git提交/推送。
+
+## 当前：R3完成，R4开始（2026-09-26）
+
+- `ContentLayoutSolver.Resolve`：唯一主/交叉轴占用、跨度不缩、普通Manual从原意图投影、Legacy冲突分类；`Reclip`要求交叉轴/度量见证一致。
+- `ContentLayoutFlow` / `ContentBrowseModel`：有限/循环资格、signed offset、同身份tile、物理XY锚与删除后继；`ContentSpacePolicy`：被动原因/有效环境见证/安全恢复纯模型，不能仅C<M自动授权双轴。
+- `PosterVisualWindow.Content.EnsureContentSnapshot`：完整宽高度量缓存、新tile锚、派生只读；未知原文的空回退不得交给E当有效几何。
+- `ControlCenterWindow.xaml` / `.UiCSample.cs`、`App.UiCSampleProbe.cs`、`scripts/probe-ui-c-sample.ps1`：UI C中心原生骨架及四状态隔离观测。并未接新两模式或代表场景效果。
+- `ContentLayoutCommandPolicy.ValidateAuthoring`：轴对称canonical写入闸。Portable/Profile/Clone仍复用，R4须分开无损存档与编辑；Editing/热度提案也需当前空间闸。来源、测试与限制见[执行记录](LR_MILESTONE_EXECUTION.md)。
+
+## 当前：R2保真修复，R3模型实施中（2026-09-26）
+
+- `src/DesktopUp.Application/PortableContentLayout.cs`：`PortableContentLayoutCodec.Export/Import`保留ReservedSpaces的独立只读集合快照，不清字段、不放宽既有authoring校验。
+- `src/DesktopUp.Domain/ContentLayout.cs`：`ContentLayoutPolicy.Validate`在访问Name.Length前拒绝null；未知或非法载荷保留原文并明确失败。
+- `tests/DesktopUp.Contracts.Tests/ContentLayoutPortableTests.cs`：完整字段/独立注入/调用方数组修改/非法数据/身份映射，真实ExecutePortable→SQLite→store重开→再导出；R2定向25、全量1664通过，构建0警告错误，证据归[VERIFICATION](VERIFICATION.md)。
+- R3正在修改Solver/Flow派生合同；下方只读审查是当时源码事实，后续完成后按实际实现补锚点。持久schema及旧枚举不因统一几何而删除；每单元归属见[执行记录](LR_MILESTONE_EXECUTION.md)。
+
 ## 最新：操作与真实空间不足方案（只读核对，无生产修改）
 
 [操作与空间方案](../../20_Architecture/CONTENT_LAYOUT_OPERATION_SPACE_REVIEW_V1.md)§7对应现源码差距：ContentLayoutSolver.Resolve的squeeze-single-column、ResolveHorizontalLoop的squeeze-single-row/viewport-height-clamped不能当作DEC-011/022实现；Reclip旧轴分支不能证明受限资格/恢复；ContentLayoutFlowPolicy.SetFlowAxis会转换旧Manual→Anchored，不能用它进入临时二维浏览；PosterSpatialRuntime.Effective.ResolveEffectiveBounds继续是外框有效空间入口。未修改上述源码，不关闭旧Bug。
@@ -596,3 +639,35 @@ M07已收口；前两项[按需优化](../../30_Plans/ON_DEMAND_OPTIMIZATIONS.md
 - PosterVisualWindow.cs：M03 已接受显式绑定ID的初始projection、按保存显示器恢复；固定元信息/演示Item在M05/V3-05替换。
 - DesktopLayerAttachment / PosterInputIslandManager：保留已验证算法，新增跨 cluster identity/排序与命中矩阵 → M04。
 - 新合同与工作流见 [HANDOFF](HANDOFF.md)；M02 改状态链和现有三端消费者，未改宿主/命中/拖缩算法。
+
+## 2026-09-27：R5 UI C纠偏后的新增入口
+
+- `PosterContentContextRequest` / `PosterInputRouter.ResolveContext` / Windows input island：原生右键按当前session/layout/frame/Item见证分发，和左键capture分开。
+- `ContentInteractionFeedbackPolicy.Describe`：从已求解结果派生整图承接/让位/屏外范围，不增加求解器或持久状态。App `ContentFeedback`用既有footer显示，`ContentEditing`同笔保存/撤销。
+- `PosterMenuActionGate`：弹出菜单单次/当前实例权限。海报级`ShowPosterMenu`只保留四类动作；Item右键与中心设置分开。
+- Windows `DesktopMenuInteraction.PlaceAndVerify` / `NativeDesktopMenuPlatform`：仅自身Popup/Input两步排列；每步完整序见证、末态严格层级，第二步精确同步许可；异常关闭恢复。`DesktopMenuInteractionTests`32项，candidate14的原生层级与命令读回通过，完整命中受遮挡尚未通过。
+- `ControlCenterWindow.UiCWorkspace` / XAML：实际三模板纸样片、外观/行为、单原生标题及按需精调。`TemplateRecipe`为真实模板册、只读配方与本地AI说明；没有线上AI或包导入。
+- `TemplateParameterSchema` / `TemplateParameterBindingAdapter`：声明按Kind造表单，按Binding连接既有Lamp实例与SettingsSession；默认值不可被日常参数覆盖。测试见`TemplateParameterSchemaTests`。
+- `PosterGeometryTransitionSurface` / `PosterSpatialRuntime.ControlCenter` / `PosterVisualWindow.Transition`：中心resize的双轴原生容量与逐帧逻辑构图；`content.geometry_frame`记录实际Canvas/Input/Clip/native readback。原等宽收展独立合同保留。
+- `App.ContentCompositionProbe` / `scripts/probe-content-composition.ps1`：100项正式几何命令、缩窄不写内容、松手整图承接、一次Undo、进程重启；从真实handler与发布表面取证。其probe协议不等于OS输入。
+
+源码/包/验证与尚未交付范围见[对齐记录§7](LR_R5_UI_C_INTENT_ALIGNMENT.md#7-用户截图反馈后的实际c核对与第二轮纠偏)。
+
+## 2026-09-27 六项反馈补充入口（候选16，运行待验）
+
+- 日常/编辑饰件和命中：`PosterVisualWindow.Content.cs`/`ContentEditing.cs`；诊断footer显式开关：`ContentFeedback.cs`与`Start-DesktopUpFixtureProcess.ps1`。
+- 配方声明/能力边界/不可变默认：Domain `TemplateRecipes.cs`、`TemplateParameterSchema.cs`；实例保真：`PosterPresentationParameters.cs`；注册CAS：Application `TemplateRecipeCommands.cs`及SQLite状态命令仓库，核心符号`RegisterTemplateCommand`/`TemplateRecipeCodec`。
+- 通用表单/装入/副本/模板册/分页：`ControlCenterWindow.TemplateParameters.cs`、`TemplateRecipe.cs`、`UiCWorkspace.cs`；控制中心主题及统一弹窗：`Theme.cs`，只操作全局CenterTheme。
+- 当前模板实际参数：`ResolvedPosterPresentation.TemplateParameters`，原始`Parameters.Lamp`只代表内置lamp，不能以custom覆盖它。
+- 光照跟随/闲置摆动：`LampSceneMotion`→`PosterSpatialRuntime.LampMotion`共享frame→`PosterVisualWindow.LampScene`；`TemplatePresentationRefreshPolicy`仅在同定义的参数变化时保持原卡片直接更新绘制。
+- 新验证：`probe-template-recipes.ps1`、`probe-content-interaction.ps1 -Mode Daily/Protocol`、33步`probe-lamp-parameters.ps1`。当前合同2065及App构建通过，不等于上述运行门已通过；当前状态以HANDOFF/VERIFICATION为准。
+## 2026-09-27 最新输入与模块入口
+
+- 控制中心默认黑底：`ControlCenterWindow.Theme.cs/RenderCenterTheme`仅修改字典直接拥有的画刷；`ControlCenterWindow.xaml`完整按钮状态/UiCDropDown；`LampColors.cs`弹窗主题作用域，`TemplateParameters.cs`显式动态按钮样式。`ThemeProbe.cs`经配方门检验四主题及system重启，证据见输入报告§6。
+- `Windows/NativeDesktopPointerPlatform.CoversPoint`：只在分层窗口属性读取成功且整体alpha=0时排除遮挡；未知/色键独用/非零alpha保持保守。`PassivePosterPointerNativeTests`包含真实自有HWND透明度切换；候选20真实鼠标跟随与离开轻摆通过。
+- `Application/PosterInputRouter.cs`的`CapturesPointer/Resolve/Begin/ResolveContext`及`Windows/PosterInputIslandManager.cs`的`BuildWindowRegion/HitTest/CompleteContentContext`：排除Viewport整面原生命中，右键按下/抬起同目标见证。
+- `Domain/ContentPinPresentationPolicy.cs`、`App/PosterVisualWindow.Content.cs`、`ContentMenu.cs`：共享22 DIP图标边界，正式解除/撤销，旧锁和循环剪裁。
+- `Windows/PassivePosterPointerObserver.cs/LastDiagnostics`、`App/PosterSpatialRuntime.LampMotion.cs`、`App.LampPointerProbe.cs`、`scripts/probe-lamp-pointer.ps1`：同次原生指针诊断与真实外部移动门，生产规则未放松。
+- `App/PosterVisualWindow.SparseInputProbe.cs`、`ContentInteractionProbe.cs`及`SparseContentInputTests`：实际HRGN、接收者读回和图钉处理器，不能替代OS手势。
+
+当前证据见[输入报告](LR_R5_POINTER_AND_MODULE_REVIEW.md)，框架改造边界见[模块提案](../../20_Architecture/CONTENT_SCENE_MODULE_DECOUPLING_PROPOSAL.md)。以下旧入口的“未实现”等应结合最新记录，不独立裁决状态。

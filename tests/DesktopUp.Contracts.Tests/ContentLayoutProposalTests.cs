@@ -12,7 +12,7 @@ public sealed class ContentLayoutProposalTests
     [InlineData(.5,2)] [InlineData(.75,3)] [InlineData(1,4)] [InlineData(1.5,6)] [InlineData(3,12)]
     public void Heat_is_one_length_multiplier_from_author_intent_not_cumulative(double scale,int span)
     {
-        var d=Doc(2); var p=Heat(d,scale);var a=ContentLayoutProposals.ResolveHeat(d,p);var b=ContentLayoutProposals.ResolveHeat(d,p);
+        var d=Doc(2) with {AllowHeatDrivenSize=true}; var p=Heat(d,scale);var a=ContentLayoutProposals.ResolveHeat(d,p);var b=ContentLayoutProposals.ResolveHeat(d,p);
         Assert.All(a.Document.Placements,i=>{Assert.Equal(span,i.ColumnSpan);Assert.Equal(span,i.RowSpan);});
         Assert.True(ContentLayoutEditing.SameState(a.Document,b.Document));Assert.All(d.Placements,i=>Assert.Equal(4,i.ColumnSpan));
         Assert.Equal(d.DocumentVersion,a.Document.DocumentVersion);Assert.Equal(d.ItemSetVersion,a.Document.ItemSetVersion);
@@ -24,13 +24,51 @@ public sealed class ContentLayoutProposalTests
     public void Version_one_quantizer_has_five_tiers_and_hysteresis(double scale,int previous,int expected)=>Assert.Equal(expected,ContentLayoutProposals.Quantize(scale,previous));
 
     [Fact]
-    public void Manual_layout_ignores_heat_and_size_override_and_pin_are_independent()
+    public void Enabled_heat_size_respects_size_override_independently_from_the_order_pin()
     {
-        var d=Doc(3);var manual=d with {Mode=ContentLayoutMode.Manual};Assert.True(ContentLayoutEditing.SameState(manual,ContentLayoutProposals.ResolveHeat(manual,Heat(manual,3)).Document));
-        d=d with {Mode=ContentLayoutMode.Anchored,Placements=d.Placements.Select((p,i)=>p with {ManualSize=i==0,PinnedIndex=i==0?1:null}).ToArray()};
+        var d=Doc(4) with {AllowHeatDrivenSize=true};
+        d=d with {Placements=d.Placements.Select((p,i)=>p with {ManualSize=i==0,PinnedIndex=i==1?1:null}).ToArray()};
         var effective=ContentLayoutProposals.ResolveHeat(d,Heat(d,1.5)).Document;
         Assert.Equal(4,effective.Placements[0].ColumnSpan);Assert.Equal(6,effective.Placements[1].ColumnSpan);
-        Assert.Equal(d.Placements[0].ItemId,ContentLayoutSolver.Resolve(effective,View()).Items[0].ItemId);
+        Assert.Null(effective.Placements[0].PinnedIndex);Assert.Equal(3,effective.Placements[0].Order);
+        Assert.False(effective.Placements[1].ManualSize);Assert.Equal(1,effective.Placements[1].PinnedIndex);
+        Assert.Equal(d.Placements[1].ItemId,ContentLayoutSolver.Resolve(effective,View()).Items[0].ItemId);
+        Assert.All(d.Placements,p=>Assert.Equal(4,p.ColumnSpan));
+    }
+
+    [Fact]
+    public void Disabled_heat_size_still_updates_automatic_order_but_preserves_all_authored_spans_and_overrides()
+    {
+        var author=Doc(4);
+        author=author with {Placements=author.Placements.Select((p,i)=>p with {ManualSize=i==1,PinnedIndex=i==2?1:null}).ToArray()};
+        string original=ContentLayoutPolicy.Serialize(author);
+        Assert.False(author.AllowHeatDrivenSize);
+        var effective=ContentLayoutProposals.ResolveHeat(author,Heat(author,3)).Document;
+        Assert.Equal(new[]{3,2,1,0},effective.Placements.Select(p=>p.Order));
+        for(int i=0;i<author.Placements.Count;i++)
+        {
+            Assert.Equal(author.Placements[i] with {Order=3-i},effective.Placements[i]);
+            Assert.Equal(author.Placements[i].ColumnSpan,effective.Placements[i].ColumnSpan);
+            Assert.Equal(author.Placements[i].RowSpan,effective.Placements[i].RowSpan);
+        }
+        Assert.Equal(new[]{2,3,1,0},ContentLayoutSolver.Resolve(effective,View()).Items.Select(p=>p.SourceIndex));
+        Assert.Equal(original,ContentLayoutPolicy.Serialize(author));
+        Assert.Equal(author.DocumentVersion,effective.DocumentVersion);Assert.Equal(author.ItemSetVersion,effective.ItemSetVersion);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Manual_picture_and_saved_automatic_return_state_ignore_heat_with_either_size_switch(bool enabled)
+    {
+        var author=Doc(3) with {AllowHeatDrivenSize=enabled};
+        var entered=ContentLayoutEditing.Apply(author,new(ContentLayoutEditKind.Mode){Mode=ContentLayoutMode.Manual},View());
+        Assert.True(entered.Accepted,entered.Error);
+        var manual=entered.Document;
+        Assert.All(manual.Placements,p=>Assert.NotNull(p.SavedAutomaticState));
+        var effective=ContentLayoutProposals.ResolveHeat(manual,Heat(manual,3)).Document;
+        Assert.True(ContentLayoutEditing.SameState(manual,effective));
+        Assert.Equal(ContentLayoutPolicy.Serialize(manual),ContentLayoutPolicy.Serialize(effective));
     }
 
     [Theory]

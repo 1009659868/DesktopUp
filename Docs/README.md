@@ -1,16 +1,24 @@
 # DesktopUp V2 文档入口
 
-## 当前入口（2026-09-24，先验证整体体验闭环）
+新agent从[冷启动提示词](00_Catalog/AGENT_COLD_START.md)开始：包含可复制入口、当前基线和分层核对步骤；实际阶段以当前决定/计划/交接为准。
+
+2026-09-27最新（DEC-029）：R5核心已收口，用户延期BUG-026并批准继续、最小解耦及解耦后的雨夜窗边。先读[R5收口与代码/计划审计](A_Project/40_Implementation/V3-04/LR_R5_CLOSEOUT_AND_PLAN_AUDIT.md)，后续里程碑看[LR计划§8](A_Project/30_Plans/V3_04_L_REMEDIATION_REVIEW_PLAN.md#8-当前出口和最近下一步)，候选/验证看[HANDOFF](A_Project/40_Implementation/V3-04/HANDOFF.md)。R6就绪但实现未开始，模块/Rain/R7/R8及真实Item未完成；下方较早阶段为历史。
+
+2026-09-26当前节点：R1合同齐全、R2基线完成；R3统一几何/浏览/手动投影/空间资格模型及UI C最小原生样板完成，248项相关/1758项全量回归通过，R4安全保存合同及代表模板原生绑定完成（1868项合同）；进入R5首次直接操作。阶段证据与分工见[执行记录](A_Project/40_Implementation/V3-04/LR_MILESTONE_EXECUTION.md)。
+
+## 当前入口（2026-09-26，LR里程碑goal启动）
+
+用户已授权按[LR-R1～R8计划](A_Project/30_Plans/V3_04_L_REMEDIATION_REVIEW_PLAN.md)建立goal并推进方案/文档/代码/测试及必要子agent协作。DEC-024/025收清保真兼容、单草稿冲突和新建纵向/循环关闭；R1实施合同齐全，R2～R4完成、R5实施中。当前分工、基线及验证入口见[里程碑执行记录](A_Project/40_Implementation/V3-04/LR_MILESTONE_EXECUTION.md)，阶段状态归细化工作流。
 
 DEC-021：先用[整体体验评审/E1](A_Project/20_Architecture/CONTENT_LAYOUT_EXPERIENCE_REVIEW_V1.md)验证基础手势、适配整图承接和模式退出覆盖；现有决定暂不推翻，控件细化后置。E1六任务反馈已收清（06c提示后恢复成功）；DEC-023采用double/退出A，DEC-022批准被动极端不足时临时双轴。[操作/空间方案](A_Project/20_Architecture/CONTENT_LAYOUT_OPERATION_SPACE_REVIEW_V1.md)已成文；旧41项原型证据不验证新双轴，不是生产通过。
 
 DEC-019：纯手动/热度自动两种模式，均在桌面海报按住Item并移动即拖，无整理按钮/长按时间前置；纯手动支持指定网格位置和主动留白，控制中心另提供精细微调。自动拖动仍按DEC-018固定顺序位，不能把手动位置也降为序号。
 
-[UI C](A_Project/20_Architecture/CONTENT_TEMPLATE_SCHEMA_UI_C.md)视觉方向保持采纳；原型里的强制“整理”入口已落后于新决定，需定向调整，不重选整套风格。UI C原稿保留；本轮新增独立E1体验试验，未改生产。
+[UI C](A_Project/20_Architecture/CONTENT_TEMPLATE_SCHEMA_UI_C.md)视觉方向保持采纳；原型里的强制“整理”入口已落后于新决定，需定向调整，不重选整套风格。UI C原稿保留；此前新增独立E1体验试验，未改生产。
 
-DEC-020确认手动局部让位、每次进入手动从当前画面开始、适配后有效编辑保存新构图；[手动构图专项](A_Project/20_Architecture/CONTENT_LAYOUT_MANUAL_COMPOSITION_REVIEW_V1.md)与[组合规则](A_Project/20_Architecture/CONTENT_LAYOUT_PIN_DRAG_REVIEW_V1.md)已同步。[LR-R1下一分项](A_Project/30_Plans/V3_04_L_REMEDIATION_REVIEW_PLAN.md)为操作/空间组合反例、循环接缝/受限恢复、特殊约束兼容及双入口草稿交接；暂不进入控件细化。几何候选未获生产证明。
+DEC-020手动局部让位/当前构图/有效编辑承接保持；[组合核对](A_Project/20_Architecture/CONTENT_LAYOUT_COMBINATION_AUDIT_V1.md)12条行为映射和19条轨迹作为R3～R7实施入口。几何候选与原生效果须分别证明，R1合同齐全不代替这些门。
 
-目标仍是稳定、好用的桌面内容收纳。当前状态归[工作流](A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md)，[已发现缺陷](A_Project/40_Implementation/V3-04/CONTENT_LAYOUT_REVIEW_2026-09-23.md)未修，LR-R2/真实Item未开工，旧候选证据不转授当前dirty源码。
+目标仍是稳定、好用的桌面内容收纳。当前状态归[工作流](A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md)，缺陷修复证据归[清单](A_Project/40_Implementation/V3-04/KNOWN_ISSUES.md)与VERIFICATION；真实Item未开工，旧候选证据不转授当前dirty源码。
 
 ## 历史阶段摘要
 

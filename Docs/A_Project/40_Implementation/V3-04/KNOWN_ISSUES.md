@@ -4,7 +4,7 @@
 
 ## Bug清单
 
-最后核对：2026-09-23。BUG-008～017来自当前wb工作区审查；尚未修复，不把隔离诊断当原生复验。根因和整改方向统一见[布局审查](CONTENT_LAYOUT_REVIEW_2026-09-23.md)§3/4；后续关闭仍登记本表。旧Bug处置不变，设计取舍不自动算Bug。
+最后核对：2026-09-27，R5收口审计。BUG-008～017的历史机制已与R3～R5现源码及证据逐项对照，不能把原审查OPEN直接当成现状；修复层级及剩余范围见[R5审计§3](LR_R5_CLOSEOUT_AND_PLAN_AUDIT.md#3-代码与计划的差异审计)。新增BUG-026按用户要求延期，不进行本轮修复。原始反例见[布局审查](CONTENT_LAYOUT_REVIEW_2026-09-23.md)§3/4；旧Bug和失败材料保留。
 
 | 编号 | 问题 | 状态 | 影响 / 当前处置 |
 | --- | --- | --- | --- |
@@ -15,18 +15,49 @@
 | V3-BUG-005 | 新增海报模板与外观滑块禁用 | CLOSED / CODE AUTO + USER PASS（2026-09-16） | 新建统一adaptive-grid，v8窄范围兼容修复；1315合同/12进程及真实旧库副本迁移通过，见布局统一交付 |
 | V3-BUG-006 | 拖动控制中心后关闭再打开，窗口不恢复到上次位置 | OPEN / DEFERRED BY USER（2026-09-16） | 用户明确仅登记、暂不修复；不阻塞P9其他项，不扩大为跨进程位置持久化承诺 |
 | V3-BUG-007 | 原生文件选择器打开时，托盘退出须等用户手动关闭选择器才继续 | CLOSED / CODE AUTO + USER PASS（2026-09-16） | 独立R3：1462合同、8真实原生及21既有同包门通过；用户随后确认复验通过，按已发步骤关闭退出缺陷，不扩大到未验环境 |
-| V3-BUG-008 | 有限/循环滚动边界与轴向混用，短内容偏移、反向接缝及小增量异常 | OPEN / SOURCE + MODEL CONFIRMED | LRA-01；统一滚动链，未原生验收 |
-| V3-BUG-009 | 横向区域局部坐标误碰撞，容量与纵向不对称 | OPEN / SOURCE + MODEL CONFIRMED | LRA-02；同一100项纵向成功横向耗尽列范围 |
-| V3-BUG-010 | 横向只改变高度时宿主遗漏布局失效 | OPEN / SOURCE CONFIRMED + MODEL CONTRAST | LRA-03；几何键/R4终态需修，未声称实机复现 |
-| V3-BUG-011 | 自动未固定项纯模型可移动，生产鼠标编辑门仍拒绝 | OPEN / SOURCE CONFIRMED | LRA-04；真实首次输入链需复验 |
-| V3-BUG-012 | Anchored恢复自动仍保留位置/尺寸/序号覆盖 | OPEN / SOURCE + MODEL CONFIRMED | LRA-05；按钮语义与结果不一致 |
-| V3-BUG-013 | Manual切方向提案版本+2被真实命令拒绝，并包含清位置固定的转换 | OPEN / COMMAND POLICY CONFIRMED | LRA-06；提案变化未成功提交，不宣称已损坏真实库 |
-| V3-BUG-014 | 便携导出/导入静默清空ReservedSpaces | OPEN / ROUNDTRIP MODEL CONFIRMED | LRA-07；配置保真缺陷，不是文件丢失声明 |
-| V3-BUG-015 | 热度尺寸关闭标记未控制ResolveHeat投影 | OPEN / INJECTED MODEL CONFIRMED | LRA-08；真实统计尚未接入，属于端口缺陷 |
-| V3-BUG-016 | 最小可用高度只限制求解值，真实裁切仍不足；受限跨度规则不一致 | OPEN / SOURCE + MODEL CONFIRMED | LRA-09；先分清主动/被动及批准规则 |
-| V3-BUG-017 | 布局人工候选manifest与实际DLL不匹配 | OPEN / CHECKONLY FAILED | LRA-10；禁止修改指纹绕过，需新同包证据 |
+| V3-BUG-008 | 有限/循环滚动边界与轴向混用，短内容偏移、反向接缝及小增量异常 | PARTIAL FIX / WHEEL CODE + APP HANDLER PASS（候选25） | 起点反向预夹紧/逐事件Round已修；47相关/2115全量、两轴12场景102处理器事件/XAML/命中及八组同包门通过。用户确认大致可用，新报停顿续滚另列026延期；循环抓取/被动恢复归R6，不写成全场景已修，见[报告§9](LR_R5_POINTER_AND_MODULE_REVIEW.md#9-候选25循环起点反向滚动与主线审阅节点) |
+| V3-BUG-009 | 横向区域局部坐标误碰撞，容量与纵向不对称 | FIXED / SOURCE + MODEL（R3） | 现solver按主/交叉轴求解并转换区域全局坐标；两轴1000个最大跨度及旧区域语义合同通过。原100项非对称反例为历史；App横向组合仍归R6/R7 |
+| V3-BUG-010 | 横向只改变高度时宿主遗漏布局失效 | PARTIAL FIX / SOURCE + MODEL | EnsureContentSnapshot已有HeightDip失效键与锚恢复，Reclip拒绝横向旧高度见证；原遗漏已修。横向单改高度与R4动画/终态实际连续证据归R6 |
+| V3-BUG-011 | 自动未固定项纯模型可移动，生产鼠标编辑门仍拒绝 | FIXED IN R5 FINITE PATH / CODE + HANDLER + SCOPED USER | 自动未钉项首拖门已解除，正式编辑输出读序图钉；R5协议/重启及早期人工基础组支持。运行中的循环副本仍拒绝拖动，按R6实现，不扩称全组合通过 |
+| V3-BUG-012 | 旧“恢复自动”清位置/尺寸/序号的预期与结果不一致 | SUPERSEDED / DEC-020、023、024；R4新合同已实现 | 退出A恢复保存的自动来源，解除图钉和恢复尺寸独立；不能恢复“全清”旧预期。旧Manual无返回来源明确拒绝退出A，旧硬约束不静默转换；不是所有旧数据均可自由转换 |
+| V3-BUG-013 | Manual切方向提案版本+2被真实命令拒绝，并包含清位置固定的转换 | FIXED / POLICY + CONTRACT；APP WIRED | SetFlowAxis现只改方向与版本+1，保留模式/loop/坐标/返回态，冲突拒绝；App沿正式提交。动作专属原生/SQLite连续验收不冒填，归R6/R7 |
+| V3-BUG-014 | 便携导出/导入静默清空ReservedSpaces | FIXED / CODE+AUTO（2026-09-26） | R2独立包：10新红测→定向25/25、全1664/1664；非空留白经真实SQLite/store重开保真。见[验证记录](VERIFICATION.md)；R7复验另列，非App重启或文件丢失声明 |
+| V3-BUG-015 | 热度尺寸关闭标记未控制ResolveHeat投影 | FIXED / INJECTED MODEL + R4 AUTO | ResolveHeat现遵循AllowHeatDrivenSize及ManualSize，手动模式不改；R4红绿及1868合同支持。真实统计/热度公式仍未接入 |
+| V3-BUG-016 | 真实可用空间不足时的准入/裁切/导航未闭环 | PARTIAL FIX / MODEL READY；APP NOT WIRED | solver已区分真实不足与旧约束冲突并保留跨度，ContentSpacePolicy有受限/恢复模型；App尚未消费该策略/ReadOnlyOverflow，也未接最大完整Item主动最小值；R6必须接线并验证 |
+| V3-BUG-017 | 旧布局人工候选manifest与实际DLL不匹配 | HISTORICAL CANDIDATE INVALID / REPLACEMENT VERIFIED | 旧CheckOnly失败与禁用保留，不修改hash绕过。后续候选25已有新同包证据/445源码/402产物，启动预检复核成功；旧包不继承新PASS，当前不再被旧失配阻塞 |
+| V3-BUG-018 | 中心缩窄/增宽动画误用等宽收展表面，导致安全取消 | FIXED / CODE+AUTO（2026-09-27） | `alignment-composition-01`原生失败；新geometry lease同步prepared Content/Input/Clip，`alignment-v9-composition`104帧全部一致，100项缩窄/承接/放宽/撤销及重启通过；取消/宽高/DPI另有9项合同，非全环境人工认证 |
+| V3-BUG-019 | 两个Store并发首次初始化偶发SQLite table locked | OPEN / EXISTING CONCURRENCY RISK | `alignment-contracts-01`1959/1960，同名历史失败已存在；单项及后续全量通过不代表竞态已修。Infrastructure与原测试本轮未改；不能由此推断已有配置丢失，R7可靠性需明确处置 |
+| V3-BUG-020 | 海报原生菜单排列返回error5并立即安全关闭 | OPEN / FIX IMPLEMENTED，NATIVE HIT PENDING | candidate11/12复现foreign锚点error5；candidate13自身input单步实验成功。candidate14正式两步、严格层级/输入透明/全序见证通过，32菜单合同和2001全量通过；15命中点被外进程遮挡，完整六状态/原生鼠标未通过，暂不关闭。详见对齐记录§7.3 |
+| V3-BUG-021 | 中心尺寸动画间歇读不到预分配窗口区域并安全取消 | OPEN / ONE NATIVE OBSERVATION | candidate17 `alignment-v17-composition`第一动画帧GetWindowRgn=0；恢复成功、未提交几何、资源0；同包`composition-recheck`及重启通过不等于修复。可继续隔离UI体验，阻止将尺寸链称为完全可靠；后续调查见下节 |
+
+本轮新增：
+
+| Bug ID | 问题 | 当前状态 | 依据与边界 |
+| --- | --- | --- | --- |
+| V3-BUG-022 | 内容Viewport整幅HRGN截获日常空白下的桌面操作 | FIX IMPLEMENTED / NATIVE REGION VERIFIED / GESTURES PENDING | 候选18实际应用区域243空白点均排除、216交互点保留；没有实际执行桌面框选/右键/双击，不能作为USER PASS；不是网格绘制造成 |
+| V3-BUG-023 | 真实鼠标进入Item后仍不能驱动Lamp跟随 | FIXED / CODE + REAL POINTER（候选20，2026-09-27） | v19真实移动复现：NVIDIA Overlay整体alpha=0仍被当成遮挡；v20按成功原生读取排除全透明窗口，两个点实际跟随、离开轻摆通过，2102合同及NativeMouse通过。未知/非零alpha仍阻挡；产品视觉待人工，不扩大为全环境认证 |
+| V3-BUG-024 | 控制中心默认按钮深色、悬停才恢复主题 | FIXED / CODE + CONTROL STATES（候选21，2026-09-27） | system浅色模式写到框架共享画刷，真实红测复现Normal深灰/PointerOver浅色；本地资源隔离、完整状态与弹窗样式修复。四主题及保存system重启共378状态读回通过；不是OS hover或高对比认证，见输入报告§6 |
+| V3-BUG-025 | 半透明Lamp展开过程及终态标题下浅灰 | FIXED / NATIVE PHASE PIXELS + USER ACCEPTED UI/ANIMATION（候选24） | 候选23仅修终态，候选24在每次HRGN扩大后清新区域，四组三阶段24点差值0。用户随后明确“目前的UI，动画等都做得挺不错了”，登记当前体验认可；不扩为原速全部GPU帧/HDR/混合DPI认证，见[报告§8](LR_R5_POINTER_AND_MODULE_REVIEW.md#8-候选24展开过程灰底与ab不透明度对照) |
+| V3-BUG-026 | 纵向循环在原顶部/底部停顿后继续滚动可能失效 | OPEN / USER-REPORTED / DEFERRED BY USER（2026-09-27） | 用户说明持续滚动正常、停下再滚偶发失效，当前大致可用并明确后续再修；不阻塞R5收口，不计为已修或循环全场景通过，详见下节 |
+
+具体输入链、图钉边界、候选与未过项见[输入与模块报告](LR_R5_POINTER_AND_MODULE_REVIEW.md)。模块可移除是DEC-027目标及独立方案，不把“当前不能删Lamp”伪装成已经修复的Bug。
+
+候选20后续用户反馈：其他样式、灯光、图钉交互“都很不错”，对应范围登记用户正向体验，BUG-023补充USER POSITIVE；未将这句话扩大为BUG-022全部桌面手势或所有图钉反例的逐项确认。
 
 后续新增记录继续分配稳定编号；关闭须写明候选、证据和复测范围，不以一次未复现或纯模型PASS关闭。
+
+## V3-BUG-026：纵向循环停顿后继续滚动可能失效
+
+- 来源：候选25交付后的用户体验反馈。浏览方向纵向、循环开启，在原本的顶部或底部停下后继续滚动可能无效；持续滚动反而正常。
+- 当前只确认用户报告的表现；停顿时长、续滚方向、指针位置、恢复条件和发生频率未量化，根因未验证。不能据此断言是输入区域、相位或滚轮硬件问题。
+- 与BUG-008已修的取模前非负夹紧/逐事件取整分开登记，保留候选25红绿证据，不回退修复。本轮未新增复现、测试或代码改动。
+- 用户明确“大致能用，这个小bug后续再修”，按DEC-029延期；R5按原核心有限路径收口。后续原生滚轮回归/R7支持范围审查必须携带此项；不能因延期宣称纵向循环完全可靠，也不据此自动重开修复。
+
+## V3-BUG-021：尺寸动画窗口区域读回间歇失败
+
+- 2026-09-27，App SHA256 `4BBBC824BCD4A19D93EB985E0742D44B655FDC2A1CCB63CB58CCC91C35F6637A`，`alignment-v17-composition/data/logs/desktopup.jsonl` PID18068。basic-box/100项夹具，无Lamp动效，因此没有证据把故障归于本次Lamp根ledger修正。
+- 540×720准备及两次ready回调成功，逻辑缩到528×720时尺寸、输入、区域设置均返回成功；预分配surface实际GetWindowRgn=0，`window-region-read-failed`，不放松表面读回门。取消后`spatial.presentation_restored`的restored/layoutsReleased均true，未见几何命令提交，退出资源0。
+- 同二进制在全新`alignment-v17-composition-recheck`通过全部宽窄/承接/撤销与第二进程；仅说明独立复核成功，不证明并发/时序根因消除。保留失败与成功证据；不增加自动重试掩盖、不凭未再现关闭。R5核心收口明确携带本风险，未宣称尺寸链完全可靠；R7最终出口必须有处置/支持范围结论，破坏核心链则阻塞。
 
 ## V3-BUG-006：控制中心重开未保留最后位置
 

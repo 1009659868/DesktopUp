@@ -93,15 +93,18 @@ public sealed partial class ControlCenterEditTransactionTests
     }
 
     [Fact]
-    public void Ux_queue_merges_same_field_and_only_rebases_on_own_success()
+    public void Ux_same_poster_waits_for_own_receipt_then_starts_from_fresh_basis()
     {
         using var f = new Fixture(); var a = f.Current.PostersById["A"]; var s = new ControlCenterSettingsSession();
         s.Update(new(a, PosterSetting.Scale, 1.2)); s.Finish(); var first = s.TakeNext()!;
-        foreach (double value in new[] { .6, .8, 1.4 }) { s.Update(new(a, PosterSetting.Spacing, value)); s.Finish(); }
-        s.Update(new(a, PosterSetting.AutoEnabled, 1)); s.Finish();
-        Assert.Equal(2, s.QueuedCount);
+        foreach (double value in new[] { .6, .8, 1.4 }) Assert.False(s.Update(new(a, PosterSetting.Spacing, value)));
+        Assert.False(s.Update(new(a, PosterSetting.AutoEnabled, 1)));
+        Assert.Equal(0, s.QueuedCount);
         Assert.True(s.Complete(f.Coordinator.Execute(first)));
-        while (s.TakeNext() is { } command) { var r = f.Coordinator.Execute(command); Assert.True(r.Succeeded, r.Error); s.Complete(r); }
+        Assert.True(s.Update(new(f.Current.PostersById["A"], PosterSetting.Spacing, 1.4))); s.Finish();
+        Assert.True(s.Complete(f.Coordinator.Execute(s.TakeNext()!)));
+        Assert.True(s.Update(new(f.Current.PostersById["A"], PosterSetting.AutoEnabled, 1))); s.Finish();
+        Assert.True(s.Complete(f.Coordinator.Execute(s.TakeNext()!)));
         Assert.Equal(new PosterContentPreferences(1.2, 1.4), f.Current.PostersById["A"].Presentation.Parameters.Preferences);
         Assert.True(f.Current.PostersById["A"].Poster.AutoCollapseEnabled);
     }

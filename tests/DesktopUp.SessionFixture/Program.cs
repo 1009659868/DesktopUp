@@ -83,9 +83,9 @@ Console.WriteLine(JsonSerializer.Serialize(new { root, revision = current.Revisi
 // Content layouts are a separate opt-in mode; historical numeric scenarios above remain unchanged.
 static void CreateContentLayoutFixture(string requestedRoot, string scenario)
 {
-    string[] allowed = ["equal", "illustration", "covers", "landscape", "three", "empty", "hundred", "thousand", "resource-one", "resource-three", "resource-six"];
+    string[] allowed = ["equal", "illustration", "covers", "landscape", "three", "empty", "hundred", "thousand", "rejected-heat", "resource-one", "resource-three", "resource-six"];
     if (!allowed.Contains(scenario, StringComparer.Ordinal))
-        throw new ArgumentException("Unknown content layout fixture. Use equal|illustration|covers|landscape|three|empty|hundred|thousand|resource-one|resource-three|resource-six.");
+        throw new ArgumentException("Unknown content layout fixture. Use equal|illustration|covers|landscape|three|empty|hundred|thousand|rejected-heat|resource-one|resource-three|resource-six.");
     if (!Path.IsPathFullyQualified(requestedRoot))
         throw new ArgumentException("Content layout fixture requires an absolute new isolated directory.");
     string contentRoot = Path.GetFullPath(requestedRoot);
@@ -114,6 +114,14 @@ static void CreateContentLayoutFixture(string requestedRoot, string scenario)
             "empty" => ContentLayoutSamples.Equal(id, 0),
             "hundred" => ContentLayoutSamples.Equal(id, 100),
             "thousand" => ContentLayoutSamples.Equal(id, 1000),
+            // The author may legally move its 4x4 hard rectangle to (0,0), but a 1.5 heat
+            // projection makes that destination 6x6 and intersects the preserved keep-out area.
+            "rejected-heat" => new(id, [new(id + ":rejected-heat", 0, 4, 4)
+                { Column=0, Row=8, FixedPosition=true }])
+            {
+                SchemaVersion=2, AllowHeatDrivenSize=true,
+                ReservedSpaces=[new(4,0,4,4) { Kind=ContentReservedKind.Explicit, Name="rejected heat destination" }]
+            },
             _ => ContentLayoutSamples.Equal(id)
         };
         ContentLayoutCommandPolicy.ValidateAuthoring(document);

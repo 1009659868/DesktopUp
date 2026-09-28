@@ -40,10 +40,15 @@ internal sealed partial class PosterSpatialRuntime
                 if (step == 1)
                 {
                     var probe = target.ReadMenuProbe();
+                    var commands = target.ReadPosterMenuCommandsForProbe();
+                    bool compactCommands = commands.Length == 4 &&
+                        commands[0] is "锁定" or "解除锁定" &&
+                        commands[1] is "调整海报外框" or "结束外框调整" &&
+                        commands[2] == "打开控制中心" && commands[3] == "删除海报…";
                     bool passed = probe is { Ordered: true, InputsTransparent: true } &&
-                        probe.Samples.Count == 15 && probe.Samples.All(p => p.HitPopup);
+                        probe.Samples.Count == 15 && probe.Samples.All(p => p.HitPopup) && compactCommands;
                     log.Write(passed ? "info" : "error", "menu.smoke_readback", new
-                    { target.PosterId, editing = target.IsEditing, passed, probe, note = "native-query-not-mouse-click" });
+                    { target.PosterId, editing = target.IsEditing, passed, probe, commands, compactCommands, note = "native-query-not-mouse-click" });
                     if (!passed)
                     {
                         bool occluded = probe is { Ordered: true, InputsTransparent: true } &&

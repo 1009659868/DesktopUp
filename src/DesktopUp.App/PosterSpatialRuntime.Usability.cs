@@ -3,6 +3,13 @@ namespace DesktopUp;
 
 internal sealed partial class PosterSpatialRuntime
 {
+    public string? ValidateControlCenterSetting(PosterSettingEdit edit)
+    {
+        if (_suspended || IsSpatialBusy) return "海报正在恢复或交互，请先完成或取消当前操作。";
+        if (!state.TryGetCurrent(out var current) || current!.PostersById.GetValueOrDefault(edit.PosterId)?.EntityVersion != edit.Basis.EntityVersion)
+            return "海报版本已变化，请重新开始这次调节。";
+        return _windows.TryGetValue(edit.PosterId, out var target) ? target.ValidateCenterPresentation(edit) : null;
+    }
     public string LocateControlCenterPoster(string id)
     {
         foreach (var peer in _windows.Values) peer.StopLocate();

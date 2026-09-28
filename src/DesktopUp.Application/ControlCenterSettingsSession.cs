@@ -3,9 +3,10 @@ using DesktopUp.Domain;
 
 namespace DesktopUp.Application;
 
-public enum PosterSetting { Scale, Spacing, Template, Subtitle, Content, Theme, AutoEnabled, AutoDelay }
+public enum PosterSetting { Scale, Spacing, Template, Subtitle, Content, Theme, AutoEnabled, AutoDelay, Lamp, TemplateParameters }
 public sealed record PosterSettingEdit(PosterSurfaceProjection Basis, PosterSetting Setting,
-    double Number = 0, string Text = "", PosterContentParameters? Content = null, PosterThemeParameters? Theme = null)
+    double Number = 0, string Text = "", PosterContentParameters? Content = null, PosterThemeParameters? Theme = null,
+    LampTemplateParameters? Lamp = null, TemplateRecipe? Recipe = null)
 {
     public string PosterId => Basis.Poster.PosterId;
     public PosterStateCommand Command(string requestId)
@@ -30,10 +31,14 @@ public sealed record PosterSettingEdit(PosterSurfaceProjection Basis, PosterSett
         {
             PosterSetting.Scale => draft with { Parameters = parameters with { Preferences = preferences with { Scale = Number } } },
             PosterSetting.Spacing => draft with { Parameters = parameters with { Preferences = preferences with { Spacing = Number } } },
-            PosterSetting.Template => draft with { TemplateKey = Text },
+            PosterSetting.Template => draft with { TemplateKey = Text, Parameters = Recipe is null ? parameters :
+                Recipe.Id == Text ? TemplateRecipeInstancePolicy.Select(parameters, Recipe) : throw new ArgumentException("Recipe target mismatch.") },
             PosterSetting.Subtitle => draft with { Subtitle = Text },
             PosterSetting.Content => draft with { Parameters = parameters with { Content = Content ?? throw new ArgumentException("Missing content parameters.") } },
             PosterSetting.Theme => draft with { Parameters = parameters with { Theme = Theme ?? throw new ArgumentException("Missing theme parameters.") } },
+            PosterSetting.Lamp => draft with { Parameters = parameters with { Lamp = Lamp ?? throw new ArgumentException("Missing lamp parameters.") } },
+            PosterSetting.TemplateParameters => draft with { Parameters = TemplateRecipeInstancePolicy.Update(parameters, draft.TemplateKey,
+                Lamp ?? throw new ArgumentException("Missing template parameters.")) },
             _ => throw new ArgumentException("Unknown setting.")
         };
         var command = draft.ToCommand(requestId);
@@ -51,27 +56,38 @@ public sealed class ControlCenterSettingsSession
     private PosterSettingEdit? _pendingEdit;
     private PosterStateCommand? _pending;
     private bool _closed;
+    private string? _previewValidationError;
     public PosterSettingEdit? Preview { get; private set; }
+    public bool IsPreviewValid => Preview is not null && _previewValidationError is null;
     public string? Error { get; private set; }
     public string? ErrorPosterId { get; private set; }
     public bool IsPending => _pending is not null;
     public bool ProtectsInteraction => Preview is not null || IsPending || _queue.Count > 0;
     public int QueuedCount => _queue.Count;
+    public bool OwnsPoster(string posterId) => Preview?.PosterId == posterId || _pendingEdit?.PosterId == posterId ||
+        _queue.Any(edit => edit.PosterId == posterId);
 
     public bool Update(PosterSettingEdit edit)
     {
         if (_closed) return false;
-        if (Preview is { } prior && prior.PosterId == edit.PosterId && prior.Setting != edit.Setting) Finish();
+        if (_pendingEdit?.PosterId == edit.PosterId || _queue.Any(e => e.PosterId == edit.PosterId) ||
+            Preview is { } prior && (prior.PosterId != edit.PosterId || prior.Setting != edit.Setting))
+        {
+            Error = "请先完成或取消当前修改；冲突操作未排队。"; ErrorPosterId = edit.PosterId;
+            return false;
+        }
         if (Preview is { } previous && previous.PosterId == edit.PosterId && previous.Setting == edit.Setting)
             edit = edit with { Basis = previous.Basis };
         try { edit.Command("validate-only"); }
-        catch (ArgumentException e) { Error = e.Message; ErrorPosterId = edit.PosterId; Preview = null; return false; }
-        Preview = edit; Error = ErrorPosterId = null; return true;
+        catch (ArgumentException e)
+        { _previewValidationError = Error = e.Message; ErrorPosterId = edit.PosterId; Preview = edit; return false; }
+        Preview = edit; _previewValidationError = Error = ErrorPosterId = null; return true;
     }
 
     public void Finish()
     {
         if (Preview is not { } edit) return;
+        if (_previewValidationError is not null) { Error = _previewValidationError; ErrorPosterId = edit.PosterId; return; }
         Preview = null;
         int existing = _queue.FindIndex(e => e.PosterId == edit.PosterId && e.Setting == edit.Setting);
         if (existing >= 0) _queue[existing] = edit with { Basis = _queue[existing].Basis };
@@ -79,7 +95,12 @@ public sealed class ControlCenterSettingsSession
         else { Error = "待保存操作过多，请稍后重试。"; ErrorPosterId = edit.PosterId; }
     }
 
-    public void CancelPreview() { Preview = null; Error = ErrorPosterId = null; }
+    public void CancelPreview() { Preview = null; _previewValidationError = Error = ErrorPosterId = null; }
+    public void RejectPreview(string error)
+    {
+        if (Preview is not { } edit) return;
+        _previewValidationError = Error = error; ErrorPosterId = edit.PosterId;
+    }
     // Completed valid input stays bound to its original target even across selection/close.
     public void Close() { CancelPreview(); _closed = true; }
 

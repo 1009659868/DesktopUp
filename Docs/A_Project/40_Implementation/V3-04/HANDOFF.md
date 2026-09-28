@@ -1,10 +1,183 @@
 # V3-04 当前交接
 
-## 接替入口（2026-09-24）
+## 2026-09-28：远端wb合并回当前V3
 
-供下一位Agent直接使用：[接替提示词：04-L / LR-R1](AGENT_HANDOFF_PROMPT.md)。其中集中记录工作区、必读顺序、已确认规则、证据边界及最近下一步；只作交接快照，不新增需求或实施授权。
+用户要求获取远端`impl/poster-redesign-V3-wb`并合入当前`impl/poster-redesign-V3`，本次不推送。合并前当前分支为`0e37d9d`，远端wb为`fc8c920`（新增源码/收口/冷启动三个提交）。仅本文件顶部追加段发生文本冲突；保留双方历史记录，生产代码没有冲突，不作整侧覆盖。
 
-wb合并及双分支推送已在bd148fb完成并核对远端一致；当前工作分支为impl/poster-redesign-V3。本次仅将提示词和导航追加提交到当前V3，wb保留前次检查点。接手时重新核对Git状态，不能把文稿中的基准提交当永远最新HEAD。此前Git授权不传递给后续任务。
+当前接替入口为[统一冷启动提示词](../../../00_Catalog/AGENT_COLD_START.md)：远端文档已记录R5核心收口、R6就绪未实施。此前[LR-R1接替提示词](AGENT_HANDOFF_PROMPT.md)保留作2026-09-24历史快照，不再用于指示当前阶段。合并本身不新增里程碑验收、不启动R6或App；本机工作区仍为`G:\A_\Tools\DesktopUp_V2`，分支/HEAD与本机构建证据须现场核对，不照搬远端旧机器路径、PID或未上传的out产物。
+
+本机合并验证：Release合同2115/2115、0跳过；Release构建0警告/0错误。src/tests/scripts/config与远端wb完全一致；仅交接导航、历史标签及本次验证记录额外调整。本地.workbuddy两文件哈希不变。详见[验证记录最新段](VERIFICATION.md)，未运行App/同包门或推送；本地合并提交结果以Git记录为准。
+
+## 2026-09-27 Agent冷启动入口同步
+
+新增[统一冷启动提示词](../../../00_Catalog/AGENT_COLD_START.md)，在仓库README、Docs入口、目录/登记表和ACTIVE_PATH均可到达。实际检索未发现独立旧提示词文件，本次将分散的接手约束汇总为可复制入口：核对真实Git/指令→当前决定/计划→R5证据与Bug→代码链/验证→按本次任务等待或继续。同步了R5已收口、R6待实施、模块后Rain、BUG-026延期、配置/证据与多agent边界；不凭旧“当前/待审”重开已决事项。
+
+提示词制作前Git基线为`67559b4800a939871271b29b9823baf2895baad4`，此前两个提交已成功推送并核对远端SHA相同。提示词维护完成时尚未提交；用户随后明确要求将提示词及导航提交远程，本次按该授权形成独立文档检查点，同步到`origin/impl/poster-redesign-V3-wb`，结果以push/远端SHA核对为准。仅文档维护，不开始R6、不改生产/测试/配置、不运行App。以后冷启动必须重新检查HEAD和工作区，不将此前快照当作永不变化的状态。
+
+## 2026-09-27 Git同步检查点（用户明确授权）
+
+用户在R5收口后要求同步当前项目至远程。本次沿现有`impl/poster-redesign-V3-wb`→`origin/impl/poster-redesign-V3-wb`跟踪关系，不继承历史切换/合并其他分支的指令。源码、测试、脚本与配置检查点为`e9a3320d97a0cc81812d472e9c0689ed6fe8bb8a`（172文件），本次文档提交另行保存R1～R5记录、收口及已批准后续计划；根README同步当前入口。各阶段验收结果不因Git提交升级。
+
+提交前445源码与候选25零漂移、启动CheckOnly成功；未重跑既有2115合同。暂存检查唯一格式提示为`scripts/probe-content-fields.ps1`已有EOF空行，保留已验证字节；排除该提示后无其他空白错误。源码/文档候选清单未匹配常见私钥/token模式，无大体积二进制或数据库。`out/`、依赖/生成目录、`.claude/settings.local.json`和未引用的旧桌面截图留在本机，不删除、不推送。远端同步成功与否以实际push及分支SHA核对为准，不把本地提交自动当已上传。
+
+## 2026-09-27 当前：R5核心收口，恢复里程碑推进
+
+DEC-029：用户将纵向循环在原首尾停顿后续滚可能失效登记为BUG-026，明确延期；接受最小模块解耦，并要求其后制作“雨夜窗边”。等待方向审阅已结束。**R5 CORE CLOSED；R6 READY / NOT STARTED；模块、Rain、R7/R8尚未实施。** 依次推进R6→模块B/C/D→Rain→R7→R8→V3-05，里程碑归[主计划§8](../../30_Plans/V3_04_L_REMEDIATION_REVIEW_PLAN.md#8-当前出口和最近下一步)。
+
+本轮完成[R5出口及代码/计划审计](LR_R5_CLOSEOUT_AND_PLAN_AUDIT.md)：原核心有限链与用户UI/动画认可逐项对应，旧Bug机制/SQLite版本/配方与参数描述已校正；真实循环拖拽、受限空间恢复、假源、模块能力仍明确未完成。Portable v4对自定义目录、非light中心主题或RecipeInstances拒绝导出，不能声称所有现配置可便携；R7前须补受支持新字段的版本化携带及恢复，现有拒绝不代替完整往返验收。BUG-019/020/021/022及026携带，不因阶段收口关闭。
+
+交付仍为`candidate25-loop-wheel`；App `1FE34E3121EBDF3104753510294768D282F160517511A83C64D9D3E4BDA9D6CA`，445源码/402产物。本次只读复核零源码漂移、启动器CheckOnly成功；没有新构建/GUI运行，也没有重跑既有2115合同/八组门。启动仍为`& .\out\lr-r5-evidence\start-loop-wheel-review.ps1`，旧体验库及候选保持。
+
+可复制交接：DesktopUp仍为DEMO海报内容，最近已同步基线`impl/poster-redesign-V3-wb@67559b4800a939871271b29b9823baf2895baad4`，新增本地改动须实查；旧`bd148fb…＋dirty`仅是候选制作时基线。先读冷启动入口→DEC-029→LR计划§8→R5收口审计→执行记录§9。下一实施是R6循环抓点/导航/结束锚；root持全部文件和唯一构建/GUI队列，审计agent已交回。最小模块/Rain已获准但未制作，BUG-026延期；保留配置/旧失败，不凭历史授权自动Git操作或真实文件搬移。以下候选记录及等待指示是历史，不继承旧PID/旧分工。
+
+## 2026-09-27 最新：候选25循环反向修正，后续主线待审阅
+
+用户认可当前UI/动画，另报纵向循环起点向上被挡。旧App在循环取模前夹到0，且逐事件取整丢小增量；现生产ScrollItems接入统一wheel策略，正反取模、有限钳制、小增量累计，浏览不写配置。旧处理器首个反向事件红测复现；新两轴12场景/102事件/984检查与卡片/发布命中通过，47相关及2115全量、八组同包门通过。证据、边界与指纹见[报告§9](LR_R5_POINTER_AND_MODULE_REVIEW.md#9-候选25循环起点反向滚动与主线审阅节点)。本轮未发送OS滚轮，实际滚轮仍待用户复看。
+
+启动`& .\out\lr-r5-evidence\start-loop-wheel-review.ps1`，PS5.1/7预检通过。候选`candidate25-loop-wheel`，App `1FE34E3121EBDF3104753510294768D282F160517511A83C64D9D3E4BDA9D6CA`；445源码/402运行产物冻结。human-review-09从用户最新human-review-08快照复制，旧库未覆盖/源hash不变，无常驻实例，无Git提交推送。
+
+**DEC-028：本轮到修复、文档/计划同步及交接为止，后续主线等待用户审阅。** R5收口核对中（UI/动画已认可），R6～R8未开始；建议顺序及每步出口只看[主计划§8](../../30_Plans/V3_04_L_REMEDIATION_REVIEW_PLAN.md#8-当前出口和最近下一步)。最小模块B/C/D建议插在R6后R7前，仍未批准/实施；不展开更多UI装饰、AI平台或真实文件搬移。BUG-019/020/021与空白桌面手势继续按证据分列。
+
+可复制交接：DesktopUp是桌面海报式收纳入口，当前仍DEMO Item。基线分支impl/poster-redesign-V3-wb / bd148fb4641bccb18d75777ae6645149e3ff9cfc＋现有dirty，最终候选25和源指纹见报告§9。权威入口为DEC-028、LR计划§8、本HANDOFF。UI/动画用户认可、反向循环已CODE/APP PASS，实际滚轮待复看；本轮结束后主线待用户判断，不沿旧goal自动开发。保留用户库/旧包，模块拆分、复杂循环拖动和R7可靠性门未完成。
+
+## 2026-09-27 最新：候选24修正展开过程灰底
+
+用户指出A展开仍灰而B正常；只读保存human-review-07后，仅交换25%/100%不透明度，灰底随25%转移。原生ARGB未丢失，原因为扩大HRGN后新露出底面未及时清理，候选23的FinalRestore仅修了终态。候选24共用窗口层按新旧圆角差集同步擦底，保留终态恢复；清底失败使缓存失效以便重试。完整因果对照、指纹和采样限制见[报告§8](LR_R5_POINTER_AND_MODULE_REVIEW.md#8-候选24展开过程灰底与ab不透明度对照)。
+
+最终包`candidate24-frame-backdrop-final`，App `0F02DA495BFB72DC18F94CA8B347F9EDDC6AF5BB541C1356C3135F7DFE47BF94`，441源码/402产物；2105合同、构建0警告错误、四组自身HWND三阶段24点差值0、八组同包门全部通过。采样保持了中间HRGN，不是原速逐帧认证。启动`& .\out\lr-r5-evidence\start-frame-backdrop-review.ps1`，PS5.1/7预检通过，新`human-review-08/data`保留原A25%/B100%参数副本；旧库未覆盖，当前无常驻实例。请在该候选原速反复收展A/B，人工通过仍待用户确认。
+
+root负责集成/Docs；lamp_motion的探针三个文件已交付冻结，只读复审已处理缓存恢复问题。R5 IN PROGRESS / R6 NOT STARTED，模块B/C/D待审、BUG-019/020/021及空白桌面手势未自动关闭，无Git提交推送。以下候选23及更早为历史。
+
+## 2026-09-27 最新：候选23修复半透明海报收展灰底
+
+实际原生复现A在收纳再展开后漏清透明底面，已在现有FinalRestore重绘补RDW_ERASE；四组自身HWND捕获90点差值0，2102合同、构建0警告错误、八组同包门通过。灯光双停是当时Windows报告AnimationsEnabled=false，App实测ReducedMotion/timers0；之后系统恢复true，新探针帧与跟随/闲置处理器正常，未改系统设置或Lamp策略。完整时间线、候选指纹、旧失败与限制见[报告§7](LR_R5_POINTER_AND_MODULE_REVIEW.md#7-候选23半透明收展灰底与系统动画策略)。
+
+启动`& .\out\lr-r5-evidence\start-backdrop-review.ps1`，PS5.1/7预检通过，独立human-review-07已从故障配置只读快照准备，保留A/B设置；不覆盖human-review-06/日常库。当前无常驻实例。root持有全部编辑；lamp_motion只读审查结束。BUG-025修正稳定终态，不宣称逐帧、混合DPI或新OS鼠标认证；R5 IN PROGRESS / R6 NOT STARTED，模块B/C/D待审，无Git提交推送。以下候选21及更早均历史。
+
+## 2026-09-27 当前：候选21修复控制中心默认黑底
+
+用户已对其他样式、灯光与图钉交互给出正向反馈，同时指出默认黑底、悬停恢复。已真实复现system模式Light/Default写到框架共享画刷；现仅修改本地画刷、补齐按钮状态与下拉/弹窗样式。候选21 `candidate21-center-theme`（App `6FAACCE76E645FA942F1DB09FAAC99075820A32278AE0DCB07BF8FE31DB7926A`）2102/2102、构建0警告错误、八组同包回归通过；四主题与保存system重启378个真实控件状态读回通过。范围、红测和未验项见[报告§6](LR_R5_POINTER_AND_MODULE_REVIEW.md#6-候选21默认黑底与主题资源隔离)。
+
+体验命令`& .\out\lr-r5-evidence\start-center-theme-review.ps1`（项目根目录），新human-review-06；PS5.1/7预检通过，无常驻实例。真实色块仍表示当前参数，不因主题换成浅色。未改Lamp运动/图钉/海报输入，旧库保留、无Git提交推送。R5 IN PROGRESS，模块B/C/D方案待审阅；桌面空白手势未获逐项确认，不扩张本次用户反馈。下方候选20与更早为历史。
+
+## 2026-09-27 当前：候选20真实追光修复与鼠标回归通过
+
+已真实复现并修复全透明NVIDIA Overlay窗口被误判遮挡，非追光/闲置动画冲突。`candidate20-pointer-alpha` / App SHA256 `354FD9B152B8273172C1C8C8D945EDB949EC3B4D3818C50CFA37846C97AFCC90`；2102/2102、构建0警告/错误、八组同包回归、真实两点跟随/离开轻摆、NativeMouse条目链及重启通过。规则仅排除原生API明确的整体alpha=0，不按进程放行。完整复现、范围、旧失败及指纹见[报告§4.2](LR_R5_POINTER_AND_MODULE_REVIEW.md#42-真实复现与修复候选20)。
+
+体验命令`& .\out\lr-r5-evidence\start-pointer-alpha-review.ps1`，绑定候选20/八组证据/新human-review-05；PS5.1与7预检均通过，本轮未启动常驻实例。图钉正式解除/撤销、空白HRGN已验证，直接右击图钉、桌面空白框选/菜单/双击和产品视觉仍待人工，不移用旧USER PASS。模块B/C/D方案待审阅，当前仍不能直接删Lamp编译。R5 IN PROGRESS / R6 NOT STARTED；所有文件归root、子agent冻结，不改旧体验库/日常库、不Git提交推送。以下候选19及更早的“最新”均为历史记录。
+
+最新续测（用户已露出桌面）：候选19的真实指针仍在零输入守卫处阻挡，接收者明确为Codex/ChatGPT.exe窗口，详见[报告§5](LR_R5_POINTER_AND_MODULE_REVIEW.md#5-下一步与协作交接)。App二进制未改；仅测试脚本补最多10秒零输入遮挡等待与独立脚本hash证据。`run-lamp-pointer-check.ps1`提供终端延时启动、新输出目录及自动退出，待用户最小化Codex/终端后运行；当前无DesktopUp常驻实例。不得以反复环境阻挡推断Lamp根因、放松guard或关闭R5/BUG-023。
+
+最新补正：复审指出右键按下见证误取处理时光标，已改为DOWN/UP各自消息坐标并核对原生frame。候选19 `candidate19-pointer-feedback` / App `158F72459466C8A5DC92495F5673ABDB02BC9115F11CD73AE9CE538D875882C0`，436源码/402运行产物；2094/2094及0警告错误构建，八组同包脚本门通过。当前候选/结果看[报告§4.1](LR_R5_POINTER_AND_MODULE_REVIEW.md#41-复审补正候选19)，以下v18与v17均历史。真实追光尚未通过、模块提案待审阅、R5未收口的边界不变，未启动常驻体验实例。
+
+## 2026-09-27 最新：候选18稀疏输入/图钉修正，真实追光仍待验证
+
+候选17实测暴露全内容Viewport拦截桌面、图钉文字及追光问题。候选18 `candidate18-pointer-feedback`（App `B71FC337862497E51EF6EF182D30070DADC7C166DC33B5518AB7DFB919A30CCE`）已修稀疏HRGN与图钉右键；全量2093通过，实际区域读回243空白/216交互点符合预期。真实指针门因点不属于自身Input而0输入停止，不把合成Lamp门PASS写成追光修好。完整范围/证据/后续见[输入与模块报告](LR_R5_POINTER_AND_MODULE_REVIEW.md)。
+
+用户已关闭候选17并允许隔离验证；本轮未重开体验实例，未改旧体验库/日常库。所有编辑归root，子agent写入已冻结，审查只读。R5 IN PROGRESS / R6 NOT STARTED。框架仍直接依赖Lamp，按用户要求给出[可移除模块提案](../../20_Architecture/CONTENT_SCENE_MODULE_DECOUPLING_PROPOSAL.md)，B/C/D拆分未实施；不能沿下方旧已运行PID或已通过描述关闭最新未过项。
+
+## 2026-09-27 最新：候选17已完成同包检查并打开体验；R5仍待产品/原生出口
+
+用户确认已关闭旧实例，实际确认DesktopUp进程为0后继续。六项反馈交付到`out/lr-r5-evidence/candidate17-ui-c-feedback`：App SHA256 `4BBBC824BCD4A19D93EB985E0742D44B655FDC2A1CCB63CB58CCC91C35F6637A`，manifest `4E275E30EF7D26DD2E4E98D451607EF79817ADB9C98172371BE6B1A48F179FE0`。427源码/401产物一致；2065合同的输入未变，候选17 App构建0警告/错误。详细检查和保留失败见[对齐记录§8.1](LR_R5_UI_C_INTENT_ALIGNMENT.md#81-候选17同包运行与体验交付)。
+
+八组同候选门已有通过记录：Daily/Protocol各14场景及重启、字段337检查、非法有效预览拒绝及重启、UI五态、Lamp33步、模板配方/主题及重启、100项构图及重启。构图第一次窗口区域读回失败后安全取消，独立复查通过；**BUG-021仍OPEN，不把复查当修复**。v16的厚度严格浮点断言及共享timer错误资源归属已在v17分别修正验证；失败文件保留。已实际查看宽窄中心、日常海报、参数、配方与主题截图；这些是XAML/状态/处理器证据，不是系统鼠标、原生文件选择器或完整桌面合成验收。
+
+已用PS5.1打开`human-review-03/data`，启动PID **26864**，新候选使用新库；旧`human-review-02`及所有历史证据保留。启动入口为`out/lr-r5-evidence/start-ui-c-feedback-review.ps1`，两种PowerShell的八证据绑定CheckOnly已通过；此实例留给用户，后续自动门不得关闭或重建其数据。root已收回所有文件；没有Git提交/推送或日常库迁移。
+
+现支持minimal/lamp声明配方的新ID装入、留副本、逐海报参数与中心主题持久化；雨场景renderer、select参数、同ID替换/watch/联网AI尚未实现。旧便携导出明确拒绝无法完整携带的custom/非默认中心主题，完整SQLite备份可保留。R5 IN PROGRESS，R6 NOT STARTED；下一步是本次六项修改的产品体验、原生输入/文件选择器及BUG-021调查，不能沿用旧“人工通过”关闭R5。
+
+## 2026-09-27 当前：六项实机反馈已实现到候选16，待旧实例退出后运行验证
+
+最新用户六项要求已记录DEC-026，优先于下方旧静态/只读范围。普通选择无编辑描边/锚点、新建两辅助默认关、底部反馈仅测试；中心纸面控件统一、真实配方装入/副本/分页、删除AI说明、动态声明参数、Lamp跟随/闲置轻摆、独立中心主题均已实现到新候选。详细入口、范围与未完成证据见[对齐记录§8](LR_R5_UI_C_INTENT_ALIGNMENT.md#8-2026-09-27-六项实机反馈候选16已构建原生验证待旧实例退出)。
+
+`out/lr-r5-evidence/candidate16-ui-c-feedback`，App SHA256 `70705C6B5E3525DFA37DF154AB6A77CD113706C223A6E99D819E109D7CA23432`；427源码指纹、401产物绑定。最终2065/2065合同、App/fixture构建0警告/错误；不是新UI/原生运行PASS。SQLite v12、配方/参数/中心主题走现有状态仓库；完整备份保留，旧便携格式暂拒绝无法完整携带的新内容。rain/select、在线AI、watcher/同ID替换不在本次已实现范围。
+
+旧候选14体验PID9460仍运行，用户退出/代退出问题已发出但尚未回复；不能关闭、重建或升级`human-review-02/data`。下一步正常退出后用候选16与新数据逐项跑Daily/Protocol/fields/rejected/UI/Lamp/composition/recipes+restart并看PNG，再交付体验。不要把下面candidate14六组证据套用到candidate16。新三agent及旧agent均已冻结；全部文件交root，没有Git提交/推送。R5 IN PROGRESS，R6 NOT STARTED。
+
+## 2026-09-27 当前补充：修复 Windows PowerShell 5.1 体验启动兼容
+
+用户原启动命令在PS5.1误报证据集合不匹配：`ConvertFrom-Json`数组直接进入管道被当作一个对象，399项误计为1；同时补齐JSON/JSONL的显式UTF-8读取，避免PS5.1默认编码破坏中文JSON。只改`scripts/start-lr-r5-review.ps1`，不改候选14二进制、冻结清单或既有体验数据；原命令无需更换。
+
+PS5.1与PS7的六组同包`-CheckOnly`均通过；缺文件、错误哈希两个独立副本在两种Shell均正确拒绝。证据见`out/lr-r5-evidence/launcher-ps51-fix/`。随后用PS5.1实际启动，复用`human-review-02/data`，本次PID **9460**，正常权限、中心created/shown各1、启动错误0、响应正常；下方PID6356为上次启动历史。实例继续留给用户体验，不运行自动GUI门或重建数据。R5产品/原生命中待验及R6未开始的状态不变。
+
+## 2026-09-27 当前：候选14纠偏回归完成，已打开独立UI体验实例
+
+当前使用`out/lr-r5-evidence/candidate14-app-local`，App.dll SHA256=`B42B923EFE35C869FE7C8E1A14BE0BD5817A1BCA5801BE89A700AF91513D7221`。2001/2001合同、0警告/错误构建，UI/字段/协议/拒绝预览/Lamp/100项整图构图及重启六组同包通过；源码/全产物绑定已核对。按C和用户截图落地单原生标题、行为分组、纸样片夹与文案、精简海报菜单、声明参数和本地配方/AI说明入口。细节以[对齐记录§7.3](LR_R5_UI_C_INTENT_ALIGNMENT.md#73-当前交付候选14菜单修复集成同包回归完成)和[验证记录](VERIFICATION.md)为准，下方为历史过程。
+
+补充菜单问题已实现仅自身Popup/Input两步排列，严格层级/输入透明/其他窗序与四命令原生读回通过；完整命中门仍因15个采样点被其他应用遮挡而未通过。已请求用户露出桌面，未获环境确认前不重复测试、不自行关闭/最小化他窗；BUG-020保持修复已集成但原生命中待验，BUG-019并发SQLite风险仍OPEN。不得把排序读回、XAML截图或2001合同写成系统鼠标/键盘/产品PASS。
+
+已启动独立`out/lr-r5-evidence/human-review-02/data`，PID **6356**；绑定记录为`human-review-02-launch.json`和data下`review-candidate.json`。两个DEMO海报，不接真实文件/Shell；旧`human-review-01`及全部失败材料保留。**此体验实例留给用户，后续自动门不得关闭它或重建它的数据。** 重新启动用`scripts/start-lr-r5-review.ps1`及`alignment-v14-*`六证据目录；运行前必须确认用户已正常退出当前实例。
+
+R5 IN PROGRESS、R6 NOT STARTED。下一步收集修改后的必要产品核对（样片夹/行为/单标题/三个配方相关弹窗、关闭中心后的预告/取消/撤销），在可见桌面补完整菜单与系统输入；通过R5原出口再接R6。雨夜/跟随动效、完整模板导入热装入、在线AI未交付，旧夜航蓝色与C绿仍明确列为差异。所有子agent均冻结交root；没有Git提交/推送、日常库迁移或真实文件操作。
+
+## 2026-09-27 后续：R5纠偏六组同包验证完成，补充原生菜单待修
+
+本条取代下方同日“只编辑Docs”的当前状态；下方仍保留历史证据。用户要求先继续未完成验证，并明确五项偏差：旧锁定/收展等归行为栏；样片夹造型、文字与样片画面按C；海报更多菜单不承载网格/跨度等中心设置；只保留一套窗口标题；模板参数及AI辅助必须预留真实扩展基础。已实际打开C页面、展开样片夹核对，原型文件未改。
+
+当前已集成桌面结果/影响反馈、Item右键目标保护、两页中心、样片夹、Lamp颜色选择和声明参数/本地配方入口。100项构图发现的中心宽度动画合同问题及窄footer文字裁切已修；候选11六组同包验证通过：UI五态、精调338检查、协议13组、非法热度、Lamp26步、100项缩窄/承接/放宽/撤销及重启。全量合同1984/1984；原有并发SQLite首启锁风险仍OPEN。候选路径/hash/全部失败材料见[对齐记录§7](LR_R5_UI_C_INTENT_ALIGNMENT.md#7-用户截图反馈后的实际c核对与第二轮纠偏)与[验证记录](VERIFICATION.md)。
+
+补充菜单实机检查失败，具体为popup已创建、排序读回失败后安全关闭，非鼠标遮挡；root正在依据新增native诊断定位，不提前交付为已通过。r1_contract_audit仅持有DesktopMenuInteraction/NativeDesktopMenuPlatform诊断文件；r2_review只读复审配方入口；其他文件均已交root冻结。所有构建/GUI验证仍由root串行执行，禁止关闭用户实例或复用日常数据。R5仍IN PROGRESS/R6 NOT STARTED；产品人工出口待新体验，完整模板平台/在线AI未交付。
+
+## 2026-09-27：R5基础操作获正向反馈，UI C与已确认意图须先纠偏
+
+用户先回复“人工体验通过”，随后明确当前UI和操作意图偏离UI C，并指出文档已有操作意图确认测试，不能要求重述。**R5仍IN PROGRESS；先按主计划§4.2.1对齐，R6新增实现尚未开始**。已重新完整读取E1 §4/§6.1～6.2、DEC-017～025及C/E1源稿；六任务/当前实现/可见反馈差异见[对齐记录](LR_R5_UI_C_INTENT_ALIGNMENT.md)。01～05和06a/b的历史原型反馈保留，06c为提示后完成；不重做规则比选。
+
+明确缺口：桌面打开/提交/失败/取消结果未完整绑定；Item右键管理未接、更多菜单撤销失败可能无反馈；`AdoptsProjection`未进入松手前整图影响提示；模式与中心四页签长表单未完整对齐C。模型/事务证据保留，不能替代这些体验要求。下一步先桌面反馈/正确目标与影响表达，再UI C工作区和同包生产任务核对；06c真实受限仍归R6，完整模板平台仍V3-07。
+
+本轮root只编辑Docs，三子agent只读审查，未改生产/测试/原型、未重建包或操作体验库；所有写入归属仍须按[执行记录](LR_MILESTONE_EXECUTION.md)重新分配。当前候选3与旧证据保留，不Git提交/推送。下方“早期人工PENDING”为反馈前历史状态。
+
+## 2026-09-26：R5 固定候选通过协议/控件验证，早期人工 PENDING
+
+R5 仍 IN PROGRESS。候选3的13组真实处理器协议、同库进程重启、字段事务/提案唤醒、非法有效预览拒绝及Lamp回归通过；全量合同为1921/1921。四张最新宽窄截图已查看。系统鼠标尝试因遮挡零输入停止，不能称为NativeMouse通过。已打开独立 `human-review-01/data`（启动PID2812）并请用户体验；人工结果尚未收到，不准自动进入R6出口。源码/包/证据、运行入口与具体限制见[核心交互记录](LR_R5_CORE_INTERACTION.md)。
+
+所有子agent文件已移交root，未提交/推送/迁移日常数据；正在运行的体验实例不得被自动测试关闭或重建。R6只读接线地图在[执行记录§9](LR_MILESTONE_EXECUTION.md)，尚未实施。下方为历史阶段事实。
+
+## 2026-09-26：R4保存合同/代表模板完成，进入R5
+
+当前R1合同齐全，R2/R3完成，**R4 SAVE CONTRACT + SAMPLE READY / R5 IN PROGRESS**。1868项合同全部通过；完整CAS、逐操作保真、模式返回态、尺寸覆盖、Portable v4和草稿仲裁已有真实SQLite证据。独立原生候选完成Lamp六参数/取消/冲突/两海报/中心重开验证，退出资源0。详见[执行记录§7～8](LR_MILESTONE_EXECUTION.md)及[配置保真报告](LR_R4_CONFIGURATION_FIDELITY.md)。
+
+R5入口为ContentEditing首按拖动、点击/打开仲裁和UI C操作接线。当前仍DEMO，未提供真实文件操作。原生鼠标/键盘/滚轮、App同库进程重启、光池截图异常与最终UI C视觉尚未通过；不要沿用下方历史PASS。原有工作区/数据不覆盖，不自动Git提交/推送。
+
+## 2026-09-26：R3模型与最小原生样板完成，进入R4
+
+当前R1 DESIGN CONTRACT READY / R2 BASELINE READY / R3 MODEL + SAMPLE READY / R4 IN PROGRESS。用户新建默认纵向/循环关已入DEC-025。分支/HEAD及无提交、无日常库迁移约束不变。所有R3子agent文件已交回root；后续R4归属以[执行记录](LR_MILESTONE_EXECUTION.md)为准，不沿下方旧分工并发改同文件。
+
+R3共248项相关、1758项全量通过；标准解决方案/fixture构建0警告错误。最小UI C实际宽/窄与展开/折叠四状态观测成功，revision/配置指纹保持，Canvas/Input/Clip一致，退出资源0。见`out/lr-r3-evidence/ui-native-05/`四张PNG与observation.json；最终`candidate3-app-local`有源码/产物hash绑定。运行需正常桌面权限；该验证包内置Windows App SDK 2.4、仍依赖.NET10，默认框架包在本机缺对应运行时。失败启动及XAML资源修复证据均保留。未证明原生鼠标/滚轮/键盘、深色/高DPI、桌面合成或UI C最终产品验收。
+
+R4入口：区分旧配置存档与编辑能力；当前空间/提案发布显式检查只读；两模式/单项覆盖/手动整图承接与局部让位；同海报单草稿所有者、真实CAS/版本/撤销；至少一款已采纳代表模板的真实控件/效果和清理证据。未知布局原文不覆盖，旧约束不能因desired合法就默许清除。R3的被动资格是纯模型，原生受限双轴和恢复接线归R6。以下R3开始/R4未实施为历史状态。
+
+## 2026-09-26：R1合同齐全、R2基线完成，R3开始
+
+当前长期goal按LR-R1～R8持续推进。DEC-024收清保真兼容和同海报单草稿所有者；用户明确DEC-025新建纵向、循环关，方向/循环独立、旧显式值保持。已授权代码、测试和子agent；没有授权提交/推送、日常库迁移或真实文件搬移。以下同日“待Q1/Q2/仅文档”记录为此前阶段，不再作为当前阻塞。
+
+R1 DESIGN CONTRACT READY。R2 BASELINE READY：源码/未跟踪材料及Git bundle完成恢复核验；隔离SDK10.0.112和依赖还原成功；BUG-014保留ReservedSpaces并拒绝非法数据，10项新用例先红后绿，定向25/25、完整1664/1664、Release构建0警告/0错误，独立审查无阻塞发现。真实SQLite store重开保真，不代表App进程/原生验收。新固定构建副本及指纹见[验证记录](VERIFICATION.md)，旧manifest未改。
+
+分支仍`impl/poster-redesign-V3-wb`、HEAD `bd148fb4641bccb18d75777ae6645149e3ff9cfc`，既有未跟踪目录保留。当前R3 A/B统一几何由r1_contract_audit负责Domain/Solver，C浏览由r2_portable_audit负责Flow，r2_review只读核对UI C原生入口；root统筹公共合同、Application、全部Docs及串行构建。详细文件归属和恢复材料见[里程碑执行记录](LR_MILESTONE_EXECUTION.md)。
+
+下一步：双轴有界几何、不缩作者跨度、明确空间/兼容状态、有限/循环共享边界与身份锚；随后手动响应投影、被动受限资格/恢复及原生UI C样板。R3尚未通过，R4～R8未实施。不能以A/B/C纯模型通过替代R3样板观测或R7同包人工。
+
+## 2026-09-26：手势/行为映射与三组反例核对（DESIGN AUDIT）
+
+用户在计划补强后要求说明手势和行为映射，再完成三组核对。新增[组合核对](../../20_Architecture/CONTENT_LAYOUT_COMBINATION_AUDIT_V1.md)：已确认手势、BM-01～12、CA-01～07/CB-01～06/CC-01～06共19条轨迹、代码差异及正式门关联。源码只读＋9个工具内存数值/身份断言只用于证伪错误简化，没有运行项目solver/事务/原生或原型门。
+
+关键结果：循环接缝按下不能立即夹到普通有限offset；须保实际tile/抓取基准，恢复到有限边界允许必要最小夹紧并保Item身份。旧硬坐标/多区域/显式禁入区不能一律无损满足新最小边界；PortableContentLayout及旧测试仍清留白。双入口须按同海报布局单所有者协调，当前中心关闭/切目标的全局取消不能作为新合同。
+
+Q1旧约束首批范围、Q2中心未提交草稿遇桌面拖动已向用户集中提问，尚待回复。建议分别为保真兼容/冲突只读留待明确转换，以及保留当前草稿/提示完成或取消后再操作；只是建议，未新增DEC或将TBD关闭。R1设计核对已完成但尚未收口，后续先登记选择、核对受影响合同和TBD-024剩余边界。不要重做E1六任务或开始R2/生产。
+
+保持当前`impl/poster-redesign-V3-wb`/`bd148fb4641bccb18d75777ae6645149e3ff9cfc`及既有未提交改动/未跟踪目录；仅编辑Docs，没有改生产/测试/原型/配置、启动DesktopUp、构建包、迁移库或Git提交推送。证据归[VERIFICATION](VERIFICATION.md)。
+
+## 2026-09-26：LR-R1～R8计划补强（PLAN ONLY）
+
+用户要求先小范围补强计划并列明每步里程碑。本次在[原整改计划](../../30_Plans/V3_04_L_REMEDIATION_REVIEW_PLAN.md)§4～5补齐：R1行为/UI C范围映射；R2可恢复构建与已知保真底线；R3/R4模型、事务和最小原生样板；R5 UI C核心界面＋首次真实操作；R6循环/被动恢复与假源变化；R7同包产品验收及延期Bug影响；R8可执行的真实Item接入交接。完整模板平台仍归V3-07，不为其延期真实引用链。
+
+下一步仍是R1三组组合反例（循环/受限恢复、旧硬约束/留白、双入口草稿），再完成入口→行为/状态→命令→验收映射。R1未关闭，R2～R8均NOT STARTED。此轮只更新文档，不修BUG、不变更需求决定，不改生产/测试/原型/配置，不启动DesktopUp或继承旧Git授权；验证记录见[VERIFICATION](VERIFICATION.md)。
+
+本机基线为`D:\Project\Desktop-up`，分支`impl/poster-redesign-V3-wb`，HEAD `bd148fb4641bccb18d75777ae6645149e3ff9cfc`；保留既有未跟踪目录。此前冷启动发现本机SDK 10.0.301与global.json要求10.0.103/latestPatch不兼容，且没有out候选包；R2开始时需重新核对并补齐。没有创建可恢复快照或新候选，不把本次文档修改当作R2完成。以下旧机器路径、Git同步与阶段状态按当时记录理解。
+## 历史接替入口（2026-09-24，LR-R1快照）
+
+此前供下一位Agent使用的[接替提示词：04-L / LR-R1](AGENT_HANDOFF_PROMPT.md)保留作当时工作区、规则与证据的快照；当前阶段已由上方R5/R6记录和统一冷启动入口接替，不新增需求或实施授权。
+
+当时wb合并及双分支推送已在bd148fb完成并核对远端一致；工作分支为impl/poster-redesign-V3。随后仅将提示词和导航追加提交到V3（0e37d9d），wb保留前次检查点。此次合并保留这段独有历史；此前Git授权不传递给后续任务。
 
 ## 2026-09-24：wb合并与双分支同步检查点
 

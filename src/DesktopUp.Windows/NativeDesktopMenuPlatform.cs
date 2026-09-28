@@ -43,8 +43,68 @@ internal sealed class NativeDesktopMenuPlatform : IDesktopMenuNative
         return result;
     }
 
-    public bool PlacePopup(nint popup, nint insertAfter) => IsOwnWindow(popup) &&
-        SetWindowPos(popup, insertAfter, 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0010 | 0x0200);
+    public int? LastPlacementError { get; private set; }
+    public string? LastPlacementFailure { get; private set; }
+    public bool IsOwnUiWindow(nint window) => IsOwnWindow(window);
+    public bool IsOwnedPopup(nint popup, nint owner) => IsOwnWindow(popup) && IsOwnWindow(owner) &&
+        IsWindowVisible(popup) && GetWindow(popup, 4) == owner;
+    public bool PlacePopupAfterOwnWindow(nint popup, nint input, nint owner)
+    {
+        if (!IsOwnedPopup(popup, owner) || !IsOwnInput(input))
+        {
+            LastPlacementError = null; LastPlacementFailure = "own-window-validation-failed";
+            return false;
+        }
+        return PlaceOwnWindowAfter(popup, input);
+    }
+    public bool PlaceInputAfterPopup(nint input, nint popup, nint owner)
+    {
+        if (!IsOwnedPopup(popup, owner) || !IsOwnInput(input))
+        {
+            LastPlacementError = null; LastPlacementFailure = "own-window-validation-failed";
+            return false;
+        }
+        return PlaceOwnWindowAfter(input, popup);
+    }
+    private bool IsOwnInput(nint input)
+    {
+        if (!IsOwnWindow(input) || !IsWindowVisible(input)) return false;
+        var name = new StringBuilder(128);
+        _ = GetClassName(input, name, name.Capacity);
+        return name.ToString() == "DesktopUp.V3.PosterInputIsland";
+    }
+    private bool PlaceOwnWindowAfter(nint window, nint insertAfter)
+    {
+        LastPlacementError = null; LastPlacementFailure = null;
+        if (!IsOwnWindow(window) || !IsOwnWindow(insertAfter)) { LastPlacementFailure = "not-own-ui-thread"; return false; }
+        bool placed = SetWindowPos(window, insertAfter, 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0010 | 0x0200);
+        if (!placed)
+        {
+            LastPlacementError = Marshal.GetLastPInvokeError();
+            LastPlacementFailure = "set-window-pos";
+        }
+        return placed;
+    }
+
+    public object DescribeWindow(nint window)
+    {
+        bool exists = IsWindow(window);
+        uint thread = GetWindowThreadProcessId(window, out uint process);
+        bool ownProcess = process == Environment.ProcessId;
+        // Foreign windows contribute only identity/visibility/style ordering evidence, never
+        // their text, class, owner chain, bounds or executable path.
+        if (!ownProcess) return new { handle = $"0x{window:X}", exists, ownProcess,
+            visible = IsWindowVisible(window), topmost = (GetWindowLongPtr(window, -20).ToInt64() & 8) != 0 };
+        var name = new StringBuilder(128);
+        _ = GetClassName(window, name, name.Capacity);
+        return new
+        {
+            handle = $"0x{window:X}", exists, ownProcess, thread, currentThread = GetCurrentThreadId(),
+            className = name.ToString(), owner = $"0x{GetWindow(window, 4):X}",
+            visible = IsWindowVisible(window), topmost = (GetWindowLongPtr(window, -20).ToInt64() & 8) != 0,
+            style = $"0x{GetWindowLongPtr(window, -16):X}", exStyle = $"0x{GetWindowLongPtr(window, -20):X}"
+        };
+    }
     public IDisposable WatchPopup(nint popup, Action<uint, nint> beforeMessage) => new PopupHook(popup, beforeMessage);
 
     public IReadOnlyList<DesktopMenuHit> SamplePopup(nint popup)

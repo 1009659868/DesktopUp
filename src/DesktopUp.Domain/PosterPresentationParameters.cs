@@ -12,10 +12,13 @@ public sealed record PosterContentParameters(double ItemWidthDip = 118, double I
 }
 public sealed record PosterThemeParameters(string Background = "#21242A", string Foreground = "#F2F2F2", string Accent = "#99CEFF");
 public sealed record PosterPresentationParameters(PosterContentParameters Content, PosterThemeParameters Theme,
-    PosterContentPreferences? Preferences = null);
+    PosterContentPreferences? Preferences = null, LampTemplateParameters? Lamp = null,
+    IReadOnlyDictionary<string, TemplateRecipeInstance>? RecipeInstances = null);
 public sealed record ResolvedPosterPresentation(string EffectiveTemplateKey, PosterPresentationParameters Parameters,
     PosterContentMetrics Metrics, bool CanEdit, bool IsLegacy, string? Warning)
 {
+    public string? SelectedRecipeId { get; init; }
+    public LampTemplateParameters TemplateParameters => TemplateRecipeInstancePolicy.Current(Parameters, SelectedRecipeId ?? EffectiveTemplateKey);
     public bool IsFallback => !CanEdit;
     public PosterContentParameters EffectiveContent => PosterContentPreferencePolicy.Resolve(Parameters.Content, Parameters.Preferences);
     public double MetaHeightDip => EffectiveTemplateKey == "basic-box" ? 0 : Math.Ceiling(81 + Parameters.Content.TitleFontSizeDip * 1.35);
@@ -24,18 +27,20 @@ public sealed record ResolvedPosterPresentation(string EffectiveTemplateKey, Pos
 public static class PosterPresentationPolicy
 {
     public const string AdaptiveGridLayout = "adaptive-grid";
-    public const int SchemaVersion = 2;
-    public const int MaximumJsonLength = 32768;
+    public const int SchemaVersion = 4;
+    public const int MaximumJsonLength = 2 * 1024 * 1024;
     public const double HorizontalPaddingDip = 28;
-    public static bool IsBuiltIn(string? key) => key is "night-ops" or "basic-box";
+    public static bool IsBuiltIn(string? key) => key is "night-ops" or "basic-box" or LampTemplatePolicy.TemplateKey;
     public static PosterPresentationParameters Defaults(string template = "night-ops") => template == "basic-box"
         ? new(new(100, 72, 40, 12, 12, 24), new("#282B30", "#F2F2F2", "#68BDFF"))
-        : new(new(), new());
+        : new(new(), new(Background: "#202E2A"));
 
     public static string? Validate(PosterPresentationParameters? value)
     {
         if (value?.Content is not { } c || value.Theme is not { } t) return "Missing content/theme parameters.";
         if (PosterContentPreferencePolicy.Validate(value.Preferences) is { } preferenceError) return preferenceError;
+        if (LampTemplatePolicy.Validate(value.Lamp) is { } lampError) return lampError;
+        if (TemplateRecipeInstancePolicy.Validate(value.RecipeInstances) is { } recipeError) return recipeError;
         if (!In(c.ItemWidthDip, 72, 320) || !In(c.ItemHeightDip, 48, 240) ||
             !In(c.IconSizeDip, 16, 128) || !In(c.GapDip, 0, 40) ||
             !In(c.LabelFontSizeDip, 9, 24) || !In(c.TitleFontSizeDip, 18, 48))
@@ -49,17 +54,24 @@ public static class PosterPresentationPolicy
 
     public static ResolvedPosterPresentation Resolve(PosterDefinition poster)
     {
-        if (!IsBuiltIn(poster.TemplateKey) || poster.LayoutKind != AdaptiveGridLayout)
+        if (poster.LayoutKind != AdaptiveGridLayout)
             return Fallback("Unknown template/layout; configuration retained.");
         try
         {
             using var doc = Parse(poster.LayoutParametersJson);
             var root = doc.RootElement;
             var parameters = Read(root, poster.TemplateKey, out bool legacy);
+            string effectiveKey = poster.TemplateKey;
+            if (!IsBuiltIn(effectiveKey))
+            {
+                if (parameters.RecipeInstances is not { } instances || !instances.TryGetValue(effectiveKey, out var instance))
+                    return Fallback("Unknown template; configuration retained.");
+                effectiveKey = instance.Recipe.EffectiveTemplateKey;
+            }
             var error = Validate(parameters);
-            return error is null ? Resolved(poster.TemplateKey, parameters, true, legacy, null) : Fallback(error);
+            return error is null ? Resolved(effectiveKey, parameters, true, legacy, null) with { SelectedRecipeId = poster.TemplateKey } : Fallback(error);
         }
-        catch (Exception e) when (e is JsonException or ArgumentException or InvalidOperationException or OverflowException)
+        catch (Exception e) when (e is JsonException or ArgumentException or InvalidOperationException or OverflowException or KeyNotFoundException)
         { return Fallback(e.Message); }
     }
 
@@ -67,7 +79,7 @@ public static class PosterPresentationPolicy
     public static string? ValidateEdit(PosterDefinition previous, PosterDefinition desired)
     {
         if (!Resolve(previous).CanEdit) return "Unsupported stored presentation must be repaired explicitly before editing.";
-        if (!IsBuiltIn(desired.TemplateKey) || desired.LayoutKind != AdaptiveGridLayout) return "Unsupported template/layout.";
+        if (!Resolve(desired).CanEdit || desired.LayoutKind != AdaptiveGridLayout) return "Unsupported template/layout.";
         try
         {
             using var oldDoc = Parse(previous.LayoutParametersJson);
@@ -75,6 +87,15 @@ public static class PosterPresentationPolicy
             var value = Read(newDoc.RootElement, desired.TemplateKey, out bool legacy);
             if (legacy) return "New presentation writes require a supported schemaVersion.";
             if (Validate(value) is { } error) return error;
+            var previousRecipes = Read(oldDoc.RootElement, previous.TemplateKey, out _).RecipeInstances;
+            if (previousRecipes is not null)
+                foreach (var (id, prior) in previousRecipes)
+                    if (value.RecipeInstances is not { } retainedRecipes || !retainedRecipes.TryGetValue(id, out var retainedRecipe) ||
+                        TemplateRecipeCodec.Serialize(prior.Recipe) != TemplateRecipeCodec.Serialize(retainedRecipe.Recipe))
+                        return "Presentation edits must preserve existing recipe definitions and instances.";
+            if (oldDoc.RootElement.TryGetProperty("templates", out _) &&
+                Read(oldDoc.RootElement, previous.TemplateKey, out _).Lamp is not null && value.Lamp is null)
+                return "Presentation edits must retain the saved lamp override; reset by writing its defaults explicitly.";
             var expectedLegacy = LegacyPayload(oldDoc.RootElement);
             var actualLegacy = newDoc.RootElement.TryGetProperty("legacy", out var retained) ? retained : (JsonElement?)null;
             if (expectedLegacy is { } expected && (actualLegacy is null || !JsonElement.DeepEquals(expected, actualLegacy.Value)) ||
@@ -82,7 +103,7 @@ public static class PosterPresentationPolicy
                 return "Presentation edits must preserve the legacy payload unchanged.";
             return null;
         }
-        catch (Exception e) when (e is JsonException or ArgumentException or InvalidOperationException or OverflowException)
+        catch (Exception e) when (e is JsonException or ArgumentException or InvalidOperationException or OverflowException or KeyNotFoundException)
         { return e.Message; }
     }
 
@@ -90,17 +111,30 @@ public static class PosterPresentationPolicy
     {
         if (Validate(value) is { } error) throw new ArgumentException(error);
         using var previous = previousJson is null ? null : Parse(previousJson);
-        if (previous is not null && previous.RootElement.TryGetProperty("schemaVersion", out var v) &&
-            (!v.TryGetInt32(out int version) || version is not (1 or SchemaVersion)))
-            throw new ArgumentException("Cannot overwrite an unknown presentation version.");
-        // Do not downgrade a v2 object when an older caller edits a fine parameter.
-        if (value.Preferences is null && previous?.RootElement.TryGetProperty("preferences", out var oldPreferences) == true)
-            value = value with { Preferences = ReadPreferences(oldPreferences) };
+        if (previous is not null)
+        {
+            // Older callers cannot erase a new understood section while changing an unrelated value.
+            // Validate the complete versioned source before retaining it: copying only the known child
+            // would silently drop an unknown sibling. Unversioned legacy objects remain opaque.
+            try
+            {
+                Unique(previous.RootElement);
+                if (previous.RootElement.TryGetProperty("schemaVersion", out _))
+                {
+                    var retained = Read(previous.RootElement, "night-ops", out _);
+                    if (Validate(retained) is { } invalid) throw new ArgumentException(invalid);
+                    value = value with { Preferences = value.Preferences ?? retained.Preferences, Lamp = value.Lamp ?? retained.Lamp,
+                        RecipeInstances = value.RecipeInstances ?? retained.RecipeInstances };
+                }
+            }
+            catch (Exception e) when (e is JsonException or InvalidOperationException or OverflowException or KeyNotFoundException)
+            { throw new ArgumentException("Cannot overwrite an invalid presentation payload.", e); }
+        }
         if (Validate(value) is { } retainedError) throw new ArgumentException(retainedError);
         using var bytes = new MemoryStream();
         using (var writer = new Utf8JsonWriter(bytes))
         {
-            writer.WriteStartObject(); writer.WriteNumber("schemaVersion", value.Preferences is null ? 1 : SchemaVersion);
+            writer.WriteStartObject(); writer.WriteNumber("schemaVersion", value.RecipeInstances is not null || value.Lamp is not null ? SchemaVersion : value.Preferences is null ? 1 : 2);
             writer.WritePropertyName("content"); writer.WriteStartObject();
             writer.WriteNumber("itemWidthDip", value.Content.ItemWidthDip);
             writer.WriteNumber("itemHeightDip", value.Content.ItemHeightDip);
@@ -122,6 +156,35 @@ public static class PosterPresentationPolicy
                 writer.WriteNumber("mappingVersion", preferences.MappingVersion);
                 writer.WriteNumber("scale", preferences.Scale); writer.WriteNumber("spacing", preferences.Spacing);
                 writer.WriteEndObject();
+            }
+            if (value.Lamp is { } lamp)
+            {
+                writer.WritePropertyName("templates"); writer.WriteStartObject();
+                writer.WritePropertyName("lamp"); writer.WriteStartObject();
+                writer.WriteString("lightColor", lamp.LightColor.ToUpperInvariant());
+                writer.WriteNumber("softness", lamp.Softness); writer.WriteNumber("intensity", lamp.Intensity);
+                writer.WriteString("background", lamp.Background.ToUpperInvariant());
+                writer.WriteString("card", lamp.Card.ToUpperInvariant());
+                writer.WriteNumber("backgroundOpacity", lamp.BackgroundOpacity);
+                WriteMotion(writer, lamp);
+                writer.WriteEndObject(); writer.WriteEndObject();
+            }
+            if (value.RecipeInstances is not null)
+            {
+                writer.WritePropertyName("recipes"); writer.WriteStartArray();
+                foreach (var instance in value.RecipeInstances.OrderBy(p => p.Key, StringComparer.Ordinal).Select(p => p.Value))
+                {
+                    writer.WriteStartObject(); writer.WritePropertyName("definition");
+                    using var recipe = JsonDocument.Parse(TemplateRecipeCodec.Serialize(instance.Recipe)); recipe.RootElement.WriteTo(writer);
+                    writer.WritePropertyName("values"); writer.WriteStartObject();
+                    foreach (var p in instance.Recipe.Schema.Properties)
+                    {
+                        writer.WritePropertyName(p.Key);
+                        TemplateRecipeCodec.WriteValue(writer, TemplateRecipeInstancePolicy.Get(instance.Parameters, p.Binding));
+                    }
+                    writer.WriteEndObject(); writer.WriteEndObject();
+                }
+                writer.WriteEndArray();
             }
             writer.WriteEndObject();
         }
@@ -183,11 +246,15 @@ public static class PosterPresentationPolicy
                 throw new ArgumentException("Legacy rowHeight cannot be represented safely; original data retained.");
             return defaults with { Content = content };
         }
-        if (!version.TryGetInt32(out int v) || v is not (1 or SchemaVersion)) throw new ArgumentException("Unknown presentation schema version.");
+        if (!version.TryGetInt32(out int v) || v is not (1 or 2 or 3 or SchemaVersion)) throw new ArgumentException("Unknown presentation schema version.");
         if (v == 1) Members(root, "schemaVersion", "content", "theme", "legacy");
-        else Members(root, "schemaVersion", "content", "theme", "legacy", "preferences");
+        else if (v == 2) Members(root, "schemaVersion", "content", "theme", "legacy", "preferences");
+        else if (v == 3) Members(root, "schemaVersion", "content", "theme", "legacy", "preferences", "templates");
+        else Members(root, "schemaVersion", "content", "theme", "legacy", "preferences", "templates", "recipes");
         if (root.TryGetProperty("legacy", out var retained) && retained.ValueKind != JsonValueKind.Object)
             throw new ArgumentException("Legacy payload must be an object.");
+        if (v == 4 && !root.TryGetProperty("templates", out _) && !root.TryGetProperty("recipes", out _))
+            throw new ArgumentException("Missing v4 template parameters.");
         var c = defaults.Content; var t = defaults.Theme;
         if (root.TryGetProperty("content", out var contentNode))
         {
@@ -202,13 +269,66 @@ public static class PosterPresentationPolicy
             t = new(Text(themeNode, "background", t.Background), Text(themeNode, "foreground", t.Foreground), Text(themeNode, "accent", t.Accent));
         }
         PosterContentPreferences? preferences = null;
-        if (v == SchemaVersion)
+        if (v >= 2)
         {
-            if (!root.TryGetProperty("preferences", out var p)) throw new ArgumentException("Missing v2 preferences.");
-            preferences = ReadPreferences(p);
+            if (root.TryGetProperty("preferences", out var p)) preferences = ReadPreferences(p);
+            else if (v == 2) throw new ArgumentException("Missing v2 preferences.");
         }
-        return new(c, t, preferences);
+        LampTemplateParameters? lamp = null;
+        if (v == 3 || v == 4 && root.TryGetProperty("templates", out _))
+        {
+            if (!root.TryGetProperty("templates", out var templates)) throw new ArgumentException("Missing v3 template parameters.");
+            Members(templates, "lamp");
+            if (!templates.TryGetProperty("lamp", out var node)) throw new ArgumentException("Missing v3 lamp parameters.");
+            lamp = ReadLamp(node);
+        }
+        IReadOnlyDictionary<string, TemplateRecipeInstance>? recipes = null;
+        if (v == 4 && root.TryGetProperty("recipes", out var recipeNodes))
+        {
+            if (recipeNodes.ValueKind != JsonValueKind.Array || recipeNodes.GetArrayLength() > TemplateRecipeCatalog.MaximumTemplates)
+                throw new ArgumentException("Invalid recipe instance array.");
+            var items = new Dictionary<string, TemplateRecipeInstance>(StringComparer.Ordinal);
+            foreach (var entry in recipeNodes.EnumerateArray())
+            {
+                Members(entry, "definition", "values");
+                var recipe = TemplateRecipeCodec.Parse(entry.GetProperty("definition").GetRawText());
+                var values = entry.GetProperty("values"); Members(values, recipe.Schema.Properties.Select(p => p.Key).ToArray());
+                var instance = TemplateRecipeInstancePolicy.Defaults(recipe);
+                foreach (var p in recipe.Schema.Properties)
+                {
+                    var raw = values.GetProperty(p.Key);
+                    var value = p.Kind switch
+                    {
+                        TemplateParameterKind.Color => TemplateParameterValue.FromColor(raw.GetString()!),
+                        TemplateParameterKind.Boolean => TemplateParameterValue.FromBoolean(raw.GetBoolean()),
+                        _ => TemplateParameterValue.FromNumber(raw.GetDouble())
+                    };
+                    if (!TemplateParameterSchemas.Accepts(p, value)) throw new ArgumentException("Invalid template instance value.");
+                    instance = TemplateRecipeInstancePolicy.Set(instance, p.Binding, value);
+                }
+                if (!items.TryAdd(recipe.Id, new(recipe, instance))) throw new ArgumentException("Duplicate template instance.");
+            }
+            recipes = new System.Collections.ObjectModel.ReadOnlyDictionary<string, TemplateRecipeInstance>(items);
+        }
+        return new(c, t, preferences, lamp, recipes);
     }
+
+    private static LampTemplateParameters ReadLamp(JsonElement node)
+    {
+        string[] fields = ["lightColor", "softness", "intensity", "background", "card", "backgroundOpacity"];
+        Members(node, fields.Concat(new[] { "motionEnabled", "followPointer", "idleSway", "motionSpeed" }).ToArray());
+        if (fields.Any(key => !node.TryGetProperty(key, out _))) throw new ArgumentException("Incomplete lamp parameters.");
+        return new(Text(node, "lightColor", ""), Number(node, "softness", 0), Number(node, "intensity", 0),
+            Text(node, "background", ""), Text(node, "card", ""), Number(node, "backgroundOpacity", 0),
+            Boolean(node, "motionEnabled", true), Boolean(node, "followPointer", true), Number(node, "idleSway", 35), Number(node, "motionSpeed", 40));
+    }
+    private static void WriteMotion(Utf8JsonWriter writer, LampTemplateParameters lamp)
+    {
+        writer.WriteBoolean("motionEnabled", lamp.MotionEnabled); writer.WriteBoolean("followPointer", lamp.FollowPointer);
+        writer.WriteNumber("idleSway", lamp.IdleSway); writer.WriteNumber("motionSpeed", lamp.MotionSpeed);
+    }
+    private static bool Boolean(JsonElement node, string key, bool fallback) => !node.TryGetProperty(key, out var value) ? fallback :
+        value.ValueKind is JsonValueKind.True or JsonValueKind.False ? value.GetBoolean() : throw new ArgumentException("Invalid boolean: " + key);
     private static PosterContentPreferences ReadPreferences(JsonElement node)
     {
         Members(node, "mappingVersion", "scale", "spacing");

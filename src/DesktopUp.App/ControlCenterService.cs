@@ -30,6 +30,9 @@ internal sealed partial class ControlCenterService(
     public bool IsRemovalInteractionActive => _removalShowing;
     public event Action? RemovalInteractionChanged;
     public bool IsSettingsInteractionActive => _window?.IsSettingsInteractionActive == true;
+    internal bool HasPosterDraft(string id) => _window?.HasPosterDraft(id) == true;
+    internal bool OwnsContentFieldDraft(string id, long entityVersion, long documentVersion) =>
+        _window?.OwnsContentFieldDraft(id, entityVersion, documentVersion) == true;
     public event Action? SettingsInteractionChanged;
     private void OnSettingsInteractionChanged() => SettingsInteractionChanged?.Invoke();
 
@@ -63,6 +66,27 @@ internal sealed partial class ControlCenterService(
                     });
                 stage = "apply-projection";
                 pendingWindow.ConfigureContentLayout(() => spatialRuntime?.Invoke());
+                pendingWindow.ConfigureCenterTheme(theme =>
+                {
+                    if (!state.TryGetCurrent(out var current) || current is null) return;
+                    ShowCommandResult(commands.Execute(new SettingsStateCommand(Guid.NewGuid().ToString("N"),
+                        StateCommandSource.ControlCenter, SettingsStateCommandKind.SetCenterTheme, current.Revision,
+                        current.ControlCenter.Settings.Settings with { CenterTheme = theme })));
+                });
+                pendingWindow.ConfigureTemplateRegistration((source, targetId, revision) =>
+                {
+                    string requestId = "template-register-" + Guid.NewGuid().ToString("N");
+                    if (!state.TryGetCurrent(out var current) || current is null || current.Revision != revision)
+                        return Unavailable(requestId, revision);
+                    var read = StateReadSet.ForSettings(current.ControlCenter.Settings.EntityVersion);
+                    if (targetId is not null)
+                    {
+                        if (!current.PostersById.TryGetValue(targetId, out var target)) return Unavailable(requestId, revision);
+                        read = StateReadSet.ForPoster(targetId, target.EntityVersion) with { SettingsVersion = current.ControlCenter.Settings.EntityVersion };
+                    }
+                    var result = commands.Execute(new RegisterTemplateCommand(requestId, StateCommandSource.ControlCenter, revision, read, source, targetId));
+                    ShowCommandResult(result); return result;
+                });
                 pendingWindow.ConfigureUsability(
                     edit => spatialRuntime?.Invoke()?.PreviewControlCenterSetting(edit) == true,
                     () => spatialRuntime?.Invoke()?.CancelControlCenterVisuals(),

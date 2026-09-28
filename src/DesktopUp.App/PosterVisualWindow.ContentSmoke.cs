@@ -1,5 +1,6 @@
 using DesktopUp.Application;
 using DesktopUp.Domain;
+using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 
@@ -20,9 +21,30 @@ internal sealed record ContentSuspensionSmokeProbe(bool InputReady, bool HeatPen
 internal sealed record ContentInputSmokeResult(string Scenario, long BeforeRevision, long AfterRevision,
     int Previews, bool LatestPending, bool MotionReleased, int? ExpectedRow, int? ActualRow,
     bool NativeMouse = false, bool NativeKeyboard = false);
+internal sealed record ContentAdornmentProbe(string? SelectedItemId, bool IsEditing,
+    bool SelectedCardPresent, double? SelectedBorderThickness, int VisualResizeHandles,
+    int PublishedResizeHandles, int PublishedItems, bool FeedbackDiagnosticsEnabled,
+    bool FeedbackVisualAllocated, bool FeedbackVisible, bool FooterVisible, ContentSurfaceProbe Surface);
 
 internal sealed partial class PosterVisualWindow
 {
+    internal ContentAdornmentProbe ReadContentAdornmentsForProbe()
+    {
+        (_window?.Content as FrameworkElement)?.UpdateLayout();
+        var selected = _selectedContentItem is { } id && _contentCards.TryGetValue(id, out var item)
+            ? item as Grid : null;
+        var card = selected?.Children.OfType<Border>().FirstOrDefault();
+        int visualHandles = _contentCards.Values.OfType<Grid>().Sum(cell => cell.Children.OfType<Border>().Count(child =>
+            child.Width == 14 && child.Height == 14 && Grid.GetRowSpan(child) == 2 && !child.IsHitTestVisible));
+        var regions = inputRouter.ReadSurface(inputSession)?.Layout.Regions
+            ?? throw new InvalidOperationException("The actual poster has no published input regions.");
+        return new(_selectedContentItem, IsEditing, selected is not null && _contentCanvas?.Children.Contains(selected) == true,
+            card?.BorderThickness.Left, visualHandles, regions.Count(r => r.Kind == PosterInputTargetKind.ContentSpanHandle),
+            regions.Count(r => r.Kind == PosterInputTargetKind.ContentItem), TestContentFeedbackEnabled,
+            _contentFeedbackCallout is not null || _contentFeedbackText is not null,
+            _contentFeedbackCallout?.Visibility == Visibility.Visible, _footer?.Visibility == Visibility.Visible,
+            ReadContentSurfaceForSmoke());
+    }
     internal ContentProposalProbe ReadContentProposalForSmoke() => new(_contentActiveHeat?.Version,
         _contentHeatBuffer?.HasPending == true, ContentDocument, EffectiveContentDocument);
     internal ContentThemeSmokeProbe ReadContentThemeForSmoke() => new(_presentation.Parameters,_contentThemeBuffer?.HasPending==true);
@@ -44,6 +66,9 @@ internal sealed partial class PosterVisualWindow
         ScrollContentForSmoke(0,0);
         var id=_contentSnapshot!.Items.First(p=>!p.Clip.IsEmpty).ItemId;
         Check(SelectContentItem(id) is null,"Unable to select a real visible item.");
+        var adornments = ReadContentAdornmentsForProbe();
+        Check(adornments.IsEditing && adornments.SelectedBorderThickness == 2 && adornments.VisualResizeHandles == 1 &&
+            adornments.PublishedResizeHandles == 1, "Editing selection lacks its actual visible and published resize handle.");
         var surface=inputRouter.ReadSurface(inputSession)!;
         var targetKind=scenario=="edge-release"?PosterInputTargetKind.ContentItem:PosterInputTargetKind.ContentSpanHandle;
         var region=surface.Layout.Regions.Single(p=>p.Kind==targetKind && p.ContentItemId==id);
@@ -195,6 +220,7 @@ internal sealed partial class PosterVisualWindow
 
 internal sealed partial class PosterSpatialRuntime
 {
+    internal ContentAdornmentProbe ReadContentAdornmentsForProbe(string id) => _windows[id].ReadContentAdornmentsForProbe();
     internal ContentSurfaceProbe ReadContentSurfaceForSmoke(string id) => _windows[id].ReadContentSurfaceForSmoke();
     internal void ScrollContentForSmoke(string id, double x, double y) => _windows[id].ScrollContentForSmoke(x, y);
     internal ContentProposalProbe ReadContentProposalForSmoke(string id) => _windows[id].ReadContentProposalForSmoke();

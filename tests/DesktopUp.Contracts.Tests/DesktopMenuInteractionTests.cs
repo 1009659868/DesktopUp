@@ -45,7 +45,8 @@ public sealed class DesktopMenuInteractionTests
             Assert.True(menu.ActivatePopup());
             Assert.True(menu.ActivatePopup());
             Assert.Equal(1, f.Native.Hooks);
-            Assert.Equal((nint)100, f.Native.LastAnchor); // ordinary application stays above the menu
+            Assert.Equal(new[] { ((nint)200, f.Surfaces[^1].Input), (f.Surfaces[^1].Input, (nint)200) }, f.Native.Placements);
+            Assert.Equal((nint)100, f.Native.Order[0].Handle); // ordinary application stays above the menu
             Assert.True(DesktopMenuInteraction.IsOrdered(f.Native.Order, f.Handles, 200));
             Assert.Single(f.Ledger.ActiveResources);
         }
@@ -116,11 +117,14 @@ public sealed class DesktopMenuInteractionTests
     }
 
     [Fact]
-    public void TopmostWindowIsNeverUsedAsInsertionAnchor()
+    public void OnlyTheFirstPairedInputCanBeAnAnchorAndForeignWindowsAreNeverCandidates()
     {
-        DesktopMenuZWindow[] order = [new(99, true), new(11, false), new(12, false), new(200, false)];
-        Assert.Equal((nint)0, DesktopMenuInteraction.ResolveAnchor(order, new HashSet<nint> { 11, 12 }, 200));
-        Assert.Null(DesktopMenuInteraction.ResolveAnchor(order, new HashSet<nint> { 300 }, 200));
+        var surfaces = new HashSet<nint> { 11, 12 }; var inputs = new HashSet<nint> { 12 };
+        DesktopMenuZWindow[] order = [new(99, true), new(100, false), new(12, false), new(11, false), new(200, false)];
+        Assert.Equal((nint)12, DesktopMenuInteraction.ResolveOwnInputAnchor(order, surfaces, inputs, 200));
+        Assert.Null(DesktopMenuInteraction.ResolveOwnInputAnchor([new(11, false), new(12, false)], surfaces, inputs, 200));
+        Assert.Null(DesktopMenuInteraction.ResolveOwnInputAnchor([new(12, true), new(11, false)], surfaces, inputs, 200));
+        Assert.Null(DesktopMenuInteraction.ResolveOwnInputAnchor(order, new HashSet<nint> { 300 }, inputs, 200));
         Assert.False(DesktopMenuInteraction.IsOrdered([new(200, true), new(11, false)], new HashSet<nint> { 11 }, 200));
     }
 
@@ -140,24 +144,151 @@ public sealed class DesktopMenuInteractionTests
     }
 
     [Fact]
-    public void PopupGuardRecomputesAnchorAndNeverMovesItsOwner()
+    public void ExternalPopupReorderIsFrozenAndInvalidOrderClosesWithoutRepair()
     {
         var f = new Fixture(3);
         using var menu = f.Open();
         Assert.True(menu.ActivatePopup());
-        f.Native.Order.Insert(1, new(101, false));
         WithPosition(new() { Window = 200, InsertAfter = -1, Flags = 4, X = -40, Width = 180 }, memory =>
         {
             f.Native.Before!(0x0046, memory);
             var p = Marshal.PtrToStructure<DesktopMenuInteraction.MenuWindowPos>(memory);
-            Assert.Equal((nint)101, p.InsertAfter);
-            Assert.Equal(0x210u, p.Flags & 0x214u);
+            Assert.Equal((nint)(-1), p.InsertAfter); // ignored because NOZORDER is retained
+            Assert.Equal(0x214u, p.Flags & 0x214u);
             Assert.Equal(-40, p.X); Assert.Equal(180, p.Width);
         });
-        f.Native.Before!(0x0082, 0);
+        int first = f.Native.Order.FindIndex(w => f.Handles.Contains(w.Handle));
+        f.Native.Order.Insert(first, new(101, false)); // outsider interposes after the menu
+        f.Native.Before!(0x0047, 0);
         Assert.Equal(0, f.Closed); // never destroy inside a native message
+        Assert.Equal(2, f.Native.Placements.Count); // no retry can reorder the outsider
         f.Queue.Dequeue()();
         Assert.Equal(1, f.Closed);
+    }
+
+    [Theory]
+    [InlineData("placement", 1)]
+    [InlineData("input-placement", 2)]
+    [InlineData("readback", 1)]
+    [InlineData("input-readback", 2)]
+    [InlineData("popup-exception", 1)]
+    [InlineData("input-exception", 2)]
+    public void EachFailedOrLyingNativeStepClosesRestoresAndNeverRetries(string fault, int attempts)
+    {
+        var f = new Fixture(3); f.Native.Fault = fault;
+        f.Native.Transparent[12] = true;
+        using var menu = f.Open();
+        Assert.False(menu.ActivatePopup());
+        Assert.Equal(attempts, f.Native.Placements.Count);
+        Assert.All(f.Native.Placements, p => Assert.Contains(p.Anchor, f.Native.Alive));
+        Assert.Equal(1, f.Closed); Assert.Equal(3, f.Restored);
+        Assert.Empty(f.Ledger.ActiveResources); Assert.Equal(0, f.Native.Hooks);
+        Assert.True(f.Native.Transparent[12]); Assert.Single(f.Native.Transparent.Where(p => p.Value));
+        Assert.False(DesktopMenuInteraction.IsActive);
+        WithPosition(new() { Window = 32, InsertAfter = 200, Flags = 3 }, p =>
+            Assert.False(DesktopMenuInteraction.PreserveSurfaceZOrder(32, p)));
+    }
+
+    [Theory]
+    [InlineData("popup-topmost")]
+    [InlineData("input-topmost")]
+    [InlineData("visual-first")]
+    [InlineData("wrong-owner")]
+    [InlineData("foreign-surface")]
+    [InlineData("missing-surface")]
+    public void UnprovenOrTopmostGroupsAreRejectedBeforeAnyPlacement(string fault)
+    {
+        var f = new Fixture(3);
+        if (fault == "popup-topmost") f.Native.Order[^1] = new(200, true);
+        if (fault == "input-topmost") f.Native.Order[1] = new(32, true);
+        if (fault == "visual-first") (f.Native.Order[1], f.Native.Order[2]) = (f.Native.Order[2], f.Native.Order[1]);
+        if (fault == "missing-surface") f.Native.Order.RemoveAll(w => w.Handle == 22);
+        if (fault is "wrong-owner" or "foreign-surface") f.Native.Fault = fault;
+        using var menu = f.Open();
+        Assert.False(menu.ActivatePopup());
+        Assert.Empty(f.Native.Placements); Assert.Equal(1, f.Closed); Assert.Empty(f.Ledger.ActiveResources);
+        if (fault == "popup-topmost") Assert.True(f.Native.Order.Single(w => w.Handle == 200).Topmost);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void OutsideInsertionOrSurfaceReorderDuringEitherStepFailsTheFullOrderWitness(bool secondStep)
+    {
+        foreach (bool reorderSurface in new[] { false, true })
+        {
+            var f = new Fixture(3);
+            void ChangeOrder()
+            {
+                if (reorderSurface)
+                {
+                    int a = f.Native.Order.FindIndex(w => w.Handle == 21), b = f.Native.Order.FindIndex(w => w.Handle == 11);
+                    (f.Native.Order[a], f.Native.Order[b]) = (f.Native.Order[b], f.Native.Order[a]);
+                }
+                else f.Native.Order.Insert(0, new(101, false));
+            }
+            if (secondStep) f.Native.AfterInputPlacement = ChangeOrder; else f.Native.AfterPopupPlacement = ChangeOrder;
+            using var menu = f.Open();
+            Assert.False(menu.ActivatePopup());
+            Assert.Equal(secondStep ? 2 : 1, f.Native.Placements.Count);
+            Assert.Equal(1, f.Closed); Assert.Equal(3, f.Restored); Assert.Empty(f.Ledger.ActiveResources);
+        }
+    }
+
+    [Fact]
+    public void SecondStepPermissionRequiresExactInputPopupAndNoGeometryFlags()
+    {
+        var f = new Fixture(3); int checks = 0;
+        f.Native.BeforeInputPlacement = () =>
+        {
+            foreach (var (window, after, flags, allowed) in new (nint, nint, uint, bool)[]
+            {
+                (32, 200, 3, true), (31, 200, 3, false), (22, 200, 3, false),
+                (32, 100, 3, false), (32, 200, 1, false), (32, 200, 2, false),
+                (32, 200, 0x43, false), (32, 200, 0x83, false), (32, 200, 7, false)
+            })
+                WithPosition(new() { Window = window, InsertAfter = after, Flags = flags, X = -900, Width = 400 }, memory =>
+                {
+                    Assert.True(DesktopMenuInteraction.PreserveSurfaceZOrder(window, memory));
+                    var p = Marshal.PtrToStructure<DesktopMenuInteraction.MenuWindowPos>(memory);
+                    Assert.Equal(allowed, (p.Flags & 4) == 0); Assert.Equal(0x210u, p.Flags & 0x210u);
+                    Assert.Equal(-900, p.X); Assert.Equal(400, p.Width); checks++;
+                });
+        };
+        using var menu = f.Open();
+        Assert.True(menu.ActivatePopup()); Assert.Equal(9, checks);
+        WithPosition(new() { Window = 32, InsertAfter = 200, Flags = 3 }, memory =>
+        {
+            Assert.True(DesktopMenuInteraction.PreserveSurfaceZOrder(32, memory));
+            Assert.NotEqual(0u, Marshal.PtrToStructure<DesktopMenuInteraction.MenuWindowPos>(memory).Flags & 4);
+        });
+    }
+
+    [Fact]
+    public void OwnAnchorExchangePreservesEveryOtherWindowAndRepeatedOpenedDoesNoMoreNativeWork()
+    {
+        var f = new Fixture(3);
+        f.Native.Order.RemoveAll(w => w.Handle == 200); f.Native.Order.Insert(0, new(200, false));
+        var before = f.Native.Order.Where(w => w.Handle != 200).ToArray();
+        using var menu = f.Open();
+        Assert.True(menu.ActivatePopup());
+        Assert.Equal(before, f.Native.Order.Where(w => w.Handle != 200).ToArray());
+        Assert.True(DesktopMenuInteraction.IsOrdered(f.Native.Order, f.Handles, 200));
+        Assert.Equal(new[] { ((nint)200, (nint)32), ((nint)32, (nint)200) }, f.Native.Placements);
+        Assert.True(menu.ActivatePopup()); Assert.Equal(2, f.Native.Placements.Count);
+        Assert.Empty(f.Queue); // Own synchronous WINDOWPOSCHANGED callbacks must not schedule repair.
+    }
+
+    [Fact]
+    public void RepeatedOpenedWithInvalidOwnerClosesAndReleasesInsteadOfLeavingAnUnprovenMenu()
+    {
+        var f = new Fixture(3);
+        using var menu = f.Open();
+        Assert.True(menu.ActivatePopup());
+        f.Native.Fault = "wrong-owner";
+        Assert.False(menu.ActivatePopup());
+        Assert.Equal(2, f.Native.Placements.Count); Assert.Equal(1, f.Closed);
+        Assert.Equal(3, f.Restored); Assert.Empty(f.Ledger.ActiveResources);
     }
 
     private static void WithPosition(DesktopMenuInteraction.MenuWindowPos position, Action<nint> check)
@@ -200,6 +331,8 @@ public sealed class DesktopMenuInteractionTests
         public List<DesktopMenuZWindow> Order = [];
         public nint FailTransparency, LastAnchor;
         public string? Fault;
+        public List<(nint Window, nint Anchor)> Placements = [];
+        public Action? AfterPopupPlacement, BeforeInputPlacement, AfterInputPlacement;
         public int Hooks;
         public Action<uint, nint>? Before;
         public bool Exists(nint window) => Alive.Contains(window);
@@ -212,14 +345,47 @@ public sealed class DesktopMenuInteractionTests
         public nint FindPopup(nint owner) => Fault == "missing" ? 0 : 200;
         public IReadOnlyList<DesktopMenuHit> SamplePopup(nint popup) => [];
         public IReadOnlyList<DesktopMenuZWindow> ReadZOrder() => Order;
-        public bool PlacePopup(nint popup, nint anchor)
+        public bool IsOwnUiWindow(nint window) => Alive.Contains(window) && !(Fault == "foreign-surface" && window == 22);
+        public bool IsOwnedPopup(nint popup, nint owner) => Fault != "wrong-owner" && popup == 200 && IsOwnUiWindow(owner);
+        public bool PlacePopupAfterOwnWindow(nint popup, nint anchor, nint owner)
         {
+            Placements.Add((popup, anchor));
+            if (Fault == "popup-exception") throw new InvalidOperationException("popup native exception");
             if (Fault == "placement") return false;
             LastAnchor = anchor;
             if (Fault == "readback") return true;
-            Order.RemoveAll(w => w.Handle == popup);
-            Order.Insert(anchor == 0 ? 0 : Order.FindIndex(w => w.Handle == anchor) + 1, new(popup, false));
+            WithPosition(new() { Window = popup, InsertAfter = anchor, Flags = 0x213 }, memory =>
+            {
+                Before!(0x0046, memory);
+                var p = Marshal.PtrToStructure<DesktopMenuInteraction.MenuWindowPos>(memory);
+                Assert.Equal(anchor, p.InsertAfter); Assert.Equal(0u, p.Flags & 4);
+                Move(popup, anchor);
+            });
+            AfterPopupPlacement?.Invoke(); Before!(0x0047, 0);
             return true;
+        }
+        public bool PlaceInputAfterPopup(nint input, nint popup, nint owner)
+        {
+            Placements.Add((input, popup));
+            if (Fault == "input-exception") throw new InvalidOperationException("input native exception");
+            if (Fault == "input-placement") return false;
+            if (Fault == "input-readback") return true;
+            BeforeInputPlacement?.Invoke();
+            WithPosition(new() { Window = input, InsertAfter = popup, Flags = 0x213 }, memory =>
+            {
+                Assert.True(DesktopMenuInteraction.PreserveSurfaceZOrder(input, memory));
+                var p = Marshal.PtrToStructure<DesktopMenuInteraction.MenuWindowPos>(memory);
+                Assert.Equal(0u, p.Flags & 4); Assert.Equal(popup, p.InsertAfter);
+                Move(input, popup);
+            });
+            AfterInputPlacement?.Invoke(); Before!(0x0047, 0);
+            return true;
+        }
+        private void Move(nint window, nint after)
+        {
+            var original = Order.Single(w => w.Handle == window); // Never invent non-topmost state.
+            Order.RemoveAll(w => w.Handle == window);
+            Order.Insert(Order.FindIndex(w => w.Handle == after) + 1, original);
         }
         public IDisposable WatchPopup(nint popup, Action<uint, nint> callback)
         {
