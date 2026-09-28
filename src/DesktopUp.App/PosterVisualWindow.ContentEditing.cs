@@ -56,7 +56,8 @@ internal sealed partial class PosterVisualWindow
             bool canEdit = !_geometry.IsLocked && !_contentReadOnly;
             _contentGesture = new(args.Capture, doc, _contentSnapshot, viewport, tile, slot,
                 ContentActivationTargetFor(slot.ItemId), _posterEntityVersion, _stateRevision,
-                _bounds, args.TargetKind, _monitor.ScaleX, _monitor.ScaleY, canEdit, ledger.Acquire("content.gesture", "pointer-preview"));
+                _bounds, args.TargetKind, _monitor.ScaleX, _monitor.ScaleY, canEdit,
+                ContentDragNavigation.Begin(_contentSnapshot, viewport, tile, x, y), ledger.Acquire("content.gesture", "pointer-preview"));
             args.Handled = true;
             spatial.NotifyContentEditorChanged(PosterId);
             RefreshContentSurface();
@@ -90,6 +91,7 @@ internal sealed partial class PosterVisualWindow
         if (args.EventKind is PosterInputEventKind.Invoked or PosterInputEventKind.GestureCompleted)
         {
             StopContentMotion();
+            QueueContentEndAnchor(gesture);
             _contentGesture = null; gesture.Lease.Dispose(); _contentDraft = _contentDraftProjection = null;
             if (args.EventKind == PosterInputEventKind.GestureCompleted && gesture.Proposal is { } desired)
             {
@@ -121,6 +123,7 @@ internal sealed partial class PosterVisualWindow
         _contentActivation.Reset();
         StopContentMotion();
         if (_contentGesture is not { } gesture) { _contentDraft=_contentDraftProjection=null; return; }
+        QueueContentEndAnchor(gesture);
         _contentGesture=null; _contentDraft=_contentDraftProjection=null; gesture.Lease.Dispose();
         // Release the existing native owner after clearing RAM; its synchronous cancel cannot recurse.
         _inputIsland?.CancelPointerGesture();
@@ -129,6 +132,15 @@ internal sealed partial class PosterVisualWindow
         if (!_disposed && _itemsGrid is not null && _bounds.IsUsable) RefreshContentSurface();
         QueueContentProposalDrain();
         spatial.NotifyContentEditorChanged(PosterId);
+    }
+    private void QueueContentEndAnchor(ContentGesture gesture)
+    {
+        // Preserve the actual grabbed identity after cancel/no-op/commit, not whichever peer
+        // happens to be the first visible candidate. Expired frame/scale never reuses old pixels.
+        if (gesture.IsDragging && !_disposed && !_contentPresentationSuspended && _posterEntityVersion == gesture.EntityVersion &&
+            _bounds == gesture.Frame && _monitor is not null &&
+            _monitor.ScaleX == gesture.ScaleX && _monitor.ScaleY == gesture.ScaleY)
+            _contentEndAnchor = gesture.Navigation.EndAnchor(gesture.PointerDeltaX, gesture.PointerDeltaY);
     }
     private void StartContentMotion()
     {
@@ -151,29 +163,37 @@ internal sealed partial class PosterVisualWindow
             _monitor.ScaleX!=gesture.ScaleX || _monitor.ScaleY!=gesture.ScaleY || _transitionLayout is not null)
         {CancelContentGesture("motion-basis-expired");return;}
         bool scrolled=false;
-        if(edgeScroll && _contentSnapshot is { } current && _contentViewport is { } view)
+        if(edgeScroll)
         {
             double x=(motion.LatestPoint.X-_bounds.X)/gesture.ScaleX-ContentLeftDip;
             double y=(motion.LatestPoint.Y-_bounds.Y)/gesture.ScaleY-ContentTopDip;
             double Edge(double point,double extent)=>point < -64 || point > extent+64 ? 0 :
                 point<24 ? -8 : point>extent-24 ? 8 : 0;
             bool vertical=gesture.Snapshot.FlowAxis==ContentFlowAxis.Vertical;
-            double nextX=vertical?gesture.Snapshot.ScrollXDip:
-                Math.Clamp(_contentScrollX+Edge(x,view.WidthDip),0,Math.Max(0,gesture.Snapshot.ExtentWidthDip-view.WidthDip));
-            double nextY=!vertical?gesture.Snapshot.ScrollYDip:
-                Math.Clamp(_itemScrollOffsetDip+Edge(y,view.HeightDip),0,Math.Max(0,gesture.Snapshot.ExtentHeightDip-view.HeightDip));
-            scrolled=nextX!=_contentScrollX || nextY!=_itemScrollOffsetDip;
-            _contentScrollX=nextX;_itemScrollOffsetDip=nextY;
+            try
+            {
+                var next = gesture.Navigation.Advance(vertical ? Edge(y,gesture.Viewport.HeightDip) : Edge(x,gesture.Viewport.WidthDip));
+                scrolled = next.TravelDip != gesture.Navigation.TravelDip;
+                gesture.Navigation = next;
+                var offsets = next.ProjectOffsets(gesture.Snapshot, gesture.Viewport);
+                _contentScrollX=offsets.ScrollXDip; _itemScrollOffsetDip=offsets.ScrollYDip;
+            }
+            catch (ArgumentException)
+            { CancelContentGesture("navigation-budget"); return; }
         }
         if(!_contentMotionPending && !scrolled) return;
         _contentMotionPending=false;
         double dx=motion.DeltaX/gesture.ScaleX, dy=motion.DeltaY/gesture.ScaleY;
-        gesture.GhostX=gesture.Tile.Bounds.X+dx; gesture.GhostY=gesture.Tile.Bounds.Y+dy;
+        ContentRect ghost;
+        try { ghost = gesture.Navigation.Ghost(dx,dy); }
+        catch (ArgumentException) { CancelContentGesture("pointer-budget"); return; }
+        gesture.PointerDeltaX=dx; gesture.PointerDeltaY=dy;
+        gesture.GhostX=ghost.X; gesture.GhostY=ghost.Y;
         double pointerX=(motion.LatestPoint.X-_bounds.X)/gesture.ScaleX-ContentLeftDip;
         double pointerY=(motion.LatestPoint.Y-_bounds.Y)/gesture.ScaleY-ContentTopDip;
         var mapped=ContentDragPolicy.Map(gesture.Document,gesture.Snapshot,gesture.Viewport,gesture.Tile,
             gesture.Target==PosterInputTargetKind.ContentSpanHandle?ContentDragKind.Resize:ContentDragKind.Move,
-            dx,dy,_contentScrollX-gesture.Snapshot.ScrollXDip,_itemScrollOffsetDip-gesture.Snapshot.ScrollYDip);
+            dx,dy,gesture.Navigation.ScrollDeltaXDip,gesture.Navigation.ScrollDeltaYDip);
         if(!new ContentRect(0,0,gesture.Viewport.WidthDip,gesture.Viewport.HeightDip).Contains(pointerX,pointerY))
             mapped=new(null,"请移回海报内容区；在此松手不会保存。");
         if (gesture.LastMapping == mapped && !scrolled) { RefreshContentSurface(); return; }
@@ -355,7 +375,8 @@ internal sealed partial class PosterVisualWindow
     }
     private sealed class ContentGesture(PosterInputCapture capture,ContentLayoutDocument document,ContentLayoutSnapshot snapshot,
         ContentLayoutViewport viewport, ContentLayoutTile tile, ContentResolvedPlacement slot, ContentActivationTarget? activationTarget,
-        long entityVersion,long revision,DesktopPixelRect frame,PosterInputTargetKind target,double scaleX,double scaleY,bool canEdit,IDisposable lease)
+        long entityVersion,long revision,DesktopPixelRect frame,PosterInputTargetKind target,double scaleX,double scaleY,bool canEdit,
+        ContentDragNavigation navigation,IDisposable lease)
     {
         public PosterInputCapture Capture {get;}=capture;
         public ContentLayoutDocument Document {get;}=document;
@@ -371,6 +392,9 @@ internal sealed partial class PosterVisualWindow
         public double ScaleX {get;}=scaleX;
         public double ScaleY {get;}=scaleY;
         public bool CanEdit {get;}=canEdit;
+        public ContentDragNavigation Navigation {get;set;}=navigation;
+        public double PointerDeltaX {get;set;}
+        public double PointerDeltaY {get;set;}
         public IDisposable Lease {get;}=lease;
         public ContentLayoutDocument? Proposal {get;set;}
         public ContentLayoutEdit? LastEdit {get;set;}

@@ -41,6 +41,15 @@ public static class ControlCenterSpatial
             env.WorkArea.X, env.WorkArea.Y, env.DpiX, env.DpiY, out var end)) return null;
         // A position-only edit keeps the exact current physical dimensions, including constrained height.
         if (!resize) end = end with { Width = source.Bounds.Width, Height = source.Bounds.Height };
+        int minWidth = (int)Math.Ceiling(PosterFrameGeometryPolicy.MinimumWidthDip * env.DpiX / 96d);
+        int minHeight = (int)Math.Ceiling(PosterFrameGeometryPolicy.MinimumExpandedHeightDip * env.DpiY / 96d);
+        if (resize)
+        {
+            if (!ContentFrameMinimumPolicy.TryForPoster(poster, out var minimum, out error)) return null;
+            (minWidth, minHeight) = minimum!.Pixels(env.DpiX, env.DpiY);
+            if (end.Width < minWidth || end.Height < minHeight)
+            { error = "尺寸低于最大完整 Item 与海报边距所需下限；未缩小内容或改写布局。"; return null; }
+        }
         if (!env.WorkArea.Contains(end)) { error = "输入超出当前工作区；未自动缩小或改写位置。"; return null; }
         foreach (bool moveFirst in new[] { true, false })
         {
@@ -55,7 +64,7 @@ public static class ControlCenterSpatial
                 var frameScene = new SpatialSnapshot(env, scene.Posters.Select(p => p.PosterId == poster.PosterId
                     ? p with { Bounds = previous, ExpandedHeight = Math.Max(p.ExpandedHeight, previous.Height) } : p));
                 var step = PosterSpatialSolver.PlanFrameChange(frameScene, new(poster.PosterId, next, kind,
-                    PosterOperatingMode.Editing, (int)Math.Ceiling(240 * env.DpiX / 96d), (int)Math.Ceiling(240 * env.DpiY / 96d)));
+                    PosterOperatingMode.Editing, minWidth, minHeight));
                 if (!step.Succeeded) { accepted = false; break; }
                 path.AddRange(step.Path); previous = next;
             }

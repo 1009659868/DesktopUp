@@ -194,6 +194,13 @@ internal sealed partial class PosterVisualWindow
                 for (int i = 1; i <= 6; i++) At(Send(name + "-small-down-" + i, -20), head.Period - head.Step + head.Step * i / 6d);
                 At(Read(name + "-small-return"), 0); cases.Add(stage);
 
+                stage = name + "-loop-drag";
+                observations.Add(new { name = stage, drag = RunLoopDragForProbe() });
+                Read(name + "-after-loop-drag"); cases.Add(stage);
+                stage = name + "-frame-minimum";
+                observations.Add(new { name = stage, frame = RunContentFrameMinimumForProbe() });
+                Read(name + "-after-frame-minimum"); cases.Add(stage);
+
                 stage = name + "-finite";
                 Configure(name + "-loop-off", () => SetContentLoopScroll(false)); Head();
                 At(Send(name + "-finite-head-up", 120), 0);
@@ -272,9 +279,9 @@ public partial class App
         catch (Exception failure) { error = failure.ToString(); }
         finally { if (_stopAutoSmoke == Stop) _stopAutoSmoke = null; }
         var report = new { passed, error, observation,
-            inputDriver = "managed-Scrolled-event-with-current-published-region-to-production-HandleContentInput-and-ScrollItems",
+            inputDriver = "managed-scroll-and-loop-press-motion-end-with-current-published-region-to-production-handlers",
             layoutEvidence = "existing-ProjectTiles-versus-live-XAML-and-published-input-regions",
-            fixtureSetup = "formal-axis-loop-and-single-item-commands; RAM-only-head-reset",
+            fixtureSetup = "formal-axis-loop-mode-drag-undo-and-single-item-commands; RAM-only-head-reset",
             nativeMouse = false, nativeKeyboard = false, nativeWheel = false,
             desktopPixelVisualCertified = false, captureIncludesSystemBackdrop = false,
             processRestartTested = false, uiCProductAccepted = false, milestoneAccepted = false };

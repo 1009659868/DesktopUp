@@ -55,6 +55,13 @@ public static class PosterFrameResizePolicy
             throw new ArgumentOutOfRangeException(nameof(gesture), gesture, "Unsupported resize gesture.");
         }
 
+        // No legal size about this fixed edge: retain the whole proposal. In particular,
+        // never lower the content minimum to the work area or throw from Math.Clamp.
+        if ((movesLeft && initial.Right - workArea.X < minimumWidth) ||
+            (movesRight && workArea.Right - initial.X < minimumWidth) ||
+            (movesTop && initial.Bottom - workArea.Y < minimumHeight) ||
+            (movesBottom && workArea.Bottom - initial.Y < minimumHeight)) return initial;
+
         int x = initial.X;
         int y = initial.Y;
         int width = initial.Width;

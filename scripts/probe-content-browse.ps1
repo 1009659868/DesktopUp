@@ -78,10 +78,11 @@ $taskExpectedCaptures=@('content-browse-horizontal-head-after-up.png','content-b
     'content-browse-vertical-head-after-up.png','content-browse-vertical-head-before.png')
 $taskExpectedCases=@('vertical-loop-seam','vertical-bidirectional','vertical-small-delta','vertical-finite','vertical-disable-while-wrapped',
     'horizontal-loop-seam','horizontal-bidirectional','horizontal-small-delta','horizontal-finite','horizontal-disable-while-wrapped',
-    'vertical-short-content','horizontal-short-content')
+    'vertical-short-content','horizontal-short-content','vertical-loop-drag','horizontal-loop-drag',
+    'vertical-frame-minimum','horizontal-frame-minimum')
 $taskObservation=if($taskDone.Count -eq 1){$taskDone[0].data}else{$null}
 $taskObservedCases=@($taskObservation.observation.cases)
-$taskCasesComplete=$taskObservedCases.Count -eq 12 -and
+$taskCasesComplete=$taskObservedCases.Count -eq 16 -and
     (@($taskObservedCases | Sort-Object) -join '|') -ceq (@($taskExpectedCases | Sort-Object) -join '|')
 $taskCaptureComplete=(@($taskPngs.Name) -join '|') -ceq ($taskExpectedCaptures -join '|')
 $taskScopeCorrect=$null -ne $taskObservation -and !$taskObservation.nativeMouse -and !$taskObservation.nativeKeyboard -and
@@ -90,7 +91,7 @@ $taskPassed=$taskProcess.ExitCode -eq 0 -and $taskDone.Count -eq 1 -and $taskObs
     $taskObservation.observation.passed -and $taskObservation.observation.wheelEvents -eq 102 -and $taskCasesComplete -and
     $taskStopped.Count -eq 1 -and $taskStopped[0].data.activeResources -eq 0 -and $taskErrors.Count -eq 0 -and
     $taskStable -and $taskCaptureComplete -and @($taskPngs | Where-Object Length -le 0).Count -eq 0 -and $taskScopeCorrect
-$taskResult=[pscustomobject]@{Passed=$taskPassed;Result=$(if($taskPassed){'OBSERVED - MANAGED SCROLL/XAML/STATE ONLY'}else{'FAILED - EVIDENCE PRESERVED'});
+$taskResult=[pscustomobject]@{Passed=$taskPassed;Result=$(if($taskPassed){'OBSERVED - MANAGED SCROLL/LOOP-DRAG/XAML/STATE ONLY'}else{'FAILED - EVIDENCE PRESERVED'});
     ProcessId=$taskProcess.Id;ExitCode=$taskProcess.ExitCode;DataRoot=$taskData;ExpectedAssemblySha256=$ExpectedAssemblySha256;
     ArtifactsStable=$taskStable;FixtureScenario='hundred';FixtureSeedDatabaseSha256=$taskSeedHash;
     CasesComplete=$taskCasesComplete;CapturesComplete=$taskCaptureComplete;Pngs=$taskPngs;

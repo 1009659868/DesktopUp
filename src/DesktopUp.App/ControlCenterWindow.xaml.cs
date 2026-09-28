@@ -32,7 +32,7 @@ public sealed partial class ControlCenterWindow : Window
         InitializeComponent();
         // Use the native caption once; the workspace does not draw a second application titlebar.
         ExtendsContentIntoTitleBar = false;
-        Title = "DesktopUp · 控制中心";
+        Title = DistributionBuild.DisplayName + " · 控制中心";
         // Closed notices must release their layout space as well as hide their content.
         StateInfoBar.Visibility = Visibility.Collapsed;
         StateInfoBar.RegisterPropertyChangedCallback(InfoBar.IsOpenProperty, (_, _) =>

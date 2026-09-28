@@ -164,7 +164,7 @@ public sealed class ContentDragPolicyTests
     }
 
     [Theory] [InlineData(0)] [InlineData(1)]
-    public void Every_actual_loop_copy_explicitly_waits_for_the_seam_transaction(int requestedCycle)
+    public void A_forged_loop_copy_is_rejected_even_when_loop_dragging_is_supported(int requestedCycle)
     {
         var document = Document(ContentLayoutMode.Automatic, ContentFlowAxis.Vertical, 9) with { LoopScroll = true };
         var viewport = View(document.FlowAxis, 144);
@@ -173,9 +173,9 @@ public sealed class ContentDragPolicyTests
         viewport = viewport with { ScrollYDip = period - 48 };
         snapshot = ContentLayoutSolver.Resolve(document, viewport);
         var tiles = ContentLayoutFlow.ProjectTiles(snapshot, viewport);
-        var tile = tiles.First(t => t.LoopIndex == requestedCycle);
+        var tile = tiles.First(t => t.LoopIndex == requestedCycle) with { LoopIndex = 99 };
         var result = ContentDragPolicy.Map(document, snapshot, viewport, tile, ContentDragKind.Move, 48, 0);
-        Assert.False(result.Accepted); Assert.Contains("Loop", result.Error!); Assert.Null(result.Edit);
+        Assert.False(result.Accepted); Assert.Contains("actual visible tile", result.Error!); Assert.Null(result.Edit);
     }
 
     [Fact]

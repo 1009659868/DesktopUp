@@ -46,7 +46,7 @@ internal sealed class TrayService(IResourceLedger ledger, IStructuredLog log) : 
 
         _icon = new TaskbarIcon
         {
-            ToolTipText = "DesktopUp V3",
+            ToolTipText = DistributionBuild.TrayName,
             ContextMenuMode = ContextMenuMode.PopupMenu,
             MenuActivation = PopupActivationMode.RightClick,
             NoLeftClickDelay = true,
@@ -120,6 +120,7 @@ internal sealed class TrayService(IResourceLedger ledger, IStructuredLog log) : 
             string text = _feedback is not null ? "DesktopUp · " + _feedback :
                 (_projection?.ToolTipText ?? "DesktopUp") + (_globallyHidden ? " · 全局隐藏" : "") +
                 (_environmentPending ? " · 等待桌面" : "");
+            text += DistributionBuild.TraySuffix;
             _icon.ToolTipText = text.Length <= 120 ? text : text[..120];
         }
         foreach (var entry in TrayManagement.Menu(_projection, _globallyHidden, _environmentPending))

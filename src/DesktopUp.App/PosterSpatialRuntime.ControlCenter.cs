@@ -31,6 +31,12 @@ internal sealed partial class PosterSpatialRuntime
         if (request.ActualBasis is not { } actual || !actual.Matches(scene!, target))
         { completed(Failure(command, "实际位置或显示环境已变化，请重新载入几何。") with { Status = StateCommandStatus.Conflict }); return; }
         var intent = actual.Resolve(target.Poster, request.Desired, request.ChangedFields);
+        bool contentResize = intent.Width != target.Poster.WidthDip || intent.ExpandedHeight != target.Poster.ExpandedHeightDip;
+        if (contentResize && (!owner.TryReadContentFrameMinimum(out int minWidth, out int minHeight) ||
+            !SpatialPixelProjection.TryProjectLocalDip(intent.X, intent.Y, intent.Width, intent.ExpandedHeight,
+                scene!.Environment.WorkArea.X, scene.Environment.WorkArea.Y, scene.Environment.DpiX, scene.Environment.DpiY, out var requested) ||
+            requested.Width < minWidth || requested.Height < minHeight))
+        { completed(Failure(command, "尺寸不足以完整显示当前内容，或内容下限尚未就绪；未修改海报。")); return; }
         var plan = ControlCenterSpatial.Plan(target.Poster, scene!, intent, out var error);
         if (plan is null) { completed(Failure(command, error!)); return; }
         bool resize = intent.Width != request.Basis.Poster.WidthDip || intent.ExpandedHeight != request.Basis.Poster.ExpandedHeightDip;
@@ -109,7 +115,8 @@ internal sealed partial class PosterSpatialRuntime
         if (request.CloneSourceId is { } source)
             return commands.Execute(new ClonePosterCommand(request.RequestId, request.Source,
                 request.Revision, request.Reads, source) { Placement = proof, Title = request.Title });
-        var configuration = PosterConfigurationFactory.NewBasicBox(request.Title, monitor.DeviceName);
+        var configuration = DistributionBuild.ApplyCreationDefaults(
+            PosterConfigurationFactory.NewBasicBox(request.Title, monitor.DeviceName));
         return commands.Execute(new CreatePosterCommand(request.RequestId, request.Source,
             request.Revision, request.Reads, configuration) { Placement = proof });
     }

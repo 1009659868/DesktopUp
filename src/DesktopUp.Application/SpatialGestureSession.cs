@@ -83,13 +83,22 @@ public static class SpatialGestureCommitPolicy
         if (PosterSpatialSolver.CheckPath(gesture.Initial, command.PosterId, gesture.Path).Count != 0 ||
             (gesture.Path.LastOrDefault()?.To ?? source.Bounds) != gesture.Final) return "Spatial path is stale, discontinuous or blocked.";
         SpatialRect previous = source.Bounds;
+        var env = gesture.Initial.Environment;
+        int minWidth = Math.Min(env.WorkArea.Width, Math.Max(1, (int)Math.Round(240 * env.DpiX / 96d)));
+        int minHeight = Math.Min(env.WorkArea.Height, Math.Max(1, (int)Math.Round(240 * env.DpiY / 96d)));
+        if (command.Kind == PosterStateCommandKind.Resize)
+        {
+            if (!ContentFrameMinimumPolicy.TryForPoster(current, out var minimum, out var error)) return error;
+            (minWidth, minHeight) = minimum!.Pixels(env.DpiX, env.DpiY);
+            if (gesture.Final.Width < minWidth || gesture.Final.Height < minHeight)
+                return "Active resize cannot clip the largest complete content item.";
+        }
         foreach (var leg in gesture.Path)
         {
             var scene = new SpatialSnapshot(gesture.Initial.Environment, gesture.Initial.Posters.Select(p => p.PosterId == command.PosterId
                 ? p with { Bounds = previous, ExpandedHeight = p.IsCollapsed ? p.ExpandedHeight : previous.Height } : p));
             var result = PosterSpatialSolver.PlanFrameChange(scene, new(command.PosterId, leg.To, gesture.Gesture,
-                PosterOperatingMode.Editing, Math.Min(gesture.Initial.Environment.WorkArea.Width, Math.Max(1, (int)Math.Round(240 * gesture.Initial.Environment.DpiX / 96d))),
-                Math.Min(gesture.Initial.Environment.WorkArea.Height, Math.Max(1, (int)Math.Round(240 * gesture.Initial.Environment.DpiY / 96d)))));
+                PosterOperatingMode.Editing, minWidth, minHeight));
             if (!result.Succeeded) return "Spatial trace contains an invalid geometry transition.";
             previous = leg.To;
         }

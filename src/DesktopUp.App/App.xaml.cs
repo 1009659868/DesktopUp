@@ -51,7 +51,7 @@ public partial class App : Microsoft.UI.Xaml.Application
         InitializeComponent();
         var parser = new StartupIntentParser();
         _startupIntent = parser.Parse(Environment.GetCommandLineArgs().Skip(1));
-        _singleInstance = new SingleInstanceCoordinator(SingleInstanceNames.ForCurrentUser());
+        _singleInstance = new SingleInstanceCoordinator(SingleInstanceNames.ForCurrentUser(DistributionBuild.ApplicationId));
         _singleInstance.IntentReceived += OnExternalIntent;
         _isPrimary = _singleInstance.TryAcquireOrForward(_startupIntent.ForExistingInstance());
     }
@@ -140,10 +140,15 @@ public partial class App : Microsoft.UI.Xaml.Application
         _log.Write("info", "application.started", new
         {
             version = typeof(App).Assembly.GetName().Version?.ToString(),
+            distribution = DistributionBuild.ApplicationId,
+            creationDefaults = DistributionBuild.CreationDefaults,
+            runtimeDirectory = System.Runtime.InteropServices.RuntimeEnvironment.GetRuntimeDirectory(),
             dataRoot = _services.GetRequiredService<IUserDataPaths>().Root,
             isElevated = IsProcessElevated(),
             requestedExecutionLevel = "asInvoker"
         });
+        if (DistributionBuild.CreationDefaultsError is { } defaultsError)
+            _log.Write("warning", "configuration.creation_defaults_ignored", new { error = defaultsError });
         _spatialRuntime = new PosterSpatialRuntime(_stateCoordinator, _stateCommands, _log, animationOptions,
             () => _posterSessions?.GloballyHidden == true, id => _controlCenter?.HasPosterDraft(id) == true,
             (id, entity, document) => _controlCenter?.OwnsContentFieldDraft(id, entity, document) == true);
@@ -304,9 +309,9 @@ public partial class App : Microsoft.UI.Xaml.Application
     private static ServiceProvider BuildServices()
     {
         var services = new ServiceCollection();
-        // Explicit child-process test override. Normal launches keep the existing per-user root.
+        // Explicit child-process test override; the opt-in preview build has its own profile.
         services.AddSingleton<IUserDataPaths>(new UserDataPaths(
-            Environment.GetEnvironmentVariable("DESKTOPUP_V3_TEST_DATA_ROOT")));
+            Environment.GetEnvironmentVariable("DESKTOPUP_V3_TEST_DATA_ROOT") ?? DistributionBuild.DefaultDataRoot));
         services.AddSingleton<IStructuredLog, JsonLineLog>();
         services.AddSingleton<IResourceLedger, ResourceLedger>();
         services.AddSingleton<SqliteStateStore>();

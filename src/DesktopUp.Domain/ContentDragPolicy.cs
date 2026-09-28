@@ -14,7 +14,7 @@ public sealed record ContentDragResult(ContentLayoutEdit? Edit, string? Error = 
 /// a moving preview, changes authoring, manages input ownership or accumulates per-frame rounding.</summary>
 public static class ContentDragPolicy
 {
-    private const double MaximumDisplacementDip = 16_000_000;
+    internal const double MaximumDisplacementDip = 16_000_000;
 
     public static ContentDragResult Map(ContentLayoutDocument document, ContentLayoutSnapshot pressSnapshot,
         ContentLayoutViewport pressViewport, ContentLayoutTile actualPressTile, ContentDragKind kind,
@@ -34,24 +34,29 @@ public static class ContentDragPolicy
                 throw new ContentLayoutException("A read-only composition cannot start an authored drag.");
             if (!ContentLayoutFlow.ProjectTiles(pressSnapshot, pressViewport).Contains(actualPressTile))
                 throw new ContentLayoutException("The drag target is not the actual visible tile from the frozen press composition.");
-            // R5 supports finite browsing. Reject the entire looping strip, including its cycle-zero
-            // tile, rather than losing the chosen copy or ever persisting cycle * period as a position.
-            if (ContentLayoutFlow.IsLooping(pressSnapshot, pressViewport))
-                throw new ContentLayoutException("Loop drag mapping requires the seam transaction and is not supported by the finite drag policy.");
+            bool looping = ContentLayoutFlow.IsLooping(pressSnapshot, pressViewport);
             var slot = pressSnapshot.Items.Single(p => p.ItemId == actualPressTile.ItemId);
             var source = document.Placements[slot.SourceIndex];
             bool vertical = pressSnapshot.FlowAxis == ContentFlowAxis.Vertical;
             RequireDisplacement(totalPointerXDip); RequireDisplacement(totalPointerYDip);
             RequireDisplacement(scrollDeltaXDip); RequireDisplacement(scrollDeltaYDip);
             if (vertical ? scrollDeltaXDip != 0 : scrollDeltaYDip != 0)
-                throw new ContentLayoutException("Finite single-axis dragging cannot invent cross-axis scrolling.");
+                throw new ContentLayoutException("Single-axis dragging cannot invent cross-axis scrolling.");
             double currentScroll = vertical ? pressSnapshot.ScrollYDip + scrollDeltaYDip : pressSnapshot.ScrollXDip + scrollDeltaXDip;
             double maximumScroll = Math.Max(0, vertical ? pressSnapshot.ExtentHeightDip - pressViewport.HeightDip
                 : pressSnapshot.ExtentWidthDip - pressViewport.WidthDip);
-            if (!double.IsFinite(currentScroll) || currentScroll < 0 || currentScroll > maximumScroll + 1e-7)
+            if (!double.IsFinite(currentScroll) || !looping && (currentScroll < 0 || currentScroll > maximumScroll + 1e-7))
                 throw new ContentLayoutException("The supplied scroll displacement is outside the finite content range.");
             double deltaX = totalPointerXDip + scrollDeltaXDip, deltaY = totalPointerYDip + scrollDeltaYDip;
             RequireDisplacement(deltaX); RequireDisplacement(deltaY);
+            double period = looping ? ContentLayoutFlow.LoopPeriodDip(pressSnapshot, pressViewport) : 0;
+            // Navigation is unwrapped, not a subtraction of two folded offsets. Remove whole
+            // turns BEFORE grid rounding (the period need not be an integer number of pitches).
+            // Resizing is a size delta and must never wrap into a small positive/negative size.
+            if (looping && kind == ContentDragKind.Move)
+            {
+                if (vertical) deltaY %= period; else deltaX %= period;
+            }
             double pitch = pressSnapshot.CellDip + pressSnapshot.GapDip;
             int stepX = checked((int)Math.Round(deltaX / pitch, MidpointRounding.AwayFromZero));
             int stepY = checked((int)Math.Round(deltaY / pitch, MidpointRounding.AwayFromZero));
@@ -73,7 +78,17 @@ public static class ContentDragPolicy
             if (document.Mode == ContentLayoutMode.Manual || source.FixedPosition)
             {
                 int column = checked(slot.Column - slot.RegionColumn + stepX), row = checked(slot.Row - slot.RegionRow + stepY);
+                if (looping)
+                {
+                    double origin = vertical ? slot.Bounds.Y : slot.Bounds.X;
+                    double moved = ContentLayoutFlow.NormalizeScroll(origin + (vertical ? deltaY : deltaX), period);
+                    int mainCell = checked((int)Math.Round(moved / pitch, MidpointRounding.AwayFromZero));
+                    if (mainCell * pitch >= period)
+                        throw new ContentLayoutException("The drop lies in the trailing seam gap, not a canonical grid cell.");
+                    if (vertical) row = mainCell - slot.RegionRow; else column = mainCell - slot.RegionColumn;
+                }
                 RequirePlacement(document, pressSnapshot, slot, column, row, slot.ColumnSpan, slot.RowSpan);
+                if (column == slot.Column - slot.RegionColumn && row == slot.Row - slot.RegionRow) return new(null);
                 return new(new(ContentLayoutEditKind.Move, source.ItemId) { Column = column, Row = row });
             }
 
@@ -84,6 +99,11 @@ public static class ContentDragPolicy
                 + actualPressTile.Bounds.Width / 2 + stepX * pitch;
             double centerY = actualPressTile.Bounds.Y + pressSnapshot.ScrollYDip - actualPressTile.OffsetYDip
                 + actualPressTile.Bounds.Height / 2 + stepY * pitch;
+            if (looping)
+            {
+                if (vertical) centerY = ContentLayoutFlow.NormalizeScroll(centerY, period);
+                else centerX = ContentLayoutFlow.NormalizeScroll(centerX, period);
+            }
             int target = FindFinalReadOrder(pressSnapshot, slot, centerX, centerY, vertical);
             return target == slot.ReadOrder ? new(null)
                 : new(new(ContentLayoutEditKind.Move, source.ItemId) { TargetReadOrder = target });

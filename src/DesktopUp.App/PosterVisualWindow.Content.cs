@@ -19,6 +19,7 @@ internal sealed partial class PosterVisualWindow
     private ContentLayoutDocument? _solvedDocument;
     private long _contentGeneration;
     private double _contentScrollX;
+    private ContentBrowseAnchor? _contentEndAnchor;
     private readonly Dictionary<string, FrameworkElement> _contentCards = new(StringComparer.Ordinal);
     private string? _contentPaintKey;
     private ContentLayoutDocument? _contentPaintDocument;
@@ -58,12 +59,27 @@ internal sealed partial class PosterVisualWindow
             Math.Max(0, frame.Height / sy - HeaderHeightDip - MetaHeightDip - ItemsTopInsetDip - FooterHeightDip - borderY),
             _contentScrollX, _itemScrollOffsetDip, _contentGeneration, preference.Scale, preference.Spacing);
     }
+    internal bool TryReadContentFrameMinimum(out int width, out int height)
+    {
+        width = height = 0;
+        if (_disposed || _monitor is null || _authoritativePoster is null) return false;
+        var snapshot = EnsureContentSnapshot(_bounds);
+        if (_contentParseReadOnly || _contentProjectionFault ||
+            !ContentFrameMinimumPolicy.TryForPoster(_authoritativePoster, out var authored, out _)) return false;
+        var effective = ContentFrameMinimumPolicy.FromSnapshot(snapshot,
+            HorizontalPaddingDip * 2 + ContentFrameMinimumPolicy.EditingBorderDip,
+            HeaderHeightDip + MetaHeightDip + ItemsTopInsetDip + FooterHeightDip + ContentFrameMinimumPolicy.EditingBorderDip);
+        // A currently accepted heat projection may have larger cards than its author basis.
+        (width, height) = new ContentFrameMinimum(Math.Max(authored!.WidthDip, effective.WidthDip),
+            Math.Max(authored.HeightDip, effective.HeightDip)).Pixels(_monitor.DpiX, _monitor.DpiY);
+        return true;
+    }
     private ContentLayoutSnapshot EnsureContentSnapshot(DesktopPixelRect frame)
     {
         _ = ContentDocument;
         var doc = EffectiveContentDocument;
         var viewport = ContentViewportFor(frame);
-        if (ReferenceEquals(_solvedDocument, doc) && _contentViewport == viewport && _contentSnapshot is not null) return _contentSnapshot;
+        if (ReferenceEquals(_solvedDocument, doc) && _contentViewport == viewport && _contentSnapshot is not null && _contentEndAnchor is null) return _contentSnapshot;
         bool geometryChanged = _contentProjectionFault || !ReferenceEquals(_solvedDocument, doc) || _contentViewport?.WidthDip != viewport.WidthDip ||
             _contentViewport?.HeightDip != viewport.HeightDip ||
             _contentViewport?.Scale != viewport.Scale || _contentViewport?.Spacing != viewport.Spacing ||
@@ -72,9 +88,10 @@ internal sealed partial class PosterVisualWindow
         ContentLayoutSnapshot next;
         try
         {
-            var anchor = geometryChanged && !HasContentGesture && !_contentProjectionFault &&
+            var anchor = _contentEndAnchor ?? (geometryChanged && !HasContentGesture && !_contentProjectionFault &&
                 _contentSnapshot is not null && _contentViewport is not null
-                ? ContentLayoutFlow.CaptureAnchor(_contentSnapshot, _contentViewport) : null;
+                ? ContentLayoutFlow.CaptureAnchor(_contentSnapshot, _contentViewport) : null);
+            _contentEndAnchor = null;
             next = geometryChanged || _contentSnapshot is null
                 ? ContentLayoutSolver.Resolve(doc, viewport)
                 : ContentLayoutSolver.Reclip(_contentSnapshot, viewport);
@@ -301,6 +318,7 @@ internal sealed partial class PosterVisualWindow
         ReleaseLampScene();
         CancelContentGesture("surface-release");
         ReleaseContentAssets();
+        _contentEndAnchor=null;
         _contentCanvas=null; _contentCards.Clear(); _contentSnapshot=null; _contentViewport=null; _solvedDocument=null;
     }
 }

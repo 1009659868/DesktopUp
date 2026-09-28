@@ -684,9 +684,15 @@ internal sealed partial class PosterVisualWindow(
 
         if (_spatialGesture is null)
         {
+            int minWidth = Math.Min(_monitor.WorkArea.Width, ToPhysicalX(240, _monitor));
+            int minHeight = Math.Min(_monitor.WorkArea.Height, ToPhysicalY(240, _monitor));
+            if (gesture != PosterGestureKind.Move && !TryReadContentFrameMinimum(out minWidth, out minHeight))
+            {
+                CancelSpatialGesture("content-minimum-unavailable");
+                return;
+            }
             _spatialGesture = spatial.Begin(this, args.InitialFrame, gesture, _mode,
-                Math.Min(_monitor.WorkArea.Width, ToPhysicalX(240, _monitor)),
-                Math.Min(_monitor.WorkArea.Height, ToPhysicalY(240, _monitor)));
+                minWidth, minHeight);
             if (_spatialGesture is null)
             {
                 CancelSpatialGesture("spatial-snapshot-unavailable");
@@ -699,7 +705,7 @@ internal sealed partial class PosterVisualWindow(
             args.InitialFrame,
             args.DeltaX,
             args.DeltaY,
-            _monitor);
+            _monitor, _spatialGesture.MinimumWidth, _spatialGesture.MinimumHeight);
         if (args.EventKind == PosterInputEventKind.GesturePreview)
         {
             ScheduleGestureFrame(candidate, args.InitialFrame);
@@ -882,7 +888,7 @@ internal sealed partial class PosterVisualWindow(
     }
 
     internal static PosterDefinition CreateInitialDefault(DisplayMonitorSnapshot monitor) =>
-        CreateDefaultPoster(CreateDefaultBounds(monitor), monitor);
+        DistributionBuild.ApplyCreationDefaults(CreateDefaultPoster(CreateDefaultBounds(monitor), monitor));
 
     private static DisplayMonitorSnapshot? ResolveMonitor(DisplayTopologySnapshot topology, string? savedName) =>
         topology.Monitors.FirstOrDefault(m => string.Equals(m.DeviceName, savedName, StringComparison.OrdinalIgnoreCase))
@@ -1732,7 +1738,7 @@ internal sealed partial class PosterVisualWindow(
         DesktopPixelRect initial,
         int deltaX,
         int deltaY,
-        DisplayMonitorSnapshot monitor)
+        DisplayMonitorSnapshot monitor, int minimumWidth, int minimumHeight)
     {
         return PosterFrameResizePolicy.Resolve(
             gesture,
@@ -1740,8 +1746,8 @@ internal sealed partial class PosterVisualWindow(
             deltaX,
             deltaY,
             monitor.WorkArea,
-            ToPhysicalX(PosterFrameGeometryPolicy.MinimumWidthDip, monitor),
-            ToPhysicalY(PosterFrameGeometryPolicy.MinimumExpandedHeightDip, monitor));
+            minimumWidth,
+            minimumHeight);
     }
 
     private static bool TryResolveGesture(
