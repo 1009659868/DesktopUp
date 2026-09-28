@@ -18,7 +18,7 @@
 | V3-BUG-008 | 有限/循环滚动边界与轴向混用，短内容偏移、反向接缝及小增量异常 | PARTIAL FIX / WHEEL CODE + APP HANDLER PASS（候选25） | 起点反向预夹紧/逐事件Round已修；47相关/2115全量、两轴12场景102处理器事件/XAML/命中及八组同包门通过。用户确认大致可用，新报停顿续滚另列026延期；循环抓取/被动恢复归R6，不写成全场景已修，见[报告§9](LR_R5_POINTER_AND_MODULE_REVIEW.md#9-候选25循环起点反向滚动与主线审阅节点) |
 | V3-BUG-009 | 横向区域局部坐标误碰撞，容量与纵向不对称 | FIXED / SOURCE + MODEL（R3） | 现solver按主/交叉轴求解并转换区域全局坐标；两轴1000个最大跨度及旧区域语义合同通过。原100项非对称反例为历史；App横向组合仍归R6/R7 |
 | V3-BUG-010 | 横向只改变高度时宿主遗漏布局失效 | PARTIAL FIX / SOURCE + MODEL | EnsureContentSnapshot已有HeightDip失效键与锚恢复，Reclip拒绝横向旧高度见证；原遗漏已修。横向单改高度与R4动画/终态实际连续证据归R6 |
-| V3-BUG-011 | 自动未固定项纯模型可移动，生产鼠标编辑门仍拒绝 | FIXED IN R5 FINITE PATH / CODE + HANDLER + SCOPED USER | 自动未钉项首拖门已解除，正式编辑输出读序图钉；R5协议/重启及早期人工基础组支持。运行中的循环副本仍拒绝拖动，按R6实现，不扩称全组合通过 |
+| V3-BUG-011 | 自动未固定项纯模型可移动，生产鼠标编辑门仍拒绝 | R5 FINITE FIXED；R6 LOOP CODE + MANAGED HANDLER，NATIVE PENDING | R5有限首拖及原分项证据保留；2026-09-28已解除活动循环拒绝门，实际副本/累计导航/结束锚两轴两模式托管App验证通过，见[R6记录](LR_R6_CONTINUOUS_OPERATIONS.md)。循环原生鼠标/人工及完整组合未验，不扩称全场景通过 |
 | V3-BUG-012 | 旧“恢复自动”清位置/尺寸/序号的预期与结果不一致 | SUPERSEDED / DEC-020、023、024；R4新合同已实现 | 退出A恢复保存的自动来源，解除图钉和恢复尺寸独立；不能恢复“全清”旧预期。旧Manual无返回来源明确拒绝退出A，旧硬约束不静默转换；不是所有旧数据均可自由转换 |
 | V3-BUG-013 | Manual切方向提案版本+2被真实命令拒绝，并包含清位置固定的转换 | FIXED / POLICY + CONTRACT；APP WIRED | SetFlowAxis现只改方向与版本+1，保留模式/loop/坐标/返回态，冲突拒绝；App沿正式提交。动作专属原生/SQLite连续验收不冒填，归R6/R7 |
 | V3-BUG-014 | 便携导出/导入静默清空ReservedSpaces | FIXED / CODE+AUTO（2026-09-26） | R2独立包：10新红测→定向25/25、全1664/1664；非空留白经真实SQLite/store重开保真。见[验证记录](VERIFICATION.md)；R7复验另列，非App重启或文件丢失声明 |

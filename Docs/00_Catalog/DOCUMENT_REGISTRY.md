@@ -6,6 +6,7 @@
 
 | 文档 | 职责 | 状态 |
 | --- | --- | --- |
+| [PREVIEW_INSTALLER_DELIVERY](../A_Project/40_Implementation/V3-04/PREVIEW_INSTALLER_DELIVERY.md) | Preview一键打包、自选路径、新建默认值、配置隔离、撤回与验证证据 | 旧包已回收；脚本2175合同/本机门通过，目标机/普通权限未验；不代替R6/R7出口 |
 | [AGENT_COLD_START](AGENT_COLD_START.md) | 可复制的agent冷启动入口、当前Git/阶段快照、分层阅读、实现核对、协作与证据边界 | 当前接手入口；只导航/核对，不独立裁决产品状态 |
 | [LR_R5_CLOSEOUT_AND_PLAN_AUDIT](../A_Project/40_Implementation/V3-04/LR_R5_CLOSEOUT_AND_PLAN_AUDIT.md) | R5原出口证据、用户认可边界、现源码与旧计划差异、遗留项和R6入口 | CORE CLOSED / 携带明确限制；不是R7验收 |
 | [CONTENT_SCENE_MODULE_DECOUPLING_PROPOSAL](../A_Project/20_Architecture/CONTENT_SCENE_MODULE_DECOUPLING_PROPOSAL.md) | 通用宿主/可删除Lamp/配置保留与恢复；解耦后Rain验证标准 | DEC-029 APPROVED / NOT STARTED；排期归LR计划§8 |
@@ -13,7 +14,8 @@
 | [LR_R5_UI_C_INTENT_ALIGNMENT](../A_Project/40_Implementation/V3-04/LR_R5_UI_C_INTENT_ALIGNMENT.md) | E1六任务/最终决定/UI C与生产纠偏的追溯 | 审查起点及迭代历史；当前R5核心收口不由早期缺口表重新否决，也不扩大到R7 |
 | [CONTENT_LAYOUT_COMBINATION_AUDIT_V1](../A_Project/20_Architecture/CONTENT_LAYOUT_COMBINATION_AUDIT_V1.md) | 已决手势、BM行为映射、循环/旧约束/双入口19条反例及源码差异 | R1 DESIGN CONTRACT READY；DEC-024/025收清选择，正式工程门仍待验证 |
 | [LR_R4_CONFIGURATION_FIDELITY](../A_Project/40_Implementation/V3-04/LR_R4_CONFIGURATION_FIDELITY.md) | 配置字段/能力、真实事务与代表模板原生绑定证据；限制与后续进程/视觉门 | R4 SAVE CONTRACT + SAMPLE READY，非R7同包验收 |
-| [LR_MILESTONE_EXECUTION](../A_Project/40_Implementation/V3-04/LR_MILESTONE_EXECUTION.md) | 当前里程碑、协作文件归属、兼容矩阵、恢复材料与工具链 | R1～R4出口保持 / R5核心收口 / R6就绪未实施；旧agent分工已交回，后续重新分派 |
+| [LR_MILESTONE_EXECUTION](../A_Project/40_Implementation/V3-04/LR_MILESTONE_EXECUTION.md) | 当前里程碑、协作文件归属、兼容矩阵、恢复材料与工具链 | R1～R4出口保持 / R5核心收口 / R6实施中；主agent持当前文件 |
+| [LR_R6_CONTINUOUS_OPERATIONS](../A_Project/40_Implementation/V3-04/LR_R6_CONTINUOUS_OPERATIONS.md) | R6分批范围、循环抓取及主动缩框实现、源码/候选证据及下批入口 | 第一批及2A主动下限CODE/CONTRACT/MANAGED APP PASS；2B被动空间、第三批及原生人工未完成 |
 | [CONTENT_LAYOUT_EXPERIENCE_REVIEW_V1](../A_Project/20_Architecture/CONTENT_LAYOUT_EXPERIENCE_REVIEW_V1.md) | 五风险/两缺口、基础手势、六任务、整图承接与模式退出对照 | E1六任务反馈收清（06c提示后通过）；非生产合同门 |
 | [CONTENT_LAYOUT_OPERATION_SPACE_REVIEW_V1](../A_Project/20_Architecture/CONTENT_LAYOUT_OPERATION_SPACE_REVIEW_V1.md) | 新操作基线/退出A、被动极端不足时临时双轴、恢复与反例矩阵 | DEC-022/023已确认产品边界；工程待验证，不细化控件 |
 | [CONTENT_TEMPLATE_SCHEMA_UI_C](../A_Project/20_Architecture/CONTENT_TEMPLATE_SCHEMA_UI_C.md) | 已采纳UI C、模板域收纳、动态参数和受控装入边界；生产落地导航 | UI BASELINE ACCEPTED / DEC-017；排期归LR计划§4.2，非生产验收 |
@@ -58,7 +60,7 @@
 | [M08_AUTO_POSTURE_MODEL](../A_Project/40_Implementation/V3-04/M08_AUTO_POSTURE_MODEL.md) | M08-01观察/行为/取消协议、连续纯模型验证及接线边界 | PASS；用户规则已确认，非原生功能完成 |
 | [M08_POINTER_OBSERVATION](../A_Project/40_Implementation/V3-04/M08_POINTER_OBSERVATION.md) | M08-03被动观察、热区/归属/保护及原生API证据 | PASS（03适配器/API阶段证据）；后续生产接线见M08-04 |
 | [M08_AUTO_POSTURE_SETTINGS](../A_Project/40_Implementation/V3-04/M08_AUTO_POSTURE_SETTINGS.md) | M08-02实体设置、schema7、目标CAS/投影、备份与回执兼容证据 | PASS（02数据/构建阶段证据）；设置UI已由05接入 |
-| [ON_DEMAND_OPTIMIZATIONS](../A_Project/30_Plans/ON_DEMAND_OPTIMIZATIONS.md) | A层V2-DEFER-005/006的工程映射 | 按需引用，无实施卡/排期 |
+| [ON_DEMAND_OPTIMIZATIONS](../A_Project/30_Plans/ON_DEMAND_OPTIMIZATIONS.md) | A层V2-DEFER-005/006/007的工程映射；含海报拖动流畅度/拖影低优先级反馈 | 按需引用，无实施卡/排期，不作为R6前置 |
 | [M07_MEASUREMENT_AND_SAFETY](../A_Project/40_Implementation/V3-04/M07_MEASUREMENT_AND_SAFETY.md) | 1/3/6资源与提交时序口径、实际环境记录、5.1兼容入口和S1～S5安全矩阵 | M07 PASS；功能欠项处置已登记，预算差距保留 |
 | [M07_CLOSEOUT](../A_Project/40_Implementation/V3-04/M07_CLOSEOUT.md) | 稳定产物绑定、自动/人工/零目录证据和缺口处置 | PASS，不等于全产品完成 |
 | [M07_RESOURCE_BASELINE_20260910](../A_Project/40_Implementation/V3-04/M07_RESOURCE_BASELINE_20260910.md) | 36/36资源原始证据与预算差距 | 当前环境测量PASS，非性能达标 |

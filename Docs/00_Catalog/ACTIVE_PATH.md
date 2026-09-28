@@ -1,6 +1,14 @@
 # DesktopUp V2 当前执行入口
 
+Git 同步检查点（2026-09-28）：用户已授权将当前 V3 状态提交并推送同名远端；源码检查点 `c815015`，相邻文档提交保存 R6/打包进度，见 [最新交接](../A_Project/40_Implementation/V3-04/HANDOFF.md)。本次复跑 2175 合同全部通过，不新增 App/人工认证；推送结果与 HEAD 以实际 Git 核对。下方“未提交/未推送/ahead 4”均为此前快照。**最近下一步仍是 R6 第二批 2B**，不是重新实施第一批或主动缩框。
+
+按需维护（2026-09-28）：[Preview一键打包流程](../A_Project/40_Implementation/V3-04/PREVIEW_INSTALLER_DELIVERY.md)已补自选安装目录、深夜书桌/背景不透明度25%新建默认值，2175合同与本机安装/新增/重启/卸载通过；旧安装器与验证用安装器均移入回收站，当前交付脚本而非新发布包。目标机/普通权限待验，保存配置不覆盖、未Git同步；**主线仍为下述R6 2B**。
+
+最新实施（2026-09-28）：**R6 IN PROGRESS，第一批及第二批2A主动下限代码/合同/托管App通过；2B、第三批及原生人工待做**。请先读[R6记录](../A_Project/40_Implementation/V3-04/LR_R6_CONTINUOUS_OPERATIONS.md)；最近下一步为ContentSpacePolicy真实被动准入/只读二维/恢复。下方合并/对齐时“未实施”不再是当前状态；Git仍为V3 `98e0204`加未提交修改，未推送。
+
 新agent先读[冷启动提示词](AGENT_COLD_START.md)，再按本页当前入口核对；文档中的旧分支、旧PID和下方历史“待审”不直接当作执行指令。
+
+本机基线（2026-09-28）：`G:\A_\Tools\DesktopUp_V2`、`impl/poster-redesign-V3@98e0204`，已合入远端wb；当前ahead 4、未推送。本轮为认知/文档/本地记忆对齐，R6尚未实施。远端候选25的`out/`未随Git来到本机，最新本地隔离预览不是候选25、也不继承其同包门；详见[最新交接](../A_Project/40_Implementation/V3-04/HANDOFF.md)。
 
 当前（2026-09-27，DEC-029）：**R5核心已收口，R6就绪但未实施**。用户将停顿续滚BUG-026延期，批准最小解耦及其后的Rain，并恢复推进。先读[需求决定](../A_Project/10_Requirements/REQUIREMENTS_RISKS_AND_OPEN_QUESTIONS.md#31-已明确的近期优先级)→[计划§8](../A_Project/30_Plans/V3_04_L_REMEDIATION_REVIEW_PLAN.md#8-当前出口和最近下一步)→[R5收口/代码审计](../A_Project/40_Implementation/V3-04/LR_R5_CLOSEOUT_AND_PLAN_AUDIT.md)→[HANDOFF](../A_Project/40_Implementation/V3-04/HANDOFF.md)。顺序为R6→模块B/C/D→雨夜窗边→R7→R8→V3-05；候选仍25，445源码/402产物绑定复核成功。真实Item未接，R7可靠性未验。以下较早“最新/当前/待审”均为对应阶段历史，不覆盖本段状态。
 
@@ -12,7 +20,7 @@
 
 2026-09-27当前节点：R1～R4达到对应出口；R5基础操作组获人工正向反馈，但用户明确UI/操作意图未对齐已采纳C及已有E1测试。**R5 IN PROGRESS，先按主计划§4.2.1纠偏，R6 NOT STARTED**。先读[六任务与UI C对齐记录](../A_Project/40_Implementation/V3-04/LR_R5_UI_C_INTENT_ALIGNMENT.md)及其E1后续确认入口，再查[执行分工](../A_Project/40_Implementation/V3-04/LR_MILESTONE_EXECUTION.md)；不得用模型/控件PASS替代生产体验。
 
-## 当前（2026-09-26）：LR里程碑goal启动，R1合同齐全、R2～R4完成，R5实施中
+## 历史（2026-09-26）：LR里程碑goal启动，R1合同齐全、R2～R4完成，R5实施中
 
 用户已授权以[LR-R1～R8](../A_Project/30_Plans/V3_04_L_REMEDIATION_REVIEW_PLAN.md)为goal推进实施/文档/测试及必要子agent。DEC-024/025收清Q1/Q2、新建纵向/循环关；R1实施合同齐全，R2～R4完成、R5实施中。先读[里程碑执行记录](../A_Project/40_Implementation/V3-04/LR_MILESTONE_EXECUTION.md)的分工、兼容矩阵、工具链与证据；不要再沿下方历史“仅文档”或旧分支同步指令阻止/扩大当前工作。
 
@@ -22,7 +30,7 @@ DEC-019确认：纯手动/热度自动两模式；按住移动即拖、无整理
 
 A→B→C：[DEC-019～025与需求§13](../A_Project/10_Requirements/REQUIREMENTS_RISKS_AND_OPEN_QUESTIONS.md) → [组合核对](../A_Project/20_Architecture/CONTENT_LAYOUT_COMBINATION_AUDIT_V1.md) → [LR计划](../A_Project/30_Plans/V3_04_L_REMEDIATION_REVIEW_PLAN.md)及执行记录。产品边界已收清，R2保全/构建/保真出口已取得，当前实施R5直接操作，R4保真报告与原生绑定证据已登记。
 
-当前工作分支为`impl/poster-redesign-V3-wb`；R5收口后用户已明确授权同步远程，源码检查点`e9a3320…`，文档随独立提交保存，过程见[HANDOFF](../A_Project/40_Implementation/V3-04/HANDOFF.md)。`bd148fb…＋dirty`是此前候选构建时的历史基线。此次只沿当前跟踪分支同步，不继承2026-09-24的合并/切换其他分支指令；远端结果以push与SHA核对为准。旧CheckOnly失败不因新Git提交或构建自动获人工PASS。
+历史同步（2026-09-27，另一机器）：当时工作分支为`impl/poster-redesign-V3-wb`；R5收口后用户授权同步远程，源码检查点`e9a3320…`，文档随独立提交保存，过程见[HANDOFF](../A_Project/40_Implementation/V3-04/HANDOFF.md)。`bd148fb…＋dirty`是此前候选构建时的历史基线。当时只沿该跟踪分支同步；本机后续已于2026-09-28合并到V3，以本页顶部与实际Git为准。旧CheckOnly失败不因新Git提交或构建自动获人工PASS。
 
 ## 历史阶段摘要
 

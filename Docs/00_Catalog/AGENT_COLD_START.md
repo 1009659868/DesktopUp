@@ -1,15 +1,21 @@
 # DesktopUp：agent 冷启动提示词
 
+2026-09-28 当前 Git 同步：用户授权提交并推送当前 `impl/poster-redesign-V3` 至同名 origin 分支；源码检查点 `c81501592776a0c99779034dc0d7fd62b5b5a367`，相邻文档提交保存本轮进度。2175 合同复验通过，485 源码与已验证打包源清单零漂移；不新增原生人工认证。实际 HEAD/推送结果每次通过 Git 核对，见 [最新交接](../A_Project/40_Implementation/V3-04/HANDOFF.md)。`.workbuddy/` 和 `out/` 不上传；以下“98e0204＋未提交”“ahead 4”“不推送”为同步前历史，不是当前状态或新任务指令。
+
+2026-09-28最新按需任务：[Preview一键打包维护](../A_Project/40_Implementation/V3-04/PREVIEW_INSTALLER_DELIVERY.md)完成，旧包已移入回收站。根Package-Preview.cmd＋集中JSON设置支持PS5.1/7、自选安装路径、初始/新增默认lamp与背景不透明度25%；不改已有配置、复制/导入/模板重置或普通构建。2175合同、本机自选目录/托盘新增/重启/卸载自动门通过；验证安装已卸载、验证安装器回收、测试配置保留，目标机/普通权限未验。当前交付脚本，不混用旧包或candidate03哈希，不推进R6 2B、不Git提交推送。
+
 2026-09-28合并上下文：远端`impl/poster-redesign-V3-wb@fc8c920`合入本机当前`impl/poster-redesign-V3`，实际工作区为`G:\A_\Tools\DesktopUp_V2`；本次不推送。下方`D:\Project\Desktop-up`、wb分支和候选基线属于此前机器的校验快照，不是切换目录/分支指令。本地独有的[旧LR-R1提示词](../A_Project/40_Implementation/V3-04/AGENT_HANDOFF_PROMPT.md)已标历史，当前接手以本页、最新决定和实际Git为准。
 
-维护日期：2026-09-27。用途：给新agent建立可追溯的项目认知，并按本次用户任务接手工作。本文件是阅读与接手入口，不取代需求、计划或验收记录；下方基线是校验快照，每次启动仍须检查真实工作区。更新阶段时同步本页的基线、下一步和限制，详细任务只维护在主计划与执行记录中。
+维护日期：2026-09-28。用途：给新agent建立可追溯的项目认知，并按本次用户任务接手工作。本文件是阅读与接手入口，不取代需求、计划或验收记录；下方基线是校验快照，每次启动仍须检查真实工作区。更新阶段时同步本页的基线、下一步和限制，详细任务只维护在主计划与执行记录中。
+
+本机最新核对（2026-09-28）：`impl/poster-redesign-V3@98e0204`加未提交修改，相对跟踪远端领先4提交，未推送。R5核心收口；R6第一批及第二批2A主动缩框接线/自动门通过，2B被动空间、第三批和原生人工未完成。最新candidate03构建0警告错误、2158合同、16场景浏览/两轴缩框、宽窄构图/R4/撤销/重启及有限协议/重启五进程通过；452源码绑定见[R6记录](../A_Project/40_Implementation/V3-04/LR_R6_CONTINUOUS_OPERATIONS.md)。candidate02是第一批证据，不能替代后续源码。远端候选25不在本机；此前独立预览的退出缺证不能套给本轮正常退出的新进程。
 
 ## 可直接复制的启动提示
 
 ```text
-项目目录：D:\Project\Desktop-up（若运行环境不同，以实际检出的项目根为准）。
+项目目录：G:\A_\Tools\DesktopUp_V2（若运行环境不同，以实际检出的项目根为准；不要误进旧G:\A_\Tools\DesktopUp）。
 请读取并执行 Docs/00_Catalog/AGENT_COLD_START.md 的冷启动流程，实际核对文档、Git、源码与可用证据后再报告，不只复述摘要。
-目前已知：LR-R5核心已收口，R6就绪但尚未实施；后续为R6→最小模块解耦→雨夜窗边→R7→R8→V3-05。BUG-026按用户决定延期。以上需与最新决定和当前工作区交叉核对。
+目前已知：LR-R5核心已收口，R6第一批抓取/导航/结束锚和2A主动缩框已接线并通过自动门；下一步2B被动空间准入/恢复，再做资源/假源及完整连续验收；之后模块解耦→雨夜窗边→R7→R8→V3-05。BUG-026、OPT-MOTION-02延期。以上须与最新文档和实际工作区核对。
 如果本次仅要求冷启动或开发准备，完成《项目开发准备摘要》后等待任务；如果本次已指定开发任务或明确要求继续主线，完成必要理解后直接在授权范围推进，不重复询问已确认的产品选择。
 保留已有改动、配置、旧包和失败证据；区分需求、实现、测试与人工体验。不要凭历史记录切分支、重开延期Bug、提交推送或执行真实文件搬移。
 ```
@@ -28,8 +34,8 @@ git remote -v
 ```
 
 - 定位适用的仓库级/目录级`AGENTS.md`或同类指令；本次维护时未发现项目AGENTS文件，不代表以后一定没有。跳过`out/`、`node_modules/`、`.pnpm-store/`、`dist/`、`bin/obj/target`等生成目录的全文搜索。
-- 提示词制作前的已同步基线：分支`impl/poster-redesign-V3-wb`，远端`origin/impl/poster-redesign-V3-wb`；当时HEAD为`67559b4800a939871271b29b9823baf2895baad4`，源码检查点为`e9a3320d97a0cc81812d472e9c0689ed6fe8bb8a`。2026-09-27已实际核对该次同步的本地与远端HEAD相同。本提示词及后续工作会形成新提交，启动时以Git实查为准，不因HEAD更新而回退到此快照。
-- 旧`bd148fb…＋dirty`是候选25制作时的基线；旧`impl/poster-redesign-V3`、旧机器`G:\A_\Tools\DesktopUp_V2`和旧PID均非当前执行指令。Git提交不改变既有产品验收范围。
+- 历史远端制作基线（2026-09-27）：分支`impl/poster-redesign-V3-wb`，远端`origin/impl/poster-redesign-V3-wb`；当时HEAD为`67559b4800a939871271b29b9823baf2895baad4`，源码检查点为`e9a3320d97a0cc81812d472e9c0689ed6fe8bb8a`。当时已核对本地与远端HEAD相同；后续冷启动文档形成`fc8c920`，本机再合并为`98e0204`。启动时以Git实查为准，不回退到历史快照。
+- 旧`bd148fb…＋dirty`是候选25制作时的基线；`D:\Project\Desktop-up`/wb属于此前机器，当前本机为`G:\A_\Tools\DesktopUp_V2`/V3。历史PID和分工不直接作为执行指令，Git提交不改变既有产品验收范围。
 - 既有未提交/未跟踪文件视为在进行或本地保留的工作，不清理、回退或覆盖。此前同步排除了依赖、构建包、个人设置及未引用旧截图；不要用`git add .`把它们重新纳入。
 - 本页和此前Git同步记录不构成每次冷启动自动提交/推送的授权。按当前用户请求及仍适用的会话授权执行；“继续主线”也不表示合并`main`或`dev/mainline`。
 
@@ -57,7 +63,7 @@ DesktopUp是Windows桌面海报式内容收纳入口，目标支持文件、文�
 | --- | --- |
 | R1～R4 | 行为合同、可恢复基线、布局/浏览模型、编辑保存合同及原生样板达到各自出口；不等于所有生产组合通过 |
 | R5 | CORE CLOSED：UI C核心、有限路径两模式操作、配方与Lamp等有分项证据及用户认可；不是R7全面可靠性验收 |
-| R6 | READY / NOT STARTED。实际循环副本拖动仍被`ContentDragPolicy.Map`拒绝；被动不足的双轴只读/恢复尚未完整接App；不能写成“模型存在所以已经实现” |
+| R6 | IN PROGRESS。第一批循环抓取/累计导航/结束锚、第二批2A主动缩框下限已接生产并通过对应自动门；打包维护后本次2175合同复验通过。2B被动二维/恢复、第三批资源/假源及完整原生人工仍未完成，不能关闭整个R6 |
 | 模块解耦 / 雨夜窗边 | DEC-029已批准，尚未实施；顺序为R6→最小B/C/D→Rain→R7。当前仍有Lamp专属类型/生命周期耦合，生产没有rain renderer |
 | R7 / R8 / V3-05 | 未开始。配置完整往返、最终同包可靠性、假源接入和真实内容能力分别取得证据，不能凭交接文档关闭 |
 | BUG-026 | 纵向循环在原顶部/底部停顿后续滚可能失效；用户明确大致可用、后续再修。只携带记录，不自动排查修复、不阻塞R5 |
@@ -71,7 +77,7 @@ DesktopUp是Windows桌面海报式内容收纳入口，目标支持文件、文�
 
 可选核心追踪：`PosterInputRouter`及原生输入岛 → `PosterVisualWindow.ContentEditing.HandleContentInput/FlushContentMotion` → `ContentDragPolicy.Map`和`ContentLayoutEditing` → `CommitContentDocument` → `ContentLayoutCommandPolicy.Prepare`/权威事务 → SQLite → 状态投影 → 布局快照、实际tile、绘制和输入区域重发布。确认选择/浏览仅改临时状态，合法语义编辑才提交，冲突/非法/取消不覆盖原配置。
 
-接续R6时，先读执行记录§9：冻结按下snapshot/viewport/实际副本与抓取内点，累积未折返导航位移，取消/保存交接实际抓取项浏览锚；先覆盖CA-01/02/07、PD-10，再替换循环拒绝门。后续接`ContentSpacePolicy`、主动最小交叉尺寸、ReadOnlyOverflow和按tile去重的可见资源/假源。候选25已修普通wheel预夹紧和小增量，已有`ContentWheelScrollPolicy`及按TileKey读回的`App.ContentBrowseProbe`，不要重复制作或只删拒绝条件。
+接续R6先读[R6记录§4](../A_Project/40_Implementation/V3-04/LR_R6_CONTINUOUS_OPERATIONS.md#4-下一批入口和剩余风险)：第一批及2A已实现，不重复设计抓取或主动下限；下一步接`ContentSpacePolicy`与ReadOnlyOverflow的可信环境准入/成功发布/恢复，再做tile资源/假源。保留既有wheel及TileKey探针；实际原生输入/像素和复杂组合尚未认证，不由托管探针PASS替代。
 
 ## 5. 不得丢失的产品与协作约束
 
@@ -95,7 +101,7 @@ dotnet --version
 
 这些是已配置的构建/测试入口，不表示冷启动时已执行或必须无差别重跑。按任务先做针对性验证，再跑受影响正式门；SessionFixture不在solution中，需要相关进程门时单独准备。不要通过更改SDK约束或旧迁移指纹掩盖环境问题。
 
-本机现有体验入口可先只读预检：
+此前机器的候选25体验入口如下；本机2026-09-28核对不存在，不直接运行。若以后取得其完整配套证据，可先只读预检：
 
 ```powershell
 & .\out\lr-r5-evidence\start-loop-wheel-review.ps1 -CheckOnly

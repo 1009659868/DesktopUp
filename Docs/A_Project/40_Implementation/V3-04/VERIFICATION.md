@@ -1,5 +1,47 @@
 # V3-04 验证记录
 
+## 2026-09-28：Git 同步前复验（不扩大产品验收范围）
+
+- 当前分支 `impl/poster-redesign-V3`；fetch 后相对 origin 同名分支 ahead 4 / behind 0，无远端分叉。源码检查点 `c81501592776a0c99779034dc0d7fd62b5b5a367`，同步范围及排除项见 [HANDOFF 最新段](HANDOFF.md)。
+- 实际复跑 `dotnet test tests/DesktopUp.Contracts.Tests/DesktopUp.Contracts.Tests.csproj -c Release`：2175 通过、0 失败、0 跳过；本地 TRX 为 `out/preview-script-checks/tests/git-sync-contracts.trx`。既有打包清单的 485 源码指纹核对零漂移，未重新启动 GUI 或制作安装器。
+- 36 个源码/脚本/打包/测试暂存文件没有空白错误，没有纳入安装产物、个人笔记、数据库或日志，未匹配常见私钥/token 模式；这只是有限模式检查，不等于全面安全审计。
+- `.workbuddy/`、构建产物和运行证据只保留本机；提交推送不代表另一台电脑/普通权限/人工输入验收，不关闭 R6 或 R7。下方“未 Git 操作”均为当时证据边界，最新 Git 结果须现场核对。
+
+## 2026-09-28：可配置Preview打包流程（LOCAL AUTOMATED；旧包已撤回）
+
+证据见[交付记录§0](PREVIEW_INSTALLER_DELIVERY.md#0-当前旧包撤回可选安装路径深夜书桌25默认值)。2175合同/0失败跳过，PS5.1完整发布＋NSIS/WX，PS7参数/非法值与CMD CheckOnly通过；普通构建0警告错误。20260928.91 App 874F6020…A8C1DC、485源码零漂移；中文空格新目录613文件安装（612个manifest条目逐一hash匹配），非空12/重复版本13、运行中卸载21、缺标识20/联接23守卫通过。
+
+新库SQLite确认lamp/背景不透明度25；托盘/中心实际命令12场景、新增与同库重启保留参数通过，3进程正常exit0/资源0。精确卸载保留未知文件与配置；日常V3及既有Preview共5文件hash未变。仅本机提升权限的自动/托管门，未人工向导/原生鼠标/普通权限/另一台电脑认证。
+
+首次新目录被NSIS GetFullPathName误规范为空，已用Win32规范化修正并重新完整打包/验证；失败证据保留。原20260928.1安装器及验证用.90/.91安装器均移入回收站，脚本/配置交付而非新包发布；未Git操作、未推进R6 2B。
+
+## 2026-09-28 历史：独立Preview固定路径安装包（现已撤回）
+
+见[交付记录§3](PREVIEW_INSTALLER_DELIVERY.md#3-已取得的证据及边界)：最终Setup `9DD86806…E55739E`，App `A001F62B…CFD0F21`。2158合同，612安装文件hash一致；16场景浏览、构图/撤销/重启、有限Protocol/重启五进程全部exit0/资源0；普通/Preview独立身份同时运行并正常退出。重复安装与运行中卸载拒绝，退出后正常卸载；Preview配置保留、未知文件不递归清除、日常V3全部文件hash不变。
+
+本机Win11 24H2，测试继承提升权限；仅本机自动/托管门，未人工向导、普通权限、干净机、目标机或R7验收。试装默认目录/核心运行库采样使用与最终相同hash的App，正式包另行完整安装/回归/卸载，细分证据不合并冒充。未Git操作、未推进R6 2B。
+
+## 2026-09-28：R6第二批2A（主动缩框；CODE / CONTRACT / MANAGED APP）
+
+- [R6记录§5](LR_R6_CONTINUOUS_OPERATIONS.md#5-第二批2a主动缩框下限2026-09-28)：10个红测→95相关通过→最终2158/2158合同。首次扩展全量1例新夹具身份错误已修，失败证据保留。
+- candidate03 App/fixture均0警告错误；SHA256 `48142C30C6DA0189A94B576BDF84002D71A2FAF05F83575E0BE0FC52D5CA1AB1`，452源码指纹/同hash副本。
+- `frame-browse-03`16场景、102滚动事件通过，两轴实际边缘生产路径缩框/反向/取消56检查及旧640循环检查通过；`frame-composition-03`宽窄构图/R4/单撤销/同库重启及`frame-protocol-03`有限Protocol/重启通过。五进程exit0/资源0，产物稳定。
+- 仅主动缩框门，不代表第二批被动二维/恢复已完成；无OS输入、原生动画像素或人工验收。未Git同步/操作日常库，延期优化与Bug不变。
+
+## 2026-09-28：R6第一批（CODE / CONTRACT / MANAGED APP；NATIVE HUMAN PENDING）
+
+- [完整记录](LR_R6_CONTINUOUS_OPERATIONS.md)：先取得10例旧循环拒绝红测，新增抓取/导航纯模型与两轴两模式生产接线；最终candidate02 App/fixture构建0警告错误，2133/2133合同、0跳过。
+- `out/lr-r6-evidence/loop-drag-02`14场景通过：新增12个循环两模式连续子场景/640检查，实际XAML与发布input一致；`finite-protocol-02`既有有限Protocol＋同库重启通过。三进程12476/46548/35684 exit0、资源0，产物稳定。
+- candidate02 App SHA256 `957953046CA245DB3EACEB8BCDCAB2B4A01CBBE682A97E921A46C7ACD40A3A6B`，449源码/配置/脚本/工程文件绑定及同hash副本。candidate01、红测、初次构建守卫失败事实均保留。
+- 没有R6原生鼠标/键盘/滚轮、原生动画像素或人工验收；第二/三批未做，R6不关闭，BUG-026及OPT-MOTION-02不重开。未Git同步，未改日常库。
+
+## 2026-09-28：本机认知/文档与记忆对齐（DOCS / READ-ONLY CODE AUDIT）
+
+- 复核当前Git为V3 `98e0204`、ahead 4；读取DEC-024～029、R5审计、LR计划§8/执行记录§9，定向追踪循环拖动拒绝、有限位移、空间模型接线、资源可见集、Lamp类型依赖及Portable导出限制。结论和下阶段入口见[最新交接](HANDOFF.md)。未改src/tests/scripts/config，未启动R6、构建或重跑合同。
+- 校正入口中的机器/分支语境及旧“当前”标签，更新冷启动提示；旧两份本地记忆保留，新增09-28笔记。本轮不提交或推送。
+- 复查上轮隔离预览：当前无DesktopUp进程，日志最后记录非退出事件；仅保留先前启动/Ready证据，不补正常退出、资源0或人工PASS。开发预览不继承候选25的八组门，提升权限运行不作为普通权限可用性证据。
+- 文档空白检查通过；新增/修改行内8个本地链接目标均存在。整份5文档共374个本地目标，373个存在，1个为HEAD已有的历史out/lr-r5-evidence/alignment-v17-summary.json、本机未取得，保留历史链接与缺失边界，不伪造证据。src/tests/scripts/config相对远端wb仍无差异，旧09-21/22笔记SHA-256与合并前一致；预览App哈希与启动记录一致。
+
 ## 2026-09-28：远端wb合入当前V3（LOCAL MERGE / BUILD + CONTRACTS）
 
 - 授权范围：fetch远端impl/poster-redesign-V3-wb并合入当前impl/poster-redesign-V3，不推送。合并前当前0e37d9d、远端wb fc8c920；双方分别有1/3个独有提交，使用普通合并保留双方历史。

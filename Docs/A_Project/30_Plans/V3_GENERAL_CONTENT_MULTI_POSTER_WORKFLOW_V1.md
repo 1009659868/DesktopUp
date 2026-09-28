@@ -1,16 +1,18 @@
 # V3 通用内容与多海报细化工作流 V1
 
+最新（2026-09-28）：R6第一批循环抓取/导航/结束锚及第二批2A主动缩框完成生产接线/自动门，证据归[R6记录](../40_Implementation/V3-04/LR_R6_CONTINUOUS_OPERATIONS.md)。2B被动空间、第三批和原生人工未完成，不进入模块解耦。下方09-27顺序继续有效，阶段按本段及当前任务表。
+
 2026-09-27最新状态（DEC-029）：用户确认滚动大致可用、停顿续滚BUG-026延期，批准最小模块解耦与之后的雨夜窗边，要求继续推进。**R5 CORE CLOSED；下一实施为R6。** 已批准顺序R6→模块B/C/D→Rain→R7→R8→V3-05，详细里程碑唯一维护在[LR计划§8](V3_04_L_REMEDIATION_REVIEW_PLAN.md#8-当前出口和最近下一步)。[R5收口审计](../40_Implementation/V3-04/LR_R5_CLOSEOUT_AND_PLAN_AUDIT.md)说明证据和未完成项；不重选C或重做已认可UI。
 
 历史实测追溯：DEC-027的空白透传、图钉及真实追光证据见[输入与模块报告](../40_Implementation/V3-04/LR_R5_POINTER_AND_MODULE_REVIEW.md)。[可移除模块方案](../20_Architecture/CONTENT_SCENE_MODULE_DECOUPLING_PROPOSAL.md)现已批准、B/C/D未实施，不能把输入修复算成已解耦。下方早期纠偏起点和已打开实例均按当时阶段理解。
 
 历史纠偏起点：用户在R5基础操作组正向反馈后曾指出UI/意图偏差，六任务追溯见[对齐记录](../40_Implementation/V3-04/LR_R5_UI_C_INTENT_ALIGNMENT.md)。后续纠偏与当前出口见收口报告，不再把旧缺口表全数当成未实现；分工/候选历史见[执行记录](../40_Implementation/V3-04/LR_MILESTONE_EXECUTION.md)。
 
-## 当前任务状态（2026-09-27）
+## 当前任务状态（2026-09-28）
 
-04-L为 **R1 DESIGN CONTRACT READY / R2 BASELINE READY / R3 MODEL + SAMPLE READY / R4 SAVE CONTRACT + SAMPLE READY / R5 CORE CLOSED；R6 READY / NOT STARTED；模块、Rain、R7～R8未实施**。DEC-029已解除DEC-028等待审阅，恢复已授权工作；当前证据与文件归属见[里程碑执行记录](../40_Implementation/V3-04/LR_MILESTONE_EXECUTION.md)。
+04-L为 **R1～R4出口保持 / R5 CORE CLOSED；R6 IN PROGRESS（第一批自动门通过，未完成原生人工）；模块、Rain、R7～R8未实施**。当前证据与文件归属见[里程碑执行记录](../40_Implementation/V3-04/LR_MILESTONE_EXECUTION.md)和[R6记录](../40_Implementation/V3-04/LR_R6_CONTINUOUS_OPERATIONS.md)。
 
-当前优先级：R5出口及文档对齐已完成，接续R6循环抓取/导航/结束锚，再接空间准入恢复与假源；普通浏览修复不等于这些组合已实现。BUG-026延期，019/020/021/022仍独立记录，R7按核心链影响审查。已认可UI/动画保持，后续按[计划§8](V3_04_L_REMEDIATION_REVIEW_PLAN.md#8-当前出口和最近下一步)推进。
+当前优先级：R6第一批和2A主动下限已接线并自动验证，下一步2B真实被动空间准入/二维只读/恢复，随后tile资源与假源、完整连续及原生人工门。BUG-026与OPT-MOTION-02延期，019/020/021/022仍独立记录，R7按核心链影响审查。已认可UI保持，后续按[计划§8](V3_04_L_REMEDIATION_REVIEW_PLAN.md#8-当前出口和最近下一步)推进。
 
 2026-09-26已完成计划补强、BM-01～12/19条反例、产品选择及首批兼容矩阵。R1出口为实施合同齐全，不能当作工程PASS。R2保全/工具链/BUG-014红绿及R3模型/样板已完成；R4保存合同/原生绑定完成，R5开始；R6～R8未实施。UI C原生样板/核心界面/同包验收及配置保真、Item接入里程碑继续按[计划§4～5](V3_04_L_REMEDIATION_REVIEW_PLAN.md)；V3-07完整模板平台不前移。
 

@@ -1,6 +1,6 @@
 # LR-R1～R8 里程碑执行与多 agent 交接
 
-更新：2026-09-27。当前：**R1 DESIGN CONTRACT READY；R2 BASELINE READY；R3 MODEL + SAMPLE READY；R4 SAVE CONTRACT + SAMPLE READY；R5 CORE CLOSED；R6 READY / NOT STARTED；模块、Rain、R7～R8未实施**。DEC-029已取代DEC-028等待审阅限制，用户批准继续。原出口/遗留项和代码进度审计见[R5收口报告](LR_R5_CLOSEOUT_AND_PLAN_AUDIT.md)，顺序见[主计划§8](../../30_Plans/V3_04_L_REMEDIATION_REVIEW_PLAN.md#8-当前出口和最近下一步)。
+更新：2026-09-28。当前：**R1～R4出口保持；R5 CORE CLOSED；R6 IN PROGRESS（第一批CODE/CONTRACT/MANAGED APP PASS，第二/三批未实施）；模块、Rain、R7～R8未实施**。用户本轮已要求开始R6，实施及证据见[R6连续记录](LR_R6_CONTINUOUS_OPERATIONS.md)，不等于原生人工通过。顺序归[主计划§8](../../30_Plans/V3_04_L_REMEDIATION_REVIEW_PLAN.md#8-当前出口和最近下一步)，原R5出口归[R5报告](LR_R5_CLOSEOUT_AND_PLAN_AUDIT.md)。
 
 用户已在手势/三组核对后要求扩大推进跨度、建立goal，授权方案、文档、代码和测试推进及必要子agent辅助。Q1/Q2按用户随后“ok，准备开始推进”承接前轮建议；新建默认由用户另外明确选择纵向＋循环关闭。权威决定见[DEC-024/025](../../10_Requirements/REQUIREMENTS_RISKS_AND_OPEN_QUESTIONS.md)，阶段出口仍唯一维护在[主计划§4](../../30_Plans/V3_04_L_REMEDIATION_REVIEW_PLAN.md)。本文件记录执行事实、分工和证据，不替代需求或重新编号计划。
 
@@ -169,6 +169,8 @@ R3的A～E纯模型及最小原生中心样板出口已满足，按主计划进�
 - 复审修复当前归属：r2_portable_audit 仅负责 `PosterVisualWindow.ContentProposals.cs`、`PosterSpatialRuntime.Content.cs` 和独立 proposal probe；root 持其余生产/集成/probe 文件。Native driver 已补键盘目标所有权并交回 root，无实际输入执行。
 
 ## 9. R6 接线准备（R5核心已收口，实现尚未开始）
+
+2026-09-28更新：保留本节标题/锚点及以下实施前地图用于追溯；第2/3项第一批和第5项的主动下限2A已接线并取得合同/托管App证据，详见[R6记录](LR_R6_CONTINUOUS_OPERATIONS.md)。最近下一步为2B：第4/5项真实被动空间准入/二维/恢复，随后第6/7项与完整组合；不能把“准备时未开始”当成当前状态，也不能把分批结果算为R6出口通过。
 
 以下地图已按候选25复核，DEC-029授权接续，R5核心前置已满足；不把定位或已有模型当R6实现完成。当前所有子agent文件交回root，后续修改重新分配，构建/GUI串行。
 

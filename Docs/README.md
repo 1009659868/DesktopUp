@@ -1,12 +1,20 @@
 # DesktopUp V2 文档入口
 
+当前同步（2026-09-28）：按用户授权保存 R6 第一批/2A、可配置 Preview 打包及相关文档到当前 `impl/poster-redesign-V3`；源码检查点 `c815015`，2175 合同复验通过。提交/远端结果以 [最新交接](A_Project/40_Implementation/V3-04/HANDOFF.md)和实际 Git 为准；本地笔记、配置、安装产物及运行证据不上传。下一步仍为 R6 2B，不增加人工验收结论；以下未提交/未推送描述为历史。
+
+按需维护（2026-09-28）：[Preview一键打包／自选安装路径／默认深夜书桌25%](A_Project/40_Implementation/V3-04/PREVIEW_INSTALLER_DELIVERY.md)。旧安装器已移入回收站，当前交付脚本与配置；本机自动验证通过，目标机与普通权限待验。R6下一步仍为2B，未提交推送。
+
+最新实施（2026-09-28）：**R6 IN PROGRESS**。第一批循环抓取/导航/结束锚及第二批2A主动缩框下限已接生产；candidate03构建、2158合同及隔离App回归通过，原生人工未验。下一步2B被动空间准入/只读二维/恢复，见[R6记录](A_Project/40_Implementation/V3-04/LR_R6_CONTINUOUS_OPERATIONS.md)。下方同日“仅对齐、尚未实施”属于开始R6之前的历史。
+
 新agent从[冷启动提示词](00_Catalog/AGENT_COLD_START.md)开始：包含可复制入口、当前基线和分层核对步骤；实际阶段以当前决定/计划/交接为准。
+
+2026-09-28本机对齐：实际工作区`G:\A_\Tools\DesktopUp_V2`，当前`impl/poster-redesign-V3@98e0204`已合入远端wb，领先其跟踪分支4个提交、未推送。当前阶段仍是R5核心收口、R6就绪未实施；本轮仅核对新增内容、更新本地记忆和接手导航，不启动R6。UI C核心已是生产实现，不再沿用“只有HTML原型”的旧认知；本机启动预览及证据边界见[最新交接](A_Project/40_Implementation/V3-04/HANDOFF.md)。
 
 2026-09-27最新（DEC-029）：R5核心已收口，用户延期BUG-026并批准继续、最小解耦及解耦后的雨夜窗边。先读[R5收口与代码/计划审计](A_Project/40_Implementation/V3-04/LR_R5_CLOSEOUT_AND_PLAN_AUDIT.md)，后续里程碑看[LR计划§8](A_Project/30_Plans/V3_04_L_REMEDIATION_REVIEW_PLAN.md#8-当前出口和最近下一步)，候选/验证看[HANDOFF](A_Project/40_Implementation/V3-04/HANDOFF.md)。R6就绪但实现未开始，模块/Rain/R7/R8及真实Item未完成；下方较早阶段为历史。
 
-2026-09-26当前节点：R1合同齐全、R2基线完成；R3统一几何/浏览/手动投影/空间资格模型及UI C最小原生样板完成，248项相关/1758项全量回归通过，R4安全保存合同及代表模板原生绑定完成（1868项合同）；进入R5首次直接操作。阶段证据与分工见[执行记录](A_Project/40_Implementation/V3-04/LR_MILESTONE_EXECUTION.md)。
+历史节点（2026-09-26）：R1合同齐全、R2基线完成；R3统一几何/浏览/手动投影/空间资格模型及UI C最小原生样板完成，248项相关/1758项全量回归通过，R4安全保存合同及代表模板原生绑定完成（1868项合同）；当时进入R5首次直接操作。阶段证据与分工见[执行记录](A_Project/40_Implementation/V3-04/LR_MILESTONE_EXECUTION.md)。
 
-## 当前入口（2026-09-26，LR里程碑goal启动）
+## 历史入口（2026-09-26，LR里程碑goal启动；不覆盖上方当前状态）
 
 用户已授权按[LR-R1～R8计划](A_Project/30_Plans/V3_04_L_REMEDIATION_REVIEW_PLAN.md)建立goal并推进方案/文档/代码/测试及必要子agent协作。DEC-024/025收清保真兼容、单草稿冲突和新建纵向/循环关闭；R1实施合同齐全，R2～R4完成、R5实施中。当前分工、基线及验证入口见[里程碑执行记录](A_Project/40_Implementation/V3-04/LR_MILESTONE_EXECUTION.md)，阶段状态归细化工作流。
 
