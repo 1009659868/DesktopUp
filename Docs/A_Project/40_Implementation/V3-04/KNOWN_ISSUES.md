@@ -4,6 +4,8 @@
 
 ## Bug清单
 
+2026-09-30最新范围：BUG-031白条用户延期、未解决；BUG-029/030已接唯一云标题/独立动作底板，BUG-032核心组隔离已取得实际WinUI/事务证据，原生人工和完整矩阵待验。最新候选及边界归[模块§10](LR_SCENE_MODULE_EXECUTION.md#10-rr整改生产接线与同包验证2026-09-30)，下方源码审查段是修订前历史。
+
 最后核对：2026-09-27，R5收口审计。BUG-008～017的历史机制已与R3～R5现源码及证据逐项对照，不能把原审查OPEN直接当成现状；修复层级及剩余范围见[R5审计§3](LR_R5_CLOSEOUT_AND_PLAN_AUDIT.md#3-代码与计划的差异审计)。新增BUG-026按用户要求延期，不进行本轮修复。原始反例见[布局审查](CONTENT_LAYOUT_REVIEW_2026-09-23.md)§3/4；旧Bug和失败材料保留。
 
 | 编号 | 问题 | 状态 | 影响 / 当前处置 |
@@ -26,7 +28,7 @@
 | V3-BUG-016 | 真实可用空间不足时的准入/裁切/导航未闭环 | PARTIAL FIX / MODEL READY；APP NOT WIRED | solver已区分真实不足与旧约束冲突并保留跨度，ContentSpacePolicy有受限/恢复模型；App尚未消费该策略/ReadOnlyOverflow，也未接最大完整Item主动最小值；R6必须接线并验证 |
 | V3-BUG-017 | 旧布局人工候选manifest与实际DLL不匹配 | HISTORICAL CANDIDATE INVALID / REPLACEMENT VERIFIED | 旧CheckOnly失败与禁用保留，不修改hash绕过。后续候选25已有新同包证据/445源码/402产物，启动预检复核成功；旧包不继承新PASS，当前不再被旧失配阻塞 |
 | V3-BUG-018 | 中心缩窄/增宽动画误用等宽收展表面，导致安全取消 | FIXED / CODE+AUTO（2026-09-27） | `alignment-composition-01`原生失败；新geometry lease同步prepared Content/Input/Clip，`alignment-v9-composition`104帧全部一致，100项缩窄/承接/放宽/撤销及重启通过；取消/宽高/DPI另有9项合同，非全环境人工认证 |
-| V3-BUG-019 | 两个Store并发首次初始化偶发SQLite table locked | OPEN / EXISTING CONCURRENCY RISK | `alignment-contracts-01`1959/1960，同名历史失败已存在；单项及后续全量通过不代表竞态已修。Infrastructure与原测试本轮未改；不能由此推断已有配置丢失，R7可靠性需明确处置 |
+| V3-BUG-019 | 两个Store并发首次初始化偶发SQLite table locked | OPEN / EXISTING CONCURRENCY RISK | `alignment-contracts-01`1959/1960；2026-09-28 R6 2B的`out/lr-r6-evidence/contracts/space-full-02.trx`同名测试再现（2186通过/1失败，Error6 posters locked），随后单项及全量03通过。重跑不代表竞态已修；Infrastructure与原测试本轮未改，不能由此推断已有配置丢失，R7可靠性需明确处置 |
 | V3-BUG-020 | 海报原生菜单排列返回error5并立即安全关闭 | OPEN / FIX IMPLEMENTED，NATIVE HIT PENDING | candidate11/12复现foreign锚点error5；candidate13自身input单步实验成功。candidate14正式两步、严格层级/输入透明/全序见证通过，32菜单合同和2001全量通过；15命中点被外进程遮挡，完整六状态/原生鼠标未通过，暂不关闭。详见对齐记录§7.3 |
 | V3-BUG-021 | 中心尺寸动画间歇读不到预分配窗口区域并安全取消 | OPEN / ONE NATIVE OBSERVATION | candidate17 `alignment-v17-composition`第一动画帧GetWindowRgn=0；恢复成功、未提交几何、资源0；同包`composition-recheck`及重启通过不等于修复。可继续隔离UI体验，阻止将尺寸链称为完全可靠；后续调查见下节 |
 
@@ -39,12 +41,47 @@
 | V3-BUG-024 | 控制中心默认按钮深色、悬停才恢复主题 | FIXED / CODE + CONTROL STATES（候选21，2026-09-27） | system浅色模式写到框架共享画刷，真实红测复现Normal深灰/PointerOver浅色；本地资源隔离、完整状态与弹窗样式修复。四主题及保存system重启共378状态读回通过；不是OS hover或高对比认证，见输入报告§6 |
 | V3-BUG-025 | 半透明Lamp展开过程及终态标题下浅灰 | FIXED / NATIVE PHASE PIXELS + USER ACCEPTED UI/ANIMATION（候选24） | 候选23仅修终态，候选24在每次HRGN扩大后清新区域，四组三阶段24点差值0。用户随后明确“目前的UI，动画等都做得挺不错了”，登记当前体验认可；不扩为原速全部GPU帧/HDR/混合DPI认证，见[报告§8](LR_R5_POINTER_AND_MODULE_REVIEW.md#8-候选24展开过程灰底与ab不透明度对照) |
 | V3-BUG-026 | 纵向循环在原顶部/底部停顿后继续滚动可能失效 | OPEN / USER-REPORTED / DEFERRED BY USER（2026-09-27） | 用户说明持续滚动正常、停下再滚偶发失效，当前大致可用并明确后续再修；不阻塞R5收口，不计为已修或循环全场景通过，详见下节 |
+| V3-BUG-027 | 热度投影后新成员集合被旧item-set预校验阻断 | FIX IMPLEMENTED / MANAGED CONTINUOUS VERIFIED（2026-09-30） | R6第三批红例layout-05，按owner/member版本匹配热度后candidate10完整链与重启通过；不放宽CAS/兼容门，原生/真实文件不外推 |
+| V3-BUG-028 | 新建SQLite备份经只读验证后产生WAL/SHM，显式恢复拒绝 | FIX IMPLEMENTED / CONTRACT + PHYSICAL-MODULE RESTORE（2026-09-30） | D physical-03确认；仅在新备份未发布副本中封存DELETE journal，重复只读验证不改字节且可恢复。未删旧sidecar，未放宽恢复安全门；见下节 |
+| V3-BUG-029 | 雨云没有可拖动入口，用户期望按住云朵移动海报 | FIX IMPLEMENTED / MODEL + PUBLISHED GEOMETRY；NATIVE PENDING | candidate07云作为唯一标题，真实实体带/按钮优先/空白排除，沿原capture/标题/R4；XAML槽位与发布命中一致，缺模块回退通过。原生首拖/接管尚待解锁及人工，不标CLOSED |
+| V3-BUG-030 | 透明背景上收展/更多按钮难以辨认 | FIX IMPLEMENTED / XAML CONTRAST STRUCTURE；USER PENDING | candidate07白glyph＋独立近不透明底板，不受内容背景alpha影响；实际矩形/画刷读回通过。不同桌面颜色、0/25/100%和窄云视觉待人工 |
+| V3-BUG-031 | Rain及深夜书桌展开途中偶发底部闪白条，结束消失 | DEFERRED BY USER（2026-09-30）；ROOT CAUSE UNCONFIRMED | 用户要求先列入BUG清单，不阻塞RR-01～06其余项。预布局/固定原生容量已存在；Rain/Lamp各5轮、927张桌面局部图未复现，用户同轮亦未见，不是修复PASS。保留原报告、候选及取证入口，后续凭反例再判因，不能用动画提速冒充修复。 |
+| V3-BUG-032 | A收展时B手动收展被拒绝，须A完成后再次点击 | CORE FIX / WinUI GROUP + R4 + FULL CAS；MATRIX/NATIVE PENDING | candidate07独立两组即时启动，扫掠相交按最新意图排队，完整CAS重求解/单revision、一组失败不回滚另一组通过；标题/外框仍全局协调，自动交叉/无关Item实际矩阵及真实按钮人工尚未齐，不宣称所有操作并发 |
 
 具体输入链、图钉边界、候选与未过项见[输入与模块报告](LR_R5_POINTER_AND_MODULE_REVIEW.md)。模块可移除是DEC-027目标及独立方案，不把“当前不能删Lamp”伪装成已经修复的Bug。
 
 候选20后续用户反馈：其他样式、灯光、图钉交互“都很不错”，对应范围登记用户正向体验，BUG-023补充USER POSITIVE；未将这句话扩大为BUG-022全部桌面手势或所有图钉反例的逐项确认。
 
 后续新增记录继续分配稳定编号；关闭须写明候选、证据和复测范围，不以一次未复现或纯模型PASS关闭。
+
+## V3-BUG-029～032：Rain人工反馈与跨海报共享门
+
+用户在`rain-candidate08`、`out/lr-rain-review/data01`体验中提出四项问题，并明确：按钮辨识/白条目前仅测试Rain；B的收展没有延迟执行，必须A结束后重新点。对其他操作仅是用户怀疑，不能登记为全部已经原生复现。
+
+源码及日志核对：
+
+- `PosterVisualWindow.SceneHost.cs`将scene root设为不可命中；`BuildInputLayout`仅追加顶部TitleBar。云朵的几何/风动并未注册标题拖动语义。这原本符合“装饰不接输入”的旧范围，但不满足本次要求；DEC-031进一步要求云朵融入唯一可模板化标题组件，不能保留旧标题条后另造云拖动逻辑。宿主统一解析命中/动作并复用原capture，模块不得自行拖HWND或写状态。
+- `CreateCircleGlyph`使用固定浅灰TextBlock，无独立底板；背景透明使桌面颜色直接影响对比度。当前没有调整整窗或按钮Opacity的链路，不把“看不见”误报为功能控件消失。
+- `CommitSpatialFrames`仍在HRGN提交/表面读回后调用ClearExposedVisualBackground，完成时还有FinalRestore清底。调用成功、几何一致及XAML截图都不保证曝光帧无白条；需先留原速像素反例，未确定是视觉HWND、输入岛、原生底面或提交时序。
+- `PosterSpatialRuntime.Posture.cs`的单一`_posture`及SetCollapsed全局忙拒绝，与验收日志中多次`spatial.posture_result`失败“另一个拖缩/收展正在进行”吻合（2026-09-30 15:56，UTC+08）。不是B参数被A覆盖，也不是已安排延后执行。
+- 单纯把`_posture`换字典不足：PostureRun.ReadsCurrent校验全部海报版本；BeforeManualIntent会取消任何当前自动任务；`IsSpatialBusy`还被内容激活、拖动、内容编辑/菜单、定位/中心编辑等调用。源代码风险已经确认，但逐项原生症状仍待矩阵验证。导入恢复/全局环境变更等真正全局操作需要继续受保护，不能一律改为单张放行。
+
+整改范围与分层出口归[模块记录§7](LR_SCENE_MODULE_EXECUTION.md#7-rain人工反馈修订入口2026-09-30)。保留candidate08的自动PASS证据，但Rain人工状态改为NEEDS REVISION，不进入R7；当前尚未修改生产代码或宣称任何一项已修。
+
+后续补充：用户要求加快收展。只读日志最近六次单参与者成功收展136帧、nominal约1088ms、started至result约2325～2364ms；源码存在细分帧最小间隔和每次Rendering只取一帧的时长放大机制。提速单列RR-04，不并入BUG-031根因，也不能靠更快遮住白条；本轮仅制定计划。
+
+## V3-BUG-028：备份只读验证生成sidecar，随后恢复被拒
+
+D移除模块全链中的physical-03复现：BackupDatabase把源库WAL journal头带入目标；备份目标关闭后，公开只读验证仍创建-wal/-shm。恢复原有“standalone closed snapshot”门因此正确拒绝。此问题不是模块参数丢失，也不是BUG-019并发初始化。
+
+修订只操作新建、未发布、由程序独占的临时备份：checkpoint(TRUNCATE)→journal_mode=DELETE→关闭并确认无sidecar→原校验→原子发布。源库、用户文件、既有备份及其sidecar均不清理；有sidecar的旧备份仍拒绝，不绕安全门。
+
+红例为out/lr-module-cd-evidence/contracts/module-d-backup-red.trx；绿例module-cd-full-05.trx 2233通过；physical-04证明缺模块时创建备份→公开验证→实际恢复→再启动→装回参数逐字不变、退出资源0。原physical-03失败材料保留。仅认证新备份链，不承诺自动修复已有不独立备份。
+## V3-BUG-027：热度投影后合法成员替换被旧版本预校验拒绝
+
+2026-09-30在R6第三批同包连续门发现：热度提案已接受→结束保护→替换为新成员集合时，`ProjectContentEdit`仍拿旧item-set的heat校验新作者意图，抛出stale/different item set，合法CAS未执行。原配置未丢失，但成员更新被阻断。
+
+已修：仅当owner/item-set一致才派生heat；新集合先验证新作者布局，CAS失败仍保留旧last-good，成功后由原成员重置流程失效旧heat。未放宽CAS或旧区域/硬位置兼容门。红证据`out/lr-r6-batch3-evidence/layout-05`；candidate10三海报完整链446检查及同库重启通过。状态为**FIX IMPLEMENTED / MANAGED CONTINUOUS VERIFIED**，不外推真实文件接入或全部原生体验。
 
 ## V3-BUG-026：纵向循环停顿后继续滚动可能失效
 

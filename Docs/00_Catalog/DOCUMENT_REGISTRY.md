@@ -1,6 +1,6 @@
 # DesktopUp V2 V3 文档登记表
 
-最后检查：2026-09-27（DEC-029恢复推进，R5核心收口与代码/计划审计；BUG-026延期；最小模块/Rain获准但未制作；旧交付按产物保留）
+最后检查：2026-09-30（RR-02/04与RR-05核心实现，RR-03白条延期；candidate07部分同包门通过，RR-06余门/人工待解锁，不进R7）
 
 本表只登记文档职责与资料类型，不独立裁决任务状态：当前任务查[细化工作流](../A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md)，运行交接查[HANDOFF](../A_Project/40_Implementation/V3-04/HANDOFF.md)，产品决定查[统一索引](../A_Project/10_Requirements/REQUIREMENTS_RISKS_AND_OPEN_QUESTIONS.md)。HISTORICAL表示对应版本证据，不是新待办；PLANNED不表示已有实现。
 
@@ -9,13 +9,14 @@
 | [PREVIEW_INSTALLER_DELIVERY](../A_Project/40_Implementation/V3-04/PREVIEW_INSTALLER_DELIVERY.md) | Preview一键打包、自选路径、新建默认值、配置隔离、撤回与验证证据 | 旧包已回收；脚本2175合同/本机门通过，目标机/普通权限未验；不代替R6/R7出口 |
 | [AGENT_COLD_START](AGENT_COLD_START.md) | 可复制的agent冷启动入口、当前Git/阶段快照、分层阅读、实现核对、协作与证据边界 | 当前接手入口；只导航/核对，不独立裁决产品状态 |
 | [LR_R5_CLOSEOUT_AND_PLAN_AUDIT](../A_Project/40_Implementation/V3-04/LR_R5_CLOSEOUT_AND_PLAN_AUDIT.md) | R5原出口证据、用户认可边界、现源码与旧计划差异、遗留项和R6入口 | CORE CLOSED / 携带明确限制；不是R7验收 |
-| [CONTENT_SCENE_MODULE_DECOUPLING_PROPOSAL](../A_Project/20_Architecture/CONTENT_SCENE_MODULE_DECOUPLING_PROPOSAL.md) | 通用宿主/可删除Lamp/配置保留与恢复；解耦后Rain验证标准 | DEC-029 APPROVED / NOT STARTED；排期归LR计划§8 |
+| [CONTENT_SCENE_MODULE_DECOUPLING_PROPOSAL](../A_Project/20_Architecture/CONTENT_SCENE_MODULE_DECOUPLING_PROPOSAL.md) | 通用宿主/模块配置保留恢复；Rain及唯一可模板化标题边界 | RR-02声明式云标题已接宿主原输入；缺模块回退和参数保真复验，原生人工未验；详见模块§10 |
 | [LR_R5_POINTER_AND_MODULE_REVIEW](../A_Project/40_Implementation/V3-04/LR_R5_POINTER_AND_MODULE_REVIEW.md) | 候选18～25输入/主题/背景/循环根因、红绿与运行证据 | 分项证据保留；R5核心出口归收口报告，BUG-026延期，复杂组合及模块未完成 |
 | [LR_R5_UI_C_INTENT_ALIGNMENT](../A_Project/40_Implementation/V3-04/LR_R5_UI_C_INTENT_ALIGNMENT.md) | E1六任务/最终决定/UI C与生产纠偏的追溯 | 审查起点及迭代历史；当前R5核心收口不由早期缺口表重新否决，也不扩大到R7 |
 | [CONTENT_LAYOUT_COMBINATION_AUDIT_V1](../A_Project/20_Architecture/CONTENT_LAYOUT_COMBINATION_AUDIT_V1.md) | 已决手势、BM行为映射、循环/旧约束/双入口19条反例及源码差异 | R1 DESIGN CONTRACT READY；DEC-024/025收清选择，正式工程门仍待验证 |
 | [LR_R4_CONFIGURATION_FIDELITY](../A_Project/40_Implementation/V3-04/LR_R4_CONFIGURATION_FIDELITY.md) | 配置字段/能力、真实事务与代表模板原生绑定证据；限制与后续进程/视觉门 | R4 SAVE CONTRACT + SAMPLE READY，非R7同包验收 |
 | [LR_MILESTONE_EXECUTION](../A_Project/40_Implementation/V3-04/LR_MILESTONE_EXECUTION.md) | 当前里程碑、协作文件归属、兼容矩阵、恢复材料与工具链 | R1～R4出口保持 / R5核心收口 / R6实施中；主agent持当前文件 |
-| [LR_R6_CONTINUOUS_OPERATIONS](../A_Project/40_Implementation/V3-04/LR_R6_CONTINUOUS_OPERATIONS.md) | R6分批范围、循环抓取及主动缩框实现、源码/候选证据及下批入口 | 第一批及2A主动下限CODE/CONTRACT/MANAGED APP PASS；2B被动空间、第三批及原生人工未完成 |
+| [LR_R6_CONTINUOUS_OPERATIONS](../A_Project/40_Implementation/V3-04/LR_R6_CONTINUOUS_OPERATIONS.md) | R6实现、证据、人工反馈及§9收口/携带清单 | CORE CLOSED / DEC-030；真实环境等未验项转R7 |
+| [LR_SCENE_MODULE_EXECUTION](../A_Project/40_Implementation/V3-04/LR_SCENE_MODULE_EXECUTION.md) | B/C/D与Rain历史证据；RR-01～06当前实现、包绑定和续验入口 | §10为最新：RR-02/04及RR-05核心接线，2274合同/组与R4通过；BUG-031延期；RR-06未封存，等待解锁续验 |
 | [CONTENT_LAYOUT_EXPERIENCE_REVIEW_V1](../A_Project/20_Architecture/CONTENT_LAYOUT_EXPERIENCE_REVIEW_V1.md) | 五风险/两缺口、基础手势、六任务、整图承接与模式退出对照 | E1六任务反馈收清（06c提示后通过）；非生产合同门 |
 | [CONTENT_LAYOUT_OPERATION_SPACE_REVIEW_V1](../A_Project/20_Architecture/CONTENT_LAYOUT_OPERATION_SPACE_REVIEW_V1.md) | 新操作基线/退出A、被动极端不足时临时双轴、恢复与反例矩阵 | DEC-022/023已确认产品边界；工程待验证，不细化控件 |
 | [CONTENT_TEMPLATE_SCHEMA_UI_C](../A_Project/20_Architecture/CONTENT_TEMPLATE_SCHEMA_UI_C.md) | 已采纳UI C、模板域收纳、动态参数和受控装入边界；生产落地导航 | UI BASELINE ACCEPTED / DEC-017；排期归LR计划§4.2，非生产验收 |

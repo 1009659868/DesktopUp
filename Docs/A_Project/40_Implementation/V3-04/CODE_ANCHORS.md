@@ -1,5 +1,71 @@
 # V3-04 代码锚点
 
+## 2026-09-30：RR唯一标题、呈现节奏与收展组隔离
+
+- `src/DesktopUp.Domain/PosterTitleChrome.cs`＋`src/DesktopUp.App/PosterVisualWindow.TitleChrome.cs`：唯一云标题实体/保守命中带/固定动作槽位/独立底板；`PosterVisualWindow.cs`发布原输入岛，`src/DesktopUp.Domain/PosterPresentationParameters.cs`共用度量。
+- `src/DesktopUp.Domain/TemplateParameterValues.cs`、`Modules/Rain/Domain/RainDeclaration.cs`、`src/DesktopUp.App/PosterVisualWindow.SceneHost.cs`：注册能力→已校验颜色/标题kind→只读scene context。场景失败不带走宿主标题。
+- `Application/SpatialAnimationSchedule.cs`：Create保留证明帧，CreatePresentation按时间合并同段，cursor精确前缀；`PosterSpatialRuntime.Posture.cs`原R4呈现/恢复与Title接管兼容。
+- `Application/PostureGroupCoordination.cs`：整路径预约、完整CAS rebase、pending策略；`App/PosterSpatialRuntime.PostureGroups.cs`：多收展组、最新意图、失效/peer及无关编辑准入；`PosterSpatialRuntime.Title.cs`仍保留全空间捕获保护。
+- `App/App.PostureGroupsProbe.cs`＋`scripts/probe-posture-groups.ps1`：实际WinUI/R4/SQLite隔离门，不模拟原生鼠标；`PosterTitleChromeTests`、`SpatialPresentationTimingTests`、`PostureGroupCoordinationTests`为对应纯合同。
+- 同包证据与未验范围归[模块§10](LR_SCENE_MODULE_EXECUTION.md#10-rr整改生产接线与同包验证2026-09-30)。BUG-031延期，旧取证入口保留，不以提速当修复。
+
+## 2026-09-30：RR-01取证与唯一标题纯模型（未接生产）
+
+- `src/DesktopUp.Domain/PosterTitleChrome.cs` / `tests/DesktopUp.Contracts.Tests/PosterTitleChromeTests.cs`：固定动作/名称、保守云抓取区、空白透传和基础回退；纯模型，原生产标题仍未切换。
+- `PosterVisualWindow.Transition.cs/ReadTransitionForProbe`：显式诊断读取根/structure/clip/footer与控件身份；`BeginTransitionLayout/ApplyTransitionViewport`仍为原固定收展租约，responsive缩框独立。
+- `Modules/Lamp/App/App.BackdropContinuousProbe.cs` / `App.BackdropProbe.cs`：显式有界、不暂停动画的连续取证；自身WGC/桌面局部双平面或完全不启用WGC的screen-only分支；采样等待扣除BitBlt时间。前台遮挡检查有已知漏检，必须核图；正式启动不采集。
+- `scripts/probe-posture-live.ps1`：独立源库副本/新out/hash/模式守卫；`scripts/analyze-posture-capture.ps1`：离线宽白行筛选及QPC近似关联，未命中不是PASS；`scripts/verify-rain-title-sample.cjs`：独立headless局部HTML检查。当前结论见[RR-01基线§9](LR_SCENE_MODULE_EXECUTION.md#9-rr-01无遮挡重复基线2026-09-30)，RR-02生产未接。
+
+## 2026-09-30 当前：Rain受信任模块和独立验证入口
+
+- Modules/Rain/Domain/RainDeclaration.cs：8项专属参数和通用TransparentSurface/ReplacesMetaText声明；无无效背景透明度控件。
+- Modules/Rain/Application/RainSceneMotion.cs：云/雨/微光的纯数学、64滴上限、暂停/时钟重置不补跑；不参与item solver。
+- Modules/Rain/App/RainSceneInstance.cs、RainRegistration.cs：固定装饰树、共享时钟帧驱动、保留内容身份/选择样式；模板册样片独立注册。固定代码内的原型路径不是导入XAML执行入口。
+- Application/SceneFrameContext.cs新增只读HeaderBottom/ContentTop/FooterTop；ScenePresentationAdapter按可信能力声明处理透明背景和顶部装饰，宿主无Rain/Lamp模板ID判断。
+- RainSceneContractTests.cs：13项追加合同；ArchitectureTests同时检查Lamp/Rain无输入/事务/私有计时器依赖。
+- Modules/Rain/App/App.RainSceneProbe.cs、App.RainResourceProbe.cs：实际表单/颜色/副本/热装入/逐海报参数/重启及1/3/6最大雨量/暂停基线；经App显式隔离目录/单probe门。
+- scripts/probe-rain-scene.ps1、verify-scene-module-removal.ps1 -Module Rain|Lamp：连续门/资源采样、实际不复制对应模块源码后构建/备份/恢复。
+- scripts/start-lr-rain-review.ps1：只从封存证据和完整产物hash启动独立三海报人工候选，不用旧包或日常配置冒充验收。
+- Infrastructure/SqliteStateStore.cs的CreateBackupFromOpenConnection、StateBackupRecoveryTests.cs：BUG-028新备份封存DELETE journal红绿门，未清理旧备份或修改恢复拒绝规则。
+
+以下同日B/C描述为对应阶段历史，当前结论以[模块实施记录](LR_SCENE_MODULE_EXECUTION.md)为准。
+
+## 2026-09-30 本轮：C参数兼容与D物理移除门
+
+- Domain/TemplateParameterValues.cs、TemplateRecipeInstancePolicy.cs：通用不可变参数、能力声明、逐模板实例；Compatibility/LegacyTemplateParameterCalls.cs仅适配v3/v4旧灯光调用。
+- Domain/TemplateRecipes.cs、PosterPresentationParameters.cs：入站严格校验与存量缺能力只读分开；缺模块不丢原JSON，不准通过保存重置。
+- Directory.Build.targets、Modules/Lamp/{Domain,Application,App}：构建期可选源码收集和受信任初始化注册；Lamp声明/运动/绘制/样片及专属诊断在模块内，不是用户目录插件加载。
+- App/PosterVisualWindow.CaptureProbe.cs、PosterSpatialRuntime.SurfaceProbe.cs：通用内容捕获和原收展观察接口，不能随某个装饰模块一起删除。
+- SceneModuleCompatibilityTests.cs、App.SceneModuleProbe.cs、tests/DesktopUp.SceneModuleFixture、scripts/verify-scene-module-removal.ps1：异构schema、只读存量、物理排除源码构建、同库启动/备份/恢复/重新装回的证据入口。D运行结论见模块记录。
+
+## 2026-09-30 当前：模块B通用宿主与基础绘制
+
+- `Application/SceneFrameContext.cs`：只读几何/指针/暂停原因，以及逐实例故障锁；不含输入或持久命令。
+- `Application/ScenePresentationAdapter.cs`：v4旧保存字段的只读兼容桥，输出通用bindings与SurfacePaint；未迁移持久模型，C仍须消除Lamp类型依赖。
+- `App/PosterVisualWindow.SceneHost.cs`：装饰实例生命周期、单实例故障隔离；`SurfacePaint.cs`与`Backdrop.cs`独立静态绘制；宿主无Lamp分支。
+- `App/PosterSpatialRuntime.SceneMotion.cs`：原唯一共享时钟/被动观察/减少动效和资源账本；没有新输入通道。
+- `App/Scenes/IPosterSceneInstance.cs`、`SceneModuleRegistry.cs`、`LampSceneInstance.cs`：可信编译期绘制边界、注册入口和独立Lamp。物理可移除清单/通用参数保存属于C/D，未以本次类提取冒充完成。
+- `SceneHostContractTests.cs`与`ArchitectureTests.cs`：暂停、材质/参数保全、故障不重试与依赖边界；`App.LampParameterProbe.cs`新增装饰故障注入，沿受隔离保护的旧入口验证内容/其他海报/背景/资源不受损。
+
+旧`PosterVisualWindow.LampScene.cs`和`PosterSpatialRuntime.LampMotion.cs`已迁入上述文件；历史定位按原候选/源码快照查阅。当前验证见[模块记录](LR_SCENE_MODULE_EXECUTION.md)。
+
+## 2026-09-30 当前：R6第三批资源与连续组合
+
+- `Domain/ContentLayoutFlow.ProjectTiles`可选一节距overscan准入，不更改viewport/loop语义；`Application/ContentAssetDemand.cs`复用tile，去重ItemId，visible优先，完整DPI/尺寸/source version key。
+- `Application/ContentAssetCache.cs`保留真实flight预算，新增槽位完成通知/`IsLoading`；`App/PosterVisualWindow.ContentAssets.cs`负责合并补位、同key返回、失败不自旋及生命周期/可见key再校验。
+- `Application/ContentSourcePorts.cs`是可信view/resource/open适配与安全元数据投影；`App/PosterSpatialRuntime.ContentSource.cs`按目录身份绑定，`PosterVisualWindow.ContentSource.cs`负责notify订阅、版本/编辑失效和R4安全点。普通生产仍DEMO，不执行真实文件/脚本。
+- `ContentProposals.ProjectContentEdit`仅用同owner/itemset的热度校验候选，新成员意图不套旧热度；CAS成功前不清空原last-good。来源R4刷新复用原proposal恢复入口。
+- `App.ContentSourceProbe.cs`＋`probe-content-source.ps1`的隔离1/3/6受控provider；`ContentLoopDragProbe`新增接缝Resize/history。全量旧smoke夹具更新为合法跨轴空间与保留旧区域，原生产保护不放宽。
+- 人工入口`scripts/start-lr-r6-review.ps1`复用已绑UI C门并追加R6源/浏览/资源/合同/R4证据；`CheckOnly`不启动、不冒称验收。阶段及最终候选只查[R6记录](LR_R6_CONTINUOUS_OPERATIONS.md)与HANDOFF。
+
+## 2026-09-28 当前：R6第二批2B
+
+- `Domain/ContentSpaceOwnerAdmission.cs`从原空间owner的工作区/DPI和完整Item下限分类原因；既有`ContentSpacePolicy.cs`决定准入/安全点/恢复，新增`ContentSpacePublication.cs`只保存最后成功发布，拒绝部分失败、pending和过期见证。
+- `App/PosterVisualWindow.ContentSpace.cs`管理RAM环境/发布见证及受限导航；`PosterSpatialRuntime.Effective.ContentEnvironment`复用运行代次；`PosterVisualWindow.Show/Recover/AdoptPosterProjection`接权威环境和最新作者/成员；`PrepareSpatialFrame/CommitSpatialFrames/ApplyFrame`区分候选与成功整组提交，`Transition.RestoreTransitionLayout`使终态重算。
+- `Content.cs`/`ContentEditing.cs`/`ContentMenu.cs`统一携带获准BrowseMode到Reclip、绘制、命中与抓点；`Application/ContentWheelScrollPolicy.cs`仅受限时允许另一轴且有限夹紧；`ContentFeedback.cs`在原底栏显示导航；`ContentProposals.cs`受限时保留有界热度提案、恢复后排队消费。
+- `ControlCenterWindow.ContentFields.cs`的草稿增加surface session/空间epoch见证，原文保留但旧草稿不能自动复活；海报物理切换先取消旧手势/定时回调。
+- `ContentSpacePublicationTests.cs`新增12项合同；`PosterVisualWindow.ContentSpaceProbe.cs`→`App.ContentBrowseProbe.cs`→`scripts/probe-content-browse.ps1`在真实生产通道输入模拟显示事实，中心探针复用真实草稿校验器。证据/边界见[R6记录§6](LR_R6_CONTINUOUS_OPERATIONS.md#6-第二批2b被动空间不足与恢复2026-09-28)。下一步tile资源/假源及完整连续门；以下“2B未接”为历史。
+
 2026-09-28按需打包：[Preview流程/撤回与证据](PREVIEW_INSTALLER_DELIVERY.md)。`App/DistributionBuild.cs`＋`DesktopUpPreview`隔离身份/root并读取有界声明式新建默认文件；`Application/PosterCreationDefaults.cs`与17项合同校验内置模板、背景不透明度及格式边界。`PosterVisualWindow.CreateInitialDefault`和`PosterSpatialRuntime.ControlCenter.Create`共用该入口，复制分支/保存配置不受影响；`App.xaml.cs`记录实际默认值及无效文件警告。`Properties/PublishProfiles/Preview-x64.pubxml`负责双自包含及可调.NET版本。根`Package-Preview.cmd`→`scripts/package-preview.ps1`读取`packaging/preview/package-settings.json`，执行新目录打包、源码/测试绑定、licenses与hash；`installer.nsi`负责自选路径、安装位置绑定和精确安全卸载。主线布局/schema及下方R6阶段不变；完整用法见[打包README](../../../../packaging/preview/README.md)。
 
 最新（2026-09-28，R6第二批2A）：`Domain/ContentFrameMinimumPolicy.cs`从唯一solver得跨轴下限，`PosterVisualWindow.Content.cs/TryReadContentFrameMinimum`合并当前有效与作者下限，`PosterVisualWindow.OnInput`冻结到原空间会话；`PosterSpatialRuntime.ControlCenter`先验当前呈现，`ControlCenterSpatial`/`SpatialGestureCommitPolicy`重验权威内容；`PosterFrameResizePolicy`安全拒绝不可能固定边缩框。`ContentFrameResizeTests`及`PosterVisualWindow.ContentFrameProbe`→原浏览探针提供证据，见[R6记录§5](LR_R6_CONTINUOUS_OPERATIONS.md#5-第二批2a主动缩框下限2026-09-28)。下一步仍为2B ContentSpacePolicy/ReadOnlyOverflow生产发布/恢复接线，不重做主动下限；以下第一批“主动下限待做”为当时快照。

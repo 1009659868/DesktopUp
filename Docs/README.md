@@ -1,5 +1,13 @@
 # DesktopUp V2 文档入口
 
+Git同步检查点（2026-09-30，本次用户授权）：源码`5f753e1`及相邻文档提交保存R6后续、模块/Rain和RR整改，目标`origin/impl/poster-redesign-V3`；Release构建及2274合同复验通过。阶段不变：RR-06待补验、白条延期，详见[交接](A_Project/40_Implementation/V3-04/HANDOFF.md)。本地笔记/配置/产物不上传，下方“无Git授权/未提交”是此前快照。
+
+当前（2026-09-30）：[RR整改实施§10](A_Project/40_Implementation/V3-04/LR_SCENE_MODULE_EXECUTION.md#10-rr整改生产接线与同包验证2026-09-30)。唯一云标题/可读按钮、安全提速、受影响收展组隔离已接生产；candidate07全量2274及双组WinUI/R4/模块移除恢复通过。白条BUG-031按用户要求延期，未修复；RR-06同包余门和人工待解锁继续，不能整体标完成，不进R7。下方各次“最新/下一步RR-02”均为历史。
+
+最新入口（2026-09-30，DEC-031）：[Rain整改计划§7](A_Project/40_Implementation/V3-04/LR_SCENE_MODULE_EXECUTION.md#7-rain人工反馈修订入口2026-09-30)已补齐，当前仅文档；下一步RR-01反例基线与唯一标题合同，后续标题/对比度→白条→安全提速→组隔离→同包复验。Rain仍NEEDS REVISION，不直接进入R7。下方为此前工程/验收范围。
+
+当前实施（2026-09-30，DEC-030）：**R6 CORE CLOSED（用户批准携带未验项），最小模块B/C/D自动门通过；雨夜窗边生产接线与最终自动门通过，当前人工发现四项问题，待修订**。收口边界见[R6记录§9](A_Project/40_Implementation/V3-04/LR_R6_CONTINUOUS_OPERATIONS.md#9-2026-09-30-r6收口决定与携带项)，当前工程见[模块实施记录](A_Project/40_Implementation/V3-04/LR_SCENE_MODULE_EXECUTION.md)。真实显示/DPI等不补记PASS，转R7携带；以下同日/更早R6未关闭及下一步描述均为历史。
+
 当前同步（2026-09-28）：按用户授权保存 R6 第一批/2A、可配置 Preview 打包及相关文档到当前 `impl/poster-redesign-V3`；源码检查点 `c815015`，2175 合同复验通过。提交/远端结果以 [最新交接](A_Project/40_Implementation/V3-04/HANDOFF.md)和实际 Git 为准；本地笔记、配置、安装产物及运行证据不上传。下一步仍为 R6 2B，不增加人工验收结论；以下未提交/未推送描述为历史。
 
 按需维护（2026-09-28）：[Preview一键打包／自选安装路径／默认深夜书桌25%](A_Project/40_Implementation/V3-04/PREVIEW_INSTALLER_DELIVERY.md)。旧安装器已移入回收站，当前交付脚本与配置；本机自动验证通过，目标机与普通权限待验。R6下一步仍为2B，未提交推送。

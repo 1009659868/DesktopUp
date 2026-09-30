@@ -1,8 +1,8 @@
 # DesktopUp V2 — Poster Redesign V3
 
-当前工作分支：`impl/poster-redesign-V3-wb`
+当前工作分支：`impl/poster-redesign-V3`（接手时重新核对Git）
 
-状态（2026-09-27）：`LR-R5 CORE CLOSED；R6 READY / NOT STARTED`。当前仍为DEMO内容；R5核心收口不等于最终可靠性验收或真实文件接入完成。
+状态（2026-09-30）：R5 / **R6 CORE CLOSED**；模块B/C/D与物理移除恢复门通过，雨夜窗边已接生产。唯一云标题/按钮、安全提速及核心收展组隔离已修订；[RR-06同包与人工余门待完成](Docs/A_Project/40_Implementation/V3-04/LR_SCENE_MODULE_EXECUTION.md#10-rr整改生产接线与同包验证2026-09-30)，BUG-031白条用户延期、未解决。源码检查点`5f753e1`及相邻文档保存当前状态；构建/2274合同复验通过，仍为DEMO，不代表稳定发布或真实文件接入。
 
 先读[当前执行入口](Docs/00_Catalog/ACTIVE_PATH.md)、[R5收口与代码/计划审计](Docs/A_Project/40_Implementation/V3-04/LR_R5_CLOSEOUT_AND_PLAN_AUDIT.md)和[交接](Docs/A_Project/40_Implementation/V3-04/HANDOFF.md)。已批准顺序为R6组合→最小模块解耦→雨夜窗边→R7可靠性/配置保真→R8接入交接→V3-05真实内容。BUG-026停顿后续滚按用户决定延期。
 

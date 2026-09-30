@@ -1,5 +1,13 @@
 # DesktopUp V2 当前执行入口
 
+Git同步检查点（2026-09-30）：用户本次授权保存并推送当前V3状态，源码`5f753e1`及相邻文档提交，目标`origin/impl/poster-redesign-V3`；不涉及其他分支。构建和2274合同复验通过，不新增人工PASS；当前工作仍为RR-06补门。具体范围见[交接](../A_Project/40_Implementation/V3-04/HANDOFF.md)，下方“不Git同步/无授权”属于此前任务边界，不作为本次同步阻挡或未来自动同步授权。
+
+当前执行：RR-06 IN PROGRESS。RR-01基线保全、RR-02/04及RR-05核心生产接线已完成；BUG-031/RR-03按用户要求延期而非PASS。candidate07全量2274及双组WinUI/R4/模块移除恢复通过；指针读取不可用、场景安全暂停，待用户解锁后补动效/资源/原生人工及组合矩阵。当前证据和续做入口归[模块§10](../A_Project/40_Implementation/V3-04/LR_SCENE_MODULE_EXECUTION.md#10-rr整改生产接线与同包验证2026-09-30)。不进R7、不Git同步，下方同日旧步骤为历史。
+
+最新（2026-09-30，DEC-031）：本次仅补[Rain整改计划§7](../A_Project/40_Implementation/V3-04/LR_SCENE_MODULE_EXECUTION.md#7-rain人工反馈修订入口2026-09-30)。唯一可模板化标题、按钮对比度、白条、安全提速、跨海报受影响组隔离按RR-01～06推进；**下一步RR-01反例基线与标题合同，尚未开始新实现/验证**。Rain NEEDS REVISION，R7未开始；下方DEC-030及更早记录保留原范围，不作为跳过整改或本轮直接实施的授权。
+
+当前（2026-09-30，DEC-030）：**R6 CORE CLOSED，未验边界转R7；最小模块B/C/D自动门通过；Rain生产接线与最终自动门通过，当前人工发现四项问题，待修订**。先读[模块记录](../A_Project/40_Implementation/V3-04/LR_SCENE_MODULE_EXECUTION.md)和[当前交接](../A_Project/40_Implementation/V3-04/HANDOFF.md)。不重做R6或重新阻塞于原人工余项，也不补记它们PASS；收口范围见[R6§9](../A_Project/40_Implementation/V3-04/LR_R6_CONTINUOUS_OPERATIONS.md#9-2026-09-30-r6收口决定与携带项)。实际V3 `e698a3e`加未提交修改，无本轮Git授权。以下同日/更早状态按历史理解。
+
 Git 同步检查点（2026-09-28）：用户已授权将当前 V3 状态提交并推送同名远端；源码检查点 `c815015`，相邻文档提交保存 R6/打包进度，见 [最新交接](../A_Project/40_Implementation/V3-04/HANDOFF.md)。本次复跑 2175 合同全部通过，不新增 App/人工认证；推送结果与 HEAD 以实际 Git 核对。下方“未提交/未推送/ahead 4”均为此前快照。**最近下一步仍是 R6 第二批 2B**，不是重新实施第一批或主动缩框。
 
 按需维护（2026-09-28）：[Preview一键打包流程](../A_Project/40_Implementation/V3-04/PREVIEW_INSTALLER_DELIVERY.md)已补自选安装目录、深夜书桌/背景不透明度25%新建默认值，2175合同与本机安装/新增/重启/卸载通过；旧安装器与验证用安装器均移入回收站，当前交付脚本而非新发布包。目标机/普通权限待验，保存配置不覆盖、未Git同步；**主线仍为下述R6 2B**。
@@ -49,7 +57,7 @@ A→B→C：[DEC-019～025与需求§13](../A_Project/10_Requirements/REQUIREMEN
 | A 需求 | [七份需求](REQUIREMENTS_INDEX.md) | 通用内容、多海报、唯一中心/托盘、独立主题、热度与 AI |
 | A 架构 | [总体架构](../A_Project/20_Architecture/DESKTOPUP_V2_V3_ARCHITECTURE_V1.md)、[多海报合同](../A_Project/20_Architecture/GENERAL_CONTENT_MULTI_POSTER_CONTRACT_V1.md) | 当前设计基线 |
 | B 模块 | [模块分类](../A_Project/20_Architecture/DESKTOPUP_V2_V3_MODULE_CATALOG_V1.md) | 共享宿主恢复、独立海报会话 |
-| C 总计划/任务索引 | [制作计划](../A_Project/30_Plans/DESKTOPUP_V2_V3_IMPLEMENTATION_PLAN_V1.md)、[细化工作流](../A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md)、[04-L整改评审](../A_Project/30_Plans/V3_04_L_REMEDIATION_REVIEW_PLAN.md) | R1～R4出口保持，R5核心收口，R6下一实施；模块/Rain已批准未制作 |
+| C 总计划/任务索引 | [制作计划](../A_Project/30_Plans/DESKTOPUP_V2_V3_IMPLEMENTATION_PLAN_V1.md)、[细化工作流](../A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md)、[04-L整改评审](../A_Project/30_Plans/V3_04_L_REMEDIATION_REVIEW_PLAN.md) | R1～R4出口保持，R5/R6核心收口；模块B/C/D自动门通过；Rain自动门通过/人工发现四项问题，待修订，随后R7 |
 | C 当前工作/携带门 | [R5收口审计](../A_Project/40_Implementation/V3-04/LR_R5_CLOSEOUT_AND_PLAN_AUDIT.md)、[布局审查](../A_Project/40_Implementation/V3-04/CONTENT_LAYOUT_REVIEW_2026-09-23.md)、[缺陷清单](../A_Project/40_Implementation/V3-04/KNOWN_ISSUES.md) | 008～017已逐项核对现代码，非全部未修；026延期，019～022等边界保留，旧35门不转授当前工作区 |
 | C 历史呈现修复 | [R4](../A_Project/40_Implementation/V3-04/M07_ANIMATION_R4.md) | 白条人工确认；保留方法论与历史证据，非本轮修改 |
 | C 交接/代码/证据 | [HANDOFF](../A_Project/40_Implementation/V3-04/HANDOFF.md)、[CODE_ANCHORS](../A_Project/40_Implementation/V3-04/CODE_ANCHORS.md)、[VERIFICATION](../A_Project/40_Implementation/V3-04/VERIFICATION.md) | 当前事实与历史证据分开 |

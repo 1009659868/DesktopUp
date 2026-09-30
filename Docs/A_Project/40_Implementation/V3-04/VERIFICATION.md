@@ -1,5 +1,77 @@
 # V3-04 验证记录
 
+## 2026-09-30：Git同步前复验
+
+源码检查点`5f753e1`：独立Release构建0警告错误，全量2274合同通过、0失败/跳过，证据`out/git-sync-rr-20260930/contracts/sync-full.trx`。511份已验源码/脚本提交前零漂移；后续两脚本仅删除EOF空行，staged diff检查通过，不修改运行行为或旧证据指纹。原生App/人工没有重新执行，RR-06未完成、白条延期状态不变。仅当前V3分支同步；本地证据与配置不随Git上传。
+
+## 2026-09-30：RR生产整改与同包部分门通过，原生动效待解锁
+
+用户将BUG-031白条延期，未修复；实施详情/失败与待验入口见[模块§10](LR_SCENE_MODULE_EXECUTION.md#10-rr整改生产接线与同包验证2026-09-30)。candidate07 App `D81CE7C441881572A9EC6C663FA72E3A0B9663FF1C2953FC99AF899261F1E7A9`，2274全量合同通过、0失败/跳过，App与两个fixture构建0警告错误。不是旧诊断candidate06或原rain-candidate08。
+
+groups07两实际WinUI进程通过独立收展、链式排队、末次目标、完整CAS/单revision、单组取消和全局恢复；r4-07八故障门通过；rain-removal07/lamp-removal07各4进程实际模块排除/基础回退/备份恢复/装回保真通过。spatial-valid07六命令与spatial-single07两命令通过，逐帧稳定/容量/native提交有效，101实际提交而非768证明帧。composition07及重启通过；后续补门见模块§10.5原始路径，未齐全前不封存最终人工版。
+
+保留失败：rain01/rain03因native指针不可读、Recovery=64、SceneFrames=0在动效驱动门失败，同会话LogonUI存在；未放宽暂停策略或断言，等待解锁。spatial-07旧240高度低于night-ops最小346而拒绝展开，不能记PASS；合法360/480高度另测通过。单张首末提交约399～404ms是锁屏样本，不等于显示器动画耗时或手感确认。
+
+原生首次云拖动、按钮/空白、不同透明度视觉、1/3/6天气资源与自动手动/无关Item组合等仍需补齐；RR-06 IN PROGRESS，RR-03为延期而非绿灯，不进入R7。没有Git操作、日常配置迁移、强杀进程或删除失败材料。下方各“尚未实施/下一步RR-02”为历史阶段。
+
+同轮后续：recipes07两进程、browse07两轴托管浏览/循环连续门、layout07全部14布局/重启进程通过（基本内容1/3/6不等于Rain天气资源门）。至此本轮正式成功门共32进程，含4个缺模块变体，processes07.json确认全部error0/正常退出/资源0；先前失败不混入计数。rr-progress07.json只绑定已过证据，不是最终人工seal。最新下一步仍为解锁后的剩余动效/资源和原生组合验收。
+
+## 2026-09-30：RR-01无遮挡重复采样，未复现不等于修复
+
+详见[模块记录§9](LR_SCENE_MODULE_EXECUTION.md#9-rr-01无遮挡重复基线2026-09-30)。Rain/Lamp各5轮、10个正常退出进程、927张桌面局部图（另468张WGC自身窗口图），均无error/退出资源0、源库/包hash不变；宽白行扫描未命中，已逐轮抽查无遮挡。最后两轮不启用WGC、约58.7/57.2Hz，亦未复现。用户反馈“这轮没有看到白条”。不是原生像素全帧认证或白条PASS；BUG-031继续OPEN。
+
+candidate05/06诊断构建0警告错误；新增分析脚本依赖修订后通过；2262全量再次通过/0失败跳过，rr01-desktop-full.trx。未改正式动画、标题或清底行为，未Git同步；下一步RR-02唯一标题/可读按钮，白条反例要求保留于RR-03。
+
+## 2026-09-30：RR-01首批合同与不暂停动画取证
+
+权威记录见[模块§8](LR_SCENE_MODULE_EXECUTION.md#8-rr-01首批取证与唯一标题合同2026-09-30)。新增标题纯合同16/16，全量2262/2262、0失败跳过；局部HTML由独立headless Edge验证固定动作槽、收展、拖动/空白及375px布局，pageerror0，不是原生输入。浏览器工具因1385无法运行，未连接用户浏览器。
+
+隔离candidate02/03/04构建0警告错误。live01/02/03捕获进程正常退出/error0/资源0，源验收库与各自运行产物hash不变。44帧own-HWND未复现白条；live02的32组桌面局部被遮挡，不具备视觉判定资格。live03新增前台检测后取得33组、ScreenOccluded=0，但抽查仍有其他窗口覆盖，说明检测存在漏检，该批桌面证据同样作废；不标保护通过。原速含义仅为不暂停/不改动画配置，采样开销/遗漏帧明确存在，不能认证所有GPU帧。用户最新确认Rain/Lamp偶发且结束消失，BUG-031仍OPEN。未改正式收展/R4行为，无Git同步。
+
+## 2026-09-30：DEC-031整改计划对齐（DOCS ONLY）
+
+更新需求决定、标题模块职责、[Rain整改批次§7](LR_SCENE_MODULE_EXECUTION.md#7-rain人工反馈修订入口2026-09-30)、主计划/任务索引/登记表及接手入口；RR-01～06尚未实施。只读源码和既有日志显示最近六次成功单海报收展均136帧，nominal约1088ms，started至success约2325～2364ms；这是细分/逐Rendering推进导致时长放大的证据，不是输入到首帧或桌面像素认证，也未确定白条根因。
+
+本轮前后核对513份受Git清单覆盖的非文档文件（排除Docs、README、本地.workbuddy及out）：集合和SHA256均无变化；未改生产/脚本/配置，未构建、启动App或运行测试。文档空白检查通过；原自动门计数和人工状态不增加。BUG-029～032仍OPEN，Rain NEEDS REVISION，下一步RR-01反例基线与唯一标题合同；旧包/封存证据保持，无Git写操作。
+
+## 2026-09-30：Rain人工NEEDS REVISION（四项反馈）
+
+用户在candidate08反馈云拖动入口、透明面按钮辨识、展开白条及跨海报收展拒绝；第2/3仅Rain已测，第4明确是手动点击B直接无效而不是延迟。源码及`out/lr-rain-review/data01/logs/desktopup.jsonl`确认全局忙门与多次拒绝；白条尚未取得原速native反例，未宣布根因或修复。四项登记BUG-029～032，当前行动归[模块记录§7](LR_SCENE_MODULE_EXECUTION.md#7-rain人工反馈修订入口2026-09-30)。此次没有改生产、重跑自动门或新增PASS；旧自动证据保持其原范围，Rain不进入R7。
+
+## 2026-09-30：C/D物理可选模块与Rain最终自动门
+
+完整记录归[模块实施§5～6](LR_SCENE_MODULE_EXECUTION.md)，以该页和封存候选为准。C/D先取得2233合同与Lamp缺模块全链；其间备份BUG-028有失败反例→新副本seal修复→完整恢复证据，未删除旧sidecar、未放松恢复安全门。
+
+Rain最终`rain-candidate08` App **0E57F9A9BE4CA24364FB94E5E5D8F73F45267BFC4A42A930D34E0D8037626B90**，三个工程构建0警告/错误；`out/lr-module-cd-evidence/contracts/rain-full-04.trx` 2246通过，0失败/跳过。Rain实际动态控件/新配方装入/独立参数/保存重启、1/3/6资源、Lamp、Recipes/Composition含重启、Browse、14布局/重启与8项R4组件故障通过。同候选分别物理排除Lamp和Rain，各自4进程缺模块编译/启动/备份恢复/装回通过，逐字保留参数与catalog；缺模块hash与完整候选不同且单独记录。
+
+`rain-final-processes.json`共34 App进程，唯一正常退出记录、日志error/critical/fatal均0、activeResources0；均为本机提升权限隔离运行，不代表普通权限、目标机或原生输入。1/3/6满雨量运行CPU约1.55/2.34/3.64%（整机归一化口径，每阶段约6.1秒），固定64滴/张、共享时钟最多1、暂停帧推进0；不是长稳/低配性能结论。
+
+实际运行UI C原型检查60项/pageerrors0，查看最终Rain XAML与装入后中心截图；不把XAML透明通道当桌面合成像素认证。rain-03/04诊断驱动失败、recipes-07旧模板数假设与resource-07报告名错误均保留并在08重跑。人工出口是[模块记录§6.4](LR_SCENE_MODULE_EXECUTION.md#64-人工入口与最近下一步)，**Rain USER PENDING，R7未开始**。Portable完整新模板往返、R6真实显示/DPI等余项未补PASS；无Git操作、安装器或日常库迁移。
+
+## 2026-09-30：R6按用户决定收口，进入最小模块B
+
+R6按DEC-030 CORE CLOSED；已通过范围与[R6§9未验携带项](LR_R6_CONTINUOUS_OPERATIONS.md#9-2026-09-30-r6收口决定与携带项)分别保留，不以用户准入覆盖未验事实。模块B使用独立候选和数据根，完整结果归[模块实施记录§3](LR_SCENE_MODULE_EXECUTION.md#3-验证记录)；C/D和Rain尚未完成。下方R6未关闭描述为收口前历史。
+
+## 2026-09-30：R6第三批（同候选自动门及部分人工通过）
+
+- 用户反馈“1～3验证通过，循环拖动/缩框都也验证通过”。按上一轮交付三项登记：两模式中心关闭后的首次/快速反向/再次拖动、Esc取消、有效松手保存及一次撤销USER PASS；循环拖动/缩框整体USER PASS。精确范围、候选绑定和剩余项见[R6记录§8.1](LR_R6_CONTINUOUS_OPERATIONS.md#81-2026-09-30-用户反馈直接操作与循环拖动缩框通过)，不外推真实系统显示/DPI、极端不足冷启动及所有原生边界通过。仅更新文档，封存自动证据不改，R6仍IN PROGRESS。
+
+- 完整实现、红例保留与人工出口归[R6记录§7～8](LR_R6_CONTINUOUS_OPERATIONS.md#7-第三批可见资源集合假源与连续操作2026-09-30)。最终candidate10 App `FF467C13DA7ED4106C34EEF29C352F4D86B508C15A4C6315D77B371C84ED2A57`，App/fixture均0警告/错误。
+- `out/lr-r6-batch3-evidence/contracts/batch3-full-02.trx`：2206通过/0失败/0跳过，比2B多19项。BUG-019既有竞态不因此关闭。
+- `browse-10`：18场景、1008外层检查、102滚动事件，循环两轴两模式Move/Resize/history共972内部检查、被动空间158；`source-{1,3,6}-10`各5场景29/31/34检查（版本风暴/真实槽位/来源失效/成员CAS/R4通知/隐藏迟到恢复）。
+- 同包Protocol/Daily/RejectedHeat/Composition含重启，Fields/Lamp/UI C与Recipes含重启均通过；`layout-10/content-layout-gates-passed.json`完整14进程通过，0/100/1000项及1/3/6六相同卡片基线，每场12采样/>10秒；`r4-10`8故障通过。
+- `final-processes.json`正式32进程，error/critical/fatal均0、退出资源均0；前置三海报2进程另记。1/3/6首次CPU约4.73/7.93/9.19%（进程时间/墙钟，单核100%口径），只是本机DEMO基线，不是跨机或真实图片解码性能认证。
+- launcher PS7/PS5.1 CheckOnly通过，缺门/逃逸路径两负例拒绝；原生人工没有自动填PASS。失败candidate03～09、修复与过时夹具校正原因见R6记录。无Git操作/日常配置迁移/新安装器。
+
+## 2026-09-28：R6第二批2B（CODE / CONTRACT / MANAGED APP；非完整原生验收）
+
+- [R6记录§6](LR_R6_CONTINUOUS_OPERATIONS.md#6-第二批2b被动空间不足与恢复2026-09-28)列生产接线及完整证据。candidate11 App SHA256 `965AA71544B754C8408D283EBF2A8D6C41D15C18C30273F2C7563B90E2F732F1`，471源文件及同hash副本；App/fixture Release均0警告/0错误。
+- `out/lr-r6-evidence/contracts/space-full-03.trx`最终2187通过/0失败/0跳过（新增12项）。此前`space-full-02.trx`2186通过/1失败为既有并发首次初始化table locked，BUG-019仍OPEN；单项recheck与后续全量通过不抹除它。未改Infrastructure或原并发测试。
+- `passive-space-11`18场景/1008外层检查/102滚动事件，空间两轴两模式158内部检查通过；工作区少1物理像素、连续各轴DPI变化、真实处理器取消/迟到松手零写、四向入口/双轴尾部可达、选中打开、原意图不变、最新成员恢复及旧中心草稿失效均覆盖。
+- 同包`space-composition-11`与`space-protocol-11`含同库进程重启通过，`space-fields-11`中心字段门、`space-r4-faults-11`8项R4组件故障/恢复门通过。七进程exit0、activeResources0，产物稳定，结束无常驻DesktopUp；两轴受限XAML截图已查看，恢复图亦保存。
+- 05/06夹具违反模式退出合同、07虚构超前显示代次、09断言用了成员删除前锚均保留原失败，修正夹具后重跑，见实施记录。R4初次夹具漏数量参数在App启动前拒绝，补参后通过。
+- 显示数据为隔离模拟，不改变OS设置；真实HWND/XAML/input读回不是OS鼠标、系统显示器/DPI事件或桌面合成像素验收。冷启动不足只有合同证据；不以普通重启代替。第三批资源/假源未实现、R6不关闭；未Git提交推送或操作日常配置。
+
 ## 2026-09-28：Git 同步前复验（不扩大产品验收范围）
 
 - 当前分支 `impl/poster-redesign-V3`；fetch 后相对 origin 同名分支 ahead 4 / behind 0，无远端分叉。源码检查点 `c81501592776a0c99779034dc0d7fd62b5b5a367`，同步范围及排除项见 [HANDOFF 最新段](HANDOFF.md)。
