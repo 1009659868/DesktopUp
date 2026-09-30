@@ -6,7 +6,7 @@ namespace DesktopUp.Application;
 public enum PosterSetting { Scale, Spacing, Template, Subtitle, Content, Theme, AutoEnabled, AutoDelay, Lamp, TemplateParameters }
 public sealed record PosterSettingEdit(PosterSurfaceProjection Basis, PosterSetting Setting,
     double Number = 0, string Text = "", PosterContentParameters? Content = null, PosterThemeParameters? Theme = null,
-    LampTemplateParameters? Lamp = null, TemplateRecipe? Recipe = null)
+    LampTemplateParameters? Lamp = null, TemplateRecipe? Recipe = null, TemplateParameterValues? TemplateValues = null)
 {
     public string PosterId => Basis.Poster.PosterId;
     public PosterStateCommand Command(string requestId)
@@ -37,8 +37,9 @@ public sealed record PosterSettingEdit(PosterSurfaceProjection Basis, PosterSett
             PosterSetting.Content => draft with { Parameters = parameters with { Content = Content ?? throw new ArgumentException("Missing content parameters.") } },
             PosterSetting.Theme => draft with { Parameters = parameters with { Theme = Theme ?? throw new ArgumentException("Missing theme parameters.") } },
             PosterSetting.Lamp => draft with { Parameters = parameters with { Lamp = Lamp ?? throw new ArgumentException("Missing lamp parameters.") } },
-            PosterSetting.TemplateParameters => draft with { Parameters = TemplateRecipeInstancePolicy.Update(parameters, draft.TemplateKey,
-                Lamp ?? throw new ArgumentException("Missing template parameters.")) },
+            PosterSetting.TemplateParameters => draft with { Parameters = TemplateValues is { } values
+                ? TemplateRecipeInstancePolicy.UpdateValues(parameters, draft.TemplateKey, values)
+                : TemplateRecipeInstancePolicy.Update(parameters, draft.TemplateKey, Lamp ?? throw new ArgumentException("Missing template parameters.")) },
             _ => throw new ArgumentException("Unknown setting.")
         };
         var command = draft.ToCommand(requestId);

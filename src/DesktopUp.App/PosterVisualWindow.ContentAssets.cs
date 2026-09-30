@@ -9,6 +9,10 @@ internal sealed partial class PosterVisualWindow
     private readonly Dictionary<string,ContentAssetKey> _contentVisibleAssetKeys=new(StringComparer.Ordinal);
     private readonly HashSet<ContentAssetKey> _contentAssetRequests=new();
     private readonly Dictionary<ContentAssetKey,IDisposable> _contentAssetRequestLeases=new();
+    private readonly HashSet<ContentAssetKey> _contentAssetAttempted = new();
+    private Action? _contentAssetSlotFreed;
+    private int _contentAssetPumpQueued;
+    private long _contentAssetAcceptedCount;
     private PosterPresentationParameters? _contentAssetTheme;
     private long _contentAssetThemeVersion=1, _contentAssetLifetime;
 
@@ -18,34 +22,54 @@ internal sealed partial class PosterVisualWindow
         ContentLayoutViewport viewport,IReadOnlyList<ContentItemView> views)
     {
         if(_disposed || _window is null || _monitor is null) return;
-        _contentAssets??=new(NullContentAssetProvider.Instance);
+        if (_contentPresentationSuspended || _geometry.IsCollapsed) { ReleaseContentAssets(); return; }
+        if (_transitionLayout is not null) return;
+        if (_contentAssets is null)
+        {
+            var cache = _contentAssets = new(_contentPorts.Assets);
+            var dispatcher = _window.DispatcherQueue;
+            long lifetime = _contentAssetLifetime;
+            _contentAssetSlotFreed = () =>
+            {
+                if (Interlocked.Exchange(ref _contentAssetPumpQueued, 1) != 0) return;
+                if (!dispatcher.TryEnqueue(() =>
+                {
+                    Interlocked.Exchange(ref _contentAssetPumpQueued, 0);
+                    if (!_disposed && lifetime == _contentAssetLifetime && ReferenceEquals(cache, _contentAssets)) PumpContentAssets();
+                })) Interlocked.Exchange(ref _contentAssetPumpQueued, 0);
+            };
+            cache.LoadFinished += _contentAssetSlotFreed;
+        }
         if(_contentAssetTheme!=_presentation.Parameters)
         {
             _contentAssetTheme=_presentation.Parameters;
             _contentAssetThemeVersion=checked(_contentAssetThemeVersion+1);
         }
-        double pitch=snapshot.CellDip+snapshot.GapDip;
-        var overscan=new ContentRect(snapshot.ScrollXDip,Math.Max(0,snapshot.ScrollYDip-pitch),
-            viewport.WidthDip,viewport.HeightDip+pitch*2);
-        var byId=views.ToDictionary(v=>v.ItemId,StringComparer.Ordinal);
         _contentVisibleAssetKeys.Clear();
-        // Asset admission is independent of item capacity: keep drawing every item if budget is full.
-        foreach(var slot in snapshot.Items.Where(p=>p.Bounds.Intersects(overscan)).OrderBy(p=>p.Clip.IsEmpty))
-        {
-            if(_contentVisibleAssetKeys.Count>=512) break;
-            if(!byId.TryGetValue(slot.ItemId,out var view) || string.IsNullOrWhiteSpace(view.AssetKey) ||
-                view.AssetKey.Length>256 || view.AssetKey.Any(char.IsControl)) continue;
-            var placement=document.Placements[slot.SourceIndex];
-            int width=(int)Math.Clamp(Math.Ceiling(slot.Bounds.Width*_monitor.ScaleX),1,4096);
-            int height=(int)Math.Clamp(Math.Ceiling(slot.Bounds.Height*_monitor.ScaleY),1,4096);
-            var key=new ContentAssetKey(document.PosterId,slot.ItemId,inputSession.Epoch,document.DocumentVersion,
-                document.ItemSetVersion,placement.Version,view.AssetKey,width,height,_monitor.DpiX,_monitor.DpiY,_contentAssetThemeVersion);
-            _contentVisibleAssetKeys.Add(slot.ItemId,key);
-        }
+        // Admission is bounded to the cache entry budget, independent of the rendered Item count.
+        foreach (var key in ContentAssetDemand.Build(document, snapshot, viewport, _contentBrowseMode, views,
+            inputSession.Epoch, _monitor.DpiX, _monitor.DpiY, _contentAssetThemeVersion, _contentSourceVersion))
+            _contentVisibleAssetKeys.Add(key.ItemId, key);
+        _contentAssetAttempted.IntersectWith(_contentVisibleAssetKeys.Values);
         _contentAssets.SetVisible(_contentVisibleAssetKeys.Values);
+        PumpContentAssets();
+    }
+
+    private void RefreshContentAssetDemand()
+    {
+        if (_contentSnapshot is { } snapshot && _contentViewport is { } viewport)
+            SyncContentAssets(EffectiveContentDocument, snapshot, viewport, ReadContentViews());
+    }
+
+    private void PumpContentAssets()
+    {
+        if (_disposed || _contentPresentationSuspended || _geometry.IsCollapsed || _transitionLayout is not null || _contentAssets is null) return;
         foreach(var key in _contentVisibleAssetKeys.Values)
         {
+            if (_contentAssets.RunningLoads >= 4) break;
+            if (_contentAssetAttempted.Contains(key) || _contentAssets.IsLoading(key)) continue;
             if(_contentAssets.TryGet(key,out _) || !_contentAssetRequests.Add(key)) continue;
+            _contentAssetAttempted.Add(key);
             var lease=ledger.Acquire("content.asset-request:"+Guid.NewGuid().ToString("N"),key.ItemId);
             _contentAssetRequestLeases[key]=lease;
             _=ObserveContentAssetAsync(_contentAssets,key,_contentAssetLifetime,lease);
@@ -66,10 +90,18 @@ internal sealed partial class PosterVisualWindow
         {
             if(_disposed || lifetime!=_contentAssetLifetime || !ReferenceEquals(cache,_contentAssets)) return;
             _contentAssetRequests.Remove(key);_contentAssetRequestLeases.Remove(key);
+            if (result?.Status is ContentAssetStatus.Capacity or ContentAssetStatus.Stale)
+            {
+                _contentAssetAttempted.Remove(key);
+                // The slot-free callback may beat this wrapper's UI cleanup. Retry admission
+                // here too; IsLoading prevents spinning on a cancellation-resistant same-key flight.
+                PumpContentAssets();
+            }
             if(result?.Status is not (ContentAssetStatus.Loaded or ContentAssetStatus.Cached) ||
                 inputSession.PosterId!=key.PosterId || inputSession.Epoch!=key.SessionEpoch ||
                 !_contentVisibleAssetKeys.TryGetValue(key.ItemId,out var currentKey) || currentKey!=key ||
                 !cache.TryGet(key,out var payload) || payload is null) return;
+            _contentAssetAcceptedCount++;
             // No bitmap decoder is registered in this stage. A future renderer may consume this
             // bounded payload only after this same stable-key check, with its own decoded-pixel cap.
             // Do not interpret SourceKey as a path or mutate item selection/layout here.
@@ -79,9 +111,11 @@ internal sealed partial class PosterVisualWindow
     private void ReleaseContentAssets()
     {
         _contentAssetLifetime=unchecked(_contentAssetLifetime+1);
+        if (_contentAssets is not null && _contentAssetSlotFreed is not null) _contentAssets.LoadFinished -= _contentAssetSlotFreed;
         _contentAssets?.Dispose();_contentAssets=null;
         foreach(var lease in _contentAssetRequestLeases.Values) lease.Dispose();
         _contentAssetRequestLeases.Clear();_contentAssetRequests.Clear();_contentVisibleAssetKeys.Clear();
         _contentAssetTheme=null;
+        _contentAssetSlotFreed=null; _contentAssetAttempted.Clear(); Interlocked.Exchange(ref _contentAssetPumpQueued,0);
     }
 }

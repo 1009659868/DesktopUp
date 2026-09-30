@@ -39,7 +39,7 @@ internal sealed partial class PosterVisualWindow
         var published = inputRouter.ReadSurface(inputSession) ?? throw new InvalidOperationException("No published input surface.");
         if (_monitor is null) throw new InvalidOperationException("No display scale.");
         var document = ContentDocument;
-        var tiles = ContentLayoutFlow.ProjectTiles(snapshot, viewport);
+        var tiles = ContentLayoutFlow.ProjectTiles(snapshot, viewport, _contentBrowseMode);
         var hits = published.Layout.Regions.Where(r => r.Kind == PosterInputTargetKind.ContentItem).ToList();
         int hitCount = hits.Count;
         var reads = new List<ContentBrowseTileProbe>();
@@ -152,7 +152,7 @@ internal sealed partial class PosterVisualWindow
         {
             cancellation.ThrowIfCancellationRequested();
             string path = Path.Combine(dataRoot, "content-browse-" + name + ".png");
-            await CaptureLampXamlForProbeAsync(path);
+            await CapturePosterXamlForProbeAsync(path);
             captures.Add(path);
             cancellation.ThrowIfCancellationRequested();
         }
@@ -200,6 +200,9 @@ internal sealed partial class PosterVisualWindow
                 stage = name + "-frame-minimum";
                 observations.Add(new { name = stage, frame = RunContentFrameMinimumForProbe() });
                 Read(name + "-after-frame-minimum"); cases.Add(stage);
+                stage = name + "-passive-space";
+                observations.Add(new { name = stage, space = await RunContentSpaceForProbeAsync(dataRoot) });
+                Read(name + "-after-passive-space"); cases.Add(stage);
 
                 stage = name + "-finite";
                 Configure(name + "-loop-off", () => SetContentLoopScroll(false)); Head();

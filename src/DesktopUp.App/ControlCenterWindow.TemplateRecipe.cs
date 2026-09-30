@@ -63,7 +63,7 @@ public sealed partial class ControlCenterWindow
             source.TextChanging += (_, _) => { checkedSource = null; generation++; dialog.IsPrimaryButtonEnabled = false; notice.Text = "配方已变化，请检查后再装入。"; };
             example.Click += (_, _) =>
             {
-                var recipe = TemplateRecipeCatalog.BuiltIns.First(r => r.Id == "lamp");
+                var recipe = TemplateRecipeCatalog.BuiltIns.FirstOrDefault(r => r.Schema.Properties.Count > 0) ?? TemplateRecipeCatalog.BuiltIns[0];
                 source.Text = TemplateRecipeCodec.Serialize(recipe with { Schema = recipe.Schema with { TemplateId = "my-warm-desk", Name = "暖夜书桌" } });
             };
             inspect.Click += (_, _) => { if (SelectedRecipe is { } recipe) source.Text = TemplateRecipeCodec.Serialize(recipe); };
@@ -122,9 +122,9 @@ public sealed partial class ControlCenterWindow
         try
         {
             string target = _view!.SelectedPosterId!; long revision = _view.Projection.Revision;
-            var currentPaint = _view.SelectedPoster!.Presentation.TemplateParameters;
-            selected = selected with { Base = selected.Base with { Background = currentPaint.Background, Card = currentPaint.Card } };
-            var values = TemplateParameterBindingAdapter.Read(selected.Schema, _view.SelectedPoster!.Presentation.TemplateParameters)
+            var currentPaint = _view.SelectedPoster!.Presentation.TemplateValues;
+            selected = selected with { Base = selected.Base with { Background = currentPaint.Color("surface.background", selected.Base.Background), Card = currentPaint.Color("item.color", selected.Base.Card) } };
+            var values = TemplateParameterBindingAdapter.Read(selected.Schema, _view.SelectedPoster!.Presentation.TemplateValues)
                 .ToDictionary(p => p.Key, p => p.Value, StringComparer.Ordinal);
             var body = new StackPanel { Spacing = 16 }; body.Children.Add(CreateTemplateSampleArt(selected));
             var name = new TextBox { Header = "模板名称", Text = selected.Name + " · 我的", MaxLength = 40 }; body.Children.Add(name);

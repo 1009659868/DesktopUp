@@ -128,9 +128,11 @@ static void CreateContentLayoutFixture(string requestedRoot, string scenario)
         string template = example == "covers" ? "night-ops" : "basic-box";
         (double width, double height) = example switch
         {
-            "illustration" => scenario == "three" ? (500, 960) : (540, 1020),
-            "covers" => scenario == "three" ? (500, 840) : (540, 880),
-            "landscape" => scenario == "three" ? (590, 540) : (660, 590),
+            // The combined gate replaces all three samples on A, including at 1.2x metrics.
+            // Fit the largest full cross-axis intent; never rely on the retired clipping behavior.
+            "illustration" => scenario == "three" ? (800, 960) : (540, 1020),
+            "covers" => scenario == "three" ? (620, 840) : (540, 880),
+            "landscape" => scenario == "three" ? (740, 540) : (660, 590),
             _ => resourceCount > 0 ? (300, 360) : (540, 720)
         };
         double anchor = scenario == "three" ? index * .5 : .08;

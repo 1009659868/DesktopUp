@@ -22,6 +22,7 @@ $completed = @($events | Where-Object { $_.eventName -eq 'spatial.smoke_complete
 $errors = @($events | Where-Object { $_.level -in 'error','critical' })
 $ledger = Get-Content -Raw -LiteralPath (Join-Path $isolatedRoot 'state\resource-ledger.json') | ConvertFrom-Json
 $postures = @($events | Where-Object { $_.eventName -eq 'spatial.posture_started' })
+$taskFrames = @($events | Where-Object eventName -eq 'spatial.probe_frame')
 $taskOutcomes = @($events | Where-Object { $_.eventName -eq 'spatial.smoke_outcome' })
 $taskPostureValid = if ($ExpectedExpansion -eq 'InsufficientSpace') { $postures.Count -eq 0 -and $taskOutcomes.Count -gt 0 -and
     @($events | Where-Object { $_.eventName -eq 'spatial.expansion_feedback' }).Count -eq 1 } else { $postures.Count -ge $(if ($LeaveExpanded) { 1 } else { 2 }) }
@@ -30,5 +31,6 @@ if ($probe.ExitCode -ne 0 -or $completed.Count -ne 1 -or -not $taskPostureValid 
     throw "Spatial smoke failed: PID=$($probe.Id), exit=$($probe.ExitCode), completed=$($completed.Count), errors=$($errors.Count). Inspect $isolatedRoot\logs\desktopup.jsonl"
 }
 [pscustomobject]@{ Result='PASS'; ProcessId=$probe.Id; ExitCode=$probe.ExitCode; PostureCommands=$postures.Count;
-    NativeFrames=($postures | ForEach-Object { $_.data.frames } | Measure-Object -Sum).Sum; ActiveResourcesAfterExit=@($ledger.resources).Count;
+    NativeFrames=$taskFrames.Count;
+    RefinedProofFrames=($postures | ForEach-Object { $_.data.frames } | Measure-Object -Sum).Sum; ActiveResourcesAfterExit=@($ledger.resources).Count;
     Outcomes=$taskOutcomes.data; DataRoot=$isolatedRoot }

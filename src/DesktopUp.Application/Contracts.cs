@@ -199,7 +199,8 @@ public enum PosterInputTargetKind
     ResizeBottomLeft = 14,
     ContentItem = 15,
     ContentSpanHandle = 16,
-    ContentViewport = 17
+    ContentViewport = 17,
+    ContentBrowseNavigation = 18
 }
 
 public readonly record struct PosterInputRegion(

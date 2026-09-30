@@ -4,7 +4,6 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using WinRT;
-using DesktopUp.Domain;
 
 namespace DesktopUp;
 
@@ -41,7 +40,9 @@ internal sealed partial class PosterVisualWindow
             background.Color == Colors.Transparent &&
             _window.As<ICompositionSupportsSystemBackdrop>().SystemBackdrop is not null;
     }
-    private global::Windows.UI.Color BackdropColor() => _presentation.EffectiveTemplateKey == LampTemplatePolicy.TemplateKey || HasSelectedRecipePaint
-        ? ColorBrush(CurrentLamp.Background, (byte)Math.Round(CurrentLamp.BackgroundOpacity * 255 / 100)).Color
-        : ColorBrush(_presentation.Parameters.Theme.Background, 245).Color;
+    private global::Windows.UI.Color BackdropColor()
+    {
+        var paint = CurrentSceneParameters.Surface;
+        return ColorBrush(paint.Background, paint.BackgroundAlpha).Color;
+    }
 }

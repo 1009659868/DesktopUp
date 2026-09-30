@@ -91,6 +91,6 @@ public sealed partial class ControlCenterWindow
         if (!LampInputAvailable() || OtherContentOwner || IsContentFieldDraftActive)
         { if (_lampParameterNotice is not null) _lampParameterNotice.Text = "请先应用或取消当前修改。"; return; }
         ChangeLampSetting(TemplateParameterBindingAdapter.Reset(_templateParameterSchema,
-            _view?.SelectedPoster?.Presentation.TemplateParameters ?? LampTemplatePolicy.Defaults), true);
+            _view?.SelectedPoster?.Presentation.TemplateValues ?? new TemplateParameterValues([])), true);
     }
 }

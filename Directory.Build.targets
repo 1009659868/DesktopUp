@@ -1,0 +1,18 @@
+<Project>
+  <!-- Optional trusted sources are discovered at build evaluation, never loaded from user data. -->
+  <ItemGroup Condition="'$(MSBuildProjectName)' == 'DesktopUp.Domain'">
+    <Compile Include="$(MSBuildThisFileDirectory)Modules/*/Domain/*.cs" Link="Modules/%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(MSBuildProjectName)' == 'DesktopUp.Application'">
+    <Compile Include="$(MSBuildThisFileDirectory)Modules/*/Application/*.cs" Link="Modules/%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(MSBuildProjectName)' == 'DesktopUp.App'">
+    <Compile Include="$(MSBuildThisFileDirectory)Modules/*/App/*.cs" Link="Modules/%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+  <PropertyGroup Condition="Exists('$(MSBuildThisFileDirectory)Modules/Lamp/Domain/LampDeclaration.cs')">
+    <DefineConstants>$(DefineConstants);SCENE_LAMP</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="Exists('$(MSBuildThisFileDirectory)Modules/Rain/Domain/RainDeclaration.cs')">
+    <DefineConstants>$(DefineConstants);SCENE_RAIN</DefineConstants>
+  </PropertyGroup>
+</Project>

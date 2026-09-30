@@ -23,27 +23,29 @@ internal sealed record LampSceneObservation(bool Active, bool Connected, bool Vi
     public long MotionFrames { get; init; }
 }
 
-internal sealed partial class PosterVisualWindow
+// Trusted Lamp painter. It owns no input, state, spatial runtime or timers.
+internal sealed class LampSceneInstance : IPosterSceneInstance
 {
-    // The runtime owns one shared passive sampler/frame clock. This layer only paints bounded
-    // decorative geometry; input capture, item rectangles and persisted settings stay untouched.
-    private Canvas? _lampScene;
-    private Ellipse? _lampPool, _lampBulb;
-    private Polygon? _lampCone;
-    private Grid? _lampFixture;
-    private RadialGradientBrush? _lampPoolBrush;
-    private LinearGradientBrush? _lampConeBrush;
-    private RotateTransform? _lampFixtureRotation;
+    private readonly Canvas _lampScene;
+    private readonly Ellipse _lampPool, _lampBulb;
+    private readonly Polygon _lampCone;
+    private readonly Grid _lampFixture;
+    private readonly RadialGradientBrush _lampPoolBrush;
+    private readonly LinearGradientBrush _lampConeBrush;
+    private readonly RotateTransform _lampFixtureRotation;
     private LampScenePose _lampPose;
     private bool _lampMotionRunning;
     private long _lampMotionFrames;
+    private bool _disposed;
 
-    private LampTemplateParameters CurrentLamp => _presentation.TemplateParameters;
 
-    private FrameworkElement? CreateLampScene()
+    private LampTemplateParameters _parameters = LampTemplatePolicy.Defaults;
+    public FrameworkElement Root => _lampScene!;
+    public bool WantsMotion => _parameters.MotionEnabled && (_parameters.FollowPointer || _parameters.IdleSway > 0);
+    public void StopMotion() => _lampMotionRunning = false;
+
+    public LampSceneInstance()
     {
-        ReleaseLampScene();
-        if (_presentation.EffectiveTemplateKey != LampTemplatePolicy.TemplateKey) return null;
         _lampScene = new Canvas { IsHitTestVisible = false };
         _lampPoolBrush = new RadialGradientBrush
         {
@@ -71,50 +73,26 @@ internal sealed partial class PosterVisualWindow
             VerticalAlignment = VerticalAlignment.Top, IsHitTestVisible = false };
         _lampFixture.Children.Add(cord); _lampFixture.Children.Add(shade); _lampFixture.Children.Add(_lampBulb);
         _lampScene.Children.Add(_lampCone); _lampScene.Children.Add(_lampPool); _lampScene.Children.Add(_lampFixture);
-        _lampScene.SizeChanged += LampSceneSizeChanged;
-        UpdateLampScene();
-        return _lampScene;
     }
 
-    private void LampSceneSizeChanged(object sender, SizeChangedEventArgs args) => UpdateLampScene();
-    internal void RefreshLampScene() => UpdateLampScene();
-    internal void StopLampMotionFrame() => _lampMotionRunning = false;
-    private void RefreshTemplatePaint()
+    public void Update(SceneRenderParameters parameters, SceneFrameContext frame)
     {
-        if (_presentation.EffectiveTemplateKey == LampTemplatePolicy.TemplateKey) UpdateLampScene();
-        else if (HasSelectedRecipePaint)
-            foreach (var cell in _contentCards.Values.OfType<Grid>())
-                if (cell.Children.OfType<Border>().FirstOrDefault() is { } card)
-                    ApplyTemplateCardPaint(card, card.BorderThickness.Left > 1);
-    }
-
-    private void UpdateLampScene()
-    {
-        if (_lampScene is null || _lampPool is null || _lampCone is null || _lampFixture is null ||
-            _lampBulb is null || _lampPoolBrush is null || _lampConeBrush is null) return;
-        bool visible = !_disposed && _presentation.EffectiveTemplateKey == LampTemplatePolicy.TemplateKey &&
-            !_geometry.IsCollapsed && !_contentPresentationSuspended;
-        _lampScene.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
-        var value = CurrentLamp;
-        bool needsMotion = visible && _window is not null && !IsEditing && value.MotionEnabled &&
-            (value.FollowPointer || value.IdleSway > 0);
-        spatial.SetLampMotionDemand(this, needsMotion, inputRouter);
-        // Projection/size changes paint immediately. Following resumes on the next shared sample.
-        PaintLampMotion(0, null, false);
-    }
-
-    internal void PaintLampMotion(double seconds, PointerScreenPoint? pointer, bool canAnimate)
-    {
-        if (_lampScene is null || _lampPool is null || _lampCone is null || _lampFixture is null ||
-            _lampBulb is null || _lampPoolBrush is null || _lampConeBrush is null) return;
-        var value = CurrentLamp;
-        _lampMotionRunning = canAnimate && value.MotionEnabled && !spatial.LampGlobalMotionPaused && !_disposed && !IsEditing &&
-            !_geometry.IsCollapsed && !_contentPresentationSuspended && !HasContentGesture && _spatialGesture is null;
-        LampScenePoint? localPointer = pointer is { } screen ? new(
-            (screen.X - _bounds.X) / (_monitor?.ScaleX ?? 1),
-            (screen.Y - _bounds.Y) / (_monitor?.ScaleY ?? 1)) : null;
-        double width = Math.Max(0, _lampScene.ActualWidth), height = Math.Max(0, _lampScene.ActualHeight);
-        _lampPose = LampSceneMotion.Resolve(width, height, seconds, value, _lampMotionRunning, localPointer);
+        if (_disposed) return;
+        var values = parameters.Bindings;
+        var defaults = LampTemplatePolicy.Defaults;
+        string ColorValue(string key, string fallback) => values.TryGetValue(key, out var p) ? p.Color! : fallback;
+        double NumberValue(string key, double fallback) => values.TryGetValue(key, out var p) ? p.Number!.Value : fallback;
+        bool BooleanValue(string key, bool fallback) => values.TryGetValue(key, out var p) ? p.Boolean!.Value : fallback;
+        var value = _parameters = new(
+            ColorValue("lamp.color", defaults.LightColor), NumberValue("lamp.softness", defaults.Softness),
+            NumberValue("lamp.intensity", defaults.Intensity), parameters.Surface.Background,
+            parameters.Surface.Card ?? defaults.Card, parameters.Surface.BackgroundAlpha * 100.0 / 255,
+            BooleanValue("scene.motion", true), BooleanValue("lamp.follow", true),
+            NumberValue("lamp.sway", defaults.IdleSway), NumberValue("lamp.speed", defaults.MotionSpeed));
+        _lampMotionRunning = frame.CanAnimate && value.MotionEnabled;
+        LampScenePoint? localPointer = frame.Pointer is { } pointer ? new(pointer.X, pointer.Y) : null;
+        double width = frame.Width, height = frame.Height;
+        _lampPose = LampSceneMotion.Resolve(width, height, frame.Seconds, value, _lampMotionRunning, localPointer);
         if (_lampMotionRunning) _lampMotionFrames++;
         double x = _lampPose.X, y = _lampPose.Y, radius = 70 + value.Softness * 1.5, reach = 65 + value.Softness;
         if (_lampScene.Clip is RectangleGeometry clip) clip.Rect = new(0, 0, width, height);
@@ -135,25 +113,12 @@ internal sealed partial class PosterVisualWindow
         var bulbColor = LampBlend(LampColor("#63735B"), LampColor(value.LightColor), value.Intensity / 100);
         if (_lampBulb.Fill is SolidColorBrush bulbBrush) bulbBrush.Color = bulbColor;
         else _lampBulb.Fill = new SolidColorBrush(bulbColor);
-        // Existing cards remain the same objects. Labels, image fit, selection and dimensions stay owned by content.
-        foreach (var cell in _contentCards.Values.OfType<Grid>())
-            if (cell.Children.OfType<Border>().FirstOrDefault() is { } card)
-                ApplyTemplateCardPaint(card, card.BorderThickness.Left > 1, cell);
     }
 
-    private void ApplyTemplateCardPaint(Border card, bool selected, Grid? cell = null)
+    public void PaintCard(SceneCardPaint paint)
     {
-        if (_presentation.EffectiveTemplateKey != LampTemplatePolicy.TemplateKey)
-        {
-            if (HasSelectedRecipePaint)
-            {
-                var color = LampColor(_presentation.TemplateParameters.Card);
-                if (card.Background is SolidColorBrush materialBrush) materialBrush.Color = color;
-                else card.Background = new SolidColorBrush(color);
-            }
-            return;
-        }
-        var value = CurrentLamp; var basis = LampColor(value.Card); var light = LampColor(value.LightColor);
+        var card = paint.Card; bool selected = paint.Selected;
+        var value = _parameters; var basis = LampColor(value.Card); var light = LampColor(value.LightColor);
         var brush = card.Background as RadialGradientBrush ?? new RadialGradientBrush
         {
             Center = new(.5, 0), GradientOrigin = new(.5, 0),
@@ -161,9 +126,8 @@ internal sealed partial class PosterVisualWindow
         };
         brush.RadiusX = brush.RadiusY = .5 + value.Softness / 100;
         double illumination = .2;
-        if (cell is not null && card.ActualWidth > 0 && card.ActualHeight > 0)
+        if (paint.Left is { } left && paint.Top is { } top && card.ActualWidth > 0 && card.ActualHeight > 0)
         {
-            double left = ContentLeftDip + Canvas.GetLeft(cell), top = ContentTopDip + Canvas.GetTop(cell);
             double localX = _lampPose.X - left, localY = _lampPose.Y - top;
             brush.Center = brush.GradientOrigin = new(localX / card.ActualWidth, localY / card.ActualHeight);
             double distance = Math.Sqrt(Math.Pow(localX - card.ActualWidth / 2, 2) + Math.Pow(localY - card.ActualHeight / 2, 2));
@@ -180,28 +144,22 @@ internal sealed partial class PosterVisualWindow
         }
     }
 
-    private void ReleaseLampScene()
+
+    public void Dispose()
     {
-        spatial.SetLampMotionDemand(this, false, inputRouter);
-        if (_lampScene is not null)
-        {
-            _lampScene.SizeChanged -= LampSceneSizeChanged;
-            _lampScene.Children.Clear();
-            if (VisualTreeHelper.GetParent(_lampScene) is Panel parent) parent.Children.Remove(_lampScene);
-        }
-        _lampScene = null; _lampPool = null; _lampCone = null; _lampFixture = null; _lampBulb = null;
-        _lampPoolBrush = null; _lampConeBrush = null;
-        _lampFixtureRotation = null; _lampMotionRunning = false; _lampPose = default;
+        if (_disposed) return;
+        _disposed = true;
+        _lampScene.Children.Clear();
+        _lampMotionRunning = false; _lampPose = default;
     }
 
-    internal LampSceneObservation ReadLampSceneForProbe()
+    internal LampSceneObservation ReadObservation(IEnumerable<RadialGradientBrush> cards)
     {
         bool decorative = _lampScene is not null && !_lampScene.IsHitTestVisible &&
             _lampScene.Children.All(child => !child.IsHitTestVisible) &&
             _lampFixture is not null && _lampFixture.Children.All(child => !child.IsHitTestVisible);
         var color = _lampPoolBrush?.GradientStops[0].Color;
-        var cardBrushes = _contentCards.Values.OfType<Grid>()
-            .Select(cell => cell.Children.OfType<Border>().FirstOrDefault()?.Background).OfType<RadialGradientBrush>().ToArray();
+        var cardBrushes = cards.ToArray();
         var card = cardBrushes.FirstOrDefault();
         return new(_lampScene is not null, _lampScene is not null && VisualTreeHelper.GetParent(_lampScene) is not null,
             _lampScene?.Visibility == Visibility.Visible, decorative, !_lampMotionRunning, _lampScene?.Children.Count ?? 0,
@@ -212,13 +170,14 @@ internal sealed partial class PosterVisualWindow
             card is null ? "" : LampColorText(card.GradientStops[0].Color))
         {
             MotionRunning = _lampMotionRunning, FollowingPointer = _lampPose.FollowingPointer,
-            ReducedMotion = spatial.LampReducedMotion, GlobalMotionPaused = spatial.LampGlobalMotionPaused,
             LightX = _lampPose.X, LightY = _lampPose.Y,
             FixtureAngle = _lampPose.FixtureAngle, MotionFrames = _lampMotionFrames
         };
     }
 
-    private static Color LampColor(string hex, byte alpha = 255) => ColorBrush(hex, alpha).Color;
+    private static SolidColorBrush ColorBrush(string hex, byte alpha = 255) => new(LampColor(hex, alpha));
+    private static Color LampColor(string hex, byte alpha = 255) => Color.FromArgb(alpha, Convert.ToByte(hex.Substring(1, 2), 16),
+        Convert.ToByte(hex.Substring(3, 2), 16), Convert.ToByte(hex.Substring(5, 2), 16));
     private static string LampColorText(Color color) => $"#{color.A:X2}{color.R:X2}{color.G:X2}{color.B:X2}";
     private static Color LampBlend(Color basis, Color light, double amount) => Color.FromArgb(255,
         (byte)Math.Round(basis.R + (light.R - basis.R) * amount),

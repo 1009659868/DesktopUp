@@ -6,6 +6,26 @@ namespace DesktopUp.Application;
 public sealed record SpatialAnimationSchedule(IReadOnlyList<SpatialBatchFrame> Frames,
     IReadOnlyList<double> DueMilliseconds, double NominalDurationMs)
 {
+    public SpatialSnapshot? Initial { get; init; }
+    public IReadOnlySet<int> SegmentEnds { get; init; } = new HashSet<int>();
+    public bool CoalescePresentation { get; init; }
+
+    public static SpatialAnimationSchedule CreatePresentation(SpatialSnapshot initial,
+        IReadOnlyList<SpatialBatchFrame> keyframes, PosterAnimationOptions options)
+    {
+        var proof = Create(initial, keyframes, options);
+        if (proof.Frames.Count == 0) return proof;
+        var distances = proof.Frames.Select(f => f.Changes.Max(c => EdgeDistance(c.From, c.To))).ToArray();
+        double total = distances.Sum(), travelled = 0;
+        var due = new double[distances.Length];
+        for (int i = 0; i < due.Length; i++)
+        {
+            travelled += distances[i]; double progress = travelled / total;
+            due[i] = options.DurationMs * (options.Easing == "linear" ? progress : Math.Acos(1 - 2 * progress) / Math.PI);
+        }
+        return proof with { DueMilliseconds = Array.AsReadOnly(due), NominalDurationMs = options.DurationMs, CoalescePresentation = true };
+    }
+
     public static SpatialAnimationSchedule Create(SpatialSnapshot initial,
         IReadOnlyList<SpatialBatchFrame> keyframes, PosterAnimationOptions options)
     {
@@ -14,6 +34,7 @@ public sealed record SpatialAnimationSchedule(IReadOnlyList<SpatialBatchFrame> F
         const long maximumChecks = 4_000_000;
         var frames = new List<SpatialBatchFrame>();
         var distances = new List<long>();
+        var ends = new HashSet<int>();
         var positions = initial.Posters.ToDictionary(p => p.PosterId, p => p.Bounds, StringComparer.Ordinal);
         var visible = initial.Posters.Where(p => p.IsVisible).Select(p => p.PosterId).ToArray();
         long checks = 0, distance = 0;
@@ -46,6 +67,7 @@ public sealed record SpatialAnimationSchedule(IReadOnlyList<SpatialBatchFrame> F
                 distance += changes.Max(c => EdgeDistance(c.From, c.To));
                 frames.Add(new(Array.AsReadOnly(changes))); distances.Add(distance); positions = next;
             }
+            ends.Add(frames.Count);
         }
         var due = new List<double>(); double previous = 0;
         foreach (long d in distances)
@@ -55,7 +77,7 @@ public sealed record SpatialAnimationSchedule(IReadOnlyList<SpatialBatchFrame> F
             previous = Math.Max(previous + options.FrameIntervalMs, time * options.DurationMs);
             due.Add(previous);
         }
-        return new(frames.AsReadOnly(), due.AsReadOnly(), previous);
+        return new(frames.AsReadOnly(), due.AsReadOnly(), previous) { Initial = initial, SegmentEnds = ends };
     }
 
     public static long EdgeDistance(SpatialRect a, SpatialRect b) =>
@@ -82,12 +104,34 @@ public sealed class SpatialAnimationCursor(SpatialAnimationSchedule schedule, Po
     public int Index { get; private set; }
     public bool Complete => Index == schedule.Frames.Count;
     private double _lastSubmission = double.NegativeInfinity;
+    private readonly Dictionary<string, SpatialRect>? _positions = schedule.Initial?.Posters.ToDictionary(p => p.PosterId, p => p.Bounds);
     public bool TryTake(double elapsedMs, out SpatialBatchFrame? frame)
     {
         frame = null;
         if (!double.IsFinite(elapsedMs) || elapsedMs < 0 || Complete ||
             elapsedMs < schedule.DueMilliseconds[Index] || elapsedMs - _lastSubmission < options.FrameIntervalMs) return false;
-        frame = schedule.Frames[Index++]; _lastSubmission = elapsedMs;
-        return true; // Never skip geometry or submit a catch-up burst when rendering falls behind.
+        frame = schedule.Frames[Index++];
+        if (schedule.CoalescePresentation && _positions is not null && schedule.Initial is { } initial)
+        {
+            var merged = frame.Changes.ToDictionary(c => c.PosterId, StringComparer.Ordinal);
+            while (!Complete && !schedule.SegmentEnds.Contains(Index) && schedule.DueMilliseconds[Index] <= elapsedMs)
+            {
+                var candidate = new Dictionary<string, SpatialPathLeg>(merged, StringComparer.Ordinal);
+                foreach (var change in schedule.Frames[Index].Changes)
+                    candidate[change.PosterId] = new(change.PosterId, _positions[change.PosterId], change.To);
+                var visible = initial.Posters.Where(p => p.IsVisible).Select(p => p.PosterId).ToArray();
+                bool safe = true;
+                for (int a = 0; a < visible.Length && safe; a++)
+                    for (int b = a + 1; b < visible.Length && safe; b++)
+                        safe = !SpatialPathPolicy.CrossesMoving(_positions[visible[a]], candidate.GetValueOrDefault(visible[a])?.To ?? _positions[visible[a]],
+                            _positions[visible[b]], candidate.GetValueOrDefault(visible[b])?.To ?? _positions[visible[b]]);
+                if (!safe) break;
+                merged = candidate; Index++;
+            }
+            frame = new(Array.AsReadOnly(merged.Values.ToArray()));
+        }
+        if (_positions is not null) foreach (var change in frame.Changes) _positions[change.PosterId] = change.To;
+        _lastSubmission = elapsedMs;
+        return true; // One native group submission; never cross an accepted path turn or burst.
     }
 }

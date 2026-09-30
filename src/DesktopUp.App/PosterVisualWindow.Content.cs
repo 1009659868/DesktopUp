@@ -23,7 +23,6 @@ internal sealed partial class PosterVisualWindow
     private readonly Dictionary<string, FrameworkElement> _contentCards = new(StringComparer.Ordinal);
     private string? _contentPaintKey;
     private ContentLayoutDocument? _contentPaintDocument;
-    private readonly DemoContentItemViewSource _contentSource = new();
 
     private ContentLayoutDocument ContentDocument
     {
@@ -90,26 +89,45 @@ internal sealed partial class PosterVisualWindow
         {
             var anchor = _contentEndAnchor ?? (geometryChanged && !HasContentGesture && !_contentProjectionFault &&
                 _contentSnapshot is not null && _contentViewport is not null
-                ? ContentLayoutFlow.CaptureAnchor(_contentSnapshot, _contentViewport) : null);
+                ? ContentLayoutFlow.CaptureAnchor(_contentSnapshot, _contentViewport, _contentBrowseMode) : null);
             _contentEndAnchor = null;
             next = geometryChanged || _contentSnapshot is null
                 ? ContentLayoutSolver.Resolve(doc, viewport)
-                : ContentLayoutSolver.Reclip(_contentSnapshot, viewport);
-            if (anchor is not null)
+                : ContentLayoutSolver.Reclip(_contentSnapshot, viewport, _contentBrowseMode);
+            _contentSpaceCandidate = EvaluateContentSpace(next, viewport, frame, anchor);
+            if (_contentSpaceCandidate?.Disposition == ContentSpaceDisposition.PendingSafePoint)
             {
-                var restored = ContentLayoutFlow.RestoreAnchor(next, viewport, anchor);
-                next = ContentLayoutSolver.Reclip(next, viewport with { ScrollXDip = restored.ScrollXDip, ScrollYDip = restored.ScrollYDip });
+                if (_contentSpacePublication.Published?.Witness is { } previous && previous.Environment == _contentSpaceEnvironment &&
+                    previous.EffectiveFrame == PosterSpatialRuntime.Rect(frame) && _contentSnapshot is { } retained && _contentViewport is not null)
+                {
+                    _contentEndAnchor = anchor;
+                    _solvedDocument = null;
+                    return retained;
+                }
+                throw new ContentLayoutException("空间恢复尚未到达安全点，旧命中已停用。");
+            }
+            _contentBrowseMode = _contentSpaceCandidate?.BrowseMode ??
+                (_transitionLayout is not null && next.SpaceStatus == ContentLayoutSpaceStatus.InsufficientCrossAxis &&
+                 _contentSpacePublication.Published?.IsRestricted == true ? ContentBrowseMode.ReadOnlyOverflow : ContentBrowseMode.SingleAxis);
+            if (_contentSpaceCandidate?.Offsets is { } accepted)
+                next = ContentLayoutSolver.Reclip(next, viewport with { ScrollXDip = accepted.ScrollXDip, ScrollYDip = accepted.ScrollYDip }, _contentBrowseMode);
+            else if (anchor is not null)
+            {
+                var restored = ContentLayoutFlow.RestoreAnchor(next, viewport, anchor, _contentBrowseMode);
+                next = ContentLayoutSolver.Reclip(next, viewport with { ScrollXDip = restored.ScrollXDip, ScrollYDip = restored.ScrollYDip }, _contentBrowseMode);
             }
             if(_contentProjectionFault || _contentSnapshot?.IsLayoutReadOnly == true) _contentNotice=null;
-            _contentProjectionFault=false; _contentReadOnly=_contentParseReadOnly || next.IsLayoutReadOnly;
+            _contentProjectionFault=false; _contentReadOnly=_contentParseReadOnly || next.IsLayoutReadOnly || _contentSpaceCandidate?.IsReadOnly == true;
             if (next.IsLayoutReadOnly)
                 _contentNotice = next.SpaceStatus == ContentLayoutSpaceStatus.LegacyConstraintConflict
                     ? "旧布局约束超出当前内容空间，原配置已保留；暂不可编辑。"
+                    : IsContentSpaceRestricted ? "屏幕空间受限：方向按钮或滚轮浏览，Shift＋滚轮切换另一轴；原布局保留，恢复空间后自动退出。"
                     : "当前内容空间不足，卡片尺寸和原布局已保留；暂不可编辑。";
         }
         catch (ArgumentException error)
         {
             _contentProjectionFault=true; _contentReadOnly=true;
+            _contentSpaceCandidate=null; _contentBrowseMode=ContentBrowseMode.SingleAxis;
             _contentNotice="布局不能安全呈现，已保留原文并禁用编辑："+error.Message;
             next=ContentLayoutSolver.Resolve(ContentLayoutSamples.Equal(doc.PosterId,0),viewport);
             log.Write("warning","content.layout_projection_rejected",new{PosterId,error.Message});
@@ -140,7 +158,7 @@ internal sealed partial class PosterVisualWindow
         if (_metaPanel?.Children.OfType<TextBlock>().LastOrDefault() is { } metaCount) metaCount.Text=$"{doc.Placements.Count:00} DEMO ITEMS";
         // Lamp values update existing brushes and never invalidate card identity or solver geometry.
         var cardPresentation = _presentation with { Parameters = _presentation.Parameters with { Lamp = null } };
-        string paintKey = $"{doc.DocumentVersion}/{_mode}/{_selectedContentItem}/{cardPresentation}/{doc.ShowBaselineGrid}/{doc.ShowSpanLabels}";
+        string paintKey = $"{doc.DocumentVersion}/{_contentSourceVersion}/{_mode}/{_selectedContentItem}/{cardPresentation}/{doc.ShowBaselineGrid}/{doc.ShowSpanLabels}";
         if (_contentPaintKey != paintKey || !ReferenceEquals(_contentPaintDocument, doc))
         { _contentCards.Clear(); _contentPaintKey = paintKey; _contentPaintDocument = doc; }
         _contentCanvas.Children.Clear();
@@ -153,7 +171,7 @@ internal sealed partial class PosterVisualWindow
             for (double y = y0; y <= viewport.HeightDip; y += pitch) _contentCanvas.Children.Add(new Line
             { X1=0, X2=viewport.WidthDip, Y1=y, Y2=y, Stroke=Brush(30,180,200,218), StrokeThickness=.5, IsHitTestVisible=false });
         }
-        var views = _contentSource.Read(doc);
+        var views = ReadContentViews();
         SyncContentAssets(EffectiveContentDocument,snapshot,viewport,views);
         var source = views.ToDictionary(p => p.ItemId, StringComparer.Ordinal);
         // Loop projection: a card straddling the seam is drawn on both sides, so the cache key carries
@@ -161,7 +179,7 @@ internal sealed partial class PosterVisualWindow
         // cell of overscan is kept; no permanent XAML object exists per offscreen item.
         var byId = snapshot.Items.ToDictionary(p => p.ItemId, StringComparer.Ordinal);
         var retained = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var tile in ContentLayoutFlow.ProjectTiles(snapshot, viewport))
+        foreach (var tile in ContentLayoutFlow.ProjectTiles(snapshot, viewport, _contentBrowseMode))
         {
             if (tile.Bounds.Bottom < -pitch || tile.Bounds.Y > viewport.HeightDip + pitch) continue;
             string key = TileKey(tile);
@@ -186,7 +204,7 @@ internal sealed partial class PosterVisualWindow
         RenderContentFeedback();
         // No scrollbar chrome on either edge. Content stays reachable through the wheel, the drag-edge
         // auto-scroll and the clamped extent; hiding a bar is never used to make content unreachable.
-        if (_contentReadOnly || doc.Placements.Count == 0)
+        if (_contentParseReadOnly || _contentProjectionFault || doc.Placements.Count == 0)
             _contentCanvas.Children.Add(new TextBlock { Text=_contentProjectionFault ? "当前布局无法安全呈现 · 原配置保留" : _contentReadOnly ? "布局版本暂不支持 · 原配置只读保留" : "暂无内容 · DEMO 布局", FontSize=12, TextWrapping=TextWrapping.Wrap, Width=viewport.WidthDip, Foreground=ColorBrush(_presentation.Parameters.Theme.Foreground,170) });
     }
 
@@ -223,7 +241,7 @@ internal sealed partial class PosterVisualWindow
             BorderBrush=selected ? ColorBrush(_presentation.Parameters.Theme.Accent) : Brush(32,255,255,255), CornerRadius=new CornerRadius(5), Child=imageHost };
         ApplyTemplateCardPaint(card, selected);
         cell.Children.Add(card);
-        var name = new TextBlock { Text=item.Name, FontSize=ContentParameters.LabelFontSizeDip, MaxLines=1, TextTrimming=TextTrimming.CharacterEllipsis,
+        var name = new TextBlock { Text=item.Name + (item.IsAvailable ? "" : " · 暂不可用"), FontSize=ContentParameters.LabelFontSizeDip, MaxLines=1, TextTrimming=TextTrimming.CharacterEllipsis,
             VerticalAlignment=VerticalAlignment.Center, Foreground=ColorBrush(_presentation.Parameters.Theme.Foreground,210) };
         Grid.SetRow(name,1); cell.Children.Add(name);
         if (ContentDocument.ShowSpanLabels)
@@ -270,21 +288,21 @@ internal sealed partial class PosterVisualWindow
     {
         var snapshot = EnsureContentSnapshot(frame);
         DrawContentSnapshot(snapshot,_contentViewport!);
-        UpdateLampScene();
+        UpdateScene();
     }
-    private void ScrollItems(int wheelDelta)
+    private void ScrollItems(int wheelDelta, bool crossAxis = false)
     {
         if (_contentPresentationSuspended || _monitor is null || _inputIsland is null || _geometry.IsCollapsed || wheelDelta==0 || HasContentGesture || _transitionLayout is not null) return;
-        // One scroll axis, chosen by the poster. Shift never exposes a second axis, and a gesture in
-        // progress is already rejected above, so the loop cannot run away under the user's hand.
+        // Shift exposes the other axis only after qualified physical shortage; normal browsing
+        // stays single-axis. A held content gesture never competes with wheel navigation.
         var flowSnapshot = EnsureContentSnapshot(_bounds);
         // One full notch remains one grid pitch. Signed and fractional input reaches the shared
         // finite/loop policy before clamping, so the head can wrap backward and small deltas add up.
-        var offsets = ContentWheelScrollPolicy.Advance(flowSnapshot, _contentViewport!, wheelDelta);
+        var offsets = ContentWheelScrollPolicy.Advance(flowSnapshot, _contentViewport!, wheelDelta, _contentBrowseMode, crossAxis);
         _contentScrollX = offsets.ScrollXDip;
         _itemScrollOffsetDip = offsets.ScrollYDip;
         UpdateItemScrollState(_bounds);
-        _inputIsland.ApplyLayout(_bounds,BuildInputLayout(_bounds));
+        if (_inputIsland.ApplyLayout(_bounds,BuildInputLayout(_bounds))) PublishContentSpace(_contentSpaceCandidate);
     }
     private void AddContentInputRegions(DesktopPixelRect frame,List<PosterInputRegion> regions)
     {
@@ -298,7 +316,7 @@ internal sealed partial class PosterVisualWindow
         }
         // Hit regions follow the same tiles that were drawn, so a card crossing the seam is clickable
         // on both sides while still resolving to one ItemId.
-        foreach (var tile in ContentLayoutFlow.ProjectTiles(snapshot, viewport))
+        foreach (var tile in ContentLayoutFlow.ProjectTiles(snapshot, viewport, _contentBrowseMode))
         {
             if (tile.Clip.IsEmpty) continue;
             if (IsEditing && !_geometry.IsLocked && !_contentReadOnly && _selectedContentItem==tile.ItemId)
@@ -315,7 +333,7 @@ internal sealed partial class PosterVisualWindow
     }
     private void ClearContentVisuals()
     {
-        ReleaseLampScene();
+        ReleaseScene();
         CancelContentGesture("surface-release");
         ReleaseContentAssets();
         _contentEndAnchor=null;

@@ -53,7 +53,8 @@ internal sealed partial class PosterVisualWindow
             if (_authoritativePoster?.IsVisible == true && _monitor is not null && _bounds.IsUsable)
                 RequireWritableContentProjection(EffectiveContentDocument, ContentViewportFor(_bounds) with
                     { Scale = preferences.Scale, Spacing = preferences.Spacing,
-                      HeightDip = Math.Max(0, ContentViewportFor(_bounds).HeightDip + _presentation.MetaHeightDip - next.MetaHeightDip) });
+                      HeightDip = Math.Max(0, ContentViewportFor(_bounds).HeightDip + _presentation.MetaHeightDip - next.MetaHeightDip
+                          + _presentation.HeaderHeightDip - next.HeaderHeightDip) });
             return null;
         }
         catch (ArgumentException error) { return error.Message; }

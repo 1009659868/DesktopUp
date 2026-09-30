@@ -18,32 +18,51 @@ internal sealed record LampNativeReadback(LampSceneObservation Scene, ContentSur
 
 internal sealed partial class PosterVisualWindow
 {
+    // Called only by the isolated probe below; not an import/module execution entry.
+    private sealed class FailingSceneForProbe(IPosterSceneInstance inner) : IPosterSceneInstance
+    {
+        public FrameworkElement Root => inner.Root;
+        public bool WantsMotion => inner.WantsMotion;
+        public int Releases { get; private set; }
+        public void Update(SceneRenderParameters parameters, SceneFrameContext frame) =>
+            throw new InvalidOperationException("isolated-scene-frame-fault");
+        public void PaintCard(SceneCardPaint paint) => inner.PaintCard(paint);
+        public void StopMotion() => inner.StopMotion();
+        public void Dispose() { Releases++; inner.Dispose(); }
+    }
+    internal bool FailSceneForProbe()
+    {
+        if (_sceneInstance is null) return false;
+        var failing = new FailingSceneForProbe(_sceneInstance);
+        _sceneInstance = failing;
+        PaintSceneMotion(0, null, false);
+        RefreshScene(); RefreshScene();
+        return _sceneInstance is null && failing.Releases == 1 &&
+            _sceneFailure.Failure?.Message == "isolated-scene-frame-fault";
+    }
+
     internal LampNativeReadback ReadLampNativeForProbe()
     {
         var color = _windowBackdrop?.TintColor;
-        return new(ReadLampSceneForProbe(), ReadContentSurfaceForSmoke(), CurrentLamp, VerifyWindowBackdrop(),
+        return new(ReadLampSceneForProbe(), ReadContentSurfaceForSmoke(), _presentation.TemplateParameters, VerifyWindowBackdrop(),
             color is { } c ? $"#{c.A:X2}{c.R:X2}{c.G:X2}{c.B:X2}" : "", _window?.Content.Opacity ?? 0,
             _contentCards.Count > 0 && _contentCards.Values.All(cell => cell.Opacity == 1 &&
                 cell is Grid grid && grid.Children.All(child => child.Opacity == 1)), _contentCanvas,
             _contentCards.ToDictionary(pair => pair.Key, pair => (object)pair.Value, StringComparer.Ordinal));
     }
 
-    internal async Task CaptureLampXamlForProbeAsync(string path)
+    internal LampSceneObservation ReadLampSceneForProbe()
     {
-        var content = _window?.Content ?? throw new InvalidOperationException("Poster XAML is unavailable.");
-        if (content.XamlRoot is null) throw new InvalidOperationException("Poster XAML is not connected.");
-        var bitmap = new RenderTargetBitmap(); await bitmap.RenderAsync(content);
-        if (bitmap.PixelWidth <= 0 || bitmap.PixelHeight <= 0) throw new InvalidOperationException("Poster capture is empty.");
-        var pixels = await bitmap.GetPixelsAsync();
-        var folder = await StorageFolder.GetFolderFromPathAsync(Path.GetDirectoryName(path)!);
-        var file = await folder.CreateFileAsync(Path.GetFileName(path), CreationCollisionOption.FailIfExists);
-        using var stream = await file.OpenAsync(FileAccessMode.ReadWrite);
-        var encoder = await BitmapEncoder.CreateAsync(BitmapEncoder.PngEncoderId, stream);
-        encoder.SetPixelData(BitmapPixelFormat.Bgra8, BitmapAlphaMode.Premultiplied,
-            (uint)bitmap.PixelWidth, (uint)bitmap.PixelHeight, 96, 96, pixels.ToArray());
-        await encoder.FlushAsync();
+        var cards = _contentCards.Values.OfType<Grid>().Select(cell =>
+            cell.Children.OfType<Border>().FirstOrDefault()?.Background)
+            .OfType<Microsoft.UI.Xaml.Media.RadialGradientBrush>();
+        var observation = _sceneInstance is LampSceneInstance lamp ? lamp.ReadObservation(cards) :
+            new LampSceneObservation(false, false, false, true, true, 0, 0, 0, 0, 0, 0, "", 0, 0, "", "");
+        return observation with
+        {
+            ReducedMotion = spatial.SceneReducedMotion, GlobalMotionPaused = spatial.SceneGlobalMotionPaused
+        };
     }
-    internal bool ContentVisualReadyForProbe => _window?.Content is FrameworkElement { XamlRoot: not null, ActualWidth: > 0, ActualHeight: > 0 };
 
     // Deliberately a production paint-handler driver, not native pointer evidence. The normal
     // shared sampler remains the only production source of physical pointer observations.
@@ -52,16 +71,15 @@ internal sealed partial class PosterVisualWindow
         PointerScreenPoint? physical = point is { } p ? new(
             _bounds.X + (int)Math.Round(p.X * (_monitor?.ScaleX ?? 1)),
             _bounds.Y + (int)Math.Round(p.Y * (_monitor?.ScaleY ?? 1))) : null;
-        PaintLampMotion(seconds, physical, !spatial.LampReducedMotion);
+        PaintSceneMotion(seconds, physical, !spatial.SceneReducedMotion);
         return ReadLampNativeForProbe();
     }
 }
 
 internal sealed partial class PosterSpatialRuntime
 {
+    internal bool FailSceneForProbe(string posterId) => _windows[posterId].FailSceneForProbe();
     internal LampNativeReadback ReadLampNativeForProbe(string posterId) => _windows[posterId].ReadLampNativeForProbe();
-    internal Task CaptureLampXamlForProbeAsync(string posterId, string path) => _windows[posterId].CaptureLampXamlForProbeAsync(path);
-    internal bool ContentVisualReadyForProbe(string posterId) => !_suspended && _windows.TryGetValue(posterId, out var window) && window.ContentVisualReadyForProbe;
     internal LampNativeReadback PaintLampMotionForProbe(string posterId, double seconds, LampScenePoint? point) =>
         _windows[posterId].PaintLampMotionForProbe(seconds, point);
 }
@@ -165,7 +183,7 @@ public partial class App
                 "Native lamp/card/background color or background-only alpha binding is incorrect.");
             return read;
         }
-        int MotionTimers() => _ledger!.ActiveResources.Count(resource => resource == "timer.lamp-motion");
+        int MotionTimers() => _ledger!.ActiveResources.Count(resource => resource == "timer.scene-motion");
         void Collapse(string id)
         {
             var p = _stateCoordinator!.Refresh(); var target = p.PostersById[id];
@@ -185,7 +203,7 @@ public partial class App
             string center = Path.Combine(dataRoot, "lamp-" + name + "-center.png");
             string poster = Path.Combine(dataRoot, "lamp-" + name + "-poster-xaml.png");
             await window.CaptureSettingsForProbeAsync(center); captures.Add(center);
-            await _spatialRuntime!.CaptureLampXamlForProbeAsync(id, poster); captures.Add(poster);
+            await _spatialRuntime!.CapturePosterXamlForProbeAsync(id, poster); captures.Add(poster);
             if (name == "color-picker")
             {
                 string popup = Path.Combine(dataRoot, "lamp-color-picker-popup.png");
@@ -232,7 +250,7 @@ public partial class App
                             "The four declared motion bindings are missing.");
                         window.PreviewLampControlsForProbe(aValue); Next(4); break;
                     case 4:
-                        Require(current.Revision == revision && window!.CommonSettingsForProbe.Preview?.Lamp == aValue && window.HasPosterDraft(a),
+                        Require(current.Revision == revision && window!.CommonSettingsForProbe.Preview?.TemplateValues == LegacyLampValues.ToValues(aValue) && window.HasPosterDraft(a),
                             "Held lamp preview wrote state or did not own its target.");
                         var preview = Bound(a, aValue); SameGeometry(baseline!, preview, true);
                         Require(current.PostersById[b].Poster == initialB, "A's preview leaked into B.");
@@ -270,7 +288,7 @@ public partial class App
                             window.CommonSettingsForProbe.Error, controls = window.ReadLampParameterControlsForProbe(),
                             stored = current.PostersById[a].Presentation.Parameters.Lamp });
                         Require(current.Revision == revision && window!.HasPosterDraft(a) &&
-                            window.CommonSettingsForProbe.Preview is { Setting: PosterSetting.TemplateParameters, Lamp.LightColor: "#GGGGGG" } &&
+                            window.CommonSettingsForProbe.Preview is { Setting: PosterSetting.TemplateParameters, TemplateValues: { } invalidValues } && invalidValues.Color("lamp.color", "") == "#GGGGGG" &&
                             window.CommonSettingsForProbe.Error is not null && window.ReadLampParameterControlsForProbe().Values.LightColor == "#GGGGGG",
                             "Invalid lamp draft was lost, committed, or replaced by the spacing entry.");
                         var retained = Bound(a, aValue); SameGeometry(baseline!, retained, true);
@@ -362,14 +380,14 @@ public partial class App
                     case 27:
                         var moving = Bound(a, LampTemplatePolicy.Defaults);
                         observations.Add(new { name = "motion-gate-readback", previousFrames = motionFrames, moving.Scene,
-                            timers = MotionTimers(), runtimeTimerPresent = _spatialRuntime.LampMotionRunning,
-                            motionResources = _ledger!.ActiveResources.Where(resource => resource.Contains("lamp-motion", StringComparison.Ordinal)).ToArray() });
+                            timers = MotionTimers(), runtimeTimerPresent = _spatialRuntime.SceneMotionRunning,
+                            motionResources = _ledger!.ActiveResources.Where(resource => resource.Contains("scene-motion", StringComparison.Ordinal)).ToArray() });
                         Require(current.Revision == revision && MotionTimers() <= 1, "Decorative frames wrote state or allocated per-poster timers.");
                         if (moving.Scene.ReducedMotion || moving.Scene.GlobalMotionPaused)
                             Require(moving.Scene.StaticOnly && MotionTimers() == 0, "Reduced/global-paused motion retained a frame timer.");
                         else
                         {
-                            Require(MotionTimers() == 1 && _spatialRuntime.LampMotionRunning,
+                            Require(MotionTimers() == 1 && _spatialRuntime.SceneMotionRunning,
                                 "Expected exactly one application-owned motion timer, matching the running scheduler.");
                             Require(moving.Scene.MotionFrames > motionFrames,
                                 $"Real shared dispatcher frames did not advance: before={motionFrames}, after={moving.Scene.MotionFrames}.");
@@ -394,7 +412,7 @@ public partial class App
                     case 28:
                         Require(_spatialRuntime.ReadLampNativeForProbe(a).Scene.StaticOnly &&
                             _spatialRuntime.ReadLampNativeForProbe(b).Scene.StaticOnly && MotionTimers() == 0 &&
-                            !_ledger.ActiveResources.Contains("subscription.lamp-motion-settings"), "Editing kept motion or its resources alive.");
+                            !_ledger.ActiveResources.Contains("subscription.scene-motion-settings"), "Editing kept motion or its resources alive.");
                         observations.Add(new { name = "editing-stops-shared-motion", timers = MotionTimers(), current.Revision });
                         Require(_spatialRuntime.SetContentEditing(a, false) is null && _spatialRuntime.SetContentEditing(b, false) is null,
                             "Could not leave production editing modes.");
@@ -421,9 +439,22 @@ public partial class App
                         Collapse(b); Next(33); break;
                     case 33:
                         Require(current.PostersById[b].Poster.IsCollapsed && !_spatialRuntime.ReadLampNativeForProbe(b).Scene.Visible &&
-                            MotionTimers() == 0 && !_ledger.ActiveResources.Contains("subscription.lamp-motion-settings"),
+                            MotionTimers() == 0 && !_ledger.ActiveResources.Contains("subscription.scene-motion-settings"),
                             "All collapsed scenes retained motion resources.");
                         observations.Add(new { name = "all-collapsed-motion-resources-zero", timers = MotionTimers(), current.Revision });
+                        var beforeFault = _spatialRuntime.ReadLampNativeForProbe(a);
+                        var unaffected = _spatialRuntime.ReadLampNativeForProbe(b);
+                        Require(_spatialRuntime.FailSceneForProbe(a), "Failed scene was not detached/disposed once or retried on refresh.");
+                        var afterFault = _spatialRuntime.ReadLampNativeForProbe(a);
+                        SameGeometry(beforeFault, afterFault, true);
+                        Require(!afterFault.Scene.Active && afterFault.BackdropValid &&
+                            afterFault.BackdropColor == beforeFault.BackdropColor &&
+                            afterFault.Parameters == beforeFault.Parameters &&
+                            _spatialRuntime.ReadLampNativeForProbe(b).Scene == unaffected.Scene &&
+                            MotionTimers() == 0 && _stateCoordinator.Refresh().Revision == current.Revision,
+                            "Scene failure damaged base paint, another instance, state or resources.");
+                        observations.Add(new { name = "scene-host-failure-detaches-only-decoration", resources = MotionTimers(),
+                            afterFault.BackdropValid, stateUnchanged = true, geometryUnchanged = true, releaseCount = 1 });
                         _spatialRuntime.Suspend();
                         Require(MotionTimers() == 0, "Environment suspension retained motion resources.");
                         observations.Add(new { name = "environment-suspend-motion-resources-zero", timers = MotionTimers() });

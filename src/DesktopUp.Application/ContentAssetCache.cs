@@ -3,7 +3,7 @@ namespace DesktopUp.Application;
 // SourceKey is an opaque provider key, never a file path or executable instruction.
 public sealed record ContentAssetKey(string PosterId, string ItemId, long SessionEpoch, long DocumentVersion,
     long ItemSetVersion, long PlacementVersion, string SourceKey, int PixelWidth, int PixelHeight,
-    uint DpiX, uint DpiY, long ThemeVersion);
+    uint DpiX, uint DpiY, long ThemeVersion, long SourceVersion = 1);
 public sealed record ContentAssetPayload(string MediaType, ReadOnlyMemory<byte> Bytes);
 public enum ContentAssetStatus { Cached, Loaded, Missing, Stale, Capacity, Failed }
 public sealed record ContentAssetResult(ContentAssetKey Key, ContentAssetStatus Status, ContentAssetPayload? Payload = null);
@@ -58,6 +58,12 @@ public sealed class ContentAssetCache : IDisposable
     public int Count { get { lock (_gate) return _entries.Count; } }
     public long CachedBytes { get { lock (_gate) return _bytes; } }
     public int RunningLoads { get { lock (_gate) return _flights.Count; } }
+    // Includes invalidated-but-not-yet-finished requests. Returning to the same visible key
+    // must wait for that real flight rather than enqueue repeated Capacity retries.
+    public bool IsLoading(ContentAssetKey key) { lock (_gate) return _flights.ContainsKey(key); }
+    // Raised only when a real provider slot is freed, including cancellation-resistant loads.
+    // Subscribers marshal to their own dispatcher and recheck the live surface/lifetime.
+    public event Action? LoadFinished;
 
     public void SetVisible(IEnumerable<ContentAssetKey> keys)
     {
@@ -141,6 +147,7 @@ public sealed class ContentAssetCache : IDisposable
             flight.Completion.TrySetResult(new(flight.Key, status, payload));
         }
         flight.Cancellation.Dispose();
+        try { LoadFinished?.Invoke(); } catch (Exception) { /* Observer cannot fault a provider task. */ }
     }
     private void Touch(Entry entry) { _lru.Remove(entry.Node); _lru.AddLast(entry.Node); }
     private void EvictOldest()
@@ -160,7 +167,7 @@ public sealed class ContentAssetCache : IDisposable
         if (string.IsNullOrWhiteSpace(key.PosterId) || key.PosterId.Length > 128 || string.IsNullOrWhiteSpace(key.ItemId) ||
             key.ItemId.Length > 192 || !key.ItemId.StartsWith(key.PosterId + ":", StringComparison.Ordinal) ||
             string.IsNullOrWhiteSpace(key.SourceKey) || key.SourceKey.Length > 256 || key.SourceKey.Any(char.IsControl) ||
-            key.SessionEpoch < 1 || key.DocumentVersion < 1 || key.ItemSetVersion < 1 || key.PlacementVersion < 1 || key.ThemeVersion < 1 ||
+            key.SessionEpoch < 1 || key.DocumentVersion < 1 || key.ItemSetVersion < 1 || key.PlacementVersion < 1 || key.ThemeVersion < 1 || key.SourceVersion < 1 ||
             key.PixelWidth is < 1 or > 4096 || key.PixelHeight is < 1 or > 4096 || key.DpiX is < 48 or > 960 || key.DpiY is < 48 or > 960)
             throw new ArgumentException("Invalid bounded content asset key.");
     }
@@ -170,7 +177,7 @@ public sealed class ContentAssetCache : IDisposable
         lock (_gate)
         {
             if (_disposed) return;
-            _disposed = true; _visible.Clear(); _entries.Clear(); _lru.Clear(); _bytes = 0;
+            _disposed = true; _visible.Clear(); _entries.Clear(); _lru.Clear(); _bytes = 0; LoadFinished = null;
             cancelled = _flights.Values.ToList();
             foreach (var f in cancelled) { f.Valid = false; f.Completion.TrySetResult(new(f.Key, ContentAssetStatus.Stale)); }
         }

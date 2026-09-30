@@ -14,7 +14,8 @@ public sealed partial class ControlCenterWindow
     // Raw center-only input, bound to the exact committed basis. It never substitutes for the
     // document or solver and does not preview a half-entered pair onto the poster.
     private sealed record ContentFieldDraft(string PosterId, string ItemId, long EntityVersion,
-        long DocumentVersion, ContentFieldGroup Group, string First, string Second);
+        long DocumentVersion, ContentFieldGroup Group, string First, string Second)
+    { public long SpaceEpoch { get; init; } public Guid SpaceSession { get; init; } }
     private ContentFieldDraft? _contentFieldDraft;
     private string? _contentFieldNotice;
     private bool _renderingContentFields, _contentFieldApplying;
@@ -70,7 +71,8 @@ public sealed partial class ControlCenterWindow
         bool begins = _contentFieldDraft is null;
         _contentFieldDraft = _contentFieldDraft is { } existing
             ? existing with { First = boxes.First.Text, Second = boxes.Second?.Text ?? "" }
-            : new(id, item, view.EntityVersion, view.Document.DocumentVersion, group, boxes.First.Text, boxes.Second?.Text ?? "");
+            : new(id, item, view.EntityVersion, view.Document.DocumentVersion, group, boxes.First.Text, boxes.Second?.Text ?? "")
+                { SpaceEpoch = view.SpaceEpoch, SpaceSession = view.SpaceSession };
         _contentFieldNotice = DescribeContentFieldDraft(_contentFieldDraft, view);
         // TextChanging captures ownership synchronously. TextChanged/queued render may be later;
         // another control in this dispatcher turn must already see the raw (possibly invalid) draft.
@@ -111,6 +113,8 @@ public sealed partial class ControlCenterWindow
     private static string? ValidateContentFields(ContentFieldDraft draft, ContentLayoutEditorView view, out ContentLayoutEdit? edit)
     {
         edit = null;
+        if (view.SpaceEpoch != draft.SpaceEpoch || view.SpaceSession != draft.SpaceSession)
+            return "显示环境已变化，旧草稿已失效；原文保留，请取消后重新输入。";
         if (view.EntityVersion != draft.EntityVersion || view.Document.DocumentVersion != draft.DocumentVersion ||
             view.SelectedItemId != draft.ItemId || view.Document.PosterId != draft.PosterId)
             return "草稿基准或卡片选择已变化；原文保留，请取消后重新输入。";

@@ -298,7 +298,7 @@ public partial class App
                             Probe(target);cases.Add("shared-recovery-resumes-proposal-on-safe-point");
                             Require(_spatialRuntime.SetContentEditing(target,true) is null,"Cannot resume editing after lifecycle recovery.");
                         });
-                        foreach(string sample in new[]{"illustration","covers","landscape"})
+                        foreach(string sample in new[]{"illustration","covers"})
                         {
                             string captured=sample;
                             operations.Enqueue(()=>
@@ -315,11 +315,21 @@ public partial class App
                         }
                         operations.Enqueue(()=>
                         {
-                            var read=Probe(target); Require(read.ExtentWidth>read.ViewWidth,"Narrow manual reference did not expose horizontal extent.");
-                            _spatialRuntime.ScrollContentForSmoke(target,double.MaxValue,0);
-                            read=Probe(target); Require(read.ScrollX>0,"Horizontal offset was not clamped to the reachable right extent.");
-                            _spatialRuntime.ScrollContentForSmoke(target,0,0); guideBasis=Probe(target);
-                            cases.Add("horizontal-scroll-offset-nonnative-shift-wheel-equivalent");
+                            var before = Current();
+                            Require(_spatialRuntime.ApplyContentSample(target,"landscape") is not null &&
+                                Current().Revision == before.Revision && Fingerprint(Current()) == Fingerprint(before),
+                                "A membership swap silently introduced/discarded preserved regions.");
+                            cases.Add("legacy-region-membership-replacement-rejected");
+                            // The old-region fixture already exists on C. Do not bypass the
+                            // compatibility command guard by replacing a different member set on A.
+                            var legacy = before.Posters.Single(p => p.Poster.Title.Contains("landscape",StringComparison.Ordinal)).Poster.PosterId;
+                            var read=Probe(legacy); Require(read.ExtentWidth<=read.ViewWidth,"Legacy regions did not fit the supplied cross-axis space.");
+                            _spatialRuntime.ScrollContentForSmoke(legacy,double.MaxValue,0);
+                            read=Probe(legacy); Require(read.ScrollX==0,"Normal vertical browsing exposed a second scroll axis.");
+                            _spatialRuntime.ScrollContentForSmoke(legacy,0,0);
+                            cases.Add("reference-landscape");
+                            guideBasis=Probe(target);
+                            cases.Add("legacy-regions-fit-cross-axis-without-second-scrollbar");
                         });
                         foreach(var flags in new[]{(true,false),(true,true),(false,true),(false,false)})
                         {
@@ -351,14 +361,23 @@ public partial class App
                         operations.Enqueue(()=>SyntheticInput("edge-release",true));
                         operations.Enqueue(()=>
                         {
+                            var before=Current(); var doc=_spatialRuntime.ReadContentEditor(target)!.Document;
+                            Require(_spatialRuntime.ApplyContentEditor(target,new(ContentLayoutEditKind.Fixed,doc.Placements[^1].ItemId){Enabled=true}) is not null &&
+                                Current().Revision == before.Revision && Fingerprint(Current()) == Fingerprint(before),
+                                "Legacy hard-position conversion bypassed its compatibility guard.");
+                            cases.Add("legacy-hard-position-conversion-rejected");
+                        });
+                        operations.Enqueue(()=>Mutation("manual-exit-restores-automatic",()=>_spatialRuntime.ApplyContentEditor(target,
+                            new(ContentLayoutEditKind.Mode){Mode=ContentLayoutMode.Automatic})));
+                        operations.Enqueue(()=>
+                        {
                             var before=Current(); var p=before.PostersById[target]; var doc=_spatialRuntime.ReadContentEditor(target)!.Document;
-                            Mutation("fixed-card",()=>_spatialRuntime.ApplyContentEditor(target,new(ContentLayoutEditKind.Fixed,doc.Placements[^1].ItemId){Enabled=true}));
+                            Mutation("order-pin-single-revision",()=>_spatialRuntime.ApplyContentEditor(target,new(ContentLayoutEditKind.Pinned,doc.Placements[^1].ItemId){Enabled=true,PinnedIndex=1}));
                             var stale=_stateCommands!.Execute(new ContentLayoutCommand("content-smoke-stale",StateCommandSource.Poster,before.Revision,target,
                                 StateReadSet.ForPoster(target,p.EntityVersion),doc.DocumentVersion,doc.ItemSetVersion,doc with{DocumentVersion=doc.DocumentVersion+1,ShowSpanLabels=!doc.ShowSpanLabels}));
                             Require(!stale.Succeeded && stale.Status==StateCommandStatus.Conflict && Current().Revision==before.Revision+1,"Stale aggregate CAS mutated state.");
                             cases.Add("complete-aggregate-cas-stale-rejection");
                         });
-                        operations.Enqueue(()=>Mutation("manual-exit-to-anchors",()=>_spatialRuntime.ApplyContentEditor(target,new(ContentLayoutEditKind.Mode){Mode=ContentLayoutMode.Anchored,ManualExit=ManualLayoutExit.ConvertToAnchors})));
                         operations.Enqueue(()=>{Require(_spatialRuntime.SetContentEditing(target,false) is null,"Cannot exit content editing."); Posture(true);});
                         operations.Enqueue(()=>Posture(false));
                     }

@@ -32,7 +32,7 @@ internal static class StateCommandPolicy
             var recipeInstances = PosterPresentationPolicy.Resolve(command.DesiredState).Parameters.RecipeInstances;
             if (recipeInstances is not null)
             {
-                var registered = TemplateRecipeCatalog.Read(state.Settings.Settings.TemplateCatalogJson).ToDictionary(r => r.Id, StringComparer.Ordinal);
+                var registered = TemplateRecipeCatalog.All(state.Settings.Settings.TemplateCatalogJson).ToDictionary(r => r.Id, StringComparer.Ordinal);
                 if (recipeInstances.Values.Any(i => !registered.TryGetValue(i.Recipe.Id, out var r) ||
                     TemplateRecipeCodec.Serialize(r) != TemplateRecipeCodec.Serialize(i.Recipe)))
                     return Invalid("Recipe definition is not registered or does not match the catalog.");

@@ -12,9 +12,14 @@ internal sealed partial class PosterSpatialRuntime
 
     public void BeforeManualIntent(string posterId, bool? collapse = null)
     {
+        if (collapse is null && _pendingPostures.Remove(posterId, out var pending))
+        {
+            if (_windows.TryGetValue(posterId, out var window)) window.ShowPosturePending(false);
+            pending.Completed(Failure(pending.Command, "新的直接操作取代等待中的收展。"));
+        }
         if (!HasCenterDraft(posterId) && _windows.TryGetValue(posterId, out var target)) target.ClearCenterPresentation();
         ManualIntent?.Invoke(posterId, collapse);
-        if (_automatic is { } active) CancelAutomatic(active);
+        if (_automatic is { } active && active.Session.PosterId == posterId) CancelAutomatic(active);
     }
 
     public void StartAutomatic(AutoPostureRequest request, Action<AutoPostureOutcome> completed)
@@ -50,7 +55,7 @@ internal sealed partial class PosterSpatialRuntime
         catch (Exception exception)
         {
             log.Write("error", "auto_posture.start_failed", new { request.Id, exception.Message });
-            if (_posture?.Command.RequestId == command.RequestId) CancelPosture("automatic-start-failed");
+            if (_postures.GetValueOrDefault(command.RequestId) is { } run) CancelPosture("automatic-start-failed", specific: run);
             else Finish(Failure(command, exception.Message));
         }
     }
@@ -59,7 +64,8 @@ internal sealed partial class PosterSpatialRuntime
     {
         if (_automatic != request) return;
         _automaticCancellation = AutoPostureOutcome.Cancelled;
-        if (_posture?.Command.RequestId == _automaticCommand) CancelPosture("automatic-invalidated");
+        if (_automaticCommand is not null && _postures.GetValueOrDefault(_automaticCommand) is { } run)
+            CancelPosture("automatic-invalidated", specific: run);
     }
 
     private StateCommandResult CommitPosture(PosterStateCommand command) => command.Source == StateCommandSource.System

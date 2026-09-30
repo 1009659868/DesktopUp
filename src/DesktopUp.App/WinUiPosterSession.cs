@@ -16,7 +16,7 @@ internal sealed class WinUiPosterSessionFactory(
         return new WinUiPosterSession(posterId,
             new PosterVisualWindow(attachment, commands, scopedLedger, scopedLog, spatial,
                 inputRouter, new(posterId, epoch), requestRemoval, showControlCenter,
-                editing => editingChanged(posterId, editing)), scopedLedger, scopedLog, environmentChanged);
+                editing => editingChanged(posterId, editing), spatial.ContentSourceFor(posterId)), scopedLedger, scopedLog, environmentChanged);
     }
 }
 

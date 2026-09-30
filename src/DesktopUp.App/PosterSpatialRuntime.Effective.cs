@@ -9,6 +9,8 @@ internal sealed partial class PosterSpatialRuntime
     private readonly EffectivePosterLayouts _effective = new();
     private DisplayTopologySnapshot? _effectiveTopology;
     public void SetEffectiveTopology(DisplayTopologySnapshot topology) => _effectiveTopology = topology;
+    internal SpatialEnvironment ContentEnvironment(DisplayMonitorSnapshot monitor, long display, long shell) =>
+        new(monitor.DeviceName, Rect(monitor.WorkArea), monitor.DpiX, monitor.DpiY, display, shell, _runtimeId);
     public event Action? EffectiveLayoutChanged;
     public EffectivePosterLayout? GetEffectiveLayout(PosterSurfaceProjection target) => _effective.Find(target);
 

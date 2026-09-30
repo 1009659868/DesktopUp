@@ -186,10 +186,30 @@ internal sealed partial class PosterVisualWindow
             attachment.VerifyVisualSurface(_windowHandle, surface, _bounds);
     }
 
+    // Explicit fixture readback only; CPU/layout witnesses do not certify composition pixels.
+    internal object ReadTransitionForProbe() => new
+    {
+        visible = _bounds, native = CurrentNativeBounds(_bounds),
+        rootWidth = (_window?.Content as FrameworkElement)?.ActualWidth,
+        rootHeight = (_window?.Content as FrameworkElement)?.ActualHeight,
+        surfaceWidth = _surface?.ActualWidth, surfaceHeight = _surface?.ActualHeight,
+        structureWidth = _contentStructure?.ActualWidth, structureHeight = _contentStructure?.ActualHeight,
+        canvasClip = (_transitionLayout?.Canvas.Clip as RectangleGeometry)?.Rect,
+        structureClip = (_contentStructure?.Clip as RectangleGeometry)?.Rect,
+        footerTop = _footer is null ? 0 : Canvas.GetTop(_footer), footerHeight = _footer?.ActualHeight,
+        responsive = _transitionLayout?.IsResponsiveGeometry,
+        nativePrepared = _transitionLayout?.NativePrepared,
+        contentIdentity = _contentCanvas is null ? 0 : System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(_contentCanvas),
+        cardIdentities = _contentCards.ToDictionary(p => p.Key, p => System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(p.Value)),
+        scaleX = _monitor?.ScaleX, scaleY = _monitor?.ScaleY
+    };
+
     private void RestoreTransitionLayout()
     {
         if (_transitionLayout is not { } lease) return;
         _transitionLayout = null;
+        _solvedDocument = null;
+        _contentSpaceCandidate = null;
         if (_surface?.Child == lease.Canvas) _surface.Child = null;
         lease.Canvas.Children.Clear();
         lease.Structure.Width = lease.StructureWidth; lease.Structure.Height = lease.StructureHeight;

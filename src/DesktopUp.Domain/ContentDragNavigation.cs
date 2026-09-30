@@ -18,8 +18,8 @@ public sealed class ContentDragNavigation
     public double ScrollDeltaYDip => Vertical ? TravelDip : 0;
 
     public static ContentDragNavigation Begin(ContentLayoutSnapshot snapshot, ContentLayoutViewport viewport,
-        ContentLayoutTile tile, double pointerX, double pointerY) =>
-        new(snapshot, viewport, tile, ContentLayoutFlow.CaptureAnchor(snapshot, viewport, tile, pointerX, pointerY), 0);
+        ContentLayoutTile tile, double pointerX, double pointerY, ContentBrowseMode mode = ContentBrowseMode.SingleAxis) =>
+        new(snapshot, viewport, tile, ContentLayoutFlow.CaptureAnchor(snapshot, viewport, tile, pointerX, pointerY, mode), 0);
 
     public ContentDragNavigation Advance(double mainDeltaDip)
     {

@@ -12,26 +12,29 @@ public sealed record TemplateRecipe(TemplateParameterSchema Schema, string Famil
     public string EffectiveTemplateKey => Schema.RendererCapability == TemplateParameterSchemas.LampCapability
         ? "lamp" : Base.Heading ? "night-ops" : "basic-box";
 }
-public sealed record TemplateRecipeInstance(TemplateRecipe Recipe, LampTemplateParameters Parameters);
+public sealed partial record TemplateRecipeInstance(TemplateRecipe Recipe)
+{
+    public TemplateParameterValues Values { get; init; } = TemplateRecipeInstancePolicy.DefaultValues(Recipe);
+}
 
 /// <summary>Bounded declarative recipes. No paths, resources, executable text or plug-ins.</summary>
 public static class TemplateRecipeCodec
 {
     public const string Format = "desktopup.template";
     public const int MaximumBytes = 65536;
-    public static TemplateRecipe Parse(string source)
+    public static TemplateRecipe Parse(string source, bool stored = false)
     {
         if (source is null || Encoding.UTF8.GetByteCount(source) > MaximumBytes)
             throw new ArgumentException("模板配方不得超过 64 KiB。");
         try
         {
             using var document = JsonDocument.Parse(source, new JsonDocumentOptions { MaxDepth = 12 });
-            return Parse(document.RootElement);
+            return Parse(document.RootElement, stored);
         }
         catch (Exception e) when (e is JsonException or KeyNotFoundException or InvalidOperationException or OverflowException)
         { throw new ArgumentException("配方 JSON 缺少字段、类型错误或格式无效。", e); }
     }
-    internal static TemplateRecipe Parse(JsonElement root)
+    internal static TemplateRecipe Parse(JsonElement root, bool stored = false)
     {
         Members(root, "format", "schemaVersion", "id", "version", "name", "family", "renderer", "base", "properties");
         if (Text(root, "format") != Format || Integer(root, "schemaVersion") != 1)
@@ -40,7 +43,7 @@ public static class TemplateRecipeCodec
         {
             "lamp@1" => TemplateParameterSchemas.LampCapability,
             "minimal@1" => TemplateParameterSchemas.BasicCapability,
-            _ => throw new ArgumentException("未知渲染能力。")
+            var id => id
         };
         var basis = root.GetProperty("base"); Members(basis, "background", "card", "heading");
         if (basis.GetProperty("heading").ValueKind is not (JsonValueKind.True or JsonValueKind.False))
@@ -72,25 +75,27 @@ public static class TemplateRecipeCodec
         var recipe = new TemplateRecipe(new(Text(root, "id"), Text(root, "name"), capability, definitions,
             Integer(root, "schemaVersion"), Integer(root, "version")), Text(root, "family"),
             new(Text(basis, "background"), Text(basis, "card"), basis.GetProperty("heading").GetBoolean()));
-        return Freeze(recipe);
+        return Freeze(recipe, stored);
     }
-    public static TemplateRecipe Freeze(TemplateRecipe recipe)
+    public static TemplateRecipe Freeze(TemplateRecipe recipe, bool stored = false)
     {
         if (recipe is null || recipe.Base is null || !Color(recipe.Base.Background) || !Color(recipe.Base.Card) ||
             string.IsNullOrWhiteSpace(recipe.Family) || recipe.Family.Length > 24 || recipe.Family.Any(char.IsControl))
             throw new ArgumentException("配方材质或分类无效。");
-        return recipe with { Schema = TemplateParameterSchemas.Freeze(recipe.Schema) };
+        if (SceneCapabilityRegistry.Find(recipe.Schema.RendererCapability)?.ReplacesMetaText == true && !recipe.Base.Heading)
+            throw new ArgumentException("此场景需要保留顶部装饰槽；不能通过配方移除该槽。");
+        return recipe with { Schema = TemplateParameterSchemas.Freeze(recipe.Schema, stored) };
     }
-    public static string Serialize(TemplateRecipe recipe)
+    public static string Serialize(TemplateRecipe recipe, bool stored = false)
     {
-        recipe = Freeze(recipe);
+        recipe = Freeze(recipe, stored);
         using var output = new MemoryStream();
         using (var writer = new Utf8JsonWriter(output, new JsonWriterOptions { Indented = true }))
         {
             writer.WriteStartObject(); writer.WriteString("format", Format); writer.WriteNumber("schemaVersion", 1);
             writer.WriteString("id", recipe.Id); writer.WriteNumber("version", recipe.Schema.TemplateVersion);
             writer.WriteString("name", recipe.Name); writer.WriteString("family", recipe.Family);
-            writer.WriteString("renderer", recipe.Schema.RendererCapability == TemplateParameterSchemas.LampCapability ? "lamp@1" : "minimal@1");
+            writer.WriteString("renderer", recipe.Schema.RendererCapability switch { TemplateParameterSchemas.LampCapability => "lamp@1", TemplateParameterSchemas.BasicCapability => "minimal@1", var id => id });
             writer.WritePropertyName("base"); writer.WriteStartObject();
             writer.WriteString("background", recipe.Base.Background); writer.WriteString("card", recipe.Base.Card);
             writer.WriteBoolean("heading", recipe.Base.Heading); writer.WriteEndObject();
@@ -142,10 +147,11 @@ public static class TemplateRecipeCatalog
     public static IReadOnlyList<TemplateRecipe> BuiltIns => Array.AsReadOnly(new[]
     {
         new TemplateRecipe(TemplateParameterSchemas.ForTemplate("night-ops")!, "极简主义", new("#202E2A", "#2D433A", true)),
-        new TemplateRecipe(TemplateParameterSchemas.ForTemplate("lamp")!, "交互光影", new("#17221E", "#354237", true)),
         new TemplateRecipe(TemplateParameterSchemas.ForTemplate("basic-box")!, "极简主义", new("#282B30", "#456078", false))
-    });
-    public static IReadOnlyList<TemplateRecipe> Read(string source)
+    }.Take(1).Concat(SceneCapabilityRegistry.Templates).Concat(new[]
+    {
+        new TemplateRecipe(TemplateParameterSchemas.ForTemplate("basic-box")!, "极简主义", new("#282B30", "#456078", false))
+    }).ToArray());    public static IReadOnlyList<TemplateRecipe> Read(string source, bool stored = false)
     {
         if (source is null || Encoding.UTF8.GetByteCount(source) > MaximumCatalogBytes) throw new ArgumentException("模板册过大。");
         try
@@ -157,7 +163,7 @@ public static class TemplateRecipeCatalog
             var result = new List<TemplateRecipe>();
             foreach (var row in doc.RootElement.EnumerateArray())
             {
-                var recipe = TemplateRecipeCodec.Parse(row.GetRawText());
+                var recipe = TemplateRecipeCodec.Parse(row.GetRawText(), stored);
                 if (!ids.Add(recipe.Id)) throw new ArgumentException("模板 ID 已存在；请为副本使用新的 ID。");
                 result.Add(recipe);
             }
@@ -165,83 +171,11 @@ public static class TemplateRecipeCatalog
         }
         catch (JsonException e) { throw new ArgumentException("模板册 JSON 无效。", e); }
     }
-    public static IReadOnlyList<TemplateRecipe> All(string source) => Array.AsReadOnly(BuiltIns.Concat(Read(source)).ToArray());
+    public static IReadOnlyList<TemplateRecipe> All(string source) => Array.AsReadOnly(BuiltIns.Concat(Read(source, stored: true)).ToArray());
     public static string Add(string source, TemplateRecipe recipe)
     {
         var list = Read(source).ToList(); list.Add(TemplateRecipeCodec.Freeze(recipe));
-        string result = "[" + string.Join(",", list.Select(TemplateRecipeCodec.Serialize)) + "]";
+        string result = "[" + string.Join(",", list.Select(r => TemplateRecipeCodec.Serialize(r))) + "]";
         Read(result); return result;
-    }
-}
-
-public static class TemplateRecipeInstancePolicy
-{
-    public static LampTemplateParameters Current(PosterPresentationParameters parameters, string templateId)
-    {
-        if (parameters.RecipeInstances?.TryGetValue(templateId, out var instance) == true) return instance.Parameters;
-        if (templateId == "lamp") return parameters.Lamp ?? LampTemplatePolicy.Defaults;
-        var builtIn = TemplateRecipeCatalog.BuiltIns.FirstOrDefault(r => r.Id == templateId);
-        return builtIn is null ? LampTemplatePolicy.Defaults : Defaults(builtIn) with { Background = parameters.Theme.Background };
-    }
-    public static LampTemplateParameters Defaults(TemplateRecipe recipe)
-    {
-        recipe = TemplateRecipeCodec.Freeze(recipe);
-        var result = LampTemplatePolicy.Defaults with { Background = recipe.Base.Background, Card = recipe.Base.Card };
-        foreach (var p in recipe.Schema.Properties) result = Set(result, p.Binding, p.DefaultValue);
-        return result;
-    }
-    public static LampTemplateParameters Set(LampTemplateParameters result, string binding, TemplateParameterValue value) => binding switch
-    {
-        "lamp.color" => result with { LightColor = value.Color! }, "lamp.softness" => result with { Softness = value.Number!.Value },
-        "lamp.intensity" => result with { Intensity = value.Number!.Value }, "surface.background" => result with { Background = value.Color! },
-        "item.color" => result with { Card = value.Color! }, "surface.opacity" => result with { BackgroundOpacity = value.Number!.Value },
-        "scene.motion" => result with { MotionEnabled = value.Boolean!.Value }, "lamp.follow" => result with { FollowPointer = value.Boolean!.Value },
-        "lamp.sway" => result with { IdleSway = value.Number!.Value }, "lamp.speed" => result with { MotionSpeed = value.Number!.Value },
-        _ => throw new ArgumentException("未知绑定。")
-    };
-    public static TemplateParameterValue Get(LampTemplateParameters value, string binding) => binding switch
-    {
-        "lamp.color" => TemplateParameterValue.FromColor(value.LightColor), "lamp.softness" => TemplateParameterValue.FromNumber(value.Softness),
-        "lamp.intensity" => TemplateParameterValue.FromNumber(value.Intensity), "surface.background" => TemplateParameterValue.FromColor(value.Background),
-        "item.color" => TemplateParameterValue.FromColor(value.Card), "surface.opacity" => TemplateParameterValue.FromNumber(value.BackgroundOpacity),
-        "scene.motion" => TemplateParameterValue.FromBoolean(value.MotionEnabled), "lamp.follow" => TemplateParameterValue.FromBoolean(value.FollowPointer),
-        "lamp.sway" => TemplateParameterValue.FromNumber(value.IdleSway), "lamp.speed" => TemplateParameterValue.FromNumber(value.MotionSpeed),
-        _ => throw new ArgumentException("未知绑定。")
-    };
-    public static string? Validate(IReadOnlyDictionary<string, TemplateRecipeInstance>? instances)
-    {
-        if (instances is null) return null;
-        if (instances.Count > TemplateRecipeCatalog.MaximumTemplates) return "模板实例超过上限。";
-        foreach (var (key, instance) in instances)
-        {
-            if (instance is null || instance.Recipe is null || instance.Parameters is null || key != instance.Recipe.Id || PosterPresentationPolicy.IsBuiltIn(key)) return "模板实例身份无效。";
-            try { TemplateRecipeCodec.Freeze(instance.Recipe); }
-            catch (ArgumentException e) { return e.Message; }
-            if (LampTemplatePolicy.Validate(instance.Parameters) is { } error) return error;
-            if (instance.Recipe.Schema.Properties.Any(p => !TemplateParameterSchemas.Accepts(p, Get(instance.Parameters, p.Binding))))
-                return "实例参数不符合配方声明。";
-            var represented = Defaults(instance.Recipe);
-            foreach (var p in instance.Recipe.Schema.Properties) represented = Set(represented, p.Binding, Get(instance.Parameters, p.Binding));
-            if (represented != instance.Parameters) return "实例包含配方未声明的覆盖。";
-        }
-        return null;
-    }
-    public static PosterPresentationParameters Select(PosterPresentationParameters parameters, TemplateRecipe recipe)
-    {
-        recipe = TemplateRecipeCodec.Freeze(recipe);
-        if (PosterPresentationPolicy.IsBuiltIn(recipe.Id)) return parameters;
-        var instances = parameters.RecipeInstances?.ToDictionary(p => p.Key, p => p.Value, StringComparer.Ordinal) ?? new(StringComparer.Ordinal);
-        if (!instances.ContainsKey(recipe.Id)) instances.Add(recipe.Id, new(recipe, Defaults(recipe)));
-        return parameters with { RecipeInstances = new ReadOnlyDictionary<string, TemplateRecipeInstance>(instances) };
-    }
-    public static PosterPresentationParameters Update(PosterPresentationParameters parameters, string templateId, LampTemplateParameters value)
-    {
-        if (templateId == "lamp") return parameters with { Lamp = value };
-        if (parameters.RecipeInstances is not { } prior || !prior.TryGetValue(templateId, out var existing)) throw new ArgumentException("所选模板实例不存在。");
-        var instances = prior.ToDictionary(p => p.Key, p => p.Value, StringComparer.Ordinal);
-        instances[templateId] = existing with { Parameters = value };
-        var result = parameters with { RecipeInstances = new ReadOnlyDictionary<string, TemplateRecipeInstance>(instances) };
-        if (Validate(result.RecipeInstances) is { } error) throw new ArgumentException(error);
-        return result;
     }
 }

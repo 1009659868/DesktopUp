@@ -55,6 +55,7 @@ internal sealed partial class PosterVisualWindow
 
     private void RenderContentFeedback()
     {
+        RenderContentSpaceNavigation();
         if (!TestContentFeedbackEnabled)
         {
             // Preserve the reserved footer geometry so hiding diagnostic text cannot move or

@@ -113,12 +113,12 @@ public sealed partial class ControlCenterWindow
         RenderSettings(); SettingsInteractionChanged?.Invoke();
     }
 
-    private void ChangeLampSetting(LampTemplateParameters value, bool finish)
+    private void ChangeLampSetting(TemplateParameterValues value, bool finish)
     {
         if (_renderingSettings || _editingClosed || _view?.SelectedPoster is not { } target) return;
         if (_editor.ProtectsInteraction || IsContentFieldDraftActive || DesktopInteractionConflicts(target.Poster.PosterId))
         { RenderSettings(); CommonSettingsNotice.Text = "请先完成或取消当前海报操作。"; return; }
-        bool valid = _settings.Update(new(target, PosterSetting.TemplateParameters, Lamp: value));
+        bool valid = _settings.Update(new(target, PosterSetting.TemplateParameters, TemplateValues: value));
         if (valid && _settings.Preview is { } edit && _contentRuntime?.Invoke()?.ValidateControlCenterSetting(edit) is { } error)
         { _settings.RejectPreview(error); valid = false; }
         if (valid) QueueVisualPreview();
@@ -202,7 +202,7 @@ public sealed partial class ControlCenterWindow
                 _settings.ProtectsInteraction ? "调整中 · 完成后自动保存 · Esc 取消当前修改" : "已保存 · 仅当前海报");
             AutoPostureInfo.IsOpen = error is not null;
             AutoPostureInfo.Severity = InfoBarSeverity.Warning; AutoPostureInfo.Message = error ?? "";
-            RenderTemplateParameters(active?.Setting is (PosterSetting.Lamp or PosterSetting.TemplateParameters) ? active.Lamp : null);
+            RenderTemplateParameters(active?.Setting is (PosterSetting.Lamp or PosterSetting.TemplateParameters) ? active.TemplateValues ?? (active.Lamp is { } oldValues ? LegacyLampValues.ToValues(oldValues) : null) : null);
             RenderTemplateSamples();
             UpdateContentDraftPresentation();
         }

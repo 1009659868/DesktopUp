@@ -138,12 +138,41 @@ public sealed class ArchitectureTests
         Assert.Contains("new WinUIEx.TransparentTintBackdrop(color)", backdrop);
         Assert.DoesNotContain("static WinUIEx.TransparentTintBackdrop", backdrop);
         Assert.Contains("_windowBackdrop.TintColor = color", backdrop);
-        Assert.Contains("ColorBrush(_presentation.Parameters.Theme.Background, 245)", backdrop);
+        Assert.Contains("CurrentSceneParameters.Surface", backdrop);
+        Assert.Contains("ColorBrush(paint.Background, paint.BackgroundAlpha)", backdrop);
+        string paint = File.ReadAllText(Path.Combine(root, "src/DesktopUp.Application/ScenePresentationAdapter.cs"));
+        Assert.Contains("new SceneSurfacePaint(presentation.Parameters.Theme.Background, 245, null)", paint);
+        Assert.DoesNotContain("LampTemplate", backdrop);
         Assert.Contains("window.SystemBackdrop = _windowBackdrop", backdrop);
         Assert.Contains("Background = new SolidColorBrush(Colors.Transparent)", visual);
         Assert.DoesNotContain("Background = ColorBrush(_presentation.Parameters.Theme.Background, 245)", visual);
         Assert.Contains("ApplyWindowBackdrop(_window)", presentation);
         Assert.Contains("VerifyWindowBackdrop()", presentation);
+    }
+
+    [Fact]
+    public void Shared_scene_host_does_not_reference_a_concrete_lamp_module()
+    {
+        string root = FindRepositoryRoot();
+        foreach (string path in new[]
+        {
+            "PosterVisualWindow.SceneHost.cs", "PosterVisualWindow.SurfacePaint.cs",
+            "PosterSpatialRuntime.SceneMotion.cs", "PosterVisualWindow.Backdrop.cs"
+        })
+        {
+            string source = File.ReadAllText(Path.Combine(root, "src/DesktopUp.App", path));
+            Assert.DoesNotContain("Lamp", source, StringComparison.Ordinal);
+            Assert.DoesNotContain("lamp", source, StringComparison.Ordinal);
+            Assert.DoesNotContain("Rain", source, StringComparison.Ordinal);
+            Assert.DoesNotContain("rain", source, StringComparison.Ordinal);
+        }
+        string painter = File.ReadAllText(Path.Combine(root, "Modules/Lamp/App/LampSceneInstance.cs"));
+        foreach (string forbidden in new[] { "PosterSpatialRuntime", "PosterInputRouter", "DispatcherQueueTimer",
+            "IStateCommandService", "SetWindowRgn", "SetCapture", "ContentLayoutSolver" })
+        {
+            Assert.DoesNotContain(forbidden, painter, StringComparison.Ordinal);
+            Assert.DoesNotContain(forbidden, File.ReadAllText(Path.Combine(root, "Modules/Rain/App/RainSceneInstance.cs")), StringComparison.Ordinal);
+        }
     }
 
     [Fact]

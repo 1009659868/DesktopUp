@@ -15,9 +15,6 @@ internal sealed partial class PosterVisualWindow
     private double ItemGapDip => ContentParameters.GapDip;
     private double ItemCardHeightDip => ContentParameters.ItemHeightDip;
     private double ItemRowHeightDip => ContentParameters.RowHeightDip;
-    private bool HasSelectedRecipePaint => _presentation.SelectedRecipeId is { } id &&
-        _presentation.Parameters.RecipeInstances?.ContainsKey(id) == true;
-
     private void ApplyPresentation(ResolvedPosterPresentation next)
     {
         if (_centerPresentation is not null)
@@ -39,7 +36,7 @@ internal sealed partial class PosterVisualWindow
             ApplyWindowBackdrop(_window); RefreshTemplatePaint();
             return;
         }
-        ReleaseLampScene();
+        ReleaseScene();
         CancelContentGesture("presentation-changed");
         StopLocate();
         RestoreTransitionLayout();

@@ -31,7 +31,7 @@ public static class TemplatePresentationRefreshPolicy
             // Records alone compare dictionary/list references. Readback reparses them, so
             // compare every declaration value and every nonselected instance structurally.
             if (!SameRecipe(pair.Value.Recipe, updated.Recipe) ||
-                (builtIn || pair.Key != selected) && pair.Value.Parameters != updated.Parameters) return false;
+                (builtIn || pair.Key != selected) && pair.Value.Values != updated.Values) return false;
         }
         return true;
     }

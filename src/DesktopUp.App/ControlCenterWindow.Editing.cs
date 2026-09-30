@@ -40,7 +40,7 @@ public sealed partial class ControlCenterWindow
         geometry.Children.Add(_geometryStatus);
         AddActions(geometry, _geometryApply, _geometryCancel);
         var style = Section("精细基准参数 · DEMO ITEMS", true);
-        foreach (var (key, label) in new[] { ("basic-box", "基础收纳"), ("night-ops", "夜航"), ("lamp", "深夜书桌") })
+        foreach (var (key, label) in TemplateRecipeCatalog.BuiltIns.Select(r => (r.Id, r.Name)))
             _template.Items.Add(new ComboBoxItem { Content = label, Tag = key });
         TemplateSection.Children.Add(_template);
         _template.SelectionChanged += (_, _) => { if (!_renderingEditor && !_renderingSettings && SelectedTemplateKey is { } key) ChangeSetting(PosterSetting.Template, text: key, finish: true); };

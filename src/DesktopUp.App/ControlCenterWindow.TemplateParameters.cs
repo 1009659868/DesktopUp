@@ -17,7 +17,7 @@ internal sealed record LampParameterControlsObservation(bool Visible, bool Enabl
 
 public sealed partial class ControlCenterWindow
 {
-    private TemplateParameterSchema _templateParameterSchema = TemplateParameterSchemas.ForTemplate("lamp")!;
+    private TemplateParameterSchema _templateParameterSchema = TemplateParameterSchemas.ForTemplate("basic-box")!;
     private Expander? _lampParameterFolder;
     private readonly Dictionary<string, TextBox> _lampColors = new(StringComparer.Ordinal);
     private readonly Dictionary<string, Slider> _lampNumbers = new(StringComparer.Ordinal);
@@ -175,18 +175,25 @@ public sealed partial class ControlCenterWindow
         ChangeLampSetting(ReadLampControls(), true);
     }
 
-    private LampTemplateParameters ReadLampControls()
+    private TemplateParameterValues ReadLampControls()
     {
         var values = _templateParameterSchema.Properties.ToDictionary(p => p.Key, p => p.Kind == TemplateParameterKind.Color
             ? TemplateParameterValue.FromColor(_lampColors[p.Key].Text) : p.Kind == TemplateParameterKind.Boolean
             ? TemplateParameterValue.FromBoolean(_lampBooleans[p.Key].IsOn) : TemplateParameterValue.FromNumber(_lampNumbers[p.Key].Value), StringComparer.Ordinal);
         return TemplateParameterBindingAdapter.ComposeDraft(_templateParameterSchema, values,
-            _settings.Preview?.Lamp ?? _view?.SelectedPoster?.Presentation.TemplateParameters ?? LampTemplatePolicy.Defaults);
+            _settings.Preview?.TemplateValues ?? _view?.SelectedPoster?.Presentation.TemplateValues ?? new TemplateParameterValues([]));
     }
 
-    private void RenderTemplateParameters(LampTemplateParameters? preview = null)
+    private void RenderTemplateParameters(TemplateParameterValues? preview = null)
     {
         if (_lampParameterFolder is null || _lampParameterNotice is null) return;
+        if (SelectedRecipe is { } unavailable && !SceneCapabilityRegistry.Available(unavailable.Schema.RendererCapability))
+        {
+            _lampParameterFolder.IsEnabled = false;
+            _lampParameterFolder.Visibility = Visibility.Collapsed;
+            _lampParameterNotice.Text = "模板模块未安装；原设置保留，恢复模块后可调整。";
+            return;
+        }
         if (SelectedRecipe is { } recipe && _templateParameterSchema.TemplateId != recipe.Id)
         {
             CloseLampColorPicker(); _lampHeldSlider = null;
@@ -204,7 +211,7 @@ public sealed partial class ControlCenterWindow
             _lampRenderedPosterId = target?.Poster.PosterId;
             _lampParameterFolder.Visibility = lamp ? Visibility.Visible : Visibility.Collapsed;
             _lampParameterFolder.IsEnabled = lamp && target?.Presentation.CanEdit == true && !_editor.ProtectsInteraction && !IsContentFieldDraftActive;
-            var value = preview ?? target?.Presentation.TemplateParameters ?? LampTemplatePolicy.Defaults;
+            var value = preview ?? target?.Presentation.TemplateValues ?? new TemplateParameterValues([]);
             var values = TemplateParameterBindingAdapter.Read(_templateParameterSchema, value);
             foreach (var property in _templateParameterSchema.Properties)
             {
@@ -233,6 +240,6 @@ public sealed partial class ControlCenterWindow
     internal LampParameterControlsObservation ReadLampParameterControlsForProbe() => new(
         _lampParameterFolder?.Visibility == Visibility.Visible, _lampParameterFolder?.IsEnabled == true,
         _lampColors.Count + _lampNumbers.Count + _lampBooleans.Count, _lampRenderedPosterId,
-        _lampParameterFolder is null ? LampTemplatePolicy.Defaults : ReadLampControls(), _lampParameterNotice?.Text ?? "")
+        _lampParameterFolder is null ? LampTemplatePolicy.Defaults : LegacyLampValues.FromValues(ReadLampControls()), _lampParameterNotice?.Text ?? "")
     { VisualColorCount = _lampSwatches.Count, HasTemplateReset = _lampReset is not null, ColorPickerOpen = _lampColorFlyout is not null };
 }

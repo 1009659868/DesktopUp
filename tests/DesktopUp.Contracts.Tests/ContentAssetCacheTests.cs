@@ -35,7 +35,7 @@ public sealed class ContentAssetCacheTests
     [Theory]
     [InlineData("owner")] [InlineData("item")] [InlineData("session")] [InlineData("document")]
     [InlineData("membership")] [InlineData("placement")] [InlineData("source")]
-    [InlineData("width")] [InlineData("height")] [InlineData("dpi")] [InlineData("theme")]
+    [InlineData("width")] [InlineData("height")] [InlineData("dpi")] [InlineData("theme")] [InlineData("source-version")]
     public async Task Late_result_cannot_update_different_identity_version_or_render_key(string changed)
     {
         var provider = new ControlledProvider(); using var cache = new ContentAssetCache(provider);
@@ -51,6 +51,7 @@ public sealed class ContentAssetCacheTests
             "width" => old with { PixelWidth = 128 },
             "height" => old with { PixelHeight = 128 },
             "dpi" => old with { DpiX = 144, DpiY = 144 },
+            "source-version" => old with { SourceVersion = 2 },
             _ => old with { ThemeVersion = 2 }
         };
         cache.SetVisible(new[] { old }); var pending = cache.RequestAsync(old);
@@ -124,6 +125,39 @@ public sealed class ContentAssetCacheTests
         Assert.Throws<ArgumentException>(() => cache.SetVisible(new[] { Key() with { ItemId = "B:foreign" } }));
         Assert.Throws<ArgumentException>(() => cache.SetVisible(new[] { Key() with { PixelWidth = 4097 } }));
         Assert.Equal(0, cache.RunningLoads);
+    }
+
+    [Fact]
+    public async Task SlotNotificationWaitsForActualCompletionAndCannotFaultCache()
+    {
+        var provider = new ControlledProvider(); using var cache = new ContentAssetCache(provider);
+        var notification = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
+        cache.LoadFinished += () =>
+        {
+            notification.TrySetResult(cache.RunningLoads);
+            throw new InvalidOperationException("A failing observer must not fault the provider task.");
+        };
+        var key = Key(); cache.SetVisible([key]); var pending = cache.RequestAsync(key);
+        cache.SetVisible([]);
+        Assert.Equal(ContentAssetStatus.Stale, (await pending).Status);
+        Assert.False(notification.Task.IsCompleted);
+        provider.Complete(null);
+        Assert.Equal(0, await notification.Task.WaitAsync(TimeSpan.FromSeconds(5)));
+        Assert.Equal(0, cache.Count);
+    }
+
+    [Fact]
+    public async Task SameKeyReentryStillReportsCancelledRealFlightUntilItFinishes()
+    {
+        var provider = new ControlledProvider(); using var cache = new ContentAssetCache(provider);
+        var key = Key(); cache.SetVisible([key]); _ = cache.RequestAsync(key);
+        cache.SetVisible([]); cache.SetVisible([key]);
+        Assert.True(cache.IsLoading(key)); Assert.Equal(1, cache.RunningLoads);
+        Assert.Equal(ContentAssetStatus.Capacity, (await cache.RequestAsync(key)).Status);
+        provider.Complete(null); await Drain(cache);
+        Assert.False(cache.IsLoading(key)); Assert.False(cache.TryGet(key, out _));
+        Assert.Equal(ContentAssetStatus.Missing, (await cache.RequestAsync(key)).Status);
+        Assert.Equal(2, provider.Calls);
     }
 
     private static ContentAssetKey Key() => new("A", "A:item-0", 1, 1, 1, 1, "demo-neutral", 64, 64, 96, 96, 1);

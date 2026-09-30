@@ -75,14 +75,16 @@ $taskPngs=@(Get-ChildItem -LiteralPath $taskData -Filter 'content-browse-*.png' 
     [pscustomobject]@{Name=$_.Name;Length=$_.Length;SHA256=(Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash}
 })
 $taskExpectedCaptures=@('content-browse-horizontal-head-after-up.png','content-browse-horizontal-head-before.png',
-    'content-browse-vertical-head-after-up.png','content-browse-vertical-head-before.png')
+    'content-browse-horizontal-space-recovered.png','content-browse-horizontal-space-restricted.png',
+    'content-browse-vertical-head-after-up.png','content-browse-vertical-head-before.png',
+    'content-browse-vertical-space-recovered.png','content-browse-vertical-space-restricted.png')
 $taskExpectedCases=@('vertical-loop-seam','vertical-bidirectional','vertical-small-delta','vertical-finite','vertical-disable-while-wrapped',
     'horizontal-loop-seam','horizontal-bidirectional','horizontal-small-delta','horizontal-finite','horizontal-disable-while-wrapped',
     'vertical-short-content','horizontal-short-content','vertical-loop-drag','horizontal-loop-drag',
-    'vertical-frame-minimum','horizontal-frame-minimum')
+    'vertical-frame-minimum','horizontal-frame-minimum','vertical-passive-space','horizontal-passive-space')
 $taskObservation=if($taskDone.Count -eq 1){$taskDone[0].data}else{$null}
 $taskObservedCases=@($taskObservation.observation.cases)
-$taskCasesComplete=$taskObservedCases.Count -eq 16 -and
+$taskCasesComplete=$taskObservedCases.Count -eq 18 -and
     (@($taskObservedCases | Sort-Object) -join '|') -ceq (@($taskExpectedCases | Sort-Object) -join '|')
 $taskCaptureComplete=(@($taskPngs.Name) -join '|') -ceq ($taskExpectedCaptures -join '|')
 $taskScopeCorrect=$null -ne $taskObservation -and !$taskObservation.nativeMouse -and !$taskObservation.nativeKeyboard -and

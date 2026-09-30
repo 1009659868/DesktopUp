@@ -18,10 +18,18 @@ public sealed record ResolvedPosterPresentation(string EffectiveTemplateKey, Pos
     PosterContentMetrics Metrics, bool CanEdit, bool IsLegacy, string? Warning)
 {
     public string? SelectedRecipeId { get; init; }
+    public TemplateParameterValues TemplateValues => TemplateRecipeInstancePolicy.CurrentValues(Parameters, SelectedRecipeId ?? EffectiveTemplateKey);
+    // Compatibility readback for pre-module callers.
     public LampTemplateParameters TemplateParameters => TemplateRecipeInstancePolicy.Current(Parameters, SelectedRecipeId ?? EffectiveTemplateKey);
     public bool IsFallback => !CanEdit;
     public PosterContentParameters EffectiveContent => PosterContentPreferencePolicy.Resolve(Parameters.Content, Parameters.Preferences);
-    public double MetaHeightDip => EffectiveTemplateKey == "basic-box" ? 0 : Math.Ceiling(81 + Parameters.Content.TitleFontSizeDip * 1.35);
+    public SceneCapabilityDefinition? SceneCapability => SceneCapabilityRegistry.Find(
+        TemplateRecipeInstancePolicy.RecipeFor(Parameters, SelectedRecipeId ?? EffectiveTemplateKey)?.Schema.RendererCapability ?? "");
+    public PosterTitleChromeKind TitleChrome => SceneCapability?.TitleChrome ?? PosterTitleChromeKind.Basic;
+    public double HeaderHeightDip => TitleChrome == PosterTitleChromeKind.Cloud
+        ? PosterTitleChromePolicy.ExpandedCloudHeightDip : PosterTitleBarLayoutPolicy.HeaderHeightDip;
+    public double MetaHeightDip => TitleChrome == PosterTitleChromeKind.Cloud || EffectiveTemplateKey == "basic-box"
+        ? 0 : Math.Ceiling(81 + Parameters.Content.TitleFontSizeDip * 1.35);
 }
 
 public static class PosterPresentationPolicy
@@ -30,7 +38,7 @@ public static class PosterPresentationPolicy
     public const int SchemaVersion = 4;
     public const int MaximumJsonLength = 2 * 1024 * 1024;
     public const double HorizontalPaddingDip = 28;
-    public static bool IsBuiltIn(string? key) => key is "night-ops" or "basic-box" or LampTemplatePolicy.TemplateKey;
+    public static bool IsBuiltIn(string? key) => key is "night-ops" or "basic-box" or LampTemplatePolicy.TemplateKey || SceneCapabilityRegistry.Templates.Any(r => r.Id == key);
     public static PosterPresentationParameters Defaults(string template = "night-ops") => template == "basic-box"
         ? new(new(100, 72, 40, 12, 12, 24), new("#282B30", "#F2F2F2", "#68BDFF"))
         : new(new(), new(Background: "#202E2A"));
@@ -62,14 +70,17 @@ public static class PosterPresentationPolicy
             var root = doc.RootElement;
             var parameters = Read(root, poster.TemplateKey, out bool legacy);
             string effectiveKey = poster.TemplateKey;
-            if (!IsBuiltIn(effectiveKey))
+            if (parameters.RecipeInstances?.ContainsKey(effectiveKey) == true || !IsBuiltIn(effectiveKey))
             {
                 if (parameters.RecipeInstances is not { } instances || !instances.TryGetValue(effectiveKey, out var instance))
                     return Fallback("Unknown template; configuration retained.");
                 effectiveKey = instance.Recipe.EffectiveTemplateKey;
             }
             var error = Validate(parameters);
-            return error is null ? Resolved(effectiveKey, parameters, true, legacy, null) with { SelectedRecipeId = poster.TemplateKey } : Fallback(error);
+            bool missing = (parameters.RecipeInstances?.Values.Any(i => !SceneCapabilityRegistry.Available(i.Recipe.Schema.RendererCapability)) ?? false) ||
+                IsBuiltIn(poster.TemplateKey) && TemplateParameterSchemas.ForTemplate(poster.TemplateKey) is null;
+            return error is null ? Resolved(effectiveKey, parameters, !missing, legacy,
+                missing ? "模板模块未安装；原配置完整保留，当前只读显示。恢复模块后可继续调整。" : null, poster.TemplateKey) : Fallback(error);
         }
         catch (Exception e) when (e is JsonException or ArgumentException or InvalidOperationException or OverflowException or KeyNotFoundException)
         { return Fallback(e.Message); }
@@ -180,7 +191,7 @@ public static class PosterPresentationPolicy
                     foreach (var p in instance.Recipe.Schema.Properties)
                     {
                         writer.WritePropertyName(p.Key);
-                        TemplateRecipeCodec.WriteValue(writer, TemplateRecipeInstancePolicy.Get(instance.Parameters, p.Binding));
+                        TemplateRecipeCodec.WriteValue(writer, instance.Values.Get(p.Binding));
                     }
                     writer.WriteEndObject(); writer.WriteEndObject();
                 }
@@ -205,16 +216,17 @@ public static class PosterPresentationPolicy
     public static double CellWidth(double widthDip, int columns, double gapDip) =>
         Math.Max(1, (widthDip - HorizontalPaddingDip * 2 - gapDip * (columns - 1)) / columns);
 
-    private static ResolvedPosterPresentation Resolved(string template, PosterPresentationParameters parameters, bool edit, bool legacy, string? warning)
+    private static ResolvedPosterPresentation Resolved(string template, PosterPresentationParameters parameters, bool edit, bool legacy, string? warning, string? selected = null)
     {
-        double top = PosterTitleBarLayoutPolicy.HeaderHeightDip + (template == "basic-box" ? 0 :
-            Math.Ceiling(81 + parameters.Content.TitleFontSizeDip * 1.35)) + PosterContentMetrics.ItemsTopInsetDip;
+        var presentation = new ResolvedPosterPresentation(template, parameters, PosterContentMetrics.Current, edit, legacy, warning)
+            { SelectedRecipeId = selected };
+        double top = presentation.HeaderHeightDip + presentation.MetaHeightDip + PosterContentMetrics.ItemsTopInsetDip;
         double row = PosterContentPreferencePolicy.Resolve(parameters.Content, parameters.Preferences).RowHeightDip;
         // Keep the legacy metric identity for identical geometry, independent of colors/title text.
         string version = top == PosterContentMetrics.Current.ReservedTopDip && row == PosterContentMetrics.Current.CompleteItemRowDip
             ? PosterContentMetrics.Current.Version
             : string.Create(CultureInfo.InvariantCulture, $"presentation-v1:{top:R}:{row:R}:{PosterContentMetrics.FooterHeightDip:R}");
-        return new(template, parameters, new(version, top, row, PosterContentMetrics.FooterHeightDip), edit, legacy, warning);
+        return presentation with { Metrics = new(version, top, row, PosterContentMetrics.FooterHeightDip) };
     }
     private static ResolvedPosterPresentation Fallback(string warning) =>
         Resolved("basic-box", Defaults("basic-box"), false, false, warning);
@@ -291,9 +303,9 @@ public static class PosterPresentationPolicy
             foreach (var entry in recipeNodes.EnumerateArray())
             {
                 Members(entry, "definition", "values");
-                var recipe = TemplateRecipeCodec.Parse(entry.GetProperty("definition").GetRawText());
+                var recipe = TemplateRecipeCodec.Parse(entry.GetProperty("definition").GetRawText(), stored: true);
                 var values = entry.GetProperty("values"); Members(values, recipe.Schema.Properties.Select(p => p.Key).ToArray());
-                var instance = TemplateRecipeInstancePolicy.Defaults(recipe);
+                var instance = TemplateRecipeInstancePolicy.DefaultValues(recipe);
                 foreach (var p in recipe.Schema.Properties)
                 {
                     var raw = values.GetProperty(p.Key);
@@ -304,9 +316,9 @@ public static class PosterPresentationPolicy
                         _ => TemplateParameterValue.FromNumber(raw.GetDouble())
                     };
                     if (!TemplateParameterSchemas.Accepts(p, value)) throw new ArgumentException("Invalid template instance value.");
-                    instance = TemplateRecipeInstancePolicy.Set(instance, p.Binding, value);
+                    instance = instance.Set(p.Binding, value);
                 }
-                if (!items.TryAdd(recipe.Id, new(recipe, instance))) throw new ArgumentException("Duplicate template instance.");
+                if (!items.TryAdd(recipe.Id, new(recipe) { Values = instance })) throw new ArgumentException("Duplicate template instance.");
             }
             recipes = new System.Collections.ObjectModel.ReadOnlyDictionary<string, TemplateRecipeInstance>(items);
         }

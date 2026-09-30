@@ -14,12 +14,14 @@ internal sealed partial class PosterVisualWindow
         if (id is null || _disposed || _contentPresentationSuspended || _geometry.IsCollapsed ||
             _contentParseReadOnly || _contentProjectionFault || _transitionLayout is not null ||
             _monitor is null || _contentSnapshot is not { } snapshot || _contentViewport is not { } viewport ||
-            !ContentDocument.Placements.Any(p => p.ItemId == id)) return null;
+            !ContentDocument.Placements.Any(p => p.ItemId == id) ||
+            _contentPorts.Views.Version != _contentSourceVersion ||
+            ReadContentViews().FirstOrDefault(p => p.ItemId == id)?.IsAvailable != true) return null;
         // Selection paint and input-table revisions may change between clicks. Bind to actual
         // identity, author version, environment and presented geometry instead of paint churn.
         string witness = StateRequestFingerprint.Compute(new
         {
-            inputSession, _posterEntityVersion, _bounds, _monitor.ScaleX, _monitor.ScaleY,
+            inputSession, _posterEntityVersion, _contentSourceVersion, _bounds, _monitor.ScaleX, _monitor.ScaleY,
             viewport.WidthDip, viewport.HeightDip, viewport.ThemeMetricsVersion,
             snapshot.ScrollXDip, snapshot.ScrollYDip, snapshot.FlowAxis, snapshot.SpaceStatus,
             items = snapshot.Items.Select(p => new { p.ItemId, p.ReadOrder, p.Bounds }).ToArray()
@@ -39,7 +41,7 @@ internal sealed partial class PosterVisualWindow
 
     internal string? ActivateSelectedContent(bool isRepeat)
     {
-        if (HasContentGesture || spatial.IsSpatialBusy || PosterId is { } id && spatial.HasCenterDraft(id))
+        if (HasContentGesture || spatial.IsPosterSpatialBusy(PosterId!) || PosterId is { } id && spatial.HasCenterDraft(id))
             return "请先完成或取消当前修改。";
         if (ContentActivationTargetFor(_selectedContentItem) is not { } target)
             return "请先选择可打开的项目。";
@@ -53,11 +55,13 @@ internal sealed partial class PosterVisualWindow
     private void DispatchContentOpen(ContentOpenIntent intent)
     {
         if (ContentActivationTargetFor(intent.Target.ItemId) != intent.Target) return;
+        try { _contentPorts.Open.Open(intent); }
+        catch (Exception) { PublishContentFeedback("内容暂时无法打开，布局未改变。", transient: true); return; }
         // DEMO sink only. V3-05 supplies the real open adapter; layout commands never execute files.
         _contentOpenIntentCount++;
         log.Write("info", "poster.test_item_invoked", new
         { PosterId, itemId = intent.Target.ItemId, intent.ActivationId, origin = intent.Origin.ToString(), demo = true });
-        var name = _contentSource.Read(ContentDocument).FirstOrDefault(p => p.ItemId == intent.Target.ItemId)?.Name;
+        var name = ReadContentViews().FirstOrDefault(p => p.ItemId == intent.Target.ItemId)?.Name;
         PublishContentFeedback($"已打开「{name ?? "所选项目"}」（演示）。", transient: true);
     }
 }

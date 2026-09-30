@@ -76,7 +76,8 @@ $taskExpectedPngs = @('preview','transparent','second-poster','color-picker') | 
 }
 $taskExpectedPngs += 'lamp-color-picker-popup.png'
 $taskMotionCases = @('real-shared-motion-frames','editing-stops-shared-motion','per-poster-motion-disabled-preview',
-    'global-pause-stops-shared-motion','all-collapsed-motion-resources-zero','environment-suspend-motion-resources-zero')
+    'global-pause-stops-shared-motion','all-collapsed-motion-resources-zero','environment-suspend-motion-resources-zero',
+    'scene-host-failure-detaches-only-decoration')
 $taskMotionObserved = $false
 if ($taskDone.Count -eq 1) {
     $taskObservedNames = @($taskDone[0].data.observations | ForEach-Object { $_.name })

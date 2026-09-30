@@ -32,14 +32,23 @@ internal sealed partial class PosterVisualWindow
                 surface.Layout.Revision, ++press.Sequence, reason);
             Require(HandleContentInput(args), "Event did not enter the production content handler.");
         }
-        DirectContentProtocolPress Begin()
+        DirectContentProtocolPress Begin(bool resize = false)
         {
+            if (resize) Require(SetEditing(true), "Cannot publish the existing span-handle entry.");
             ScrollContentForSmoke(0, 0); ScrollItems(120);
             var read = Read();
             var tile = read.Tiles.First(t => t.LoopIndex == 1 && t.Clip.Width > 20 && t.Clip.Height > 20);
+            if (resize)
+            {
+                Require(SelectContentItem(tile.ItemId) is null, "Cannot select the seam copy for its span handle.");
+            }
             var surface = inputRouter.ReadSurface(inputSession)!;
-            var region = surface.Layout.Regions.Single(r => r.Kind == PosterInputTargetKind.ContentItem &&
-                r.ContentItemId == tile.ItemId && r.Bounds == tile.ExpectedInput);
+            var region = surface.Layout.Regions.Single(r =>
+                r.Kind == (resize ? PosterInputTargetKind.ContentSpanHandle : PosterInputTargetKind.ContentItem) &&
+                r.ContentItemId == tile.ItemId && (resize
+                    ? r.Bounds.X >= tile.ExpectedInput.X && r.Bounds.Y >= tile.ExpectedInput.Y &&
+                      r.Bounds.Right <= tile.ExpectedInput.Right && r.Bounds.Bottom <= tile.ExpectedInput.Bottom
+                    : r.Bounds == tile.ExpectedInput));
             var point = new PointerScreenPoint(surface.Frame.X + region.Bounds.X + Math.Min(10, region.Bounds.Width / 2),
                 surface.Frame.Y + region.Bounds.Y + Math.Min(10, region.Bounds.Height / 2));
             var capture = new PosterInputCapture(Guid.NewGuid(), new(inputSession, surface.Layout.Revision, surface.Frame, region));
@@ -142,6 +151,49 @@ internal sealed partial class PosterVisualWindow
                 Require(_stateRevision == before.Revision && _authoritativePoster?.ContentLayoutJson == before.StoredRaw,
                     "Invalid release persisted content.");
                 observations.Add(new { stage, before, after = Read() });
+
+                stage = mode + "-seam-resize-cancel-commit-history";
+                // Same actual loop copy and production handle path. Rapid reverse samples are
+                // evaluated against the frozen press; they never accumulate rounded deltas.
+                foreach (bool commit in new[] { false, true })
+                {
+                    press = Begin(true); before = Read(); gesture = _contentGesture!;
+                    pitch = gesture.Snapshot.CellDip + gesture.Snapshot.GapDip;
+                    destination = null;
+                    foreach (var delta in new[] { (X: -1, Y: 0), (X: 0, Y: -1), (X: 1, Y: 0), (X: 0, Y: 1) })
+                    {
+                        var point = new PointerScreenPoint(press.Point.X + (int)Math.Round(delta.X * pitch * gesture.ScaleX),
+                            press.Point.Y + (int)Math.Round(delta.Y * pitch * gesture.ScaleY));
+                        Preview(press, point);
+                        if (gesture.Proposal is { } candidate && !ContentLayoutEditing.SameState(gesture.Document, candidate))
+                        { destination = point; break; }
+                    }
+                    Require(destination.HasValue, "No legal changing resize for the actual seam handle.");
+                    intended = gesture.Proposal!;
+                    Preview(press, press.Point);
+                    Preview(press, destination!.Value);
+                    Require(ContentLayoutEditing.SameState(intended, gesture.Proposal!), "Reverse samples drifted the span proposal.");
+                    anchor = gesture.Navigation.EndAnchor(gesture.PointerDeltaX, gesture.PointerDeltaY);
+                    Send(press, commit ? PosterInputEventKind.GestureCompleted : PosterInputEventKind.GestureCancelled, destination.Value);
+                    Released(anchor);
+                    var result = Read();
+                    Require(result.Revision == before.Revision + (commit ? 1 : 0) &&
+                        result.DocumentVersion == before.DocumentVersion + (commit ? 1 : 0) && result.Members == before.Members &&
+                        result.LoopPreference, "Resize changed membership/loop or used multiple commits.");
+                    Require(commit ? ContentLayoutEditing.SameState(ContentDocument, intended) :
+                        _authoritativePoster?.ContentLayoutJson == before.StoredRaw, "Resize result differed from accepted intent.");
+                    if (commit)
+                    {
+                        Require(UndoContent(false) is null && ContentLayoutEditing.SameState(ContentDocument, gesture.Document, true) &&
+                            _stateRevision == result.Revision + 1,
+                            "Resize undo failed to restore the original author composition.");
+                        Require(UndoContent(true) is null && ContentLayoutEditing.SameState(ContentDocument, intended, true) &&
+                            _stateRevision == result.Revision + 2, "Resize redo drifted.");
+                        Require(UndoContent(false) is null, "Cannot return to the initial composition.");
+                    }
+                    observations.Add(new { stage, commit, before, after = result });
+                    Require(SetEditing(false), "Cannot return from span editing.");
+                }
             }
             stage = "restore-fixture";
             var now = ContentDocument;
@@ -152,6 +204,7 @@ internal sealed partial class PosterVisualWindow
         finally
         {
             if (owned is not null && _contentGesture?.Capture == owned.Capture) CancelContentGesture("loop-probe-cleanup");
+            if (IsEditing) SetEditing(false);
         }
     }
 }

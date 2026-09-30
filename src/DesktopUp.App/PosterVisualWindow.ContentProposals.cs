@@ -13,13 +13,13 @@ internal sealed partial class PosterVisualWindow
     private bool _contentAwaitingCenterRelease;
     private long _contentProposalDrainEpoch, _contentHighestThemeVersion;
     private bool ContentProposalsProtected => HasContentGesture || IsEditing || PosterId is { } id && spatial.HasCenterDraft(id) || _posterMenu is not null ||
-        _transitionLayout is not null || _activeCommandRequestId is not null || _disposed || _contentPresentationSuspended;
+        _transitionLayout is not null || _activeCommandRequestId is not null || _disposed || _contentPresentationSuspended || IsContentSpaceRestricted;
 
     // Future heat/theme owners submit proposals here. No scores, per-item timers or implicit persistence.
     internal bool OfferContentHeat(ContentHeatProposal proposal)
     {
         var document=ContentDocument;
-        if(_disposed || _contentReadOnly || proposal.PosterId!=document.PosterId || proposal.ItemSetVersion!=document.ItemSetVersion) return false;
+        if(_disposed || _contentParseReadOnly || _contentProjectionFault || (_contentReadOnly && !IsContentSpaceRestricted) || proposal.PosterId!=document.PosterId || proposal.ItemSetVersion!=document.ItemSetVersion) return false;
         _contentHeatBuffer??=new(document.PosterId,document.ItemSetVersion);
         if(!_contentHeatBuffer.Offer(proposal)) return false;
         QueueContentProposalDrain(); return true;
@@ -41,7 +41,10 @@ internal sealed partial class PosterVisualWindow
         return accepted;
     }
     private ContentLayoutDocument EffectiveContentDocument => _contentDraftProjection ?? _contentDraft ?? _contentHeatProjection ?? ContentDocument;
-    private ContentLayoutDocument ProjectContentEdit(ContentLayoutDocument author) => _contentActiveHeat is { } heat
+    // A membership-changing intent is validated against its new author layout, never against
+    // heat for the old set. Keep the old accepted heat untouched until the CAS actually commits.
+    private ContentLayoutDocument ProjectContentEdit(ContentLayoutDocument author) => _contentActiveHeat is { } heat &&
+        heat.PosterId == author.PosterId && heat.ItemSetVersion == author.ItemSetVersion
         ? ContentLayoutProposals.ResolveHeat(author, heat, _contentHeatTiers).Document : author;
     private void ResetContentProposals(ContentLayoutDocument? previous,ContentLayoutDocument current)
     {
@@ -66,6 +69,8 @@ internal sealed partial class PosterVisualWindow
     // can accept paint-only values immediately. No protected capture/layout is reconstructed.
     private void QueueContentProposalDrain()
     {
+        if (_contentSourceRefreshPending && _transitionLayout is null && _activeCommandRequestId is null &&
+            !_disposed && !_contentPresentationSuspended) RefreshContentSource();
         if(_disposed || _contentPresentationSuspended || _window is null || _contentProposalDrainQueued ||
             !(_contentHeatBuffer?.HasPending==true || _contentThemeBuffer?.HasPending==true ||
                 _contentThemeBuffer is { } pendingTheme && pendingTheme.Current!=_presentation.Parameters)) return;

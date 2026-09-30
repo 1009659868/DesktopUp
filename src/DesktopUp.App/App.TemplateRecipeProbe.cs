@@ -92,7 +92,7 @@ public partial class App
                 window.RevealLampParametersForProbe();
                 Step("restart-restores-catalog-schema-values-and-theme", () =>
                 {
-                    Require(Catalog().Count == 5 && Catalog().Any(r => r.Id == copyId) &&
+                    Require(Catalog().Count == TemplateRecipeCatalog.BuiltIns.Count + 2 && Catalog().Any(r => r.Id == copyId) &&
                         Current().ControlCenter.Settings.Settings.CenterTheme == "system", "Restart lost the saved copy or center theme.");
                     Require(Parameters().Intensity == 61 && !Parameters().FollowPointer, "Restart lost imported per-poster values.");
                     VerifyDynamicFields(61, false); OtherUnchanged(); Snapshot("restart-center", false);
@@ -100,7 +100,7 @@ public partial class App
                 Step("restart-theme-normal-and-picker-states", () => capture = window.VerifyCenterThemeForProbeAsync(dataRoot, "restart-system"));
                 return;
             }
-            Require(Catalog().Count == 3, "Initial catalog must contain only the three real built-ins.");
+            Require(Catalog().Count == TemplateRecipeCatalog.BuiltIns.Count, "Initial catalog must contain only the current build-linked built-ins.");
             var basis = TemplateRecipeCatalog.BuiltIns.Single(r => r.Id == "lamp");
             var imported = basis with { Schema = basis.Schema with
             {
@@ -120,14 +120,14 @@ public partial class App
             }, () => window.TemplateDialogReadyForProbe);
             Step("capture-checked-import-dialog", () =>
             {
-                Require(window.ReadTemplateRecipeUiForProbe().PrimaryEnabled && Current().Revision == baseline && Catalog().Count == 3,
+                Require(window.ReadTemplateRecipeUiForProbe().PrimaryEnabled && Current().Revision == baseline && Catalog().Count == TemplateRecipeCatalog.BuiltIns.Count,
                     "Checking a valid recipe must enable import without writing state.");
                 Snapshot("import-dialog", true);
             });
             Step("apply-checked-import", () => window.InvokeTemplateDialogForProbe("primary"));
             Step("import-commits-once-and-builds-dynamic-controls", () =>
             {
-                Require(Current().Revision == baseline + 1 && Catalog().Count == 4 && Current().PostersById[a].Poster.TemplateKey == importedId,
+                Require(Current().Revision == baseline + 1 && Catalog().Count == TemplateRecipeCatalog.BuiltIns.Count + 1 && Current().PostersById[a].Poster.TemplateKey == importedId,
                     "Import must add one recipe and select it in one transaction.");
                 Require(Parameters().Intensity == 45 && Parameters().FollowPointer, "Imported defaults were not applied.");
                 OtherUnchanged(); window.RevealLampParametersForProbe();
@@ -150,7 +150,7 @@ public partial class App
             {
                 var ui = window.ReadTemplateRecipeUiForProbe();
                 Require(!ui.PrimaryEnabled && ui.DialogText.Any(text => text.Contains("ID", StringComparison.OrdinalIgnoreCase) || text.Contains("已", StringComparison.Ordinal)) &&
-                    Current().Revision == baseline && Catalog().Count == 4, "Duplicate ID must leave state unchanged and import disabled.");
+                    Current().Revision == baseline && Catalog().Count == TemplateRecipeCatalog.BuiltIns.Count + 1, "Duplicate ID must leave state unchanged and import disabled.");
                 OtherUnchanged(); window.InvokeTemplateDialogForProbe("close");
             });
             Step("page-real-template-catalog", () =>
@@ -161,15 +161,17 @@ public partial class App
             Step("capture-real-fourth-template-page", () =>
             {
                 var ui = window.ReadTemplateRecipeUiForProbe();
-                Require(ui.CatalogCount == 4 && ui.Page == 1 && ui.Range == "4–4 / 4" &&
-                    ui.Samples.SequenceEqual(new[] { importedId }) && ui.PreviousEnabled && !ui.NextEnabled,
-                    "Paging must display the actual fourth imported template and bounded arrows.");
+                int total = TemplateRecipeCatalog.BuiltIns.Count + 1;
+                Require(ui.CatalogCount == total && ui.Page == 1 && ui.Range == $"4–{Math.Min(6, total)} / {total}" &&
+                    ui.Samples.SequenceEqual(Catalog().Skip(3).Take(3).Select(r => r.Id)) && ui.PreviousEnabled && ui.NextEnabled == (total > 6),
+                    "Paging must display actual build-linked and imported templates with bounded arrows.");
                 Snapshot("catalog-page", false);
             });
             Step("open-real-template-book", () => window.OpenTemplateDialogForProbe("book"));
             Step("capture-four-card-template-book", () =>
             {
-                Require(window.ReadTemplateRecipeUiForProbe().BookCards == 4, "The actual template book must contain four selectable cards.");
+                Require(window.ReadTemplateRecipeUiForProbe().BookCards == TemplateRecipeCatalog.BuiltIns.Count + 1,
+                    "The actual template book must contain every built-in and imported card.");
                 Snapshot("template-book", true);
             }, () => window.TemplateDialogReadyForProbe);
             Step("close-template-book-without-selection", () => window.InvokeTemplateDialogForProbe("close"));
@@ -220,7 +222,7 @@ public partial class App
             Step("save-copy-through-production-dialog", () => window.InvokeTemplateDialogForProbe("primary"));
             Step("saved-copy-does-not-select-or-alter-current", () =>
             {
-                Require(Current().Revision == baseline + 1 && Catalog().Count == 5 && PosterJson(a) == beforeCopy,
+                Require(Current().Revision == baseline + 1 && Catalog().Count == TemplateRecipeCatalog.BuiltIns.Count + 2 && PosterJson(a) == beforeCopy,
                     "Saving a copy must add to the catalog without switching or changing the selected poster.");
                 var copy = Catalog().Single(r => r.Name == "我的配方验证书桌"); copyId = copy.Id;
                 Require(copy.Schema.Properties.Single(p => p.Binding == "lamp.intensity").DefaultValue.Number == 61 &&

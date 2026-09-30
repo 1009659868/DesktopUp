@@ -38,7 +38,7 @@ public partial class App
         _stopAutoSmoke = Stop;
         void Finish(bool passed, bool blocked, string? reason)
         {
-            var diagnostic = _spatialRuntime?.ReadLampPointerDiagnosticsForProbe();
+            var diagnostic = _spatialRuntime?.ReadScenePointerDiagnosticsForProbe();
             LampSceneObservation? scene = a.Length > 0 && _spatialRuntime?.ContentVisualReadyForProbe(a) == true
                 ? _spatialRuntime.ReadLampNativeForProbe(a).Scene : null;
             Stop();
@@ -68,7 +68,7 @@ public partial class App
             if (requests.Count == 0) { Finish(true, false, null); return; }
             request = requests.Dequeue(); requestAt = _autoClock.ElapsedMilliseconds;
             acknowledgedAt = 0; acceptedSamples = 0; outsideStart = null; firstOutsideAt = 0; lastAcceptedSequence = 0;
-            issuedSequence = _spatialRuntime!.ReadLampPointerDiagnosticsForProbe()?.Sequence ?? 0;
+            issuedSequence = _spatialRuntime!.ReadScenePointerDiagnosticsForProbe()?.Sequence ?? 0;
             string temporary = requestPath + ".tmp";
             File.WriteAllText(temporary, JsonSerializer.Serialize(request, new JsonSerializerOptions { WriteIndented = true }));
             File.Move(temporary, requestPath, overwrite: true);
@@ -113,12 +113,12 @@ public partial class App
                     phase = 2; requestAt = now; return;
                 }
                 var native = _spatialRuntime.ReadLampNativeForProbe(a);
-                var diagnostic = _spatialRuntime.ReadLampPointerDiagnosticsForProbe();
+                var diagnostic = _spatialRuntime.ReadScenePointerDiagnosticsForProbe();
                 if (now >= nextSnapshot)
                 {
                     nextSnapshot = now + 500; snapshots++;
                     _log!.Write("info", "lamp.pointer_sample", new { phase, stage = request?.Stage, diagnostic,
-                        scene = native.Scene, native.Parameters, runtimeTimerPresent = _spatialRuntime.LampMotionRunning });
+                        scene = native.Scene, native.Parameters, runtimeTimerPresent = _spatialRuntime.SceneMotionRunning });
                 }
                 if (native.Scene.ReducedMotion || native.Scene.GlobalMotionPaused || !native.Parameters.MotionEnabled || !native.Parameters.FollowPointer)
                 { Finish(false, true, "motion-disabled-by-current-settings-or-system-preference"); return; }

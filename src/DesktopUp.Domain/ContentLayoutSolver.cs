@@ -205,14 +205,15 @@ public static class ContentLayoutSolver
     }
 
     /// <summary>Retains complete geometry; ordinary reclip never grants passive two-axis eligibility.</summary>
-    public static ContentLayoutSnapshot Reclip(ContentLayoutSnapshot snapshot, ContentLayoutViewport viewport)
+    public static ContentLayoutSnapshot Reclip(ContentLayoutSnapshot snapshot, ContentLayoutViewport viewport,
+        ContentBrowseMode mode = ContentBrowseMode.SingleAxis)
     {
         ValidateViewport(viewport);
         if (snapshot.ResolvedScale is { } scale && (scale != viewport.Scale || snapshot.ResolvedSpacing != viewport.Spacing ||
             snapshot.ThemeMetricsVersion != viewport.ThemeMetricsVersion ||
             snapshot.AvailableCrossAxisDip != (snapshot.FlowAxis == ContentFlowAxis.Vertical ? viewport.WidthDip : viewport.HeightDip)))
             throw new ContentLayoutException("Cross-axis space or layout metrics changed; resolve authoring before clipping.");
-        var offsets = ContentLayoutFlow.NormalizeOffsets(snapshot, viewport);
+        var offsets = ContentLayoutFlow.NormalizeOffsets(snapshot, viewport, mode);
         var view = new ContentRect(0, 0, viewport.WidthDip, viewport.HeightDip);
         var items = snapshot.Items.Select(p => p with
         {

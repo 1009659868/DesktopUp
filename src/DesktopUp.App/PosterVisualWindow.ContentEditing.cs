@@ -18,12 +18,13 @@ internal sealed partial class PosterVisualWindow
     internal ContentLayoutEditorView ReadContentEditor() => new(ContentDocument, _posterEntityVersion, _selectedContentItem,
         IsEditing, !_contentReadOnly && !_geometry.IsLocked && !_disposed && !_contentPresentationSuspended, _contentNotice)
         { SelectedSlot = _contentSnapshot?.Items.FirstOrDefault(p => p.ItemId == _selectedContentItem),
-          CanUndo = _contentHistory.CanUndo(ContentDocument), CanRedo = _contentHistory.CanRedo(ContentDocument) };
+          CanUndo = _contentHistory.CanUndo(ContentDocument), CanRedo = _contentHistory.CanRedo(ContentDocument),
+          SpaceEpoch = _contentSpaceEpoch, SpaceSession = _contentSurfaceSession };
 
     private bool HandleContentInput(PosterInputEventArgs args)
     {
         if (args.TargetKind is not (PosterInputTargetKind.ContentItem or PosterInputTargetKind.ContentSpanHandle or PosterInputTargetKind.ContentViewport)) return false;
-        if (args.EventKind == PosterInputEventKind.Scrolled) { _contentActivation.Reset(); ScrollItems(args.WheelDelta); return true; }
+        if (args.EventKind == PosterInputEventKind.Scrolled) { _contentActivation.Reset(); ScrollItems(args.WheelDelta, DesktopUp.Windows.NativeInputKeys.ShiftDown); return true; }
         if (args.EventKind == PosterInputEventKind.Pressed)
         {
             // Any intervening handle/background press ends a card double-click pair, even if
@@ -37,7 +38,7 @@ internal sealed partial class PosterVisualWindow
                 PublishContentFeedback("控制中心有未完成的修改，请先完成或取消；当前操作未开始。");
                 return true;
             }
-            if (_disposed || _contentPresentationSuspended || _monitor is null || _inputIsland is null || _transitionLayout is not null || spatial.IsSpatialBusy ||
+            if (_disposed || _contentPresentationSuspended || _monitor is null || _inputIsland is null || _transitionLayout is not null || spatial.IsPosterSpatialBusy(PosterId!) ||
                 _contentSnapshot is null || args.ContentSnapshotGeneration != _contentSnapshot.ViewportGeneration || args.Capture is null) return true;
             PublishContentFeedback(null);
             _selectedContentItem = args.ContentItemId;
@@ -50,14 +51,14 @@ internal sealed partial class PosterVisualWindow
             if (slot is null || viewport is null) return true;
             double x = (args.LatestPoint.X - _bounds.X) / _monitor.ScaleX - ContentLeftDip;
             double y = (args.LatestPoint.Y - _bounds.Y) / _monitor.ScaleY - ContentTopDip;
-            var tile = ContentLayoutFlow.ProjectTiles(_contentSnapshot, viewport)
+            var tile = ContentLayoutFlow.ProjectTiles(_contentSnapshot, viewport, _contentBrowseMode)
                 .FirstOrDefault(t => t.ItemId == slot.ItemId && t.Clip.Contains(x, y));
             if (tile is null) return true;
             bool canEdit = !_geometry.IsLocked && !_contentReadOnly;
             _contentGesture = new(args.Capture, doc, _contentSnapshot, viewport, tile, slot,
                 ContentActivationTargetFor(slot.ItemId), _posterEntityVersion, _stateRevision,
                 _bounds, args.TargetKind, _monitor.ScaleX, _monitor.ScaleY, canEdit,
-                ContentDragNavigation.Begin(_contentSnapshot, viewport, tile, x, y), ledger.Acquire("content.gesture", "pointer-preview"));
+                ContentDragNavigation.Begin(_contentSnapshot, viewport, tile, x, y, _contentBrowseMode), ledger.Acquire("content.gesture", "pointer-preview"));
             args.Handled = true;
             spatial.NotifyContentEditorChanged(PosterId);
             RefreshContentSurface();
@@ -225,7 +226,7 @@ internal sealed partial class PosterVisualWindow
     {
         if (_disposed || _contentPresentationSuspended || _monitor is null || !_bounds.IsUsable || _itemsGrid is null) return;
         UpdateItemScrollState(_bounds);
-        if (_inputIsland is not null) _inputIsland.ApplyLayout(_bounds,BuildInputLayout(_bounds));
+        if (_inputIsland?.ApplyLayout(_bounds,BuildInputLayout(_bounds)) == true) PublishContentSpace(_contentSpaceCandidate);
     }
     internal string? EditContent(ContentLayoutEdit edit, long? centerEntityVersion = null, long? centerDocumentVersion = null)
     {
@@ -317,7 +318,7 @@ internal sealed partial class PosterVisualWindow
     internal string? SelectContentItem(string? id)
     {
         if (_disposed || _contentPresentationSuspended) return "内容呈现已暂停，请等待恢复。";
-        if (HasContentGesture || spatial.IsSpatialBusy || PosterId is { } posterId && spatial.HasCenterDraft(posterId))
+        if (HasContentGesture || spatial.IsPosterSpatialBusy(PosterId!) || PosterId is { } posterId && spatial.HasCenterDraft(posterId))
             return "请先完成或取消当前修改，再切换项目。";
         if(id is not null && !ContentDocument.Placements.Any(p=>p.ItemId==id)) return "内容已变化，请重新选择。";
         _contentActivation.Reset();
@@ -408,6 +409,8 @@ internal sealed partial class PosterVisualWindow
 
 internal sealed record ContentLayoutEditorView(ContentLayoutDocument Document,long EntityVersion,string? SelectedItemId,bool IsEditing,bool CanEdit,string? Notice)
 {
+    public long SpaceEpoch { get; init; }
+    public Guid SpaceSession { get; init; }
     public ContentResolvedPlacement? SelectedSlot { get; init; }
     public bool CanUndo { get; init; }
     public bool CanRedo { get; init; }

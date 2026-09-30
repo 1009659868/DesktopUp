@@ -51,7 +51,7 @@ internal sealed partial class PosterVisualWindow
                 Require(inputRouter.Capture == nativeBasis, "The native router capture was unchanged.");
                 if (_contentNotice is not null) Feedback("completed", null);
                 string capturePath = Path.Combine(dataRoot, "content-" + name + ".png");
-                await CaptureLampXamlForProbeAsync(capturePath);
+                await CapturePosterXamlForProbeAsync(capturePath);
                 var result = new { Name = name, Passed = true, Before = before, After = State(),
                     Assertions = assertions.ToArray(), Inputs = inputs.ToArray(), capturePath, NativeMouse = false, NativeKeyboard = false };
                 cases.Add(result);

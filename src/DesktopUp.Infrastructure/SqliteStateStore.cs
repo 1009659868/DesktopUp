@@ -739,7 +739,7 @@ public sealed class SqliteStateStore : IStateStore
         using var reader = command.ExecuteReader();
         if (!reader.Read() || reader.GetString(0) is not ("light" or "ink" or "blue" or "system"))
             throw new InvalidDataException("Invalid control-center theme.");
-        try { DesktopUp.Domain.TemplateRecipeCatalog.Read(reader.GetString(1)); }
+        try { DesktopUp.Domain.TemplateRecipeCatalog.Read(reader.GetString(1), stored: true); }
         catch (ArgumentException e) { throw new InvalidDataException("Invalid stored template catalog.", e); }
     }
 
@@ -921,8 +921,20 @@ public sealed class SqliteStateStore : IStateStore
             {
                 destination.Open();
                 source.BackupDatabase(destination);
+                // The backup API copies the source's WAL-mode header too. A later read-only
+                // validation can then create sidecars beside the published snapshot, causing
+                // strict restore admission to reject it. Normalize ONLY our unpublished copy;
+                // never delete sidecars from an existing/user-supplied backup or touch source mode.
+                using var seal = destination.CreateCommand();
+                seal.CommandText = "PRAGMA wal_checkpoint(TRUNCATE);";
+                seal.ExecuteNonQuery();
+                seal.CommandText = "PRAGMA journal_mode=DELETE;";
+                if (!string.Equals(Convert.ToString(seal.ExecuteScalar(), CultureInfo.InvariantCulture), "delete", StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidDataException("Backup copy could not be sealed as a standalone snapshot.");
             }
 
+            if (File.Exists(temporaryPath + "-wal") || File.Exists(temporaryPath + "-shm"))
+                throw new InvalidDataException("Backup copy still has SQLite sidecars.");
             StateBackupValidationResult validation = ValidateBackupCore(
                 temporaryPath,
                 allowLegacy: head is null,

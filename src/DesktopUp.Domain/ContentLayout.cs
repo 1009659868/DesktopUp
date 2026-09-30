@@ -88,11 +88,20 @@ public sealed record ContentLayoutDocument(string PosterId, IReadOnlyList<Conten
     public ContentLayoutMode? SavedAutomaticMode { get; init; }
 }
 
-public sealed record ContentItemView(string ItemId, string Name, string Monogram, uint Color, string? AssetKey = null);
+public sealed record ContentItemView(string ItemId, string Name, string Monogram, uint Color, string? AssetKey = null)
+{
+    // Availability belongs to the source, never to stored placement/heat/pin intent.
+    public bool IsAvailable { get; init; } = true;
+}
 public interface IContentItemViewSource
 {
     long Version { get; }
     IReadOnlyList<ContentItemView> Read(ContentLayoutDocument document);
+}
+
+public interface IObservableContentItemViewSource : IContentItemViewSource
+{
+    event EventHandler? Changed;
 }
 
 public readonly record struct ContentRect(double X, double Y, double Width, double Height)

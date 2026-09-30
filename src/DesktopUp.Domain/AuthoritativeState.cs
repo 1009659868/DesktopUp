@@ -108,7 +108,7 @@ public static class AuthoritativeStateValidationPolicy
     {
         ArgumentNullException.ThrowIfNull(settings);
         if (settings.CenterTheme is not ("light" or "ink" or "blue" or "system")) return "Unknown control-center theme.";
-        try { TemplateRecipeCatalog.Read(settings.TemplateCatalogJson); }
+        try { TemplateRecipeCatalog.Read(settings.TemplateCatalogJson, stored: true); }
         catch (ArgumentException e) { return e.Message; }
         return Enum.IsDefined(settings.PerformanceMode)
             ? null

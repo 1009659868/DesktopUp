@@ -10,6 +10,8 @@ internal sealed partial class PosterSpatialRuntime
         _windows.Values.Select(w => w.ReadPointerTarget()).ToArray();
     public AutoPostureProtection PointerProtection =>
         (_suspended ? AutoPostureProtection.Recovery : AutoPostureProtection.None) |
-        (_owner is not null || _title is not null || _windows.Values.Any(w => w.HasContentGesture) ? AutoPostureProtection.Gesture : AutoPostureProtection.None);
+        // Item gestures are already declared on their own PosterPointerTarget. Only frame/title
+        // gestures reserve the whole spatial scene; do not cancel unrelated automatic groups.
+        (_owner is not null || _title is not null ? AutoPostureProtection.Gesture : AutoPostureProtection.None);
     public bool IsSpatialBusy => _owner is not null || _posture is not null || _title is not null || _windows.Values.Any(w => w.HasContentGesture);
 }

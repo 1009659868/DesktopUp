@@ -99,11 +99,16 @@ public static class ContentLayoutFlow
     /// state stay single-owned. The non-looping axis keeps its ordinary clamped offset.
     /// </summary>
     public static IReadOnlyList<ContentLayoutTile> ProjectTiles(ContentLayoutSnapshot snapshot, ContentLayoutViewport viewport,
-        ContentBrowseMode mode = ContentBrowseMode.SingleAxis)
+        ContentBrowseMode mode = ContentBrowseMode.SingleAxis, double overscanDip = 0)
     {
         if (snapshot is null || viewport is null) throw new ContentLayoutException("Missing content snapshot or viewport.");
         var offsets = NormalizeOffsets(snapshot, viewport with { ScrollXDip = snapshot.ScrollXDip, ScrollYDip = snapshot.ScrollYDip }, mode);
         var view = new ContentRect(0, 0, viewport.WidthDip, viewport.HeightDip);
+        if (!double.IsFinite(overscanDip) || overscanDip < 0 || overscanDip > snapshot.CellDip + snapshot.GapDip)
+            throw new ContentLayoutException("Overscan must be bounded to one grid pitch.");
+        // Do not enlarge the logical viewport: that would change loop eligibility/offsets.
+        var admission = new ContentRect(-overscanDip, -overscanDip,
+            view.Width + 2 * overscanDip, view.Height + 2 * overscanDip);
         bool looping = mode == ContentBrowseMode.SingleAxis && IsLooping(snapshot, viewport);
         bool vertical = IsVertical(snapshot);
         double period = looping ? LoopPeriodDip(snapshot, viewport) : 0;
@@ -119,10 +124,8 @@ public static class ContentLayoutFlow
             {
                 var placed = new ContentRect(item.Bounds.X + offsetX - scrollX, item.Bounds.Y + offsetY - scrollY,
                     item.Bounds.Width, item.Bounds.Height);
-                if (placed.Right <= 0 || placed.X >= view.Width) continue;
-                if (placed.Bottom <= 0 || placed.Y >= view.Height) continue;
+                if (!placed.Intersects(admission)) continue;
                 var clip = placed.Intersect(view);
-                if (clip.IsEmpty) continue;
                 tiles.Add(new ContentLayoutTile(item.ItemId, item.SourceIndex, item.ReadOrder, cycle, offsetX, offsetY, placed, clip));
             }
         }

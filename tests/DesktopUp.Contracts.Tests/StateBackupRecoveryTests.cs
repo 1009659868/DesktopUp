@@ -7,6 +7,23 @@ namespace DesktopUp.Contracts.Tests;
 public sealed class StateBackupRecoveryTests
 {
     [Fact]
+    public void Public_backup_validation_keeps_the_new_snapshot_standalone_and_restorable()
+    {
+        using var fixture = new Fixture();
+        byte[] original = File.ReadAllBytes(fixture.Backup);
+        using (var store = new SqliteStateStore(fixture.Paths))
+        {
+            Assert.True(store.Initialize().Succeeded);
+            for (int i = 0; i < 3; i++) Assert.True(store.ValidateBackup(fixture.Backup).IsValid);
+        }
+        Assert.False(File.Exists(fixture.Backup + "-wal"), "Read-only validation must not leave a WAL beside an explicit backup.");
+        Assert.False(File.Exists(fixture.Backup + "-shm"), "Read-only validation must not leave shared-memory state.");
+        Assert.Equal(original, File.ReadAllBytes(fixture.Backup));
+        var result = fixture.Recovery().Restore(Path.GetFileName(fixture.Backup));
+        Assert.True(result.Succeeded, result.Error);
+    }
+
+    [Fact]
     public void RestorePreservesOriginalsAndBackupAndInstallsVerifiedRevision()
     {
         using var fixture = new Fixture();

@@ -148,7 +148,7 @@ public partial class App
         {
             string path = Path.Combine(dataRoot, "content-composition-" + name + ".png");
             Require(!File.Exists(path), "Capture evidence already exists.");
-            captures.Add(path); capture = _spatialRuntime!.CaptureLampXamlForProbeAsync(target, path);
+            captures.Add(path); capture = _spatialRuntime!.CapturePosterXamlForProbeAsync(target, path);
         }
         void Resize(DesktopUpProjection current, double width)
         {

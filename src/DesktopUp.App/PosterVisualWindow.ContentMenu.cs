@@ -41,7 +41,7 @@ internal sealed partial class PosterVisualWindow
             return ContentPinContextAction.ItemMenu;
         (double X, double Y) Local(PointerScreenPoint point) =>
             ((point.X-_bounds.X)/_monitor.ScaleX-ContentLeftDip, (point.Y-_bounds.Y)/_monitor.ScaleY-ContentTopDip);
-        var pins = ContentLayoutFlow.ProjectTiles(_contentSnapshot, _contentViewport)
+        var pins = ContentLayoutFlow.ProjectTiles(_contentSnapshot, _contentViewport, _contentBrowseMode)
             .Where(tile => tile.ItemId == request.ContentItemId).Select(ContentPinPresentationPolicy.VisibleBounds);
         return ContentPinPresentationPolicy.ResolveContext(pins, Local(press), Local(request.ScreenPoint));
     }
@@ -50,7 +50,7 @@ internal sealed partial class PosterVisualWindow
     {
         var doc = ContentDocument;
         var placement = doc.Placements.First(p => p.ItemId == itemId);
-        bool writable = ReadContentEditor().CanEdit && !HasContentGesture && !spatial.IsSpatialBusy &&
+        bool writable = ReadContentEditor().CanEdit && !HasContentGesture && !spatial.IsPosterSpatialBusy(PosterId!) &&
             !spatial.HasCenterDraft(doc.PosterId);
         void Add(string title, string command, Func<string?> action, bool enabled = true)
         {

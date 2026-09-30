@@ -11,21 +11,9 @@ using WinRT;
 
 namespace DesktopUp;
 
-internal sealed record BackdropPostureProbeFrame(string RequestId, string PosterId, bool Collapsed,
-    int AcceptedFrame, int TotalFrames, DesktopPixelRect InitialBounds, DesktopPixelRect FinalBounds,
-    DesktopPixelRect VisibleBounds);
-
 internal sealed record BackdropMotionObservation(string Name, string File, double Progress,
     BackdropPostureProbeFrame Frame, DesktopPixelRect NativeRegionBefore, DesktopPixelRect NativeRegionAfter,
     LampNativeReadback Before, LampNativeReadback After);
-
-internal sealed partial class PosterSpatialRuntime
-{
-    internal PosterVisualWindow BackdropWindowForProbe(string id) => _windows[id];
-    // Null in production. The isolated probe can pace three frames without changing the
-    // animation schedule, cursor, native commit, or watchdog's elapsed-time budget.
-    internal Func<BackdropPostureProbeFrame, Task>? BackdropFrameObserverForProbe { get; set; }
-}
 
 public partial class App
 {
@@ -38,6 +26,8 @@ public partial class App
         var rows = new List<object>();
         var motionFrames = new List<BackdropMotionObservation>();
         bool motion = _startupIntent.Arguments.Contains("--backdrop-motion-capture", StringComparer.Ordinal);
+        bool live = _startupIntent.Arguments.Contains("--backdrop-live-capture", StringComparer.Ordinal);
+        bool screenOnly = _startupIntent.Arguments.Contains("--backdrop-screen-only", StringComparer.Ordinal);
         bool secondPoster = _startupIntent.Arguments.Contains("--backdrop-second-poster", StringComparer.Ordinal);
         string id = "poster-main";
         Task? activeCapture = null;
@@ -66,6 +56,12 @@ public partial class App
             async Task Capture(string name)
             {
                 await Task.Delay(700, cancellation.Token);
+                if (screenOnly)
+                {
+                    rows.Add(new { name, visibleBounds = VisibleBounds(),
+                        nativeRegion = BackdropCaptureProbe.ReadRegion(window.WindowHandle), readback = window.ReadLampNativeForProbe() });
+                    return; // Do not start WGC even for the stable reference in this comparison.
+                }
                 string file = Path.Combine(dataRoot, "backdrop-" + name + ".png");
                 activeCapture = BackdropCaptureProbe.CaptureAsync(window.WindowHandle, file, cancellation: cancellation.Token);
                 await activeCapture;
@@ -84,7 +80,40 @@ public partial class App
                 if (!result.Succeeded) throw new InvalidOperationException(result.Error);
             }
             await Capture("initial");
-            if (motion)
+            if (live)
+            {
+                await Posture(true); await Capture("collapsed-1");
+                var completion = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+                var commits = new List<object>();
+                Task? recording = null;
+                _spatialRuntime.BackdropFrameObserverForProbe = frame =>
+                {
+                    if (frame.PosterId != id || frame.Collapsed) return Task.CompletedTask;
+                    commits.Add(new { qpc = System.Diagnostics.Stopwatch.GetTimestamp(), frame,
+                        layout = window.ReadTransitionForProbe() });
+                    recording ??= screenOnly ? BackdropCaptureProbe.CaptureScreenSequenceAsync(window.WindowHandle,
+                        Path.Combine(dataRoot, "live-expansion"), completion.Task, cancellation.Token) :
+                        BackdropCaptureProbe.CaptureSequenceAsync(window.WindowHandle,
+                        Path.Combine(dataRoot, "live-expansion"), completion.Task, cancellation.Token,
+                        _startupIntent.Arguments.Contains("--backdrop-screen-crop", StringComparer.Ordinal));
+                    // Never hold or pace AdvancePosture while the asynchronous capture runs.
+                    return Task.CompletedTask;
+                };
+                try { await Posture(false); await Task.Delay(400, cancellation.Token); }
+                finally
+                {
+                    _spatialRuntime.BackdropFrameObserverForProbe = null;
+                    completion.TrySetResult(true);
+                    if (recording is not null) { activeCapture = recording; await recording; }
+                }
+                if (recording is null) throw new InvalidOperationException("No live expansion was recorded.");
+                await File.WriteAllTextAsync(Path.Combine(dataRoot, "live-commits.json"),
+                    JsonSerializer.Serialize(commits, new JsonSerializerOptions { WriteIndented = true }));
+                rows.Add(new { name = "live-unpaced-expansion", commits = commits.Count,
+                    frequency = System.Diagnostics.Stopwatch.Frequency, firstFrameMayBeMissed = true });
+                await Capture("expanded-1");
+            }
+            else if (motion)
             {
                 await Posture(true); await Capture("collapsed-1");
                 double[] thresholds = [.2, .5, .8];
@@ -157,8 +186,8 @@ public partial class App
             if (_stopAutoSmoke == Stop) _stopAutoSmoke = null;
         }
         var report = new { passed, error, rows, motionFrames, posterId = id, secondPoster,
-            phasePaced = motion, originalSpeedCertified = false, animationFramesCertified = false,
-            nativeMouse = false, ownWindowCapture = true,
+            phasePaced = motion && !live, liveUnpaced = live, originalSpeedCertified = false, animationFramesCertified = false,
+            nativeMouse = false, ownWindowCapture = !screenOnly, screenOnly,
             visualAcceptance = false, note = "Inspect native captures; API readback alone is not visual PASS." };
         await File.WriteAllTextAsync(Path.Combine(dataRoot, "backdrop-observation.json"),
             JsonSerializer.Serialize(report, new JsonSerializerOptions { WriteIndented = true }));
@@ -170,7 +199,7 @@ public partial class App
 
 // Bounded diagnostic lifetime; no production timer, desktop capture, input injection or
 // global setting changes. Native references are released even on capture timeout.
-internal static class BackdropCaptureProbe
+internal static partial class BackdropCaptureProbe
 {
     public static void Redraw(nint window, bool erase)
     {

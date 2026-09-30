@@ -70,6 +70,16 @@ internal sealed record ContentFieldsProbeReadback
 // do not claim to synthesize native pointer/keyboard input or routed Enter/Escape events.
 public sealed partial class ControlCenterWindow
 {
+    internal static bool VerifyContentSpaceDraftForProbe(ContentLayoutEditorView view)
+    {
+        if (view.SelectedItemId is not { } id || view.SelectedSlot is not { } slot || !view.CanEdit) return false;
+        var draft = new ContentFieldDraft(view.Document.PosterId, id, view.EntityVersion, view.Document.DocumentVersion,
+            ContentFieldGroup.Span, slot.ColumnSpan.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            slot.RowSpan.ToString(System.Globalization.CultureInfo.InvariantCulture)) { SpaceEpoch = view.SpaceEpoch, SpaceSession = view.SpaceSession };
+        return ValidateContentFields(draft, view, out _) is null &&
+            ValidateContentFields(draft, view with { SpaceEpoch = view.SpaceEpoch + 1 }, out _)?.Contains("显示环境已变化", StringComparison.Ordinal) == true &&
+            ValidateContentFields(draft, view with { SpaceSession = Guid.NewGuid() }, out _) is not null;
+    }
     private int _contentProbeWidthDip, _contentProbeHeightDip, _contentProbeWidthPixels, _contentProbeHeightPixels;
     private global::Windows.Graphics.SizeInt32 _contentProbeImmediateSize;
     internal void PrepareContentFieldsForProbe(int widthDip, int heightDip)

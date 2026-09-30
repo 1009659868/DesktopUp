@@ -8,7 +8,6 @@ namespace DesktopUp;
 
 internal sealed partial class PosterSpatialRuntime
 {
-    private PostureRun? _posture;
     // Off for every normal launch; enabled only by the existing isolated spatial probe.
     private bool _measurePostureFrames;
     public event Action? RecoveryRequired;
@@ -16,8 +15,10 @@ internal sealed partial class PosterSpatialRuntime
     public void ToggleCollapsed(PosterVisualWindow window)
     {
         if (!state.TryGetCurrent(out var current) || current?.PostersById.GetValueOrDefault(window.PosterId ?? "") is not { } target) return;
+        bool previous = _pendingPostures.GetValueOrDefault(target.Poster.PosterId)?.Command.DesiredState.IsCollapsed ??
+            PostureFor(window)?.Command.DesiredState.IsCollapsed ?? target.Poster.IsCollapsed;
         SetCollapsed(new("posture-" + Guid.NewGuid().ToString("N"), StateCommandSource.Poster, PosterStateCommandKind.SetCollapsed,
-            current.Revision, target.Poster.PosterId, target.Poster with { IsCollapsed = !target.Poster.IsCollapsed })
+            current.Revision, target.Poster.PosterId, target.Poster with { IsCollapsed = !previous })
             { ReadSet = StateReadSet.ForPoster(target.Poster.PosterId, target.EntityVersion) }, result =>
                 log.Write(result.Succeeded ? "info" : "warning", "spatial.posture_result", new { result.RequestId, result.Status, result.Error }));
     }
@@ -27,9 +28,11 @@ internal sealed partial class PosterSpatialRuntime
         if (HasCenterDraft(request.PosterId))
         { completed(Failure(request, "控制中心存在未完成修改，请先完成或取消。")); return; }
         if (request.Source != StateCommandSource.System) BeforeManualIntent(request.PosterId, request.DesiredState.IsCollapsed);
-        if (_title is not null || _posture is not null || _owner is not null || !_windows.TryGetValue(request.PosterId, out var owner) ||
-            !TrySnapshot(owner, out var scene, out var projection))
+        if (_title is not null || _owner is not null || !_windows.TryGetValue(request.PosterId, out var owner))
         { completed(Failure(request, "空间环境尚未就绪或另一个拖缩/收展正在进行。")); return; }
+        if (PostureFor(owner) is not null) { QueuePosture(request, completed); return; }
+        if (!TryPostureSnapshot(owner, out var scene, out var projection))
+        { completed(Failure(request, "空间环境尚未就绪。")); return; }
         var target = projection!.PostersById[request.PosterId];
         if (request.ReadSet?.Posters.GetValueOrDefault(request.PosterId) != target.EntityVersion)
         { completed(Failure(request, "海报状态已变化，请重试。") with { Status = StateCommandStatus.Conflict }); return; }
@@ -56,9 +59,13 @@ internal sealed partial class PosterSpatialRuntime
         if (!plan.Succeeded)
         { completed(Failure(request, "收展未执行（不是普通空间不足）：" + string.Join(", ", plan.Issues.Select(i => i.Reason)))); return; }
         SpatialAnimationSchedule schedule;
-        try { schedule = SpatialAnimationSchedule.Create(scene, group.Frames, animationOptions); }
+        try { schedule = SpatialAnimationSchedule.CreatePresentation(scene, group.Frames, animationOptions); }
         catch (ArgumentException exception)
         { completed(Failure(request, "动画轨迹未提交：" + exception.Message)); return; }
+        var reservation = PostureGroupReservation.Create(scene, schedule.Frames);
+        if (_postures.Values.Any(r => r.Command.SpatialPosture is null || reservation.Conflicts(r.Reservation)) ||
+            plan.Changes.Any(c => _windows[c.PosterId].HasContentGesture))
+        { QueuePosture(request, completed); return; }
         var final = plan.Changes.FirstOrDefault(p => p.PosterId == request.PosterId)?.After ?? source.Bounds;
         var desired = SpatialGestureCommitPolicy.Capture(target.Poster, final, scene.Environment, target.Poster.ExpandedHeightDip)
             with { IsCollapsed = request.DesiredState.IsCollapsed };
@@ -72,7 +79,7 @@ internal sealed partial class PosterSpatialRuntime
         timer.IsRepeating = true;
         var participants = plan.Changes.Select(p => _windows[p.PosterId]).ToArray();
         var run = new PostureRun(owner, command, scene, schedule, animationOptions, participants, timer, completed) { Changes = plan.Changes };
-        _posture = run;
+        _postures.Add(command.RequestId, run);
         timer.Tick += WatchPosture;
         run.RenderingHandler = (_, _) =>
         {
@@ -80,7 +87,7 @@ internal sealed partial class PosterSpatialRuntime
             catch (Exception exception)
             {
                 log.Write("error", "spatial.animation_failed", new { run.Command.RequestId, exception.Message });
-                CancelPosture("animation-exception");
+                CancelPosture("animation-exception", specific: run);
             }
         };
         try
@@ -99,7 +106,7 @@ internal sealed partial class PosterSpatialRuntime
         catch (Exception exception)
         {
             log.Write("error", "spatial.transition_prepare_failed", new { command.RequestId, exception.Message });
-            CancelPosture("content-preparation-failed");
+            CancelPosture("content-preparation-failed", specific: run);
             return;
         }
         log.Write("info", "spatial.posture_started", new { command.RequestId, command.PosterId,
@@ -121,18 +128,19 @@ internal sealed partial class PosterSpatialRuntime
 
     private void WatchPosture(DispatcherQueueTimer timer, object args)
     {
-        if (_posture is not { } run || !ReferenceEquals(run.Timer, timer)) return;
+        var run = _postures.Values.FirstOrDefault(r => ReferenceEquals(r.Timer, timer));
+        if (run is null) return;
         if (run.Clock.Elapsed.TotalMilliseconds > Math.Min(120000, 5000 + run.Schedule.NominalDurationMs + run.Frames.Count * 100d))
-        { CancelPosture("rendering-stalled"); return; }
+        { CancelPosture("rendering-stalled", specific: run); return; }
         if (!TrySnapshot(run.Owner, out var scene, out var current) || scene!.Environment != run.Initial.Environment || !run.ReadsCurrent(current!))
-        { CancelPosture("environment-or-read-set-stale"); return; }
+        { CancelPosture("environment-or-read-set-stale", specific: run); return; }
     }
 
     private void AdvancePosture(PostureRun run)
     {
-        if (!ReferenceEquals(_posture, run)) return;
+        if (_postures.GetValueOrDefault(run.Command.RequestId) != run) return;
         if (!TrySnapshot(run.Owner, out var scene, out var current) || scene!.Environment != run.Initial.Environment || !run.ReadsCurrent(current!))
-        { CancelPosture("environment-or-read-set-stale"); return; }
+        { CancelPosture("environment-or-read-set-stale", specific: run); return; }
         // Only the explicit isolated backdrop probe installs this observer. Keep the native
         // frame stable while its own-HWND capture completes; the existing watchdog remains on.
         if (run.BackdropObservation is { } observation)
@@ -169,10 +177,10 @@ internal sealed partial class PosterSpatialRuntime
                 elapsedMs = run.Clock.Elapsed.TotalMilliseconds,
                 prepareAndCommitMs = System.Diagnostics.Stopwatch.GetElapsedTime(probeStart).TotalMilliseconds });
             if (!applied)
-                CancelPosture("native-batch-failed");
+                CancelPosture("native-batch-failed", specific: run);
             else
             {
-                run.AcceptedFrames++;
+                run.AcceptedFrames = run.Cursor.Index; // Exact refined prefix retained for title handoff.
                 if (BackdropFrameObserverForProbe is { } observer &&
                     prepared.FirstOrDefault(p => p!.Owner == run.Owner) is { } source)
                 {
@@ -187,15 +195,18 @@ internal sealed partial class PosterSpatialRuntime
         }
         run.Timer.Stop();
         StateCommandResult result = CommitPosture(run.Command);
-        if (_posture != run) return;
+        if (_postures.GetValueOrDefault(run.Command.RequestId) != run) return;
         FinishPosture(run, result);
     }
 
-    private void CancelPosture(string reason, StateCommandStatus status = StateCommandStatus.Failed)
+    private void CancelPosture(string reason, StateCommandStatus status = StateCommandStatus.Failed, PostureRun? specific = null)
     {
-        if (_posture is not { } run) return;
-        log.Write("warning", "spatial.posture_cancelled", new { run.Command.RequestId, reason });
-        FinishPosture(run, Failure(run.Command, "收展已取消并恢复权威布局：" + reason) with { Status = status });
+        foreach (var run in specific is null ? _postures.Values.ToArray() : new[] { specific })
+        {
+            if (_postures.GetValueOrDefault(run.Command.RequestId) != run) continue;
+            log.Write("warning", "spatial.posture_cancelled", new { run.Command.RequestId, reason });
+            FinishPosture(run, Failure(run.Command, "收展已取消并恢复权威布局：" + reason) with { Status = status });
+        }
     }
 
     private void FinishPosture(PostureRun run, StateCommandResult result)
@@ -208,7 +219,7 @@ internal sealed partial class PosterSpatialRuntime
                 if (projection.PostersById.TryGetValue(change.PosterId, out var target))
                     _effective.Set(target, change.After, run.Initial.Environment);
         bool restored = RestorePresentedGroup(run.Owner, run.Participants, run.Command.RequestId);
-        _posture = null;
+        _postures.Remove(run.Command.RequestId);
         EffectiveLayoutChanged?.Invoke();
         if (!restored)
         {
@@ -218,6 +229,7 @@ internal sealed partial class PosterSpatialRuntime
             RecoveryRequired?.Invoke();
         }
         run.Completed(result);
+        if (!_suspended && run.Owner.WindowHandle != 0) run.Owner.SpatialDispatcher.TryEnqueue(DrainPostures);
     }
 
     // Both posture and title owners finish through this exact R4 release/readback path.
@@ -274,8 +286,9 @@ internal sealed partial class PosterSpatialRuntime
         DispatcherQueueTimer timer, Action<StateCommandResult> completed)
     {
         public PosterVisualWindow Owner { get; } = owner;
-        public PosterStateCommand Command { get; } = command;
-        public SpatialSnapshot Initial { get; } = initial;
+        public PosterStateCommand Command { get; set; } = command;
+        public SpatialSnapshot Initial { get; set; } = initial;
+        public PostureGroupReservation Reservation { get; } = PostureGroupReservation.Create(initial, schedule.Frames);
         public SpatialAnimationSchedule Schedule { get; } = schedule;
         public IReadOnlyList<SpatialBatchFrame> Frames => Schedule.Frames;
         public SpatialAnimationCursor Cursor { get; } = new(schedule, options);

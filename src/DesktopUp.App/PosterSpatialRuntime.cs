@@ -20,7 +20,7 @@ internal sealed partial class PosterSpatialRuntime(IStateProjectionCoordinator s
     public void Register(PosterVisualWindow window)
     {
         _windows[window.PosterId!] = window;
-        RefreshLampMotionSurfaces();
+        RefreshSceneMotionSurfaces();
         ActivityChanged?.Invoke();
     }
     public void Remove(PosterVisualWindow window)
@@ -28,7 +28,9 @@ internal sealed partial class PosterSpatialRuntime(IStateProjectionCoordinator s
         window.StopLocate();
         _continuityProbeStop?.Invoke();
         if (_title?.Participants.Contains(window) == true) CancelTitle("surface-disposed");
-        if (_posture?.Participants.Contains(window) == true) CancelPosture("surface-disposed");
+        if (PostureFor(window) is { } posture) CancelPosture("surface-disposed", specific: posture);
+        if (window.PosterId is { } pendingId && _pendingPostures.Remove(pendingId, out var pending))
+            pending.Completed(Failure(pending.Command, "目标已移除。"));
         if (ReferenceEquals(_owner, window)) End(window);
         if (window.PosterId is { } id && _windows.GetValueOrDefault(id) == window) _windows.Remove(id);
         ActivityChanged?.Invoke();
@@ -37,20 +39,26 @@ internal sealed partial class PosterSpatialRuntime(IStateProjectionCoordinator s
     {
         CancelControlCenterVisuals();
         _suspended = true;
+        foreach (var pending in _pendingPostures.Values.ToArray()) pending.Completed(Failure(pending.Command, "环境已失效。"));
+        _pendingPostures.Clear();
         CancelTitle("environment-invalidated");
         CancelPosture("environment-invalidated");
         _owner?.CancelSpatialGesture("environment-invalidated");
         foreach (var window in _windows.Values.ToArray()) window.SuspendInput();
     }
-    public void Resume() { _suspended = false; RefreshLampMotionSurfaces(); ActivityChanged?.Invoke(); }
+    public void Resume() { _suspended = false; RefreshSceneMotionSurfaces(); ActivityChanged?.Invoke(); }
     public void OnProjection(StateProjectionChangedEventArgs change)
     {
-        RefreshLampMotionSurfaces();
+        foreach (var id in _contentSources.Keys.Where(id => !change.Projection.PostersById.ContainsKey(id)).ToArray()) _contentSources.Remove(id);
+        RefreshSceneMotionSurfaces();
         _effective.RemoveMissing(change.Projection);
         if (_title is { } title && title.Session.Intent.Token.OperationId != change.RequestId &&
             !TitleReadsCurrent(title.Reads, change.Projection)) CancelTitle("catalog-or-entity-changed");
-        if (_posture is { } posture && posture.Command.RequestId != change.RequestId &&
-            !posture.ReadsCurrent(change.Projection)) CancelPosture("catalog-or-entity-changed", StateCommandStatus.Conflict);
+        var committed = _postures.GetValueOrDefault(change.RequestId);
+        foreach (var posture in _postures.Values.ToArray())
+            if (posture.Command.RequestId != change.RequestId && !posture.ReadsCurrent(change.Projection) &&
+                !(committed is not null ? TryRebasePeer(posture, committed, change.Projection) : TryRebaseUnrelatedEdit(posture, change.Projection)))
+                CancelPosture("catalog-or-entity-changed", StateCommandStatus.Conflict, posture);
         if (_gesture is { } gesture && change.RequestId != gesture.OperationId &&
             !gesture.IsCurrent(change.Projection, gesture.Initial.Environment))
             _owner?.CancelSpatialGesture("catalog-or-entity-changed");
@@ -87,6 +95,7 @@ internal sealed partial class PosterSpatialRuntime(IStateProjectionCoordinator s
         _gesture = null;
         _owner = null;
         ActivityChanged?.Invoke();
+        owner.SpatialDispatcher.TryEnqueue(DrainPostures);
     }
 
     private bool TrySnapshot(PosterVisualWindow source, out SpatialSnapshot? snapshot, out DesktopUpProjection? projection)

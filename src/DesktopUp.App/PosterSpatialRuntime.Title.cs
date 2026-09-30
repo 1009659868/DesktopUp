@@ -21,7 +21,7 @@ internal sealed partial class PosterSpatialRuntime
             commands is not ITitleSpatialCommitter port || !owner.OwnsTitleCapture(input.Capture)) return;
         // A different source's group retains ownership. Never graft an unrelated animation
         // prefix onto this title's intent, and never fall through to legacy cancellation.
-        if (_posture is { } other && other.Owner != owner) return;
+        if (_postures.Values.Any(r => r.Owner != owner)) return;
         try
         {
             // A presented endpoint is Expanded/Compact, even before the next rendering callback.
@@ -62,7 +62,7 @@ internal sealed partial class PosterSpatialRuntime
             {
                 paused.Timer.Stop(); paused.Timer.Tick -= WatchPosture;
                 CompositionTarget.Rendering -= paused.RenderingHandler;
-                paused.Clock.Stop(); _posture = null;
+                paused.Clock.Stop(); _postures.Remove(paused.Command.RequestId);
             }
             _title = run;
             if (paused is not null)

@@ -79,9 +79,10 @@ function Invoke-ContentGate {
         $taskProof.resourceSamples -ne 12 -or $taskProof.sampledSeconds -lt 10 -or $taskProof.checks -lt 10){throw 'Completion evidence has the wrong scenario/scope/idle sample duration.'}
     $taskRequired=if($Restart){@('same-root-restart-preserves-content-identities-and-settings')}elseif($Scenario -eq 'three'){
         @('reference-illustration','reference-covers','reference-landscape','guides-False-False','guides-True-False','guides-True-True','guides-False-True',
-            'resize-single-revision-target-only','move-single-revision-target-only','undo-after-commit','redo-after-commit','fixed-card',
-            'manual-exit-to-anchors','complete-aggregate-cas-stale-rejection','r4-collapse-prepare-and-restoration','r4-expand-prepare-and-restoration',
-            'horizontal-scroll-offset-nonnative-shift-wheel-equivalent','heat-two-proposals-protected-latest-pending',
+            'resize-single-revision-target-only','move-single-revision-target-only','undo-after-commit','redo-after-commit','order-pin-single-revision',
+            'manual-exit-restores-automatic','legacy-hard-position-conversion-rejected','legacy-region-membership-replacement-rejected',
+            'complete-aggregate-cas-stale-rejection','r4-collapse-prepare-and-restoration','r4-expand-prepare-and-restoration',
+            'legacy-regions-fit-cross-axis-without-second-scrollbar','heat-two-proposals-protected-latest-pending',
             'heat-safe-point-latest-only-override-preserved-no-persistence','heat-old-itemset-rejected-after-membership-replacement',
             'content-input-latest-release','content-input-reverse-origin','content-input-cancel-draft','content-input-edge-release',
             'theme-metrics-protected-latest-pending','theme-safe-point-latest-last-good-no-native-surface',
