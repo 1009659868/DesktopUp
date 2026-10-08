@@ -1,5 +1,82 @@
 # V3-04 代码锚点
 
+## 2026-10-08 R7-A/B完整配置往返
+
+- Application/PortableProfileCodec.cs：v5必需中心主题/模板册，presentation v1～6严格数据验证；旧v1～4字段边界保持；raw参数不经过渲染投影重写。
+- Application/PortableTemplateMerge.cs：纯定义级合并、内嵌变体保真、完整声明比较/确定性副本、缺模块只读与恢复容量预留，不放宽普通RegisterTemplate。
+- Application/PortableProfilePlanner.cs、StateProjectionCoordinator.Portable.cs：原空间/待安置策略与完整CAS；模板目录独立于全局设置选择，创建/替换/目录单事务，重检参数及警告。
+- Domain/PosterPresentationParameters.cs：ReadStoredParameters/ValidateStoredParameters区分可安全存储与模块是否可编辑；不赋予未知模板执行权限。
+- App/PortableProfileController.cs、ControlCenterWindow.Portable.cs：原备份/文件哈希/原生环境守卫，更新导出范围和全局设置文案；不新增管理入口。
+- R7PortableFidelityTests/R7PortableTransactionTests：完整实例/目录/标题false、兼容、冲突、回滚、重启再编辑；原Portable/ContentLayout/文件故障合同继续跑。
+- App.PortableFidelityProbe.cs、App.PortableSmoke.cs及smoke-portable-profile.ps1 -FullConfiguration：0/1/3张实际controller与正常重启，未认证鼠标/原生选择器。
+- SceneModuleFixture/PortableModuleFixture.cs、verify-scene-module-removal.ps1：物理缺Lamp/Rain时导出不变、导入只读/重启、模块恢复可编辑。
+- scripts/verify-r7-portable.ps1：2396合同/4门/14应用进程＋两模块各5段console检查、544源码/161产物锁定。唯一证据与后续门归[里程碑§11.6](LR_MILESTONE_EXECUTION.md#116-r7-ab实施与验证2026-10-08)，不替整体R7或原生人工认证。
+
+## 2026-10-08 R7-0可靠性
+
+- `src/DesktopUp.Infrastructure/SqliteStateStore.cs` OpenWritableConnection：文件WAL＋Private cache；既有有界等待、读取快照、写事务/CAS不变。
+- `tests/DesktopUp.Contracts.Tests/PosterCatalogTests.cs`：CatalogReadDuringUncommittedFirstSeed、HeldCatalogSnapshot、FailedSeed、ConcurrentFirstSeedRepeated（固定32新库）；原并发first-run测试保留。
+- `src/DesktopUp.App/PosterVisualWindow.cs` CommitSpatialFrames/ApplyVisualRegion：SurfacePreparation与FinalRestore跨缓存重装HRGN，失败清缓存、严格原生读回；原Animation缓存复用不变。
+- `PosterVisualWindow.SurfaceProbe.cs`＋`PosterSpatialRuntime.TitleSurfaceSmoke.cs`＋`scripts/smoke-title-surface.ps1`：自有视觉HWND区域丢失注入，11案例/3注入、共享恢复无数据库写入；不模拟真实鼠标。
+- `ControlCenterWindow.ThemeProbe.cs`：中心控件和弹层控件的状态验证分阶段，避免同时禁用弹层锚点却要求弹层保持加载；所有颜色、状态及连接断言保留。仅探针修订，不改变产品开关/弹层行为。
+- 候选、反例、完整门与后续便携合同唯一见[里程碑§11.4/11.5](LR_MILESTONE_EXECUTION.md#114-r7-0可靠基线实施2026-10-08)。便携仍v4，未实现v5。
+
+## 2026-10-08 标题显隐
+
+- PosterPresentationParameters.ShowTitle/IsTitleVisible与PosterPresentationPolicy：v6按需保存、旧版本默认显示、保留nullable显式值、拒绝未知/非法值与静默降级。
+- PosterSetting.TitleVisibility/ControlCenterSettingsSession、ControlCenterWindow.AutoPosture.cs及LayoutFolder中的TitleVisibilitySwitch：原CAS与即时完成通道，无新状态库。
+- PosterVisualWindow.TitleChrome.cs/CreateMeta：名称文字透明但布局不塌陷；TemplatePresentationRefreshPolicy/Content paint key不因开关重建Item；动作/云/原生命中不改。
+- TitleVisibilityTests、PortableProfileModelTests、Lamp/Rain原生探针：目标隔离、单revision、保值/冲突、真实控件/切模板/收展/重启；证据归[模块§17](LR_SCENE_MODULE_EXECUTION.md#17-标题显隐与r7准入2026-10-08)。
+
+## 2026-10-08 云尺寸与增强风摆（同包AUTO PASS / USER PENDING）
+
+- TitleCloudPose.Size/Scale/Fit/Transform与PosterVisualWindow.PaintTitlePose：相同枢轴/缩放和有界摇摆，TitleCloudInputGeometry复用；1e-9数值尘埃不反复发布。
+- TitleCloudInputGeometry.AllowsProtection与PosterInputIslandManager.CanUpdateTitleSize：显式尺寸与闲置风摆分离；只允许外部按键/捕获位，自身捕获/菜单/事务不豁免，尺寸更新不借权限推进风摆。
+- RainDeclaration v3/cloud.size、RainSceneInstance.TitlePose、RainSceneMotion.Cloud：声明参数→场景提案→宿主；SceneCapabilityRegistry.PreviousBuiltIns兼容精确v1/v2，不改用户配方。
+- TitleCloudMotionTests/RainSceneContractTests与App.RainSceneProbe：尺寸/DPI/周期、真实alpha差分/HRGN、无动画刷新、保存重启；候选证据归[模块§16](LR_SCENE_MODULE_EXECUTION.md#16-云尺寸参数与增强起伏倾斜2026-10-08)。
+
+## 2026-10-08 最新：UI C风感与随机闪电（同包AUTO PASS / USER PENDING）
+
+- Domain/TitleCloudShape.cs：UI C主体统一轮廓与保守内切条带，单槽有界缓存；TitleCloudPose.Fit：发布前拟合标题预算，避免整周期出框。
+- App/PosterVisualWindow.TitleChrome.cs：唯一云组、固定名称/按钮、两片有界内部材质；雨/闪电不进入云命中。
+- Modules/Rain/Application/RainSceneMotion.cs：19秒升降/偏移/摇摆与27/23秒材质相位；RainLightningSchedule.cs：按活动时间的间隔/逐次种子，RainLightningGeometry.cs：有界变位及分叉连续性。
+- RainDeclaration.cs：间隔动态控件及精确旧内置声明；TemplateRecipeInstancePolicy.InstalledBuiltInRevision、PosterPresentationParameters.Read：只读默认投影/显式编辑保存，不覆盖自定义声明。
+- App.RainSceneProbe.cs：独立云层5位置边界、实际HRGN、闪电seed像素对照、间隔控件/保存重启；TitleCloudMotionTests/RainLightningScheduleTests/RainSceneContractTests覆盖几何与兼容。
+- 候选与失败证据见[模块§15](LR_SCENE_MODULE_EXECUTION.md#15-ui-c风感对齐整周期防裁切与随机闪电2026-10-08)；下方§14为被用户要求续修的候选25，非当前验收入口。
+
+## 2026-10-08 最新：整云动态命中与贯穿闪电（AUTO PASS / USER PENDING）
+
+- Domain/TitleCloudPose.cs、Application/TitleCloudInputGeometry.cs：共同有界变换，物理像素行保守内切命中；TitleCloudMotionTests覆盖不同DPI/仅标题替换/暂停。
+- App/PosterVisualWindow.TitleChrome.cs：宿主云形变换、明确标题Clip及title-only发布；PosterVisualWindow.cs的全量输入更新复用当前云位姿。SceneHost只读模块提案、原所有者裁决；IPosterTitleMotion取代旧IPosterTitleDecoration。
+- Windows/PosterInputIslandManager.cs：CanAnimateTitle/TryApplyTitleMotion保护捕获与菜单，原生HRGN更新及拒绝回退，不动窗口或完整布局；VerifyTitleRegionForProbe读回实际HRGN。
+- Modules/Rain/Application/RainLightningGeometry.cs与App/RainLightningDecoration.cs：3路径16点的贯穿电光及两条固定描边；RainSceneInstance使用原共享时钟，单独累计云活动时间，无额外timer。RainTitleDecoration风纹/小闪电退役。
+- App.RainSceneProbe：固定整海报根表面的采样坐标，整云alpha轮廓、实际HRGN同步/非标题不变、持有路由捕获及上中下闪电像素；candidate25同包16门/2308合同/42进程通过。真实鼠标首拖与桌面合成仍待人工，不以旧§13 PASS交付。详见[模块§14](LR_SCENE_MODULE_EXECUTION.md#14-整云摆动动态命中与贯穿闪电2026-10-08)。
+
+## 2026-10-08 历史：设置夹保留，Rain标题前景装饰已退役
+
+- `src/DesktopUp.App/ControlCenterWindow.xaml`：LayoutFolder/LayoutFolderPanel收纳通用外观与浏览；ContentLayoutPanel外层保留所选Item入口；原事件/草稿/只读门不变。
+- `ControlCenterWindow.UiCSample.cs`、`App.UiCSampleProbe.cs`：7场景宽窄折叠/独立展开，折叠按声明关系验证，展开验证实际可见边界；TitleColors/SettingsSmoke探针显式展开父级。
+- `src/DesktopUp.App/Scenes/IPosterSceneInstance.cs`：可选IPosterTitleDecoration；`PosterVisualWindow.SceneHost.cs`与`TitleChrome.cs`在静态云与文字之间接入，释放/失败时共同卸载，不新增输入协议。
+- `Modules/Rain/App/RainTitleDecoration.cs`：复用Domain标题形状，固定主体上的光带/风纹及云下60～82DIP闪电；有界节点，无时钟/命中/状态写。`RainSceneInstance.cs`只在Cloud标题下隐藏旧后景整云，同一共享更新驱动前后两层。
+- `Modules/Rain/App/App.RainSceneProbe.cs`：真实标题层XAML像素对照（大风／无风、闪电开／关）及原命中、对象、层级不变；确定时刻绘制不等于桌面连续帧认证。ResourceProbe计入新增5个固定装饰节点，每场景72个逻辑绘制节点，仍64雨滴上限。
+- 详细候选、测试与人工范围归[模块§13](LR_SCENE_MODULE_EXECUTION.md#13-rr-06收口与r7前增量修订2026-10-08)。RR-06原验收已关闭；下节待人工为历史。
+
+## 2026-10-08：无底板标题与交互追光
+
+- Domain/PosterPresentationParameters.cs：按需v5 titleColors、严格解析及旧字段保留；Application/ControlCenterSettingsSession.cs沿原命令编辑标题色。
+- App/PosterVisualWindow.TitleChrome.cs、SurfacePaint.cs、Content.cs：独立字色/符号色，无背景板，标题色不触发Item缓存失效；TitleColors.cs与XAML折叠小节复用LampColors.cs共享弹层。
+- Application/ScenePointerAdmissionPolicy.cs、App/PosterSpatialRuntime.SceneMotion.cs、PosterVisualWindow.SceneHost.cs：只读装饰准入及刷新样本连续性，原自动收展保护不变。
+- tests/TitleColorTests.cs、ScenePointerAdmissionTests.cs、PortableProfileModelTests.cs；Modules/Lamp/App/App.LampParameterProbe.cs与probe-lamp-parameters.ps1新增真实控件和原Item协议门。输入不是OS自动化，最新证据见模块§12。
+
+## 2026-10-08：RR-06组合验证与删除恢复
+
+- `src/DesktopUp.App/App.PostureCombinationProbe.cs`：显式`--posture-groups-probe --rr-combinations`隔离分支；真实R4接受首帧后暂缓以确定性穿插B参数/Item协议、自动A与手动B、锁定邻居、删除/排队/迟到回调。正常启动不安装观察器，不模拟OS输入，不用于时长或像素认证。
+- `src/DesktopUp.App/PosterSpatialRuntime.Posture.cs/RestorePresentedGroup`：仅committed确认已删除成员免除“无恢复几何但HWND仍在”的误报，释放租约并停用输入；存活/未知状态严格恢复。BUG-033红绿证据见缺陷清单。
+- `scripts/probe-posture-groups.ps1 -Combinations`：两独立进程，完整退出/error/资源/hash门；原Groups分支保留。
+- `scripts/verify-rr06.ps1`：新out目录中2274合同及16项同包门，源码/运行文件不变才生成Schema2 seal；任何失败保留证据且停止，不封存。
+- `scripts/start-lr-rain-review.ps1`：Schema2在原11门上增加Groups/Combinations/Spatial/AnimationRain/AnimationLamp，逐文件及proof哈希校验后新建隔离DEMO。Schema1仅兼容其原证据范围，不给旧包补新PASS。
+- 本轮不处理BUG-031、不进入R7；当前自动/人工结果见[模块执行记录](LR_SCENE_MODULE_EXECUTION.md)最新节。
+
 ## 2026-09-30：RR唯一标题、呈现节奏与收展组隔离
 
 - `src/DesktopUp.Domain/PosterTitleChrome.cs`＋`src/DesktopUp.App/PosterVisualWindow.TitleChrome.cs`：唯一云标题实体/保守命中带/固定动作槽位/独立底板；`PosterVisualWindow.cs`发布原输入岛，`src/DesktopUp.Domain/PosterPresentationParameters.cs`共用度量。

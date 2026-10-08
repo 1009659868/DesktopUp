@@ -1,5 +1,17 @@
 # DesktopUp V2 文档入口
 
+Git同步检查点（2026-10-08，本次用户授权）：源码`f2f6804`保存尚未同步的RR-06/Rain/标题修订、R7-0可靠基线和R7-A/B完整配置往返；相邻文档提交保存计划、证据与交接。同步目标仅`origin/impl/poster-redesign-V3`，远端结果以实际Git核对；不合入发布分支。本次2396合同复跑通过，原final04的544源码/161产物/4份proof哈希复核一致，详情见[交接](A_Project/40_Implementation/V3-04/HANDOFF.md)。下一步仍为R7-C，再R7-D；下方“无Git提交推送/无授权”为各次实施时的历史快照，不改变原验收范围。本地笔记、配置、候选及日志均不上传。
+
+2026-10-08当前：**R7-A/B实现及自动门完成，整体R7未关闭**。便携v5携带模板册、当前/未选模板实例、标题显隐/颜色、内容布局和中心主题；DEC-032同ID异定义保留两份，导入副本确定性映射，原单事务/CAS/备份守卫保持。唯一同包证据为`out/r7-portable/final04`：2396合同、4项门、14个应用进程及Lamp/Rain各5段缺模块便携检查通过，error/退出资源0，544源码/161产物指纹未变。原始失败及旧包/配置保留，详见[R7-A/B合同与实施](A_Project/40_Implementation/V3-04/LR_MILESTONE_EXECUTION.md#116-r7-ab实施与验证2026-10-08)。下一步R7-C长时资源与连续可靠性，再R7-D真实显示/DPI、原生选择器/手势与人工验收；不把本轮当整体R7关闭，不进入R8。本轮未启动新人工包、无Git提交推送。下方R7-0或更早“尚未实现/下一步A/B”等是历史范围，不转授旧证据给当前源码。
+
+最新续做（2026-10-08）：用户追加云尺寸及更强起伏/倾斜，转[模块§16](A_Project/40_Implementation/V3-04/LR_SCENE_MODULE_EXECUTION.md#16-云尺寸参数与增强起伏倾斜2026-10-08)。review28已正常退出，旧包/库保留；新参数0.60～1.10倍、默认1，绘制/命中共用缩放与边界拟合，风力提升升降/转角占比。rain-size candidate04已通过final04完整16门、2338合同与42进程，536源码/161产物指纹不变，error/退出资源0。严格入口已打开独立review04（初始PID3276，中心显示/启动日志正常），当前AUTO GATES COMPLETE / USER PENDING。参数与风摆准入分离、失败证据及短时资源限制见§16；不继承旧人工结论，确认后再R7，RR-06仍关闭、BUG-031延期，无Git操作。下方§15及更早候选是历史范围。
+
+最新增量（2026-10-08）：candidate25云风感/裁切用户未通过，贯穿闪电形态认可；当前按[模块§15](A_Project/40_Implementation/V3-04/LR_SCENE_MODULE_EXECUTION.md#15-ui-c风感对齐整周期防裁切与随机闪电2026-10-08)对齐UI C复合风摆、防裁切及可调间隔/随机落点。candidate28已通过final28b完整同包16门、2327合同及42进程；严格入口已启动独立review28（初始PID42520），当前AUTO GATES COMPLETE / USER PENDING。失败重试与资源短样本限制保留在§15，不代填真实鼠标/桌面合成PASS。RR-06仍CLOSED，BUG-031延期，人工确认后再R7；下方§14及更早候选为历史。
+
+最新（2026-10-08收口）：**RR-06 CLOSED / USER PASS**。用户确认标题无底板、独立颜色及射灯交互跟随通过，BUG-030/034按该范围关闭。先完成本次“设置夹＋Rain风纹/闪电”增量修订，再进入R7；当前证据和入口见[模块§13](A_Project/40_Implementation/V3-04/LR_SCENE_MODULE_EXECUTION.md#13-rr-06收口与r7前增量修订2026-10-08)。BUG-031仍延期未修，无Git授权；下方待验文字均为历史。
+
+当前（2026-10-08）：**RR-06同包自动门完成，人工待验**。最终candidate12的2274合同、16项门、42进程及严格人工入口通过；补修删除恢复BUG-033，白条BUG-031仍延期未修。续做[模块§11](A_Project/40_Implementation/V3-04/LR_SCENE_MODULE_EXECUTION.md#11-rr-06同包自动门完成进入人工验收2026-10-08)与[交接](A_Project/40_Implementation/V3-04/HANDOFF.md)。本轮不进R7、不Git同步；下方candidate07待解锁等为历史快照。
+
 Git同步检查点（2026-09-30，本次用户授权）：源码`5f753e1`及相邻文档提交保存R6后续、模块/Rain和RR整改，目标`origin/impl/poster-redesign-V3`；Release构建及2274合同复验通过。阶段不变：RR-06待补验、白条延期，详见[交接](A_Project/40_Implementation/V3-04/HANDOFF.md)。本地笔记/配置/产物不上传，下方“无Git授权/未提交”是此前快照。
 
 当前（2026-09-30）：[RR整改实施§10](A_Project/40_Implementation/V3-04/LR_SCENE_MODULE_EXECUTION.md#10-rr整改生产接线与同包验证2026-09-30)。唯一云标题/可读按钮、安全提速、受影响收展组隔离已接生产；candidate07全量2274及双组WinUI/R4/模块移除恢复通过。白条BUG-031按用户要求延期，未修复；RR-06同包余门和人工待解锁继续，不能整体标完成，不进R7。下方各次“最新/下一步RR-02”均为历史。
