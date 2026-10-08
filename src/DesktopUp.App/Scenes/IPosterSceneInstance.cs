@@ -15,3 +15,10 @@ internal interface IPosterSceneInstance : IDisposable
     void PaintCard(SceneCardPaint paint);
     void StopMotion();
 }
+
+/// <summary>Bounded title-motion proposal only. The host owns paint AND native hit publication.
+/// The scene cannot access a HWND, capture, menu or input router.</summary>
+internal interface IPosterTitleMotion
+{
+    DesktopUp.Domain.TitleCloudPose TitlePose { get; }
+}

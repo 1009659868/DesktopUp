@@ -3,7 +3,8 @@ param(
     [Parameter(Mandatory)][string]$AppDirectory,
     [Parameter(Mandatory)][string]$FixtureDirectory,
     [Parameter(Mandatory)][string]$OutputRoot,
-    [Parameter(Mandatory)][ValidatePattern('^[A-Fa-f0-9]{64}$')][string]$ExpectedAssemblySha256
+    [Parameter(Mandatory)][ValidatePattern('^[A-Fa-f0-9]{64}$')][string]$ExpectedAssemblySha256,
+    [switch]$Combinations
 )
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'Start-DesktopUpFixtureProcess.ps1')
@@ -26,6 +27,7 @@ foreach ($rrCase in @('independent','chain')) {
     & (Join-Path $rrFixture 'DesktopUp.SessionFixture.exe') @rrFixtureArgs
     if ($LASTEXITCODE -ne 0) { throw 'Fixture failed.' }
     $rrArgs = '--posture-groups-probe --exit-after-ms=60000'
+    if ($Combinations) { $rrArgs += ' --rr-combinations' }
     if ($rrCase -eq 'chain') { $rrArgs += ' --rr-chain' }
     $rrProcess = Start-DesktopUpFixtureProcess -ExecutablePath (Join-Path $rrApp 'DesktopUp.exe') -DataRoot $rrData -Arguments $rrArgs -WindowStyle Hidden
     if (!$rrProcess.WaitForExit(65000)) { throw "Timed out; process preserved: $($rrProcess.Id)" }

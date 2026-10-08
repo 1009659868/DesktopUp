@@ -21,7 +21,7 @@ public sealed class PosterTitleChromeTests
         }
         Assert.Equal(PosterTitleChromeTarget.Collapse, value.HitTest(value.Collapse.X + 12, 40));
         Assert.Equal(PosterTitleChromeTarget.More, value.HitTest(value.More.X + 12, 40));
-        Assert.Equal(PosterTitleChromeTarget.Drag, value.HitTest(30, 40));
+        Assert.Equal(PosterTitleChromeTarget.Drag, value.HitTest(45, 40));
         Assert.Equal(PosterTitleChromeTarget.Desktop, value.HitTest(0, 40));
         Assert.Equal(PosterTitleChromeTarget.Desktop, value.HitTest(30, 5));
         Assert.Equal(PosterTitleChromeTarget.Desktop, value.HitTest(width / 2, value.Height));
@@ -65,10 +65,7 @@ public sealed class PosterTitleChromeTests
     [Theory] [InlineData(240)] [InlineData(300)] [InlineData(800)]
     public void EveryGripStripIsInsideTheSamePaintedSolidGeometry(double width)
     {
-        bool Painted(double x, double y) => PosterTitleChromePolicy.CloudBody(width).Contains(x, y) ||
-            PosterTitleChromePolicy.CloudEllipses(width).Any(e =>
-                Math.Pow((x - e.X - e.Width / 2) / (e.Width / 2), 2) +
-                Math.Pow((y - e.Y - e.Height / 2) / (e.Height / 2), 2) <= 1);
+        bool Painted(double x, double y) => TitleCloudShape.Contains(width,x,y);
         foreach (var b in PosterTitleChromePolicy.Resolve(width, false, PosterTitleChromeKind.Cloud).GripBands)
             foreach (var (x, y) in new[] { (b.X, b.Y), (b.Right, b.Y), (b.X, b.Bottom), (b.Right, b.Bottom) })
                 Assert.True(Painted(x, y));

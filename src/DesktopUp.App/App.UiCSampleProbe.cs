@@ -14,6 +14,7 @@ public partial class App
         var lease = _ledger!.Acquire("fixture.ui-c-sample", "isolated-center-and-poster");
         var cases = new[] { ("wide-folded", false, 980, 720, false, false), ("wide-open", true, 980, 720, false, false),
             ("narrow-folded", false, 680, 820, true, false), ("narrow-open", true, 680, 820, true, false),
+            ("settings-open", false, 980, 820, false, false), ("narrow-settings-open", false, 680, 900, true, false),
             ("behavior", false, 980, 720, false, true) };
         var observations = new List<object>();
         long deadline = _autoClock.ElapsedMilliseconds + 30000, readyAfter = 0, revision = -1;
@@ -64,13 +65,15 @@ public partial class App
                     window.PrepareUiCSampleForProbe(sample.Item2,
                         checked((int)Math.Ceiling(sample.Item3 * rasterScale)),
                         checked((int)Math.Ceiling(sample.Item4 * rasterScale)), sample.Item6);
+                    window.ExpandLayoutFolderForProbe(sample.Item2 || sample.Item1.Contains("settings"));
                     readyAfter = _autoClock.ElapsedMilliseconds + 600; step = 2; return;
                 }
                 if (_autoClock.ElapsedMilliseconds < readyAfter) return;
                 if (step == 2)
                 {
                     var center = window.ReadUiCSampleForProbe();
-                    Require(center.ControlsConnected && center.MacrosOutsideFolder && center.HorizontalBoundsValid,
+                    Require(center.ControlsConnected && center.MacrosInSettingsFolder && center.HorizontalBoundsValid &&
+                        center.SettingsExpanded == (sample.Item2 || sample.Item1.Contains("settings")) && center.ItemToolsOutsideSettings,
                         "Center controls or horizontal bounds failed: " + System.Text.Json.JsonSerializer.Serialize(center));
                     Require(center.VisualSampleCount == 3 && center.ParallelMacros && center.BrowsingInAppearance &&
                         center.FineTuneCollapsed && center.AdvancedCollapsed && center.GlobalControlsSeparated,

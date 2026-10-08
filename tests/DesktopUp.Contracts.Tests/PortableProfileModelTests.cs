@@ -29,6 +29,20 @@ public sealed class PortableProfileModelTests
     private static JsonObject Json(params PosterDefinition[] posters) => JsonNode.Parse(PortableProfileCodec.Export(State(posters)))!.AsObject();
     private static PortableProfileDocument Parse(JsonObject node) => PortableProfileCodec.Parse(Encoding.UTF8.GetBytes(node.ToJsonString()));
 
+    [Theory] [InlineData(false)] [InlineData(true)]
+    public void Title_colors_and_visibility_are_not_silently_dropped_by_older_portable_format(bool visibility)
+    {
+        var poster = Poster() with { LayoutParametersJson = PosterPresentationPolicy.Serialize(
+            PosterPresentationPolicy.Defaults("basic-box") with { TitleColors = new("#123456", "#ABCDEF"), ShowTitle = visibility ? false : null }) };
+        var state = State(poster);
+        var document = PortableProfileCodec.Parse(PortableProfileCodec.Export(state));
+        Assert.True(JsonElement.DeepEquals(JsonSerializer.Deserialize<JsonElement>(poster.LayoutParametersJson), document.Posters[0].LayoutParameters));
+        Assert.Throws<ArgumentException>(() => PortableProfileCodec.Encode(document with
+            { Version = 4, TemplateCatalog = null, Settings = document.Settings with { CenterTheme = null } }));
+        Assert.Equal(poster.LayoutParametersJson, state.Catalog.Posters.Single().Poster.LayoutParametersJson);
+        // v5 preserves the fields; a purported v4 must still reject them, never downgrade.
+    }
+
     [Theory] [InlineData(0)] [InlineData(1)] [InlineData(3)]
     public void Empty_single_three_profiles_round_trip_without_identity_or_revision(int count)
     {
@@ -52,8 +66,8 @@ public sealed class PortableProfileModelTests
         Assert.Throws<NotSupportedException>(() => ((IList<PortablePosterProfile>)frozen.Posters).Clear());
     }
     [Theory]
-    // 3 became a supported version (single-axis payload); 4 is the next unknown value.
-    [InlineData("version", "5")] [InlineData("format", "\"Wrong\"")]
+    // v5 supports complete presentation/catalog; v6 remains unknown.
+    [InlineData("version", "6")] [InlineData("format", "\"Wrong\"")]
     [InlineData("unknown", "true")] [InlineData("posters", "null")] [InlineData("settings", "null")]
     public void Unknown_outer_format_or_fields_are_rejected(string field, string value)
     {

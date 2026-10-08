@@ -1,15 +1,18 @@
 using System.Text.Json;
+using System.Runtime.InteropServices.WindowsRuntime;
 using DesktopUp.Application;
 using DesktopUp.Domain;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Media.Imaging;
 namespace DesktopUp;
 
 internal sealed partial class PosterVisualWindow
 {
-    internal RainSceneObservation? ReadRainForProbe() => (_sceneInstance as RainSceneInstance)?.Observe();
+    internal RainSceneObservation? ReadRainForProbe() => (_sceneInstance as RainSceneInstance)?.Observe() is { } value
+        ? value with { TitleNodes=_titleCloudGroup is null ? 0 : 1+_titleCloudGroup.Children.Count } : null;
     internal object RainSurfaceForProbe() => new { backdrop = BackdropColor().A, valid = VerifyWindowBackdrop(),
         metaOpacity = _metaPanel?.Opacity, contentTop = ContentTopDip, rootOpacity = _window?.Content.Opacity,
         module = ReadSceneModuleForProbe(), surface = inputRouter.ReadSurface(inputSession) is null ? null : ReadContentSurfaceForSmoke() };
@@ -20,6 +23,135 @@ internal sealed partial class PosterVisualWindow
         (_contentCanvas, _contentCards.ToDictionary(p => p.Key, p => (object)p.Value));
     internal bool RainSurfaceValidForProbe => BackdropColor().A == 0 && VerifyWindowBackdrop() &&
         _metaPanel?.Opacity == 0 && _window?.Content.Opacity == 1 && _contentCards.Values.All(v => v.Opacity == 1);
+    internal int CloudAlphaForProbe { get; private set; }
+    internal bool CloudSizeAppliedForProbe(double size) => _titlePose.Scale==size && Math.Abs(_titleTransform.ScaleX-size)<1e-6 &&
+        Math.Abs(_titleTransform.ScaleY-size)<1e-6 && _inputIsland?.VerifyTitleRegionForProbe((int)Math.Ceiling(84*(_monitor?.ScaleY ?? 1)))==true;
+
+    internal async Task ProbeRainTitlePixelsAsync(string directory, bool lightning, bool wind = true)
+    {
+        if (_sceneInstance is not RainSceneInstance scene || _window?.Content is not FrameworkElement poster || _titleCanvas is null || _titleCloud is null ||
+            _titleCanvas.Children.IndexOf(_titleCloudGroup!) != 0 || _titleCloudGroup!.Children.IndexOf(_titleCloud)!=0 || _titleCanvas.Children.IndexOf(_titleName!) < 1)
+            throw new InvalidOperationException("Single moving cloud must remain below stable labels.");
+        var refs = RainReferencesForProbe();
+        spatial.SetSceneMotionDemand(this, false, inputRouter);
+        try
+        {
+            async Task<(byte[] Pixels, int Width, int Height)> Pixels(string tag, bool cloudOnly = false)
+            {
+                // A transparent Canvas capture trims to its ink bounds. The poster root has
+                // a fixed transparent background, so both samples use the SAME coordinates.
+                double opacity=scene.Root.Opacity;
+                try
+                {
+                    // Rain starts at y=56 and is allowed at the bottom of the
+                    // title budget. Isolate host cloud ink for edge assertions.
+                    if(cloudOnly) scene.Root.Opacity=0;
+                    var bitmap = new RenderTargetBitmap(); await bitmap.RenderAsync(poster);
+                    var buffer = await bitmap.GetPixelsAsync();
+                    await CapturePosterXamlForProbeAsync(Path.Combine(directory, "rain-title-" + tag + ".png"));
+                    return (buffer.ToArray(), bitmap.PixelWidth, bitmap.PixelHeight);
+                }
+                finally { scene.Root.Opacity=opacity; }
+            }
+            string prefix = (!wind ? "zero-wind-" : lightning ? "enabled-" : "disabled-")+
+                scene.Observe().CloudSize.ToString("0.00",System.Globalization.CultureInfo.InvariantCulture)+"-";
+            async Task ApplyPose(double time)
+            {
+                var expected=scene.TitleSampleForProbe(time).Fit(poster.ActualWidth);
+                for(int attempt=0;attempt<50;attempt++)
+                {
+                    TryPaintTitleMotion(expected);
+                    if(_titlePose==expected && _inputIsland?.CanAnimateTitle==true) return;
+                    await Task.Delay(40);
+                }
+                throw new InvalidOperationException($"Title pose not ready; guards retained. requested={expected}, actual={_titlePose}, nativeReady={_inputIsland?.CanAnimateTitle}.");
+            }
+            await ApplyPose(0);
+            if(!CloudSizeAppliedForProbe(scene.Observe().CloudSize))
+                throw new InvalidOperationException($"Cloud size failed to bind shared paint/input pose: requested={scene.Observe().CloudSize:R}, pose={_titlePose.Scale:R}, paint={_titleTransform.ScaleX:R}/{_titleTransform.ScaleY:R}.");
+            var before = await Pixels(prefix + "start");
+            CloudAlphaForProbe=0;
+            for(int y=0;y<Math.Min(before.Height,(int)(60*before.Height/poster.ActualHeight));y++)
+                for(int x=0;x<before.Width;x++)
+                    if(before.Pixels[(y*before.Width+x)*4+3]>200) CloudAlphaForProbe++;
+            var initial = inputRouter.ReadSurface(inputSession)!;
+            await ApplyPose(9.5);
+            var drift = await Pixels(prefix + "wind-peak");
+            var moved = inputRouter.ReadSurface(inputSession)!;
+            bool nativeRegionMatches = _inputIsland!.VerifyTitleRegionForProbe((int)Math.Ceiling(84 * _monitor!.ScaleY));
+            bool gripsChanged = !initial.Layout.Regions.Where(r => r.Kind == PosterInputTargetKind.TitleBar)
+                .SequenceEqual(moved.Layout.Regions.Where(r => r.Kind == PosterInputTargetKind.TitleBar));
+            bool othersStable = initial.Layout.Regions.Where(r => r.Kind != PosterInputTargetKind.TitleBar)
+                .SequenceEqual(moved.Layout.Regions.Where(r => r.Kind != PosterInputTargetKind.TitleBar));
+            // Hold an original router lease; simulated capture is not OS mouse input.
+            var button = moved.Layout.Regions.First(r => r.Kind == PosterInputTargetKind.CollapseButton);
+            var lease = inputRouter.Begin(new(inputSession, moved.Layout.Revision, moved.Frame, button));
+            if (lease is null) throw new InvalidOperationException("Cannot establish hold check.");
+            var held = _titlePose;
+            try
+            {
+                TryPaintTitleMotion(scene.TitleSampleForProbe(14.25));
+                TryPaintTitleMotion(scene.TitleSampleForProbe(14.25) with { Scale=held.Scale==.6 ? 1.1 : .6 });
+                if (_titlePose != held || inputRouter.ReadSurface(inputSession)!.Layout.Revision != moved.Layout.Revision ||
+                    !inputRouter.CanInvoke(lease, moved.Frame.X + button.Bounds.X + 2, moved.Frame.Y + button.Bounds.Y + 2))
+                    throw new InvalidOperationException("Cloud motion invalidated a held action.");
+            }
+            finally { inputRouter.End(lease); }
+            int edgeInk=0;
+            foreach(double time in new[]{0.0,4.75,9.5,14.25,19.0})
+            {
+                await ApplyPose(time);
+                var sample=await Pixels(prefix+"cycle-"+time.ToString("0.00",System.Globalization.CultureInfo.InvariantCulture),true);
+                double sy=sample.Height/poster.ActualHeight, sx=sample.Width/poster.ActualWidth;
+                for(int y=0;y<Math.Min(sample.Height,(int)(60*sy));y++)
+                    for(int x=0;x<sample.Width;x++)
+                        if((x<sx || x>sample.Width-1-sx || y<sy || y>=59*sy) && sample.Pixels[(y*sample.Width+x)*4+3]>20) edgeInk++;
+                if(!_inputIsland!.VerifyTitleRegionForProbe((int)Math.Ceiling(84*_monitor!.ScaleY)))
+                    throw new InvalidOperationException("Wind cycle native hit region diverged.");
+            }
+            if(edgeInk!=0) throw new InvalidOperationException("Wind cycle ink reaches title/frame clip edge: "+edgeInk);
+            scene.PaintLightningSampleForProbe(0);
+            var noFlash = await Pixels(prefix + "lightning-off");
+            scene.PaintLightningSampleForProbe(17.35);
+            var flash = await Pixels(prefix + "lightning-peak");
+            scene.PaintLightningSampleForProbe(17.35,73);
+            var relocated=await Pixels(prefix+"lightning-relocated");
+            int randomPixels=Enumerable.Range(0,flash.Pixels.Length).Count(i=>Math.Abs(flash.Pixels[i]-relocated.Pixels[i])>3);
+            if(lightning ? randomPixels<100 : randomPixels!=0)
+                throw new InvalidOperationException("Lightning event relocation/disabled pixels differ unexpectedly.");
+            int changed = 0, silhouette = 0;
+            if (before.Pixels.Length != drift.Pixels.Length || before.Height <= 0)
+                throw new InvalidOperationException($"Invalid title capture: {before.Width}x{before.Height} / {drift.Width}x{drift.Height}, actual={_titleCanvas.ActualWidth}x{_titleCanvas.ActualHeight}.");
+            if (flash.Width != noFlash.Width || flash.Height != noFlash.Height || flash.Width != before.Width || flash.Height != before.Height)
+                throw new InvalidOperationException("Poster capture coordinates changed between samples.");
+            double scale = before.Height / poster.ActualHeight;
+            for (int y = 0; y < before.Height; y++)
+                for (int x = 0; x < before.Width; x++)
+                {
+                    int p = (y * before.Width + x) * 4;
+                    if (y < 60 * scale && Math.Abs(before.Pixels[p] - drift.Pixels[p]) > 3) changed++;
+                    if (y < _titleCanvas.ActualHeight * scale && Math.Abs(before.Pixels[p + 3] - drift.Pixels[p + 3]) > 20) silhouette++;
+                }
+            var bands = new int[3];
+            double top = scene.Observe().Envelope.Top + scene.Observe().Envelope.Height - 5;
+            double bottom = scene.Observe().Envelope.Bottom;
+            for (int y = 0; y < flash.Height; y++)
+                for (int x = 0; x < flash.Width; x++)
+                {
+                    double t = (y / scale - top) / (bottom - top);
+                    int p = (y * flash.Width + x) * 4;
+                    if (t >= 0 && t < 1 && Enumerable.Range(0, 4).Any(c => Math.Abs(flash.Pixels[p + c] - noFlash.Pixels[p + c]) > 3))
+                        bands[Math.Min(2, (int)(t * 3))]++;
+                }
+            if ((wind ? changed < 50 || silhouette < 50 || !gripsChanged : changed != 0 || silhouette != 0 || gripsChanged) ||
+                (lightning ? bands.Any(n => n < 20) : bands.Any(n => n != 0)) || !nativeRegionMatches || !othersStable || !VerifyTitleChromeForProbe() ||
+                !RainGeometryUnchangedForProbe(refs.Item1, refs.Item2))
+                throw new InvalidOperationException($"Weather pixels/geometry failed: wind={changed}, silhouette={silhouette}, grips={gripsChanged}, bands={string.Join(',', bands)}, enabled={lightning}.");
+            log.Write("info", "rain.title_pixels_observed", new { changedWindPixels = changed, silhouette, gripsChanged, nativeRegionMatches, othersStable, edgeInk, randomPixels, cloudAlphaPixels=CloudAlphaForProbe, paintScale=_titleTransform.ScaleX, lightningBands = bands, lightning, wind,
+                scene = scene.Observe(), deterministicRender = true, realTimeCadenceCertified = false });
+        }
+        finally { RefreshScene(); }
+    }
 }
 internal sealed partial class PosterSpatialRuntime
 {
@@ -39,6 +171,7 @@ public partial class App
         var operations = new Queue<(string Name, Action Action, Func<bool>? Ready)>(); var observations = new List<object>();
         bool initialized = false, stopped = false, ticking = false; string a = "", b = "", step = "initial";
         long readyAt = 0, deadline = _autoClock.ElapsedMilliseconds + 85000, frames = 0;
+        int smallCloudPixels=0;
         string? contentA = null, contentB = null, otherRaw = null, geometry = null;
         (object? Canvas, Dictionary<string, object> Cards) references = (null, new());
         ControlCenterWindow? center = null; Task? capture = null;
@@ -69,7 +202,7 @@ public partial class App
             Require(View(a).VerifyTitleChromeForProbe(), "Single title paint/input geometry or action contrast differs.");
             Require(View(a).RainSurfaceValidForProbe, "Backdrop not transparent or content opacity changed.");
             var scene = Scene(a);
-            Require(scene.Pool == 64 && scene.Nodes == 67 && scene.DecorativeOnly && scene.CloudVisible,
+            Require(scene.Pool == 64 && scene.Nodes == 70 && scene.TitleNodes==4 && scene.DecorativeOnly && scene.CloudVisible && scene.TitleWeatherVisible,
                 "Missing cloud, unbounded particles or interactive scene.");
             Require(scene.Envelope.Top + scene.Envelope.Height + 8 <= Current().PostersById[a].Presentation.Metrics.ReservedTopDip - 20,
                 "Cloud slot crowds content.");
@@ -98,7 +231,10 @@ public partial class App
                 Require(File.ReadAllText(expectedPath) == Stored(), "Restart changed template or instance values.");
                 center.RevealLampParametersForProbe();
                 Step("restart-keeps-generic-parameters-and-independent-scenes", () =>
-                { CheckPaint(); Require(Scene(a).VisibleDrops == 28 && Scene(b).VisibleDrops == 12, "Restart lost rain counts."); capture = Capture("restart"); });
+                { CheckPaint(); Require(center.VerifyTitleVisibilityControlForProbe(false) && View(a).VerifyTitleVisibilityForProbe(false) &&
+                    View(b).VerifyTitleVisibilityForProbe(true), "Restart lost title visibility or peer isolation.");
+                    Require(Scene(a).VisibleDrops == 28 && Scene(b).VisibleDrops == 12 && Scene(a).LightningInterval==41 && Scene(b).LightningInterval==23 &&
+                    Scene(a).CloudSize==.75 && Scene(b).CloudSize==1, "Restart lost rain values."); capture = Capture("restart"); });
                 return;
             }
             center.TemplateForProbe("rain");
@@ -106,7 +242,8 @@ public partial class App
             Step("transparent-background-cloud-gap-and-shared-frames", () =>
             {
                 CheckPaint(); var fields = center.ReadTemplateRecipeUiForProbe().Fields;
-                Require(fields.Length == 8 && fields.All(f => f.Connected) && fields.Any(f => f.Binding == "cloud.wind") &&
+                Require(fields.Length == 10 && fields.All(f => f.Connected) && fields.Any(f => f.Binding == "cloud.wind") && fields.Any(f=>f.Binding=="cloud.size") &&
+                    fields.Any(f => f.Binding == "rain.lightningInterval") &&
                     fields.All(f => !f.Binding.StartsWith("lamp.")), "Actual controls still tied to Lamp schema.");
                 references = View(a).RainReferencesForProbe(); geometry = View(a).ReadContentSurfaceForSmoke().GeometryFingerprint;
                 otherRaw = Current().PostersById[b].Poster.LayoutParametersJson; frames = Scene(a).Frames;
@@ -124,6 +261,24 @@ public partial class App
                 center.ChangeRecipeNumberForProbe("speed", 2, true);
             });
             Step("wind-bounded-and-independent", () => center.ChangeRecipeNumberForProbe("wind", 100, true));
+            Step("small-cloud-control",()=>center.ChangeRecipeNumberForProbe("cloudSize",.6,true));
+            Step("small-cloud-pixels",()=> { Require(Scene(a).CloudSize==.6,"Small size did not bind."); capture=View(a).ProbeRainTitlePixelsAsync(root,true); });
+            Step("large-cloud-control",()=> { smallCloudPixels=View(a).CloudAlphaForProbe; center.ChangeRecipeNumberForProbe("cloudSize",1.1,true); });
+            Step("large-cloud-pixels",()=> { Require(Scene(a).CloudSize==1.1,"Large size did not bind."); capture=View(a).ProbeRainTitlePixelsAsync(root,true); });
+            Step("cloud-size-paint-input-and-target-isolation",()=>
+            {
+                Require(View(a).CloudAlphaForProbe>smallCloudPixels*1.7 && Current().PostersById[b].Poster.LayoutParametersJson==otherRaw &&
+                    View(a).RainGeometryUnchangedForProbe(references.Canvas,references.Cards) && geometry==View(a).ReadContentSurfaceForSmoke().GeometryFingerprint,
+                    "Size did not change visible cloud or crossed content/target boundaries.");
+                center.ChangeRecipeNumberForProbe("cloudSize",1,true);
+            });
+            Step("lightning-interval-control",()=>center.ChangeRecipeNumberForProbe("lightningInterval",8,true));
+            Step("lightning-interval-target-isolation",()=>
+            { Require(Scene(a).LightningInterval==8 && Current().PostersById[b].Poster.LayoutParametersJson==otherRaw,"Interval control crossed target or did not bind."); });
+            Step("visible-title-wind-and-lightning", () => capture = View(a).ProbeRainTitlePixelsAsync(root, true));
+            Step("disable-title-lightning", () => center.ChangeRecipeBooleanForProbe("lightning", false));
+            Step("disabled-lightning-has-no-pixels", () => capture = View(a).ProbeRainTitlePixelsAsync(root, false));
+            Step("restore-title-lightning", () => center.ChangeRecipeBooleanForProbe("lightning", true));
             Step("rain-color-through-generated-control", () => center.ChangeRecipeColorForProbe("rainColor", "#C3E9D5"));
             Step("cloud-color-through-generated-control", () => center.ChangeRecipeColorForProbe("cloudColor", "#567A83"));
             Step("colors-and-other-poster-unchanged", () =>
@@ -133,7 +288,10 @@ public partial class App
                 capture = Capture("custom"); center.ChangeRecipeNumberForProbe("amount", 0, true);
             });
             Step("zero-rain-keeps-cloud", () => { Require(Scene(a).VisibleDrops == 0 && Scene(a).CloudVisible, "Zero rain removed cloud."); center.ChangeRecipeNumberForProbe("wind", 0, true); });
+            Step("zero-wind-no-title-drift", () => capture = View(a).ProbeRainTitlePixelsAsync(root, true, false));
             Step("disable-last-moving-feature", () => center.ChangeRecipeBooleanForProbe("lightning", false));
+            Step("size-without-animation-clock",()=> { Require(Timers()==0,"Static size setup retained clock."); center.ChangeRecipeNumberForProbe("cloudSize",.8,true); });
+            Step("static-size-binds-without-clock",()=> { Require(Timers()==0 && View(a).CloudSizeAppliedForProbe(.8),"Size needs animation clock or mismatched input."); });
             Step("fully-static-scene-releases-shared-clock", () =>
             { Require(Timers() == 0 && !Scene(a).Running, "No-op scene retained clock."); center.ResetRecipeControlsForProbe(); });
             Step("reset-current-template-only", () =>
@@ -146,7 +304,7 @@ public partial class App
             Step("two-scenes-one-clock", () =>
             { Require(Scene(a).VisibleDrops == 28 && Scene(b).VisibleDrops == 12 && Timers() <= 1, "Instances or clock not isolated."); ToggleDynamicEffectsPaused(StateCommandSource.ControlCenter); });
             Step("global-pause", () =>
-            { Require(Timers() == 0 && !Scene(a).Running && !Scene(b).Running, "Global pause failed."); ToggleDynamicEffectsPaused(StateCommandSource.ControlCenter); });
+            { Require(Timers() == 0 && !Scene(a).Running && !Scene(b).Running && Scene(a).LightningOpacity == 0 && Scene(b).LightningOpacity == 0, "Global pause failed."); ToggleDynamicEffectsPaused(StateCommandSource.ControlCenter); });
             Step("editing-pause-both", () =>
             { Require(_spatialRuntime!.SetContentEditing(a, true) is null && _spatialRuntime.SetContentEditing(b, true) is null, "Editing refused."); });
             Step("editing-has-no-motion-resources", () =>
@@ -181,7 +339,7 @@ public partial class App
             Step("copy-does-not-replace-current", () =>
             {
                 var copy = TemplateRecipeCatalog.All(Current().ControlCenter.Settings.Settings.TemplateCatalogJson).Single(r => r.Name == "雨云验证副本");
-                Require(copy.Schema.RendererCapability == "rain.paint@1" && copy.Schema.Properties.Count == 8 && Current().PostersById[a].Poster.TemplateKey == "rain",
+                Require(copy.Schema.RendererCapability == "rain.paint@1" && copy.Schema.Properties.Count == 10 && Current().PostersById[a].Poster.TemplateKey == "rain",
                     "Copy changed current or lost schema.");
                 center.OpenTemplateDialogForProbe("import");
             }, () => center.TemplateDialogClosedForProbe);
@@ -205,6 +363,29 @@ public partial class App
             });
             Step("new-schema-edit-restores-original-independently", () =>
             { Require(Scene(a).VisibleDrops == 19, "New field did not paint."); center.TemplateForProbe("rain"); });
+            Step("persist-lightning-interval",()=> { center.RevealLampParametersForProbe(); center.ChangeRecipeNumberForProbe("lightningInterval",41,true); });
+            Step("persist-cloud-size",()=>center.ChangeRecipeNumberForProbe("cloudSize",.75,true));
+            Step("hide-title-control", () =>
+            {
+                references = View(a).RainReferencesForProbe(); geometry = View(a).ReadContentSurfaceForSmoke().GeometryFingerprint;
+                otherRaw = Current().PostersById[b].Poster.LayoutParametersJson;
+                center.SetTitleVisibilityForProbe(false);
+            });
+            Step("hidden-title-keeps-cloud-input-and-peer", () =>
+            {
+                CheckPaint();
+                Require(center.VerifyTitleVisibilityControlForProbe(false) && View(a).VerifyTitleVisibilityForProbe(false) &&
+                    View(b).VerifyTitleVisibilityForProbe(true) && Current().PostersById[b].Poster.LayoutParametersJson == otherRaw &&
+                    View(a).RainGeometryUnchangedForProbe(references.Canvas,references.Cards) &&
+                    geometry == View(a).ReadContentSurfaceForSmoke().GeometryFingerprint, "Visibility changed cloud/content/peer or did not paint.");
+                capture = Capture("title-hidden");
+            });
+            Step("hidden-title-switch-basic", () => center.TemplateForProbe("basic-box"));
+            Step("hidden-title-basic-keeps-name-and-controls", () =>
+            { Require(View(a).VerifyTitleVisibilityForProbe(false), "Basic template did not retain hidden title."); center.TemplateForProbe("rain"); });
+            Step("hidden-title-collapse", () => Collapse(a, true));
+            Step("hidden-title-compact-keeps-controls", () =>
+            { Require(View(a).VerifyTitleVisibilityForProbe(false), "Compact title lost control visibility."); Collapse(a, false); });
             Step("save-restart-evidence", () =>
             {
                 CheckPaint(); center.RevealLampParametersForProbe(); capture = Capture("final");

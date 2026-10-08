@@ -9,6 +9,9 @@ internal sealed partial class PosterVisualWindow
 {
     private IPosterSceneInstance? _sceneInstance;
     private SceneFailureBoundary _sceneFailure = new();
+    private PointerScreenPoint? _lastScenePointer;
+    private double _lastSceneSeconds;
+    private bool _lastSceneCanAnimate;
 
     private FrameworkElement? CreateScene()
     {
@@ -34,7 +37,9 @@ internal sealed partial class PosterVisualWindow
     private void UpdateScene()
     {
         if (_sceneInstance is null) return;
-        PaintSceneMotion(0, null, false);
+        // A content repaint/press is not a leave event. Reuse only the last shared sample
+        // until the next tick (33ms), in screen coordinates so movement cannot shift the aim.
+        PaintSceneMotion(_lastSceneSeconds, _lastScenePointer, _lastSceneCanAnimate);
         bool visible = !_disposed && _window is not null && !_geometry.IsCollapsed && !_contentPresentationSuspended;
         bool requested = false;
         RunScene(() => requested = _sceneInstance?.WantsMotion == true);
@@ -45,11 +50,10 @@ internal sealed partial class PosterVisualWindow
     internal void PaintSceneMotion(double seconds, PointerScreenPoint? pointer, bool canAnimate)
     {
         if (_sceneInstance is null) return;
+        _lastSceneSeconds = seconds; _lastScenePointer = pointer; _lastSceneCanAnimate = canAnimate;
         bool visible = !_disposed && !_geometry.IsCollapsed && !_contentPresentationSuspended;
         var reasons = (!visible ? ScenePauseReason.Unavailable : ScenePauseReason.None) |
             (IsEditing ? ScenePauseReason.Editing : ScenePauseReason.None) |
-            (HasContentGesture ? ScenePauseReason.ContentGesture : ScenePauseReason.None) |
-            (_spatialGesture is not null ? ScenePauseReason.FrameGesture : ScenePauseReason.None) |
             (!canAnimate || spatial.SceneGlobalMotionPaused ? ScenePauseReason.SharedPolicy : ScenePauseReason.None);
         ScenePointer? local = pointer is { } p ? new(
             (p.X - _bounds.X) / (_monitor?.ScaleX ?? 1),
@@ -60,8 +64,10 @@ internal sealed partial class PosterVisualWindow
             root.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
             var frame = SceneFrameContext.Create(root.ActualWidth, root.ActualHeight, seconds, local, visible, reasons) with
             { HeaderBottom = HeaderHeightDip, ContentTop = ContentTopDip, FooterTop = Math.Max(0, root.ActualHeight - FooterHeightDip),
-                TitleChrome = _presentation.TitleChrome };
+                TitleChrome = _presentation.TitleChrome, TitleMotionPaused = _inputIsland?.CanAnimateTitle != true ||
+                    _transitionLayout is not null || _spatialGesture is not null };
             _sceneInstance.Update(CurrentSceneParameters, frame);
+            if (_sceneInstance is IPosterTitleMotion motion) TryPaintTitleMotion(motion.TitlePose);
         })) PaintSceneCards();
     }
 
@@ -69,7 +75,7 @@ internal sealed partial class PosterVisualWindow
     {
         if (_sceneFailure.Failure is not null) return false;
         if (_sceneFailure.TryRun(action)) return true;
-        log.Write("warning", "scene.instance_failed", new { PosterId, _sceneFailure.Failure!.Message });
+        log.Write("warning", "scene.instance_failed", new { PosterId, _sceneFailure.Failure!.Message, Error = _sceneFailure.Failure.ToString() });
         ReleaseScene();
         PaintSceneCards();
         return false;
@@ -77,6 +83,7 @@ internal sealed partial class PosterVisualWindow
 
     private void ReleaseScene()
     {
+        _lastScenePointer = null; _lastSceneSeconds = 0; _lastSceneCanAnimate = false;
         spatial.SetSceneMotionDemand(this, false, inputRouter);
         var instance = _sceneInstance; _sceneInstance = null;
         if (instance is null) return;

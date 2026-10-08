@@ -37,6 +37,7 @@ public sealed class ContentLayoutPortableTests
     {
         var tree = JsonNode.Parse(PortableProfileCodec.Export(State(Poster(Sample("equal", "A")))))!;
         tree["version"] = 1; tree["posters"]![0]!.AsObject().Remove("contentLayout");
+        tree.AsObject().Remove("templateCatalog"); tree["settings"]!.AsObject().Remove("centerTheme");
         var v1 = PortableProfileCodec.Parse(Encoding.UTF8.GetBytes(tree.ToJsonString()));
         var plan = PortableProfilePlanner.Plan(v1, State(), Topology(), PortableImportMode.Append, false, () => "v1");
         Assert.Null(Assert.Single(plan.Creates).ContentLayoutJson);
@@ -73,6 +74,7 @@ public sealed class ContentLayoutPortableTests
     {
         var tree = JsonNode.Parse(PortableProfileCodec.Export(State(Poster(Sample("equal", "A") with { FlowAxis = ContentFlowAxis.HorizontalLoop }))))!;
         tree["version"] = 2; tree["posters"]![0]!["contentLayout"]!.AsObject().Remove("flowAxis");
+        tree.AsObject().Remove("templateCatalog"); tree["settings"]!.AsObject().Remove("centerTheme");
         tree["posters"]![0]!["contentLayout"]!["schemaVersion"] = 2;
         var v2 = PortableProfileCodec.Parse(Encoding.UTF8.GetBytes(tree.ToJsonString()));
         var plan = PortableProfilePlanner.Plan(v2, State(), Topology(), PortableImportMode.Append, false, () => "v2");
@@ -126,6 +128,7 @@ public sealed class ContentLayoutPortableTests
         // Inject the original archive payload independently of Export, so fixing only Export cannot pass.
         var tree = JsonNode.Parse(PortableProfileCodec.Export(State(Poster(expected))))!;
         tree["version"] = version;
+        tree.AsObject().Remove("templateCatalog"); tree["settings"]!.AsObject().Remove("centerTheme");
         var content = tree["posters"]![0]!["contentLayout"]!;
         content["schemaVersion"] = 2;
         content["reservedSpaces"] = ReservedSpacePayload();

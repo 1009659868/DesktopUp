@@ -12,7 +12,8 @@ internal sealed partial class PosterSpatialRuntime
     internal Action RunTitleSurfaceSmoke(DispatcherQueue dispatcher, Action completed)
     {
         string[] cases = ["prepare-partial", "submit-before", "submit-partial", "restore-partial", "complete",
-            "handoff-reuse", "handoff-grow", "translate-fast"];
+            "handoff-reuse", "handoff-grow", "translate-fast", "prepare-region-reset",
+            "handoff-reset-reuse", "handoff-reset-grow"];
         var timer = dispatcher.CreateTimer(); timer.Interval = TimeSpan.FromMilliseconds(100);
         var deadline = DateTime.UtcNow.AddSeconds(20);
         PosterVisualWindow? owner = null;
@@ -88,8 +89,9 @@ internal sealed partial class PosterSpatialRuntime
                     if (cases[index] == "prepare-partial") { Restore(); step = 2; return; }
                     var prepared = participants.Select(w => w.PrepareSpatialFrame(Pixels(driver.Physical[w.PosterId!]))).ToArray();
                     Require(prepared.All(p => p is not null) &&
-                        owner.CommitSpatialFrames(prepared.Select(p => p!).ToArray(), DesktopFramePhase.SurfacePreparation),
-                        "surface preparation failed before injection");
+                        owner.CommitSpatialFrames(prepared.Select(p => p!).ToArray(), DesktopFramePhase.SurfacePreparation,
+                            cases[index] == "prepare-region-reset" ? owner.ResetVisualRegionForProbe : null),
+                        "surface preparation did not verify");
                     step = 1; return;
                 }
                 if (step == 1)
@@ -121,7 +123,7 @@ internal sealed partial class PosterSpatialRuntime
                         {
                             var p = initial.Posters.Single(p => p.PosterId == window.PosterId);
                             int height = Math.Max(visible[p.PosterId].Height, p.ExpandedHeight);
-                            if (window == owner && cases[index] == "handoff-grow")
+                            if (window == owner && cases[index] is "handoff-grow" or "handoff-reset-grow")
                                 height = Math.Min(initial.Environment.WorkArea.Height, height + 120);
                             window.BeginTitlePreview(request + "-transfer", Pixels(visible[p.PosterId] with { Height = height }), window == owner);
                             Require(window.TryReadSpatial(_runtimeId, out _, out var readback, out _) &&
@@ -129,7 +131,8 @@ internal sealed partial class PosterSpatialRuntime
                         }
                         var handoff = participants.Select(w => w.PrepareSpatialFrame(Pixels(visible[w.PosterId!]))).ToArray();
                         Require(handoff.All(p => p is not null) &&
-                            owner!.CommitSpatialFrames(handoff.Select(p => p!).ToArray(), DesktopFramePhase.SurfacePreparation),
+                            owner!.CommitSpatialFrames(handoff.Select(p => p!).ToArray(), DesktopFramePhase.SurfacePreparation,
+                                cases[index].StartsWith("handoff-reset-", StringComparison.Ordinal) ? owner.ResetVisualRegionForProbe : null),
                             "retained R4 surface rejected during title handoff");
                         ready = 0; step = 3; return;
                     }

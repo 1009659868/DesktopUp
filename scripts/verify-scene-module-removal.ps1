@@ -81,5 +81,28 @@ Invoke-ModuleFixture $moduleRemovedTool 'restore' 'restore-without-module'
 Invoke-ModuleApp $moduleRemovedApp 'after-backup-restore' $false
 Invoke-ModuleFixture $moduleFullTool 'check' 'restore-module-check'
 Invoke-ModuleApp $moduleApp 'after-module-restored' $true
+# R7: data-only portable export/import also works with the physical module absent.
+# These console checks do not certify picker interaction or desktop input.
+$modulePortableData = Join-Path $moduleOutput 'portable-data'
+$modulePortableFull = Join-Path $moduleOutput 'full.desktopup.json'
+$modulePortableMissing = Join-Path $moduleOutput 'missing.desktopup.json'
+foreach ($moduleRun in @(
+    @{Tool=$moduleFullTool; Args=@('portable-export',$moduleData,$modulePortableFull); Stage='portable-export-full'},
+    @{Tool=$moduleRemovedTool; Args=@('portable-export',$moduleData,$modulePortableMissing); Stage='portable-export-missing'},
+    @{Tool=$moduleRemovedTool; Args=@('portable-import',$modulePortableData,$modulePortableFull); Stage='portable-import-missing'},
+    @{Tool=$moduleRemovedTool; Args=@('portable-check',$modulePortableData); Stage='portable-restart-missing'},
+    @{Tool=$moduleFullTool; Args=@('portable-check',$modulePortableData); Stage='portable-module-restored'}
+)) {
+    $modulePortableArgs = $moduleRun.Args
+    $moduleText = @(& $moduleRun.Tool @modulePortableArgs)
+    if ($LASTEXITCODE -ne 0) { throw "R7 module portable failure: $($moduleRun.Stage)" }
+    $moduleObservation = ($moduleText -join [Environment]::NewLine) | ConvertFrom-Json
+    if (!$moduleObservation.passed) { throw 'Missing portable module proof.' }
+    $moduleObservation | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath (Join-Path $moduleOutput ($moduleRun.Stage + '.json'))
+    $moduleResults.Add([pscustomobject]@{Stage=$moduleRun.Stage;Observation=$moduleObservation})
+}
+if ((Get-FileHash -LiteralPath $modulePortableFull).Hash -cne (Get-FileHash -LiteralPath $modulePortableMissing).Hash) {
+    throw 'Missing module changed exported data.'
+}
 $moduleResults | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath (Join-Path $moduleOutput 'results.json') -Encoding utf8
 [pscustomobject]@{ Result = 'PASS'; RemovedModule = $Module; PhysicalModuleDirectoryAbsent = $true; SourceFiles = @($moduleManifest).Count; OutputRoot = $moduleOutput; NativeInput = $false }

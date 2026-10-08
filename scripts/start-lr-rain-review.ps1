@@ -11,7 +11,7 @@ function Resolve-RainProof([string]$relative) {
 }
 $reviewSealPath = Join-Path $reviewRoot 'rain-review.json'
 $reviewSeal = Get-Content -LiteralPath $reviewSealPath -Raw | ConvertFrom-Json
-if ($reviewSeal.Schema -ne 1) { throw 'Unknown Rain seal.' }
+if ($reviewSeal.Schema -notin @(1,2)) { throw 'Unknown Rain seal.' }
 $reviewCandidate = Resolve-RainProof $reviewSeal.Candidate
 $reviewManifest = Get-Content -LiteralPath (Resolve-RainProof $reviewSeal.Artifacts) -Raw | ConvertFrom-Json
 $reviewActual = @(Get-ChildItem -LiteralPath $reviewCandidate -Recurse -File | ForEach-Object { $_.FullName.Substring($reviewCandidate.Length + 1).Replace('\','/') } | Sort-Object)
@@ -21,6 +21,7 @@ foreach ($reviewFile in $reviewManifest) {
     if ((Get-FileHash -LiteralPath $reviewPath).Hash -ine $reviewFile.SHA256) { throw 'Runtime artifact changed.' }
 }
 $reviewRequired = @('Contracts','Rain','Resources','Lamp','Recipes','Composition','Browse','Layout','R4','RemoveLamp','RemoveRain')
+if ($reviewSeal.Schema -eq 2) { $reviewRequired += @('Groups','Combinations','Spatial','AnimationRain','AnimationLamp') }
 if (Compare-Object ($reviewRequired | Sort-Object) @($reviewSeal.Proofs.Name | Sort-Object)) { throw 'Rain required gates missing.' }
 foreach ($reviewProof in $reviewSeal.Proofs) {
     $reviewPath = Resolve-RainProof $reviewProof.Path

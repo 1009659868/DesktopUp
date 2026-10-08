@@ -30,7 +30,8 @@ public sealed record TemplateParameterValues
 
 public sealed record SceneCapabilityDefinition(string Id, TemplateRecipe BuiltIn, bool ExposeTemplate = true,
     bool TransparentSurface = false, bool ReplacesMetaText = false,
-    PosterTitleChromeKind TitleChrome = PosterTitleChromeKind.Basic, string? TitleColorBinding = null);
+    PosterTitleChromeKind TitleChrome = PosterTitleChromeKind.Basic, string? TitleColorBinding = null,
+    IReadOnlyList<TemplateRecipe>? PreviousBuiltIns = null);
 
 /// <summary>Build-linked trusted declarations. No filesystem scanning or runtime code loading.</summary>
 public static class SceneCapabilityRegistry
@@ -41,7 +42,19 @@ public static class SceneCapabilityRegistry
         if (module.Id != module.BuiltIn.Schema.RendererCapability || Modules.ContainsKey(module.Id) ||
             Modules.Values.Any(m => m.BuiltIn.Id == module.BuiltIn.Id)) throw new ArgumentException("Duplicate capability or template.");
         Modules.Add(module.Id, module);
-        try { Modules[module.Id] = module with { BuiltIn = TemplateRecipeCodec.Freeze(module.BuiltIn) }; }
+        try
+        {
+            var previous=module.PreviousBuiltIns ?? [];
+            if(previous.Select(p=>p.Schema.TemplateVersion).Distinct().Count()!=previous.Count || previous.Count>16 ||
+                previous.Any(p=>p.Id!=module.BuiltIn.Id || p.Schema.RendererCapability!=module.Id ||
+                    p.Schema.TemplateVersion>=module.BuiltIn.Schema.TemplateVersion ||
+                    p.Base!=module.BuiltIn.Base || p.Family!=module.BuiltIn.Family || p.Name!=module.BuiltIn.Name ||
+                    p.Schema.Properties.Count>=module.BuiltIn.Schema.Properties.Count ||
+                    p.Schema.Properties.Any(property=>!module.BuiltIn.Schema.Properties.Contains(property))))
+                throw new ArgumentException("Built-in revisions must only append parameters to exact declared predecessors.");
+            Modules[module.Id] = module with { BuiltIn = TemplateRecipeCodec.Freeze(module.BuiltIn),
+                PreviousBuiltIns=Array.AsReadOnly(previous.Select(p=>TemplateRecipeCodec.Freeze(p)).ToArray()) };
+        }
         catch { Modules.Remove(module.Id); throw; }
     }
     public static SceneCapabilityDefinition? Find(string capability) => Modules.GetValueOrDefault(capability);

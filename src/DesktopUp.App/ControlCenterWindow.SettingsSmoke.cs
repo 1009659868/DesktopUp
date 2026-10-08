@@ -16,6 +16,15 @@ public sealed partial class ControlCenterWindow
     internal bool SettingsControlsEnabledForProbe => AutoPostureSwitch.IsEnabled && AutoPostureDelay.IsEnabled;
     internal bool AppearanceControlsEnabledForProbe => _template.IsEnabled && ScaleSlider.IsEnabled && SpacingSlider.IsEnabled;
     internal void TemplateForProbe(string key) => SelectTemplateKey(key);
+    internal void SetTitleVisibilityForProbe(bool show)
+    {
+        if (!TitleVisibilitySwitch.IsEnabled) throw new InvalidOperationException("Title visibility control is disabled.");
+        ShowWorkspacePage(false); LayoutFolder.IsExpanded = true;
+        TitleVisibilitySwitch.IsOn = show; // Real ToggleSwitch -> ordinary settings handler.
+    }
+    internal bool VerifyTitleVisibilityControlForProbe(bool show) =>
+        TitleVisibilitySwitch.IsOn == show && TitleVisibilitySwitch.IsEnabled &&
+        PosterTitleText.Text == _view?.SelectedPoster?.Poster.Title && !string.IsNullOrWhiteSpace(PosterTitleText.Text);
     internal void SpacingForProbe(double value) { _settingsHeld = true; SpacingSlider.Value = value; }
     internal object PresetDiagnosticsForProbe() => new { scaleMinimum = ScaleSlider.Minimum, scaleMaximum = ScaleSlider.Maximum,
         scaleValue = ScaleSlider.Value, spacingMinimum = SpacingSlider.Minimum, spacingValue = SpacingSlider.Value };
@@ -26,7 +35,7 @@ public sealed partial class ControlCenterWindow
     internal void FinishSettingsForProbe() { _settingsHeld = false; FinishSettings(); }
     internal void DelayForProbe(double value) => AutoPostureDelay.Value = value;
     internal void ToggleForProbe(bool value) => AutoPostureSwitch.IsOn = value;
-    internal void RevealSettingsForProbe() => ShowWorkspacePage(false);
+    internal void RevealSettingsForProbe() { ShowWorkspacePage(false); ExpandLayoutFolderForProbe(true); }
     internal void RevealBehaviorForProbe() => ShowWorkspacePage(true);
     internal void PresetForProbe(bool spacing, int index)
     {

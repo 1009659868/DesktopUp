@@ -10,10 +10,15 @@ namespace DesktopUp;
 
 internal sealed record RainSceneObservation(int Pool, int VisibleDrops, bool CloudVisible, bool Running,
     long Frames, double ActiveSeconds, RainSceneEnvelope Envelope, RainCloudPose Cloud,
-    string CloudColor, string RainColor, bool DecorativeOnly, int Nodes);
+    string CloudColor, string RainColor, bool DecorativeOnly, int Nodes,
+    bool TitleWeatherVisible, double TitleWindX, double LightningOpacity, double LightningInterval)
+{
+    public int TitleNodes { get; init; }
+    public double CloudSize { get; init; }
+}
 
 // Trusted, timer-free decoration. No state commands, item identities, input or layout ownership.
-internal sealed class RainSceneInstance : IPosterSceneInstance
+internal sealed class RainSceneInstance : IPosterSceneInstance, IPosterTitleMotion
 {
     private readonly Canvas _root = new() { IsHitTestVisible = false };
     private readonly Canvas _rain = new() { IsHitTestVisible = false };
@@ -22,20 +27,25 @@ internal sealed class RainSceneInstance : IPosterSceneInstance
     private readonly Line[] _drops = new Line[RainSceneMotion.PoolSize];
     private readonly SolidColorBrush _rainBrush = new();
     private readonly LinearGradientBrush _tone;
-    private readonly Polygon _bolt;
+    private readonly RainLightningDecoration _lightning;
     private readonly SceneActiveTime _time = new();
+    private readonly SceneActiveTime _cloudTime = new();
+    private readonly RainLightningSchedule _lightningSchedule = new(unchecked((uint)Random.Shared.Next()));
     private TemplateParameterValues _values = new([]);
     private IReadOnlyDictionary<string, TemplateParameterValue>? _bindingSource;
     private Color _cardColor, _edgeColor;
     private RainSceneEnvelope _area;
     private RainCloudPose _pose;
+    private SceneFrameContext _lastFrame;
     private bool _running, _disposed;
     private int _count;
     private long _frames;
     public FrameworkElement Root => _root;
+    public TitleCloudPose TitlePose => new(_pose.X, _pose.Y, _pose.Angle, _pose.Vapor, _pose.Wisp,
+        TitleCloudPose.Size(_values.Number("cloud.size",1)));
     public bool WantsMotion => !_disposed && _values.Boolean("scene.motion", true) &&
         (_values.Number("rain.count", 28) > 0 || _values.Number("cloud.wind", 35) > 0 || _values.Boolean("rain.lightning", true));
-    public void StopMotion() { _running = false; _time.Stop(); _bolt.Opacity = 0; }
+    public void StopMotion() { _running = false; _time.Stop(); _cloudTime.Stop(); _lightning.Stop(); }
 
     public RainSceneInstance()
     {
@@ -48,14 +58,14 @@ internal sealed class RainSceneInstance : IPosterSceneInstance
             _rain.Children.Add(line);
         }
         _root.Children.Add(_cloud);
-        _bolt = new Polygon { Points = new PointCollection { new(9, 0), new(20, 0), new(10, 17), new(17, 17), new(0, 40), new(5, 22), new(0, 22) },
-            Fill = _rainBrush, IsHitTestVisible = false, Opacity = 0 };
-        _root.Children.Add(_bolt);
+        _lightning = new(_rainBrush);
+        _root.Children.Add(_lightning.Root);
     }
 
     public void Update(SceneRenderParameters parameters, SceneFrameContext frame)
     {
         if (_disposed) return;
+        _lastFrame = frame;
         if (!ReferenceEquals(_bindingSource, parameters.Bindings))
         {
             _bindingSource = parameters.Bindings; _values = new(parameters.Bindings);
@@ -71,11 +81,13 @@ internal sealed class RainSceneInstance : IPosterSceneInstance
         double seconds = _time.Step(frame.Seconds, _running);
         if (_running) _frames++;
         _count = Math.Clamp((int)Math.Floor(_values.Number("rain.count", 28)), 0, _drops.Length);
-        _pose = RainSceneMotion.Cloud(seconds, _values.Number("cloud.wind", 35));
+        double cloudSeconds = _cloudTime.Step(frame.Seconds, _running && !frame.TitleMotionPaused);
+        _pose = RainSceneMotion.Cloud(cloudSeconds, _values.Number("cloud.wind", 35));
         _cloud.Width = _area.Width; _cloud.Height = _area.Height;
-        // A moving translucent mist behind the ONE host title, not a second cloud/grab target.
-        _cloud.Opacity = frame.TitleChrome == PosterTitleChromeKind.Cloud ? .25 : 1;
-        _cloud.Visibility = _area.Height > 0 && _area.Width > 0 ? Visibility.Visible : Visibility.Collapsed;
+        // Cloud title has ONE host silhouette. Host applies this scene's bounded pose to
+        // both its paint and native sparse hit map; no duplicate background cloud.
+        bool titleCloud = frame.TitleChrome == PosterTitleChromeKind.Cloud;
+        _cloud.Visibility = !titleCloud && _area.Height > 0 && _area.Width > 0 ? Visibility.Visible : Visibility.Collapsed;
         Canvas.SetLeft(_cloud, _area.Left); Canvas.SetTop(_cloud, _area.Top);
         _cloudTransform.TranslateX = _pose.X; _cloudTransform.TranslateY = _pose.Y; _cloudTransform.Rotation = _pose.Angle;
         if (_root.Clip is not RectangleGeometry clip) _root.Clip = clip = new();
@@ -91,9 +103,9 @@ internal sealed class RainSceneInstance : IPosterSceneInstance
             var p = RainSceneMotion.Drop(i, seconds, _values.Number("rain.speed", 1), _values.Number("cloud.wind", 35), _area);
             drop.X1 = p.X; drop.X2 = p.X - p.Slant; drop.Y1 = p.Y; drop.Y2 = p.Y + p.Length;
         }
-        Canvas.SetLeft(_bolt, _area.Left + _area.Width * .73);
-        Canvas.SetTop(_bolt, _area.Top + _area.Height * .65);
-        _bolt.Opacity = RainSceneMotion.Lightning(seconds, _running && _values.Boolean("rain.lightning", true));
+        var lightning = _lightningSchedule.Step(seconds, _running && _values.Boolean("rain.lightning", true),
+            _values.Number("rain.lightningInterval",RainLightningSchedule.DefaultInterval));
+        _lightning.Update(_area, lightning.Opacity,lightning.StrokeSeed);
     }
 
     public void PaintCard(SceneCardPaint paint)
@@ -108,12 +120,26 @@ internal sealed class RainSceneInstance : IPosterSceneInstance
         // Never replace icons/labels, focus outlines, sizes, positions or hit targets.
     }
     internal RainSceneObservation Observe() => new(_drops.Length, _drops.Count(d => d.Visibility == Visibility.Visible),
-        _cloud.Visibility == Visibility.Visible, _running, _frames, _time.Seconds, _area, _pose,
-        _values.Color("cloud.color", "#3F576D"), _values.Color("rain.color", "#93C9E9"), !_root.IsHitTestVisible, _root.Children.Count + _rain.Children.Count);
+        _cloud.Visibility == Visibility.Visible || _lastFrame.TitleChrome == PosterTitleChromeKind.Cloud, _running, _frames, _time.Seconds, _area, _pose,
+        _values.Color("cloud.color", "#3F576D"), _values.Color("rain.color", "#93C9E9"), !_root.IsHitTestVisible,
+        _root.Children.Count + _rain.Children.Count + _lightning.Nodes,
+        _lastFrame.TitleChrome == PosterTitleChromeKind.Cloud, _pose.X, _lightning.Opacity,
+        _values.Number("rain.lightningInterval",RainLightningSchedule.DefaultInterval))
+        { CloudSize=TitleCloudPose.Size(_values.Number("cloud.size",1)) };
+    // Isolated rendering probe only. No preference, active clock or authoritative geometry changes.
+    internal TitleCloudPose TitleSampleForProbe(double seconds)
+    { var p = RainSceneMotion.Cloud(seconds, _values.Number("cloud.wind", 35)); return new(p.X, p.Y, p.Angle,p.Vapor,p.Wisp,
+        TitleCloudPose.Size(_values.Number("cloud.size",1))); }
+    internal FrameworkElement PaintLightningSampleForProbe(double seconds, uint seed = 0)
+    {
+        _lightning.Update(_area, RainSceneMotion.Lightning(seconds,
+            _values.Boolean("scene.motion", true) && _values.Boolean("rain.lightning", true)), seed);
+        return _lightning.Root;
+    }
     public void Dispose()
     {
         if (_disposed) return;
-        _disposed = true; StopMotion(); _rain.Children.Clear(); _root.Children.Clear();
+        _disposed = true; StopMotion(); _rain.Children.Clear(); _root.Children.Clear(); _lightning.Dispose();
     }
 
     // Fixed code-native paths adapted from our accepted UI C prototype; never parse imported markup.

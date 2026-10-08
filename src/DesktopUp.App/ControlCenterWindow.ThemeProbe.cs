@@ -30,34 +30,23 @@ public sealed partial class ControlCenterWindow
         foreach (var pair in _lampSwatches) controls["swatch-" + pair.Key] = pair.Value.Button;
         static string Hex(Brush? brush) => brush is SolidColorBrush solid ? solid.Color.ToString() : brush?.GetType().Name ?? "null";
         static double Brightness(global::Windows.UI.Color color) => (color.R + color.G + color.B) / 3d;
-        try
+        async Task ObserveStates(Dictionary<string, Control> group, StackPanel? popup = null)
         {
-            RevealLampParametersForProbe();
-            await Task.Delay(180);
-            OpenLampColorPicker(_lampSwatches.Keys.First());
-            await Task.Delay(180);
-            if (_lampColorFlyout?.Content is not StackPanel body || !body.IsLoaded)
-                throw new InvalidOperationException("The production color popup did not load.");
-            foreach (var button in RecipeVisuals<Button>(body).Where(b => b.Content is string))
-                controls["picker-" + button.Content] = button;
-            if (!controls.ContainsKey("picker-应用颜色") || !controls.ContainsKey("picker-取消"))
-                throw new InvalidOperationException("The production picker actions are missing.");
-            await CaptureSettingsForProbeAsync(Path.Combine(directory, "center-theme-" + tag + ".png"));
-            await CaptureThemeElementForProbeAsync(body, Path.Combine(directory, "center-theme-" + tag + "-picker.png"));
             foreach (string state in new[] { "Normal", "PointerOver", "Pressed", "Normal", "Disabled", "Normal" })
             {
-                if (!body.IsLoaded || !ReferenceEquals(_lampColorFlyout?.Content, body))
+                if (popup is not null && (!popup.IsLoaded || !ReferenceEquals(_lampColorFlyout?.Content, popup)))
                     throw new InvalidOperationException("Color popup was dismissed during theme observation; detached controls cannot certify visible theme states.");
-                foreach (var control in controls.Values)
+                foreach (var control in group.Values)
                 {
                     control.IsEnabled = state != "Disabled";
                     if (!VisualStateManager.GoToState(control, state, false)) errors.Add("State unavailable: " + state);
                 }
                 await Task.Delay(120);
-                foreach (var pair in controls)
+                foreach (var pair in group)
                 {
                     var control = pair.Value;
-                    bool connected = control.IsLoaded && body.IsLoaded && ReferenceEquals(_lampColorFlyout?.Content, body);
+                    bool connected = control.IsLoaded && (popup is null ||
+                        popup.IsLoaded && ReferenceEquals(_lampColorFlyout?.Content, popup));
                     var presenter = RecipeVisuals<ContentPresenter>(control).FirstOrDefault(p => p.Name == "ContentPresenter");
                     Brush? background = control is DropDownButton
                         ? RecipeVisuals<Grid>(control).FirstOrDefault(p => p.Name == "RootGrid")?.Background
@@ -70,11 +59,34 @@ public sealed partial class ControlCenterWindow
                         (light ? Brightness(ink.Color) < 150 : Brightness(ink.Color) > 140);
                     observations.Add(new { control = pair.Key, state, theme, background = Hex(background),
                         foreground = Hex(foreground), propertyBackground = Hex(control.Background), validBackground, validText,
-                        connected, actualTheme = control.ActualTheme.ToString() });
+                        connected, actualTheme = control.ActualTheme.ToString(), scope = popup is null ? "center" : "popup" });
                     if (!connected) errors.Add(pair.Key + "/" + state + " was disconnected during observation.");
                     if (!validBackground || !validText) errors.Add(pair.Key + "/" + state + " has mismatched theme brushes.");
                 }
             }
+        }
+        try
+        {
+            RevealLampParametersForProbe();
+            await Task.Delay(180);
+            // First verify center states WITHOUT a popup. Disabling its anchor while also
+            // requiring a live flyout was a contradictory lifecycle in the old probe.
+            // Then verify popup actions with the anchor enabled; keep every state/brush/
+            // connected assertion, not detached controls or automatic popup reopening.
+            await ObserveStates(controls);
+            OpenLampColorPicker(_lampSwatches.Keys.First());
+            await Task.Delay(180);
+            if (_lampColorFlyout?.Content is not StackPanel body || !body.IsLoaded)
+                throw new InvalidOperationException("The production color popup did not load.");
+            var popupControls = new Dictionary<string, Control>();
+            foreach (var button in RecipeVisuals<Button>(body).Where(b => b.Content is string))
+                popupControls["picker-" + button.Content] = button;
+            if (!popupControls.ContainsKey("picker-应用颜色") || !popupControls.ContainsKey("picker-取消"))
+                throw new InvalidOperationException("The production picker actions are missing.");
+            foreach (var pair in popupControls) controls.Add(pair.Key, pair.Value);
+            await CaptureSettingsForProbeAsync(Path.Combine(directory, "center-theme-" + tag + ".png"));
+            await CaptureThemeElementForProbeAsync(body, Path.Combine(directory, "center-theme-" + tag + "-picker.png"));
+            await ObserveStates(popupControls, body);
             if (JsonSerializer.Serialize(_view.SelectedPoster!.Poster) != savedPoster || _settings.ProtectsInteraction)
                 errors.Add("Inspecting color/theme visuals changed poster state or created a draft.");
         }

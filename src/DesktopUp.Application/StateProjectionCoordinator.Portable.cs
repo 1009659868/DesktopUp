@@ -43,7 +43,7 @@ public sealed partial class StateProjectionCoordinator
             }
             if (!verified.Creates.SequenceEqual(plan.Creates) || !verified.Updates.SequenceEqual(plan.Updates) ||
                 !verified.Removes.SequenceEqual(plan.Removes) || verified.Settings != plan.Settings ||
-                !verified.PendingPosterIds.SequenceEqual(plan.PendingPosterIds))
+                !verified.PendingPosterIds.SequenceEqual(plan.PendingPosterIds) || !verified.Warnings.SequenceEqual(plan.Warnings))
                 return StateMutationPlan.Reject(StateCommandStatus.ValidationFailed, "导入提案与确定性校验不一致。");
             return new StateMutationPlan
             {

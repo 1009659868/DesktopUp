@@ -4,6 +4,15 @@ namespace DesktopUp.Domain;
 
 public static partial class TemplateRecipeInstancePolicy
 {
+    // Exact trusted predecessor only. Custom/edited/future definitions are never
+    // rewritten. Read projection gains defaults; storage changes only on an edit.
+    public static TemplateRecipe InstalledBuiltInRevision(TemplateRecipe stored)
+    {
+        var capability=SceneCapabilityRegistry.Find(stored.Schema.RendererCapability);
+        return capability?.PreviousBuiltIns?.Any(old=>old.Id==stored.Id &&
+            TemplateRecipeCodec.Serialize(old,stored:true)==TemplateRecipeCodec.Serialize(stored,stored:true)) == true
+            ? capability.BuiltIn : stored;
+    }
     public static TemplateRecipe? RecipeFor(PosterPresentationParameters parameters, string id) =>
         parameters.RecipeInstances?.GetValueOrDefault(id)?.Recipe ?? TemplateRecipeCatalog.BuiltIns.FirstOrDefault(r => r.Id == id);
     public static TemplateParameterValues CurrentValues(PosterPresentationParameters parameters, string templateId)

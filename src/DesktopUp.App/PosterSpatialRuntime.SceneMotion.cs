@@ -28,7 +28,8 @@ internal sealed partial class PosterSpatialRuntime
     }
 
     // All scenes share one read-only sample and one bounded frame clock. Auto-posture keeps
-    // its own deadlines/evidence; decorative motion never publishes input or issues commands.
+    // its own deadlines/evidence. A trusted title-motion proposal is published by its host's
+    // title-only native path; the scene still never owns input or issues commands.
     internal void SetSceneMotionDemand(PosterVisualWindow window, bool needed,
         PosterInputRouter router)
     {
@@ -138,8 +139,9 @@ internal sealed partial class PosterSpatialRuntime
             foreach (var window in owners)
             {
                 var observed = sample.Posters.FirstOrDefault(p => p.Session == window.ReadPointerTarget().Session);
-                bool animate = !_suspended && !SceneGlobalMotionPaused && _sceneAnimationsEnabled && observed is not null &&
-                    (sample.SharedProtection | observed.Protection) == AutoPostureProtection.None;
+                bool animate = observed is not null && ScenePointerAdmissionPolicy.CanAnimate(
+                    !_suspended && !SceneGlobalMotionPaused && _sceneAnimationsEnabled, observed.Pointer.Presence,
+                    sample.SharedProtection | observed.Protection);
                 var point = animate && observed!.Pointer.Presence == AutoPosturePresence.Inside ? _scenePointer.LastPosition : null;
                 window.PaintSceneMotion(_sceneMotionClock.Elapsed.TotalSeconds, point, animate);
             }

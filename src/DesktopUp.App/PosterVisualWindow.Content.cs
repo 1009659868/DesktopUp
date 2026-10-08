@@ -156,8 +156,8 @@ internal sealed partial class PosterVisualWindow
         var doc = ContentDocument;
         if (_footer?.Children.OfType<TextBlock>().FirstOrDefault() is { } count) count.Text=$"{doc.Placements.Count} DEMO ITEMS";
         if (_metaPanel?.Children.OfType<TextBlock>().LastOrDefault() is { } metaCount) metaCount.Text=$"{doc.Placements.Count:00} DEMO ITEMS";
-        // Lamp values update existing brushes and never invalidate card identity or solver geometry.
-        var cardPresentation = _presentation with { Parameters = _presentation.Parameters with { Lamp = null } };
+        // Lamp paint and host title ink never invalidate card identity or solver geometry.
+        var cardPresentation = _presentation with { Parameters = _presentation.Parameters with { Lamp = null, TitleColors = null, ShowTitle = null } };
         string paintKey = $"{doc.DocumentVersion}/{_contentSourceVersion}/{_mode}/{_selectedContentItem}/{cardPresentation}/{doc.ShowBaselineGrid}/{doc.ShowSpanLabels}";
         if (_contentPaintKey != paintKey || !ReferenceEquals(_contentPaintDocument, doc))
         { _contentCards.Clear(); _contentPaintKey = paintKey; _contentPaintDocument = doc; }

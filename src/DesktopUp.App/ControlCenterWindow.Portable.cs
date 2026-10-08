@@ -99,14 +99,14 @@ public sealed partial class ControlCenterWindow
         byte[] bytes = _portable!.Export(); // one committed snapshot, captured before the privacy prompt
         var document = PortableProfileCodec.Parse(bytes);
         if (!await PortableDialog("导出习惯配置",
-            $"包含 {document.Posters.Count} 张海报的名称/副标题、位置、尺寸、状态、模板和参数。名称与副标题可能含个人信息。\n" +
-            "不包含真实文件、应用安装、内容源路径、使用历史、密钥或数据库内部版本。自定义主题素材不包含在本文件中。\n" +
+            $"包含 {document.Posters.Count} 张海报的名称/副标题、位置、尺寸、状态、内容布局、标题显隐及颜色、当前和未选模板参数；另含模板册与中心主题/动效/性能设置。名称、模板名称及描述可能含个人信息。\n" +
+            "不包含真实文件、应用安装、内容源路径、使用历史、密钥、启动权限或数据库内部版本。仅携带声明式模板数据，不携带模块代码或外部素材。\n" +
             "导出的是此时的已提交快照，之后的编辑不会混入。", "选择保存位置")) return;
         var file = await PickPortableFile(save: true);
         if (file is null || _editingClosed || _portableStopping) return;
         // The native save dialog owns the explicit overwrite confirmation.
         await Task.Run(() => _portable.Save(file, bytes, overwrite: true));
-        if (!_editingClosed) await PortableDialog("导出完成", $"已保存 {document.Posters.Count} 张海报配置。\n{file}\n不包含实际文件和自定义主题素材。");
+            if (!_editingClosed) await PortableDialog("导出完成", $"已保存 {document.Posters.Count} 张海报配置及模板册。\n{file}\n不包含实际文件、模块代码和外部素材。");
     });
 
     private async void PortableImport_Click(object sender, RoutedEventArgs e) => await PortableAction(async () =>
@@ -114,7 +114,7 @@ public sealed partial class ControlCenterWindow
         var file = await PickPortableFile(save: false);
         if (file is null || _editingClosed || _portableStopping) return;
         var mode = new ComboBox { Header = "导入方式", ItemsSource = new[] { "追加：保留本机已有海报", "替换：移除本机海报配置后导入" }, SelectedIndex = 0, MinWidth = 300 };
-        var settings = new CheckBox { Content = "同时应用文件中的全局提示动效／性能偏好", IsChecked = false };
+        var settings = new CheckBox { Content = "同时应用文件中的中心主题／全局动效／性能偏好", IsChecked = false };
         var body = new StackPanel { Spacing = 16 }; body.Children.Add(mode); body.Children.Add(settings);
         body.Children.Add(new TextBlock { Text = "下一步先预览，不立即应用。放不下的海报保留配置并列为等待安置；不会缩小、自动收起或推动已有海报。", TextWrapping = TextWrapping.Wrap });
         var options = new ContentDialog { XamlRoot = Content.XamlRoot, Title = "导入配置", Content = body,

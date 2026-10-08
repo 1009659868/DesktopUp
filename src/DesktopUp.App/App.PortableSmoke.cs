@@ -16,6 +16,8 @@ public partial class App
     private void RunPortableSmoke(string dataRoot)
     {
         bool restart = _startupIntent.Arguments.Contains("--portable-restart", StringComparer.Ordinal);
+        bool fullConfiguration = _startupIntent.Arguments.Contains("--portable-full", StringComparer.Ordinal);
+        bool prepared = false;
         var timer = _dispatcher!.CreateTimer(); timer.Interval = TimeSpan.FromMilliseconds(120);
         var lease = _ledger!.Acquire("fixture.portable", "isolated-production-controller");
         // Finish our own diagnostic before the shared process safety exit (capped at 60s).
@@ -76,6 +78,11 @@ public partial class App
                 switch (step)
                 {
                     case 0:
+                        if (fullConfiguration && !restart && !prepared)
+                        {
+                            PreparePortableFidelityProbe(); prepared = true;
+                            cases.Add("full-template-catalog-instances-hidden-title-and-theme-seeded"); return;
+                        }
                         initialCount = current.Posters.Count;
                         Require(initialCount is 0 or 1 or 3, "only isolated zero/one/three fixtures are supported");
                         Require(current.Posters.All(p => !p.AutoPosture.Enabled), "automatic posture must be off in this deterministic process fixture");
@@ -172,6 +179,8 @@ public partial class App
                             "restored state differs from the confirmed projection plan");
                         var finalDocument = PortableProfileCodec.Parse(controller.Export());
                         Require(finalDocument.Settings == originalDocument!.Settings, "global portable settings were not restored");
+                        Require(JsonElement.DeepEquals(finalDocument.TemplateCatalog!.Value, originalDocument.TemplateCatalog!.Value),
+                            "unselected/unused template catalog changed during restore");
                         for (int i = 0; i < finalDocument.Posters.Count; i++)
                         {
                             var source = originalDocument.Posters[i]; var actual = finalDocument.Posters[i];

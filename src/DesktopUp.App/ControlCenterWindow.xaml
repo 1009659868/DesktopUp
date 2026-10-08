@@ -210,11 +210,28 @@
         </Border>
         <Border VerticalAlignment="Stretch" HorizontalAlignment="Left" Margin="0,0,0,-1" Padding="15,2,15,3" Background="{ThemeResource UiCFolderBrush}" BorderBrush="{ThemeResource UiCBorderBrush}" BorderThickness="1,1,1,0" CornerRadius="7,8,0,0" IsHitTestVisible="False"><TextBlock x:Name="UiCFolderTab" Text="样片夹" FontSize="10" CharacterSpacing="100" Foreground="{ThemeResource UiCAccentBrush}"/></Border>
        </Grid>
+       <ContentControl x:Name="ContentLayoutHost" HorizontalContentAlignment="Stretch"><StackPanel x:Name="ContentLayoutPanel" Spacing="12">
+       <Grid>
+        <Grid.RowDefinitions><RowDefinition Height="20"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+        <Border Grid.Row="1" Background="{ThemeResource UiCFolderBrush}" BorderBrush="{ThemeResource UiCBorderBrush}" BorderThickness="1" CornerRadius="0,12,10,10">
+         <Expander x:Name="LayoutFolder" Header="外观与布局" IsExpanded="False" MinHeight="48" Padding="14,2,14,10" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Background="Transparent" BorderThickness="0" CornerRadius="0,12,10,10" AutomationProperties.AutomationId="LayoutFolder" ToolTipService.ToolTip="标题颜色、内容尺度与疏密、排布模式和浏览方式；折叠不会重置设置。">
+          <Expander.Resources>
+           <SolidColorBrush x:Key="ExpanderHeaderBackground" Color="Transparent"/><SolidColorBrush x:Key="ExpanderHeaderBorderBrush" Color="Transparent"/>
+           <SolidColorBrush x:Key="ExpanderHeaderBorderPointerOverBrush" Color="Transparent"/><SolidColorBrush x:Key="ExpanderHeaderBorderPressedBrush" Color="Transparent"/>
+           <SolidColorBrush x:Key="ExpanderContentBackground" Color="Transparent"/><SolidColorBrush x:Key="ExpanderContentBorderBrush" Color="Transparent"/>
+          </Expander.Resources>
+          <StackPanel x:Name="LayoutFolderPanel" Spacing="14">
+       <Grid ColumnSpacing="10"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+        <TextBlock Text="显示标题" VerticalAlignment="Center"/>
+        <ToggleSwitch x:Name="TitleVisibilitySwitch" Grid.Column="1" OnContent="显示" OffContent="隐藏" Toggled="TitleVisibility_Changed" AutomationProperties.AutomationId="TitleVisibility" AutomationProperties.Name="显示标题" ToolTipService.ToolTip="仅隐藏当前海报上的名称文字；控制中心名称、拖动区域、收展与更多按钮保持不变。"/>
+       </Grid>
+       <Expander x:Name="TitleColorsFolder" Header="标题与符号" IsExpanded="False" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+        <StackPanel x:Name="TitleColorsPanel" Orientation="Horizontal" Spacing="24"/>
+       </Expander>
        <Grid x:Name="MacroPair" ColumnSpacing="24"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
         <StackPanel x:Name="ScaleHost" Spacing="0" HorizontalAlignment="Stretch"><TextBlock x:Name="ScaleLabel" Text="内容尺度"/><Grid><Slider x:Name="ScaleSlider" Minimum="0.8" Maximum="1.5" StepFrequency="0.01" TickPlacement="None" AutomationProperties.AutomationId="ContentScale" AutomationProperties.Name="内容尺度"/><Canvas x:Name="ScaleMarks" IsHitTestVisible="False"/></Grid><Canvas x:Name="ScaleLabels" Height="20" IsHitTestVisible="False"/></StackPanel>
         <StackPanel Grid.Column="1" x:Name="SpacingHost" Spacing="0" HorizontalAlignment="Stretch"><TextBlock x:Name="SpacingLabel" Text="内容疏密"/><Grid><Slider x:Name="SpacingSlider" Minimum="0.5" Maximum="1.5" StepFrequency="0.01" TickPlacement="None" AutomationProperties.AutomationId="ContentSpacing" AutomationProperties.Name="内容疏密"/><Canvas x:Name="SpacingMarks" IsHitTestVisible="False"/></Grid><Canvas x:Name="SpacingLabels" Height="20" IsHitTestVisible="False"/></StackPanel>
        </Grid>
-       <ContentControl x:Name="ContentLayoutHost" HorizontalContentAlignment="Stretch"><StackPanel x:Name="ContentLayoutPanel" Spacing="12">
         <Grid ColumnSpacing="10"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
          <TextBlock Text="排布模式" VerticalAlignment="Center"/>
          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4"><ToggleButton x:Name="ContentAutomaticChoice" Content="自动" Tag="automatic" Click="ContentModeChoice_Click" Style="{StaticResource UiCChoice}" ToolTipService.ToolTip="回到自动会恢复原自动图钉和尺寸；手动尺寸不带入，可撤销。"/><ToggleButton x:Name="ContentManualChoice" Content="手动" Tag="manual" Click="ContentModeChoice_Click" Style="{StaticResource UiCChoice}" ToolTipService.ToolTip="从当前完整画面开始安排位置，不恢复上一次手动构图。"/></StackPanel>
@@ -227,7 +244,11 @@
          <ComboBox x:Name="ContentFlowSelector" Visibility="Collapsed" SelectionChanged="ContentFlow_Changed"><ComboBoxItem Content="纵向" Tag="vertical"/><ComboBoxItem Content="横向" Tag="horizontal"/></ComboBox>
         </Grid>
         <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock Text="循环浏览" VerticalAlignment="Center"/><ToggleSwitch Grid.Column="1" x:Name="ContentLoopSwitch" OnContent="开启" OffContent="关闭" Toggled="ContentLoop_Changed" ToolTipService.ToolTip="独立于浏览方向；内容不足一屏时不实际循环。"/></Grid>
-        <Border Height="1" Background="{ThemeResource UiCBorderBrush}" Margin="0,3"/>
+          </StackPanel>
+         </Expander>
+        </Border>
+        <Border VerticalAlignment="Stretch" HorizontalAlignment="Left" Margin="0,0,0,-1" Padding="15,2,15,3" Background="{ThemeResource UiCFolderBrush}" BorderBrush="{ThemeResource UiCBorderBrush}" BorderThickness="1,1,1,0" CornerRadius="7,8,0,0" IsHitTestVisible="False"><TextBlock Text="设置夹" FontSize="10" CharacterSpacing="100" Foreground="{ThemeResource UiCAccentBrush}"/></Border>
+       </Grid>
         <Grid ColumnSpacing="8"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
          <ComboBox x:Name="ContentItemSelector" Header="所选项目" HorizontalAlignment="Stretch" SelectionChanged="ContentItem_Changed" DisplayMemberPath="Name" AutomationProperties.AutomationId="ContentItem"/>
          <Button Grid.Column="1" x:Name="ContentKeyboardPad" Content="打开 ↗" Click="ContentOpen_Click" PreviewKeyDown="ContentKeyboard_KeyDown" KeyUp="ContentKeyboard_KeyUp" LostFocus="ContentKeyboard_LostFocus" VerticalAlignment="Bottom" Style="{StaticResource UiCAction}" AutomationProperties.AutomationId="ContentKeyboardPad" ToolTipService.ToolTip="打开所选项目。此按钮聚焦时：方向键移动，Shift＋方向键改跨度，Shift＋F10管理。"/>

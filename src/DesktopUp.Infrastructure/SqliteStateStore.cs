@@ -546,7 +546,10 @@ public sealed class SqliteStateStore : IStateStore
         {
             DataSource = _databasePath,
             Mode = SqliteOpenMode.ReadWriteCreate,
-            Cache = SqliteCacheMode.Shared,
+            // File-backed WAL already provides concurrent snapshot readers. Shared cache adds
+            // table locks: a held reader/seed writer can deadlock across separate Store gates.
+            // Keep isolation and bounded writer waits; do not work around this with dirty reads.
+            Cache = SqliteCacheMode.Private,
             Pooling = false,
             DefaultTimeout = BusyTimeoutMilliseconds / 1_000
         };

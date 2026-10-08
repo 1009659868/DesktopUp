@@ -1,7 +1,7 @@
 namespace DesktopUp.Application;
 
 public readonly record struct RainSceneEnvelope(double Left, double Top, double Width, double Height, double Bottom);
-public readonly record struct RainCloudPose(double X, double Y, double Angle);
+public readonly record struct RainCloudPose(double X, double Y, double Angle, double Vapor = 0, double Wisp = 0);
 public readonly record struct RainDropPose(double X, double Y, double Length, double Slant);
 
 /// <summary>Bounded decorative math, not an item layout solver or timer.</summary>
@@ -23,8 +23,14 @@ public static class RainSceneMotion
     public static RainCloudPose Cloud(double seconds, double wind)
     {
         double strength = Math.Clamp(Finite(wind), 0, 100) / 100;
-        double phase = Math.Max(0, Finite(seconds)) % 19 / 19 * Math.Tau;
-        return new(Math.Sin(phase) * 10 * strength, -Math.Sin(phase / 2) * 3 * strength, Math.Sin(phase) * .6 * strength);
+        double time = Math.Max(0, Finite(seconds));
+        // Slow wind: rise/fall and rocking carry more weight than lateral drift.
+        // Rock and lift are a quarter-cycle apart, so their peaks do not compete
+        // for the compact title's entire vertical budget at the same instant.
+        static double Ease(double t, double period) => (1-Math.Cos(t%period/period*Math.Tau))/2;
+        double phase = time%19/19*Math.Tau;
+        return new(5*Math.Sin(phase)*strength, 6*Math.Sin(phase)*strength, 3.2*Math.Cos(phase)*strength,
+            (Ease(time,27)*2-1)*strength, (1-Ease(time+9,23)*2)*strength);
     }
     public static RainDropPose Drop(int index, double seconds, double speed, double wind, RainSceneEnvelope area)
     {

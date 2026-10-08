@@ -125,7 +125,9 @@ public sealed class ContentLayoutArchiveCapabilityTests
         using var fixture = new Fixture();
         var source = ManualWithReturnState("private-manual");
         byte[] bytes = PortableProfileCodec.Export(State(Poster(source)));
-        var archive = PortableProfileCodec.Parse(bytes);
+        var latest = PortableProfileCodec.Parse(bytes);
+        var archive = PortableProfileCodec.Freeze(latest with { Version = 4, TemplateCatalog = null,
+            Settings = latest.Settings with { CenterTheme = null } });
         Assert.Equal(4, archive.Version);
         Assert.Equal(source.SavedAutomaticMode, archive.Posters[0].ContentLayout!.SavedAutomaticMode);
         Assert.Equal(source.Placements.Select(p => p.SavedAutomaticState),
@@ -155,6 +157,7 @@ public sealed class ContentLayoutArchiveCapabilityTests
     {
         var tree = JsonNode.Parse(PortableProfileCodec.Export(State(Poster(ManualWithReturnState("manual")))))!;
         tree["version"] = version;
+        tree.AsObject().Remove("templateCatalog"); tree["settings"]!.AsObject().Remove("centerTheme");
         Assert.ThrowsAny<ArgumentException>(() => PortableProfileCodec.Parse(Encoding.UTF8.GetBytes(tree.ToJsonString())));
     }
 
@@ -164,6 +167,7 @@ public sealed class ContentLayoutArchiveCapabilityTests
         var source = ContentLayoutSamples.Equal("legacy") with { SchemaVersion = 2 };
         var tree = JsonNode.Parse(PortableProfileCodec.Export(State(Poster(source))))!;
         tree["version"] = version;
+        tree.AsObject().Remove("templateCatalog"); tree["settings"]!.AsObject().Remove("centerTheme");
         if (version == 2) tree["posters"]![0]!["contentLayout"]!.AsObject().Remove("flowAxis");
         var archive = PortableProfileCodec.Parse(Encoding.UTF8.GetBytes(tree.ToJsonString()));
         var restored = PortableContentLayoutCodec.Import(archive.Posters[0].ContentLayout!, "restored");
@@ -200,6 +204,7 @@ public sealed class ContentLayoutArchiveCapabilityTests
         var source = ContentLayoutSamples.Equal("ordinary") with { SchemaVersion = 2 };
         var tree = JsonNode.Parse(PortableProfileCodec.Export(State(Poster(source))))!;
         tree["version"] = version;
+        tree.AsObject().Remove("templateCatalog"); tree["settings"]!.AsObject().Remove("centerTheme");
         tree["posters"]![0]!["contentLayout"]!["placements"]![0]!["automaticSizeBasis"] =
             new JsonObject { ["columnSpan"] = 4, ["rowSpan"] = 4 };
         Assert.ThrowsAny<ArgumentException>(() => PortableProfileCodec.Parse(Encoding.UTF8.GetBytes(tree.ToJsonString())));

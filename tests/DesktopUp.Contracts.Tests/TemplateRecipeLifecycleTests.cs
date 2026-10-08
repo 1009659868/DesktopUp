@@ -149,7 +149,9 @@ public sealed class TemplateRecipeLifecycleTests
             ReadSet = StateReadSet.ForSettings(f.Current.ControlCenter.Settings.EntityVersion) };
         Assert.Equal(StateCommandStatus.ValidationFailed, f.Coordinator.Execute(bad).Status);
         f.Reopen(); Assert.Equal("ink", f.Settings.CenterTheme); Assert.Single(TemplateRecipeCatalog.Read(f.Settings.TemplateCatalogJson));
-        Assert.Throws<ArgumentException>(() => PortableProfileCodec.Export(new SqliteStateCommandRepository(f.Store).Read()));
+        var exported = PortableProfileCodec.Parse(PortableProfileCodec.Export(new SqliteStateCommandRepository(f.Store).Read()));
+        Assert.Equal("ink", exported.Settings.CenterTheme);
+        Assert.Equal(1, exported.TemplateCatalog!.Value.GetArrayLength());
     }
 
     [Fact]

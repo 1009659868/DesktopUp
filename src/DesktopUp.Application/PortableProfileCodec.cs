@@ -5,7 +5,11 @@ using DesktopUp.Domain;
 
 namespace DesktopUp.Application;
 
-public sealed record PortableSettings(bool DynamicEffectsPaused, DesktopUpPerformanceMode PerformanceMode);
+public sealed record PortableSettings(bool DynamicEffectsPaused, DesktopUpPerformanceMode PerformanceMode)
+{
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? CenterTheme { get; init; }
+}
 public sealed record PortablePosterProfile(string Key, string Title, string Subtitle, string Purpose,
     string MonitorHint, double WidthDip, double ExpandedHeightDip, double HorizontalAnchor, double VerticalAnchor,
     long StackOrder, bool IsVisible, bool IsLocked, bool IsCollapsed, bool AutoCollapseEnabled,
@@ -16,15 +20,19 @@ public sealed record PortablePosterProfile(string Key, string Title, string Subt
     public PortableContentLayout? ContentLayout { get; init; }
 }
 public sealed record PortableProfileDocument(string Format, int Version, IReadOnlyList<PortablePosterProfile> Posters,
-    PortableSettings Settings);
+    PortableSettings Settings)
+{
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public JsonElement? TemplateCatalog { get; init; }
+}
 
 // A deliberately small, versioned data format. This codec has no file, shell, native or database effects.
 public static class PortableProfileCodec
 {
     public const string Format = "DesktopUp.PortableProfile";
-    /// <summary>v4 carries content schema three, including manual mode's retained automatic state.
-    /// v1-v3 archives remain readable; unknown members and new semantics under old versions reject.</summary>
-    public const int Version = 4, MinimumVersion = 1, MaximumBytes = 4 * 1024 * 1024, MaximumPosters = 128,
+    /// <summary>v5 adds center theme, declarative catalog and presentation v1-6.
+    /// v1-v4 archives retain their original meanings; new semantics under old versions reject.</summary>
+    public const int Version = 5, MinimumVersion = 1, MaximumBytes = 4 * 1024 * 1024, MaximumPosters = 128,
         MaximumDepth = 32, MaximumLayoutBytes = 32768;
     public const double MaximumExtentDip = 32768;
     private static readonly JsonSerializerOptions Options = new()
@@ -39,13 +47,12 @@ public static class PortableProfileCodec
         ArgumentNullException.ThrowIfNull(state);
         if (state.Catalog.Revision != state.Settings.Revision)
             throw new ArgumentException("Export requires one committed state snapshot.");
-        if (TemplateRecipeCatalog.Read(state.Settings.Settings.TemplateCatalogJson).Count != 0 || state.Settings.Settings.CenterTheme != "light" ||
-            state.Catalog.Posters.Any(p => PosterPresentationPolicy.Resolve(p.Poster).Parameters.RecipeInstances?.Count > 0))
-            throw new ArgumentException("当前便携格式尚不能携带自定义模板或中心主题；请使用完整数据库备份，配置未被修改。");
+        using var catalog = JsonDocument.Parse(state.Settings.Settings.TemplateCatalogJson, new() { MaxDepth = MaximumDepth });
         var posters = state.Catalog.Posters.OrderBy(p => p.Poster.StackOrder)
             .ThenBy(p => p.Poster.PosterId, StringComparer.Ordinal).Select((p, index) => FromPoster(p.Poster, $"p{index + 1}")).ToArray();
         var document = new PortableProfileDocument(Format, Version, Array.AsReadOnly(posters),
-            new(state.Settings.Settings.DynamicEffectsPaused, state.Settings.Settings.PerformanceMode));
+            new(state.Settings.Settings.DynamicEffectsPaused, state.Settings.Settings.PerformanceMode)
+            { CenterTheme = state.Settings.Settings.CenterTheme }) { TemplateCatalog = catalog.RootElement.Clone() };
         return Encode(document);
     }
 
@@ -68,8 +75,12 @@ public static class PortableProfileCodec
             CheckDuplicateMembers(parsed.RootElement);
             var document = JsonSerializer.Deserialize<PortableProfileDocument>(parsed.RootElement, Options)
                 ?? throw new ArgumentException("Portable configuration is null.");
+            if (document.Version < 5 && (parsed.RootElement.TryGetProperty("templateCatalog", out _) ||
+                parsed.RootElement.GetProperty("settings").ValueKind == JsonValueKind.Object &&
+                parsed.RootElement.GetProperty("settings").TryGetProperty("centerTheme", out _)))
+                throw new ArgumentException("New fields cannot be declared under an older portable version.");
             Validate(document);
-            return document with { Posters = Array.AsReadOnly(document.Posters.Select(p => p with
+            return document with { TemplateCatalog = document.TemplateCatalog?.Clone(), Posters = Array.AsReadOnly(document.Posters.Select(p => p with
             {
                 LayoutParameters = p.LayoutParameters.Clone(),
                 ContentLayout = p.ContentLayout is { } content ? content with
@@ -87,6 +98,15 @@ public static class PortableProfileCodec
         if (document.Format != Format || document.Version is < MinimumVersion or > Version)
             throw new ArgumentException("Unknown portable format or version.");
         if (document.Settings is null || !Enum.IsDefined(document.Settings.PerformanceMode)) throw new ArgumentException("Invalid portable settings.");
+        if (document.Version >= 5)
+        {
+            if (document.Settings.CenterTheme is not ("light" or "ink" or "blue" or "system") || document.TemplateCatalog is null)
+                throw new ArgumentException("Portable v5 requires explicit center theme and template catalog.");
+            CheckDuplicateMembers(document.TemplateCatalog.Value);
+            _ = PortableTemplateMerge.ReadCatalog(document.TemplateCatalog.Value);
+        }
+        else if (document.Settings.CenterTheme is not null || document.TemplateCatalog is not null)
+            throw new ArgumentException("Center theme and template catalog require portable format version five.");
         if (document.Posters is null || document.Posters.Count > MaximumPosters) throw new ArgumentException("Portable poster count exceeds 128.");
         var keys = new HashSet<string>(StringComparer.Ordinal);
         foreach (var p in document.Posters)
@@ -99,7 +119,7 @@ public static class PortableProfileCodec
                 !Unit(p.HorizontalAnchor) || !Unit(p.VerticalAnchor) ||
                 PosterAutoPosturePolicy.ValidateDelay(p.AutoCollapseDelaySeconds) is not null)
                 throw new ArgumentException("Invalid or unsupported portable poster fields.");
-            ValidateParameters(p.LayoutParameters, p.TemplateKey);
+            ValidateParameters(p.LayoutParameters, p.TemplateKey, document.Version);
             if (p.ContentLayout is { } content)
             {
                 if (document.Version == 1) throw new ArgumentException("Content layout requires portable format version two.");
@@ -113,7 +133,7 @@ public static class PortableProfileCodec
                 var documentLayout = PortableContentLayoutCodec.Import(content, p.Key);
                 var appearance = PosterConfigurationFactory.NewBasicBox("portable-content-validation", "portable-content-validation") with
                 { LayoutParametersJson = p.LayoutParametersJson, TemplateKey = PosterPresentationPolicy.IsBuiltIn(p.TemplateKey) ? p.TemplateKey : "basic-box" };
-                var preferences = PosterPresentationPolicy.Resolve(appearance).Parameters.Preferences ?? new();
+                var preferences = PosterPresentationPolicy.ReadStoredParameters(appearance.LayoutParametersJson, appearance.TemplateKey).Preferences ?? new();
                 _ = ContentLayoutCapabilities.Inspect(documentLayout, preferences.Scale, preferences.Spacing);
             }
         }
@@ -124,7 +144,7 @@ public static class PortableProfileCodec
 
     internal static PortablePosterProfile FromPoster(PosterDefinition poster, string key)
     {
-        if (Encoding.UTF8.GetByteCount(poster.LayoutParametersJson) > MaximumLayoutBytes)
+        if (Encoding.UTF8.GetByteCount(poster.LayoutParametersJson) > PosterPresentationPolicy.MaximumJsonLength)
             throw new ArgumentException("Stored layout parameters exceed the portable limit.");
         using var parsed = JsonDocument.Parse(poster.LayoutParametersJson, new() { MaxDepth = MaximumDepth });
         JsonElement parameters = parsed.RootElement.Clone();
@@ -147,15 +167,15 @@ public static class PortableProfileCodec
         { ContentLayout = PortableContentLayoutCodec.Export(content!) };
     }
 
-    private static void ValidateParameters(JsonElement parameters, string template)
+    private static void ValidateParameters(JsonElement parameters, string template, int portableVersion)
     {
-        if (parameters.ValueKind != JsonValueKind.Object || Encoding.UTF8.GetByteCount(parameters.GetRawText()) > MaximumLayoutBytes)
+        int limit = portableVersion >= 5 ? PosterPresentationPolicy.MaximumJsonLength : MaximumLayoutBytes;
+        if (parameters.ValueKind != JsonValueKind.Object || Encoding.UTF8.GetByteCount(parameters.GetRawText()) > limit)
             throw new ArgumentException("Portable layout parameters must be a bounded object.");
         CheckDuplicateMembers(parameters);
-        if (!parameters.TryGetProperty("schemaVersion", out var schema) || !schema.TryGetInt32(out int version) || version is not (1 or 2))
+        if (!parameters.TryGetProperty("schemaVersion", out var schema) || !schema.TryGetInt32(out int version) ||
+            version < 1 || version > (portableVersion >= 5 ? PosterPresentationPolicy.SchemaVersion : 2))
             throw new ArgumentException("Unknown layout parameter version.");
-        if (version == 1) Members(parameters, "schemaVersion", "content", "theme", "legacy");
-        else Members(parameters, "schemaVersion", "content", "theme", "legacy", "preferences");
         if (parameters.TryGetProperty("legacy", out var legacy))
         {
             Members(legacy, "itemGapDip", "rowHeightDip", "cardHeightDip");
@@ -163,10 +183,10 @@ public static class PortableProfileCodec
                 if (field.Value.ValueKind != JsonValueKind.Number || !field.Value.TryGetDouble(out double n) || !double.IsFinite(n) || n < 0 || n > MaximumExtentDip)
                     throw new ArgumentException("Unsupported retained legacy data.");
         }
-        var basis = PosterConfigurationFactory.NewBasicBox("portable-validation", "portable-validation") with
-        { TemplateKey = PosterPresentationPolicy.IsBuiltIn(template) ? template : "basic-box", LayoutParametersJson = parameters.GetRawText() };
-        var resolved = PosterPresentationPolicy.Resolve(basis);
-        if (!resolved.CanEdit) throw new ArgumentException("Unsupported portable layout parameters: " + resolved.Warning);
+        // Storage validity is distinct from availability of a trusted renderer. Keep the raw
+        // declaration/values intact; neither importing nor validating executes a missing module.
+        if (PosterPresentationPolicy.ValidateStoredParameters(parameters.GetRawText(), template) is { } error)
+            throw new ArgumentException("Unsupported portable layout parameters: " + error);
     }
 
     private static void Members(JsonElement node, params string[] allowed)

@@ -3,10 +3,11 @@ using DesktopUp.Domain;
 
 namespace DesktopUp.Application;
 
-public enum PosterSetting { Scale, Spacing, Template, Subtitle, Content, Theme, AutoEnabled, AutoDelay, Lamp, TemplateParameters }
+public enum PosterSetting { Scale, Spacing, Template, Subtitle, Content, Theme, AutoEnabled, AutoDelay, Lamp, TemplateParameters, TitleColors, TitleVisibility }
 public sealed record PosterSettingEdit(PosterSurfaceProjection Basis, PosterSetting Setting,
     double Number = 0, string Text = "", PosterContentParameters? Content = null, PosterThemeParameters? Theme = null,
-    LampTemplateParameters? Lamp = null, TemplateRecipe? Recipe = null, TemplateParameterValues? TemplateValues = null)
+    LampTemplateParameters? Lamp = null, TemplateRecipe? Recipe = null, TemplateParameterValues? TemplateValues = null,
+    PosterTitleColors? TitleColors = null)
 {
     public string PosterId => Basis.Poster.PosterId;
     public PosterStateCommand Command(string requestId)
@@ -36,6 +37,9 @@ public sealed record PosterSettingEdit(PosterSurfaceProjection Basis, PosterSett
             PosterSetting.Subtitle => draft with { Subtitle = Text },
             PosterSetting.Content => draft with { Parameters = parameters with { Content = Content ?? throw new ArgumentException("Missing content parameters.") } },
             PosterSetting.Theme => draft with { Parameters = parameters with { Theme = Theme ?? throw new ArgumentException("Missing theme parameters.") } },
+            PosterSetting.TitleColors => draft with { Parameters = parameters with { TitleColors = TitleColors ?? throw new ArgumentException("Missing title colors.") } },
+            PosterSetting.TitleVisibility => draft with { Parameters = parameters with { ShowTitle = Number is 0 or 1
+                ? Number == 1 : throw new ArgumentException("Invalid title visibility toggle.") } },
             PosterSetting.Lamp => draft with { Parameters = parameters with { Lamp = Lamp ?? throw new ArgumentException("Missing lamp parameters.") } },
             PosterSetting.TemplateParameters => draft with { Parameters = TemplateValues is { } values
                 ? TemplateRecipeInstancePolicy.UpdateValues(parameters, draft.TemplateKey, values)

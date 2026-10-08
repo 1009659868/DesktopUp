@@ -35,17 +35,18 @@ public static class PortableProfilePlanner
                 LayoutParametersJson = portable.LayoutParametersJson,
                 TemplateKey = PosterPresentationPolicy.IsBuiltIn(portable.TemplateKey) ? portable.TemplateKey : "basic-box"
             };
-            var preferences = PosterPresentationPolicy.Resolve(appearance).Parameters.Preferences ?? new();
+            var preferences = PosterPresentationPolicy.ReadStoredParameters(appearance.LayoutParametersJson, appearance.TemplateKey).Preferences ?? new();
             ContentLayoutCapabilities.RequireApplicable(layout, preferences.Scale, preferences.Spacing);
         }
         idFactory ??= () => Guid.NewGuid().ToString("N");
+        var templates = PortableTemplateMerge.Merge(document, current);
         var occupied = BuildObstacles(mode == PortableImportMode.Replace ? [] : current.Catalog.Posters.Select(p => p.Poster), topology);
         var ids = current.Catalog.Posters.Select(p => p.Poster.PosterId).ToHashSet(StringComparer.Ordinal);
         var themeIds = current.Catalog.Posters.Select(p => p.Poster.ThemeInstanceId).ToHashSet(StringComparer.Ordinal);
-        var creates = new List<PosterDefinition>(); var warnings = new List<string>();
+        var creates = new List<PosterDefinition>(); var warnings = templates.Warnings.ToList();
         long nextStack = mode == PortableImportMode.Replace || current.Catalog.Posters.Count == 0 ? 0 :
             checked(current.Catalog.Posters.Max(p => p.Poster.StackOrder) + 1);
-        foreach (var portable in document.Posters.OrderBy(p => p.StackOrder).ThenBy(p => p.Key, StringComparer.Ordinal))
+        foreach (var portable in templates.Posters.OrderBy(p => p.StackOrder).ThenBy(p => p.Key, StringComparer.Ordinal))
         {
             string token = idFactory();
             if (string.IsNullOrWhiteSpace(token) || token.Length > 96 || token.Any(c => !(char.IsAsciiLetterOrDigit(c) || c is '-' or '_')))
@@ -65,16 +66,19 @@ public static class PortableProfilePlanner
                     ? ContentLayoutPolicy.Serialize(PortableContentLayoutCodec.Import(content, id)) : null
             };
             var placed = Place(definition, topology, occupied, warnings);
-            if (!PosterPresentationPolicy.IsBuiltIn(definition.TemplateKey))
+            if (!PosterPresentationPolicy.Resolve(definition).CanEdit)
                 warnings.Add($"{definition.Title}：主题 {definition.TemplateKey} 未安装，将使用内置回退；原参数和主题身份保留。");
             creates.Add(placed);
         }
-        var settings = importSettings ? current.Settings.Settings with
+        var settings = current.Settings.Settings with
         {
-            DynamicEffectsPaused = document.Settings.DynamicEffectsPaused,
-            PerformanceMode = document.Settings.PerformanceMode
+            DynamicEffectsPaused = importSettings ? document.Settings.DynamicEffectsPaused : current.Settings.Settings.DynamicEffectsPaused,
+            PerformanceMode = importSettings ? document.Settings.PerformanceMode : current.Settings.Settings.PerformanceMode,
+            CenterTheme = importSettings ? document.Settings.CenterTheme ?? current.Settings.Settings.CenterTheme : current.Settings.Settings.CenterTheme,
+            TemplateCatalogJson = templates.Catalog
             // LaunchAtStartupRequested is intentionally local and unchanged.
-        } : null;
+        };
+        if (!importSettings && settings == current.Settings.Settings) settings = null;
         return new(document, mode, importSettings, topology, current.Revision, Reads(current),
             creates.AsReadOnly(), Array.AsReadOnly(mode == PortableImportMode.Replace
                 ? current.Catalog.Posters.Select(p => p.Poster.PosterId).ToArray() : []), Array.Empty<PosterDefinition>(),

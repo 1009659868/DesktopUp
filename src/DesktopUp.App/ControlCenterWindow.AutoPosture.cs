@@ -191,6 +191,10 @@ public sealed partial class ControlCenterWindow
             if (active?.Setting != PosterSetting.AutoDelay)
                 AutoPostureDelay.Value = target?.AutoPosture.LeaveDelaySeconds ?? 3;
             bool enabled = target is not null && !_editor.ProtectsInteraction && !IsContentFieldDraftActive;
+            TitleVisibilitySwitch.IsOn = active?.Setting == PosterSetting.TitleVisibility ? active.Number == 1 :
+                target?.Presentation.Parameters.IsTitleVisible ?? true;
+            TitleVisibilitySwitch.IsEnabled = enabled && target?.Presentation.CanEdit == true &&
+                !_settings.ProtectsInteraction && _lampColorFlyout is null;
             AutoPostureSwitch.IsEnabled = AutoPostureDelay.IsEnabled = enabled;
             ScaleSlider.IsEnabled = SpacingSlider.IsEnabled = _template.IsEnabled = enabled && target?.Presentation.CanEdit == true;
             _scaleMarks?.Refresh(); _spacingMarks?.Refresh();
@@ -204,12 +208,15 @@ public sealed partial class ControlCenterWindow
             AutoPostureInfo.Severity = InfoBarSeverity.Warning; AutoPostureInfo.Message = error ?? "";
             RenderTemplateParameters(active?.Setting is (PosterSetting.Lamp or PosterSetting.TemplateParameters) ? active.TemplateValues ?? (active.Lamp is { } oldValues ? LegacyLampValues.ToValues(oldValues) : null) : null);
             RenderTemplateSamples();
+            RenderTitleColors();
             UpdateContentDraftPresentation();
         }
         finally { _renderingSettings = false; }
     }
     private void AutoPosture_Changed(object sender, RoutedEventArgs args)
     { if (!_renderingSettings) ChangeSetting(PosterSetting.AutoEnabled, AutoPostureSwitch.IsOn ? 1 : 0, finish: true); }
+    private void TitleVisibility_Changed(object sender, RoutedEventArgs args)
+    { if (!_renderingSettings) ChangeSetting(PosterSetting.TitleVisibility, TitleVisibilitySwitch.IsOn ? 1 : 0, finish: true); }
     private void AutoPostureDelay_Changed(NumberBox sender, NumberBoxValueChangedEventArgs args)
     {
         if (!_renderingSettings) ChangeSetting(PosterSetting.AutoDelay, text: sender.Value.ToString("R", CultureInfo.InvariantCulture));

@@ -126,7 +126,8 @@ internal sealed partial class PosterVisualWindow(
         // Preparation must not clip or resize a live surface before its peers move.
         return new(this, frame, input, _contentSnapshot ?? EnsureContentSnapshot(frame), _contentViewport!, _contentSpaceCandidate);
     }
-    public bool CommitSpatialFrames(IReadOnlyList<PreparedSpatialFrame> frames, DesktopFramePhase phase = DesktopFramePhase.Regular)
+    public bool CommitSpatialFrames(IReadOnlyList<PreparedSpatialFrame> frames, DesktopFramePhase phase = DesktopFramePhase.Regular,
+        Action? afterNativeBatchForProbe = null)
     {
         var layouts = new List<(FrameworkElement Root, double Width, double Height)>();
         try
@@ -193,6 +194,9 @@ internal sealed partial class PosterVisualWindow(
         }
         bool applied = attachment.ApplyPreparedBoundsBatch(windows, phase);
         bool nativeApplied = applied;
+        // Isolated component probe only: reproduce a native region reset at the allocation
+        // boundary. Ordinary callers never supply this hook; it cannot replace verification.
+        afterNativeBatchForProbe?.Invoke();
         // Always read every participant after a partial native failure. Recovery then uses the
         // single committed projection, not whichever windows happened to move first.
         foreach (var frame in frames)
@@ -202,7 +206,12 @@ internal sealed partial class PosterVisualWindow(
             applied &= matches;
             // Native clipping follows the WHOLE position batch, never the per-owner prepare loop.
             var regionBefore = owner._appliedVisualRegion;
-            bool regionApplied = matches && owner.ApplyVisualRegion(owner._windowHandle, frame.Bounds, force: phase == DesktopFramePhase.FinalRestore);
+            // Preparing/retagging a native allocation is a clip-ownership boundary, even
+            // when its logical visible size is unchanged. An old cache entry is not proof
+            // that the HRGN survived native window processing. Reassert it ONCE after the
+            // batch; animation frames still reuse the cache, and readback still fails closed.
+            bool regionApplied = matches && owner.ApplyVisualRegion(owner._windowHandle, frame.Bounds,
+                force: phase is DesktopFramePhase.SurfacePreparation or DesktopFramePhase.FinalRestore);
             applied &= regionApplied;
             if (matches) owner._bounds = frame.Bounds;
             if (matches && phase == DesktopFramePhase.SurfacePreparation && owner._transitionLayout is { } lease)
@@ -1353,7 +1362,11 @@ internal sealed partial class PosterVisualWindow(
                     edgeY)));
         }
 
-        foreach (var band in titleBar.GripBands)
+        if (titleBar.Kind == PosterTitleChromeKind.Cloud)
+            foreach (var band in TitleCloudInputGeometry.Resolve(frame.Width / scaleX, _geometry.IsCollapsed,
+                _titlePose, scaleX, _monitor.ScaleY))
+                regions.Add(new PosterInputRegion(PosterInputTargetKind.TitleBar, -1, band));
+        else foreach (var band in titleBar.GripBands)
             regions.Add(new PosterInputRegion(PosterInputTargetKind.TitleBar, -1, ToTitlePixels(band)));
 
         return new PosterInputLayoutSnapshot(
@@ -1626,6 +1639,7 @@ internal sealed partial class PosterVisualWindow(
         subtitle.MaxLines = 1; subtitle.TextTrimming = TextTrimming.CharacterEllipsis;
         var title = Text(_authoritativePoster?.Title ?? "Desktop collection", ContentParameters.TitleFontSizeDip, 700, 255, 242, 242, 242);
         title.Foreground = ColorBrush(_presentation.Parameters.Theme.Foreground);
+        title.Opacity = _presentation.Parameters.IsTitleVisible ? 1 : 0;
         title.MaxLines = 1; title.TextTrimming = TextTrimming.CharacterEllipsis;
         meta.Children.Add(subtitle); meta.Children.Add(title);
         meta.Children.Add(Text($"{ContentDocument.Placements.Count:00} DEMO ITEMS", 10, 400, 170, 198, 198, 198));
@@ -1717,6 +1731,10 @@ internal sealed partial class PosterVisualWindow(
         if (applied)
         {
             _appliedVisualRegion = requested;
+        }
+        else
+        {
+            _appliedVisualRegion = null;
         }
         return applied;
     }

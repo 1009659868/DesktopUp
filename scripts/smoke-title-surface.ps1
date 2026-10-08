@@ -17,7 +17,11 @@ $taskDone = @($taskEvents | Where-Object { $_.eventName -eq 'title_surface.smoke
 $taskCases = @($taskEvents | Where-Object eventName -eq 'title_surface.case_passed')
 $taskErrors = @($taskEvents | Where-Object level -in 'error','critical')
 $taskLedger = Get-Content -Raw -LiteralPath (Join-Path $taskRoot 'state\resource-ledger.json') | ConvertFrom-Json
-if ($taskProbe.ExitCode -ne 0 -or $taskDone.Count -ne 1 -or $taskCases.Count -ne 8 -or $taskErrors.Count -gt 0 -or
+$taskExpected = @('prepare-partial','submit-before','submit-partial','restore-partial','complete',
+    'handoff-reuse','handoff-grow','translate-fast','prepare-region-reset','handoff-reset-reuse','handoff-reset-grow')
+$taskResets = @($taskEvents | Where-Object eventName -eq 'title_surface.region_reset_injected')
+if ($taskProbe.ExitCode -ne 0 -or $taskDone.Count -ne 1 -or $taskCases.Count -ne $taskExpected.Count -or
+    (Compare-Object $taskExpected @($taskCases.data.fault)) -or $taskResets.Count -ne 3 -or $taskErrors.Count -gt 0 -or
     -not $taskLedger.clean -or @($taskLedger.resources).Count -gt 0) {
     throw "Title surface component smoke failed: PID=$($taskProbe.Id), cases=$($taskCases.Count), errors=$($taskErrors.Count). Inspect $taskRoot"
 }

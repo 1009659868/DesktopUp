@@ -390,6 +390,95 @@ public sealed class PosterCatalogTests
     }
 
     [Fact]
+    public void CatalogReadDuringUncommittedFirstSeedReturnsCommittedSnapshot()
+    {
+        using var fixture = new Fixture();
+        using var writer = fixture.Open();
+        using var reader = fixture.Open();
+        // Keep the real seed mutation open. No sleeps, thread scheduling or retries:
+        // the reader must see the old committed snapshot, not SQLITE_LOCKED or dirty rows.
+        var result = writer.ExecuteCompareAndSwap(0, "held-first-seed", (connection, transaction, revision) =>
+        {
+            SqlitePosterRepository.InsertPoster(connection, transaction, Configuration(), revision);
+            var beforeCommit = new SqlitePosterCatalogRepository(reader).List();
+            Assert.Empty(beforeCommit.Posters);
+            Assert.Equal(0, beforeCommit.Revision);
+            Assert.False(beforeCommit.ProfileInitialized);
+        });
+        Assert.True(result.Succeeded);
+        var committed = new SqlitePosterRepository(reader).GetOrCreateDefault(Configuration());
+        Assert.Equal(1, committed.Revision);
+        Assert.Single(new SqlitePosterCatalogRepository(reader).List().Posters);
+        Assert.Equal(1L, fixture.Scalar("SELECT COUNT(*) FROM state_operations;"));
+    }
+
+    [Fact]
+    public void HeldCatalogSnapshotDoesNotBlockSeedAndDoesNotMixRevisions()
+    {
+        using var fixture = new Fixture();
+        using var reader = fixture.Open();
+        using var writer = fixture.Open();
+        reader.ExecuteRead((connection, transaction) =>
+        {
+            var before = SqlitePosterCatalogRepository.ReadCatalog(connection, transaction);
+            Assert.Empty(before.Posters);
+            Assert.Equal(1, new SqlitePosterRepository(writer).GetOrCreateDefault(Configuration()).Revision);
+            var sameSnapshot = SqlitePosterCatalogRepository.ReadCatalog(connection, transaction);
+            Assert.Equal(before.Revision, sameSnapshot.Revision);
+            Assert.Equal(before.ProfileInitialized, sameSnapshot.ProfileInitialized);
+            Assert.Empty(sameSnapshot.Posters);
+            return true;
+        });
+        Assert.Equal(1, new SqlitePosterCatalogRepository(reader).List().Revision);
+        Assert.Single(new SqlitePosterCatalogRepository(reader).List().Posters);
+    }
+
+    [Fact]
+    public void FailedSeedRemainsInvisibleAndDoesNotConsumeTheOperation()
+    {
+        using var fixture = new Fixture();
+        using var writer = fixture.Open();
+        using var reader = fixture.Open();
+        Assert.Throws<InvalidOperationException>(() => writer.ExecuteCompareAndSwap(0, "rollback-seed",
+            (connection, transaction, revision) =>
+            {
+                SqlitePosterRepository.InsertPoster(connection, transaction, Configuration(), revision);
+                Assert.Empty(new SqlitePosterCatalogRepository(reader).List().Posters);
+                throw new InvalidOperationException("Injected before commit.");
+            }));
+        Assert.Equal(0, reader.ReadHead().Revision);
+        Assert.Empty(new SqlitePosterCatalogRepository(reader).List().Posters);
+        Assert.Equal(0L, fixture.Scalar("SELECT COUNT(*) FROM state_operations;"));
+        Assert.Equal(1, new SqlitePosterRepository(reader).GetOrCreateDefault(Configuration()).Revision);
+    }
+
+    [Fact]
+    public async Task ConcurrentFirstSeedRepeatedOnFreshProfilesHasOneCommitPerProfile()
+    {
+        // Fixed run count, not retry-until-success. Both deterministic lock-order tests
+        // above remain the primary regression; this exercises real concurrent scheduling.
+        for (int iteration = 0; iteration < 32; iteration++)
+        {
+            using var fixture = new Fixture();
+            using var first = fixture.Open();
+            using var second = fixture.Open();
+            var start = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            Task<PosterStateSnapshot> Seed(SqliteStateStore store) => Task.Run(async () =>
+            {
+                await start.Task;
+                return new SqlitePosterRepository(store).GetOrCreateDefault(Configuration());
+            });
+            var a = Seed(first); var b = Seed(second);
+            start.SetResult();
+            var results = await Task.WhenAll(a, b);
+            Assert.Equal(results[0], results[1]);
+            Assert.Equal(1, first.ReadHead().Revision);
+            Assert.Single(new SqlitePosterCatalogRepository(first).List().Posters);
+            Assert.Equal(1L, fixture.Scalar("SELECT COUNT(*) FROM state_operations;"));
+        }
+    }
+
+    [Fact]
     public void MissingCurrentProfileFailsClosedWithoutResettingTheDatabase()
     {
         using var fixture = new Fixture();

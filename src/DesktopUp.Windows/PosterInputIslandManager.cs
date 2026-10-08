@@ -237,6 +237,56 @@ public sealed class PosterInputIslandManager : IInputRegionHost
         return true;
     }
 
+    // Paint/input motion may not reposition HWNDs, cancel menus or replace a held gesture.
+    // A blocked tick leaves BOTH the old hit map and old painted pose in place.
+    public bool CanAnimateTitle => CanPublishTitle(false);
+    public bool CanUpdateTitleSize => CanPublishTitle(true);
+    private bool CanPublishTitle(bool sizeChange) => !_disposed && WindowHandle != 0 && !_routingSuspended && _layout is not null &&
+        !DesktopMenuInteraction.ProtectsSurface(WindowHandle) &&
+        _capture is null && _pressedRegion is null && _contextPress is null && _router.Capture is null &&
+        _contextNative.TryReadProtection(out var protection) && TitleCloudInputGeometry.AllowsProtection(protection,sizeChange);
+
+    public bool TryApplyTitleMotion(PosterInputLayoutSnapshot layout, bool sizeChange = false)
+    {
+        if (!CanPublishTitle(sizeChange) || _layout is null ||
+            !TitleCloudInputGeometry.IsTitleOnlyReplacement(_layout, layout) || !ValidateFrameAndLayout(_frame, layout) ||
+            !_router.IsCurrent(_session, _layout.Revision)) return false;
+        nint region = BuildWindowRegion(layout);
+        if (region == 0) return false;
+        if (SetWindowRgn(WindowHandle, region, redraw: false) == 0) { _ = DeleteObject(region); return false; }
+        if (_router.Publish(_session, _frame, layout)) { _layout = layout; return true; }
+        // Publication is UI-thread atomic, but retain a native rollback for invariant failure.
+        nint previous = BuildWindowRegion(_layout);
+        if (previous != 0 && SetWindowRgn(WindowHandle, previous, redraw: false) != 0) return false;
+        if (previous != 0) _ = DeleteObject(previous);
+        DisableRoutingNative();
+        throw new InvalidOperationException("Cannot restore cloud input after rejected publication.");
+    }
+
+    // Read-only native evidence, not injection: compare the actual HRGN with published geometry.
+    public bool VerifyTitleRegionForProbe(int height)
+    {
+        if (_layout is null || WindowHandle == 0) return false;
+        nint region = CreateRectRgn(0, 0, 0, 0);
+        if (region == 0) return false;
+        try
+        {
+            if (GetWindowRgn(WindowHandle, region) == 0) return false;
+            for (int y = 0; y < Math.Min(height, _layout.FrameHeight); y++)
+                for (int x = 0; x < _layout.FrameWidth; x++)
+                {
+                    bool expected = PosterInputGeometry.InsideRoundedFrame(x, y, _layout) && _layout.Regions.Any(r =>
+                        PosterInputGeometry.CapturesPointer(r) && x >= r.Bounds.X && x < r.Bounds.Right && y >= r.Bounds.Y && y < r.Bounds.Bottom);
+                    if (PtInRegion(region, x, y) != expected) return false;
+                }
+            return true;
+        }
+        finally { _ = DeleteObject(region); }
+    }
+
+    [DllImport("user32.dll")] private static extern int GetWindowRgn(nint window, nint region);
+    [DllImport("gdi32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool PtInRegion(nint region, int x, int y);
+
     public bool ApplyLayout(
         DesktopPixelRect frame,
         PosterInputLayoutSnapshot layout)

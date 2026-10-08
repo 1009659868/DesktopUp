@@ -71,13 +71,14 @@ $taskStable = ($taskBinding | ConvertTo-Json -Depth 5 -Compress) -ceq (@(Get-Lam
 $taskPngs = @(Get-ChildItem -LiteralPath $taskData -Filter 'lamp-*.png' -File | Sort-Object Name | ForEach-Object {
     [pscustomobject]@{ Name = $_.Name; Length = $_.Length; SHA256 = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash }
 })
-$taskExpectedPngs = @('preview','transparent','second-poster','color-picker') | ForEach-Object {
+$taskExpectedPngs = @('preview','transparent','second-poster','color-picker','title-ink','title-hidden') | ForEach-Object {
     'lamp-'+$_+'-center.png'; 'lamp-'+$_+'-poster-xaml.png'
 }
 $taskExpectedPngs += 'lamp-color-picker-popup.png'
 $taskMotionCases = @('real-shared-motion-frames','editing-stops-shared-motion','per-poster-motion-disabled-preview',
     'global-pause-stops-shared-motion','all-collapsed-motion-resources-zero','environment-suspend-motion-resources-zero',
-    'scene-host-failure-detaches-only-decoration')
+    'scene-host-failure-detaches-only-decoration','transparent-title-colors-preview-cancel-single-commit-peer-isolation',
+    'title-visibility-immediate-single-commit-keeps-name-geometry-and-peer')
 $taskMotionObserved = $false
 if ($taskDone.Count -eq 1) {
     $taskObservedNames = @($taskDone[0].data.observations | ForEach-Object { $_.name })
@@ -88,6 +89,7 @@ if ($taskDone.Count -eq 1) {
     elseif (!$taskFrameObservation[0].Scene.ReducedMotion -and !$taskFrameObservation[0].Scene.GlobalMotionPaused) {
         $taskMotionObserved = $taskMotionObserved -and $taskDone[0].data.timerAdvanceObserved -eq $true -and
             $taskDone[0].data.pointerHandlerObserved -eq $true -and $taskDone[0].data.idleHandlerObserved -eq $true
+        $taskMotionObserved = $taskMotionObserved -and 'held-item-and-refresh-keep-lamp-following' -in $taskObservedNames
     }
 }
 $taskPassed = $taskProcess.ExitCode -eq 0 -and $taskDone.Count -eq 1 -and $taskDone[0].data.passed -and

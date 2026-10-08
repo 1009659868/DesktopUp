@@ -57,11 +57,11 @@ public partial class App
                 if (stage == 3) { Begin("rain-max-active"); stage = 4; return; }
                 if (stage == 5) { Begin("global-paused-baseline"); stage = 6; return; }
                 var scenes = Scenes(); int timers = _ledger!.ActiveResources.Count(r => r == "timer.scene-motion");
-                Require(scenes.All(s => s.Pool == 64 && s.Nodes == 67 && s.VisibleDrops == 64 && s.CloudVisible && s.DecorativeOnly),
+                Require(scenes.All(s => s.Pool == 64 && s.Nodes == 70 && s.TitleNodes==4 && s.VisibleDrops == 64 && s.CloudVisible && s.DecorativeOnly),
                     "Particle/decoration bound failed.");
                 Require(timers <= 1 && (stage != 6 || timers == 0 && scenes.All(s => !s.Running)), "Shared clock/pause bound failed.");
                 using var process = Process.GetCurrentProcess();
-                samples.Add(new { phase, sample = ++sampled, timers, nodes = scenes.Sum(s => s.Nodes),
+                samples.Add(new { phase, sample = ++sampled, timers, nodes = scenes.Sum(s => s.Nodes+s.TitleNodes), titleNodes=scenes.Sum(s=>s.TitleNodes),
                     drops = scenes.Sum(s => s.VisibleDrops), process.WorkingSet64, process.HandleCount,
                     allocatedBytes = GC.GetTotalAllocatedBytes(false) - allocated, frames = scenes.Sum(s => s.Frames) - firstFrames });
                 if (sampled < 12) return;

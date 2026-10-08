@@ -11,9 +11,15 @@ public sealed record PosterContentParameters(double ItemWidthDip = 118, double I
     public double RowHeightDip => ItemHeightDip + 7 + LabelHeightDip + 13;
 }
 public sealed record PosterThemeParameters(string Background = "#21242A", string Foreground = "#F2F2F2", string Accent = "#99CEFF");
+public sealed record PosterTitleColors(string Text = "#F2F2F2", string Actions = "#FFFFFF");
 public sealed record PosterPresentationParameters(PosterContentParameters Content, PosterThemeParameters Theme,
     PosterContentPreferences? Preferences = null, LampTemplateParameters? Lamp = null,
-    IReadOnlyDictionary<string, TemplateRecipeInstance>? RecipeInstances = null);
+    IReadOnlyDictionary<string, TemplateRecipeInstance>? RecipeInstances = null, PosterTitleColors? TitleColors = null,
+    bool? ShowTitle = null)
+{
+    // Absent in older configurations: preserve the original visible title without a write.
+    public bool IsTitleVisible => ShowTitle ?? true;
+}
 public sealed record ResolvedPosterPresentation(string EffectiveTemplateKey, PosterPresentationParameters Parameters,
     PosterContentMetrics Metrics, bool CanEdit, bool IsLegacy, string? Warning)
 {
@@ -35,7 +41,7 @@ public sealed record ResolvedPosterPresentation(string EffectiveTemplateKey, Pos
 public static class PosterPresentationPolicy
 {
     public const string AdaptiveGridLayout = "adaptive-grid";
-    public const int SchemaVersion = 4;
+    public const int SchemaVersion = 6;
     public const int MaximumJsonLength = 2 * 1024 * 1024;
     public const double HorizontalPaddingDip = 28;
     public static bool IsBuiltIn(string? key) => key is "night-ops" or "basic-box" or LampTemplatePolicy.TemplateKey || SceneCapabilityRegistry.Templates.Any(r => r.Id == key);
@@ -57,7 +63,29 @@ public static class PosterPresentationPolicy
             return "Icon must fit inside the content cell with its padding.";
         if (!Color(t.Background) || !Color(t.Foreground) || !Color(t.Accent))
             return "Theme colors must use #RRGGBB; executable/resource expressions are not allowed.";
+        if (value.TitleColors is { } ink && (!Color(ink.Text) || !Color(ink.Actions)))
+            return "Title colors must use #RRGGBB.";
         return null;
+    }
+
+    public static string? ValidateStoredParameters(string json, string template)
+    {
+        try
+        {
+            _ = ReadStoredParameters(json, template);
+            return null;
+        }
+        catch (Exception e) when (e is JsonException or ArgumentException or InvalidOperationException or OverflowException or KeyNotFoundException)
+        { return e.Message; }
+    }
+
+    // Storage inspection does not grant edit/render permission and never writes read projections.
+    public static PosterPresentationParameters ReadStoredParameters(string json, string template)
+    {
+        using var document = Parse(json);
+        var value = Read(document.RootElement, template, out _);
+        if (Validate(value) is { } error) throw new ArgumentException(error);
+        return value;
     }
 
     public static ResolvedPosterPresentation Resolve(PosterDefinition poster)
@@ -107,6 +135,10 @@ public static class PosterPresentationPolicy
             if (oldDoc.RootElement.TryGetProperty("templates", out _) &&
                 Read(oldDoc.RootElement, previous.TemplateKey, out _).Lamp is not null && value.Lamp is null)
                 return "Presentation edits must retain the saved lamp override; reset by writing its defaults explicitly.";
+            if (Read(oldDoc.RootElement, previous.TemplateKey, out _).TitleColors is not null && value.TitleColors is null)
+                return "Presentation edits must retain title colors; reset by writing defaults explicitly.";
+            if (Read(oldDoc.RootElement, previous.TemplateKey, out _).ShowTitle is not null && value.ShowTitle is null)
+                return "Presentation edits must retain title visibility; reset by writing true explicitly.";
             var expectedLegacy = LegacyPayload(oldDoc.RootElement);
             var actualLegacy = newDoc.RootElement.TryGetProperty("legacy", out var retained) ? retained : (JsonElement?)null;
             if (expectedLegacy is { } expected && (actualLegacy is null || !JsonElement.DeepEquals(expected, actualLegacy.Value)) ||
@@ -135,7 +167,9 @@ public static class PosterPresentationPolicy
                     var retained = Read(previous.RootElement, "night-ops", out _);
                     if (Validate(retained) is { } invalid) throw new ArgumentException(invalid);
                     value = value with { Preferences = value.Preferences ?? retained.Preferences, Lamp = value.Lamp ?? retained.Lamp,
-                        RecipeInstances = value.RecipeInstances ?? retained.RecipeInstances };
+                        RecipeInstances = value.RecipeInstances ?? retained.RecipeInstances,
+                        TitleColors = value.TitleColors ?? retained.TitleColors,
+                        ShowTitle = value.ShowTitle ?? retained.ShowTitle };
                 }
             }
             catch (Exception e) when (e is JsonException or InvalidOperationException or OverflowException or KeyNotFoundException)
@@ -145,7 +179,10 @@ public static class PosterPresentationPolicy
         using var bytes = new MemoryStream();
         using (var writer = new Utf8JsonWriter(bytes))
         {
-            writer.WriteStartObject(); writer.WriteNumber("schemaVersion", value.RecipeInstances is not null || value.Lamp is not null ? SchemaVersion : value.Preferences is null ? 1 : 2);
+            // Explicit visibility edits use v6; untouched older payloads keep their format.
+            // Older readers must refuse v6 instead of silently discarding hidden-title intent.
+            writer.WriteStartObject(); writer.WriteNumber("schemaVersion", value.ShowTitle is not null ? SchemaVersion : value.TitleColors is not null ? 5 :
+                value.RecipeInstances is not null || value.Lamp is not null ? 4 : value.Preferences is null ? 1 : 2);
             writer.WritePropertyName("content"); writer.WriteStartObject();
             writer.WriteNumber("itemWidthDip", value.Content.ItemWidthDip);
             writer.WriteNumber("itemHeightDip", value.Content.ItemHeightDip);
@@ -159,6 +196,13 @@ public static class PosterPresentationPolicy
             writer.WriteString("foreground", value.Theme.Foreground.ToUpperInvariant());
             writer.WriteString("accent", value.Theme.Accent.ToUpperInvariant());
             writer.WriteEndObject();
+            if (value.ShowTitle is { } showTitle) writer.WriteBoolean("showTitle", showTitle);
+            if (value.TitleColors is { } ink)
+            {
+                writer.WritePropertyName("titleColors"); writer.WriteStartObject();
+                writer.WriteString("text", ink.Text.ToUpperInvariant()); writer.WriteString("actions", ink.Actions.ToUpperInvariant());
+                writer.WriteEndObject();
+            }
             if (previous is not null && LegacyPayload(previous.RootElement) is { } retained)
             { writer.WritePropertyName("legacy"); retained.WriteTo(writer); }
             if (value.Preferences is { } preferences)
@@ -258,15 +302,30 @@ public static class PosterPresentationPolicy
                 throw new ArgumentException("Legacy rowHeight cannot be represented safely; original data retained.");
             return defaults with { Content = content };
         }
-        if (!version.TryGetInt32(out int v) || v is not (1 or 2 or 3 or SchemaVersion)) throw new ArgumentException("Unknown presentation schema version.");
+        if (!version.TryGetInt32(out int v) || v is < 1 or > SchemaVersion) throw new ArgumentException("Unknown presentation schema version.");
         if (v == 1) Members(root, "schemaVersion", "content", "theme", "legacy");
         else if (v == 2) Members(root, "schemaVersion", "content", "theme", "legacy", "preferences");
         else if (v == 3) Members(root, "schemaVersion", "content", "theme", "legacy", "preferences", "templates");
-        else Members(root, "schemaVersion", "content", "theme", "legacy", "preferences", "templates", "recipes");
+        else if (v == 4) Members(root, "schemaVersion", "content", "theme", "legacy", "preferences", "templates", "recipes");
+        else if (v == 5) Members(root, "schemaVersion", "content", "theme", "legacy", "preferences", "templates", "recipes", "titleColors");
+        else Members(root, "schemaVersion", "content", "theme", "legacy", "preferences", "templates", "recipes", "titleColors", "showTitle");
         if (root.TryGetProperty("legacy", out var retained) && retained.ValueKind != JsonValueKind.Object)
             throw new ArgumentException("Legacy payload must be an object.");
         if (v == 4 && !root.TryGetProperty("templates", out _) && !root.TryGetProperty("recipes", out _))
             throw new ArgumentException("Missing v4 template parameters.");
+        PosterTitleColors? titleColors = null;
+        bool? showTitle = null;
+        if (v == 6)
+        {
+            if (!root.TryGetProperty("showTitle", out _)) throw new ArgumentException("Missing v6 title visibility.");
+            showTitle = Boolean(root, "showTitle", true);
+        }
+        if (v == 5 || v == 6 && root.TryGetProperty("titleColors", out _))
+        {
+            if (!root.TryGetProperty("titleColors", out var ink)) throw new ArgumentException("Missing v5 title colors.");
+            Members(ink, "text", "actions");
+            titleColors = new(Text(ink, "text", ""), Text(ink, "actions", ""));
+        }
         var c = defaults.Content; var t = defaults.Theme;
         if (root.TryGetProperty("content", out var contentNode))
         {
@@ -287,7 +346,7 @@ public static class PosterPresentationPolicy
             else if (v == 2) throw new ArgumentException("Missing v2 preferences.");
         }
         LampTemplateParameters? lamp = null;
-        if (v == 3 || v == 4 && root.TryGetProperty("templates", out _))
+        if (v == 3 || v >= 4 && root.TryGetProperty("templates", out _))
         {
             if (!root.TryGetProperty("templates", out var templates)) throw new ArgumentException("Missing v3 template parameters.");
             Members(templates, "lamp");
@@ -295,7 +354,7 @@ public static class PosterPresentationPolicy
             lamp = ReadLamp(node);
         }
         IReadOnlyDictionary<string, TemplateRecipeInstance>? recipes = null;
-        if (v == 4 && root.TryGetProperty("recipes", out var recipeNodes))
+        if (v >= 4 && root.TryGetProperty("recipes", out var recipeNodes))
         {
             if (recipeNodes.ValueKind != JsonValueKind.Array || recipeNodes.GetArrayLength() > TemplateRecipeCatalog.MaximumTemplates)
                 throw new ArgumentException("Invalid recipe instance array.");
@@ -303,10 +362,11 @@ public static class PosterPresentationPolicy
             foreach (var entry in recipeNodes.EnumerateArray())
             {
                 Members(entry, "definition", "values");
-                var recipe = TemplateRecipeCodec.Parse(entry.GetProperty("definition").GetRawText(), stored: true);
-                var values = entry.GetProperty("values"); Members(values, recipe.Schema.Properties.Select(p => p.Key).ToArray());
+                var storedRecipe = TemplateRecipeCodec.Parse(entry.GetProperty("definition").GetRawText(), stored: true);
+                var recipe = TemplateRecipeInstancePolicy.InstalledBuiltInRevision(storedRecipe);
+                var values = entry.GetProperty("values"); Members(values, storedRecipe.Schema.Properties.Select(p => p.Key).ToArray());
                 var instance = TemplateRecipeInstancePolicy.DefaultValues(recipe);
-                foreach (var p in recipe.Schema.Properties)
+                foreach (var p in storedRecipe.Schema.Properties)
                 {
                     var raw = values.GetProperty(p.Key);
                     var value = p.Kind switch
@@ -322,7 +382,7 @@ public static class PosterPresentationPolicy
             }
             recipes = new System.Collections.ObjectModel.ReadOnlyDictionary<string, TemplateRecipeInstance>(items);
         }
-        return new(c, t, preferences, lamp, recipes);
+        return new(c, t, preferences, lamp, recipes, titleColors, showTitle);
     }
 
     private static LampTemplateParameters ReadLamp(JsonElement node)

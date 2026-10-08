@@ -3,6 +3,11 @@ using DesktopUp.Application;
 using DesktopUp.Domain;
 using DesktopUp.Infrastructure;
 
+if (args.Length > 0 && args[0].StartsWith("portable-", StringComparison.Ordinal))
+{
+    PortableModuleFixture.Run(args); return;
+}
+
 if (args.Length is not (2 or 3) || args[0] is not ("seed" or "backup" or "restore" or "check"))
     throw new ArgumentException("Usage: SceneModuleFixture seed|backup|restore|check <isolated-root>");
 string moduleId = args.Length == 3 ? args[2].ToLowerInvariant() : "lamp";

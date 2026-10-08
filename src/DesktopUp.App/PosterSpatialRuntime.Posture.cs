@@ -237,13 +237,26 @@ internal sealed partial class PosterSpatialRuntime
     {
         var restorations = new List<PosterVisualWindow.PreparedSpatialFrame>();
         bool restored = true;
+        state.TryGetCurrent(out var committed);
         foreach (var participant in participants)
         {
             try
             {
                 var frame = participant.PreparePostureRestore();
                 if (frame is not null) restorations.Add(frame);
-                else if (participant.WindowHandle != 0) restored = false;
+                else if (participant.WindowHandle != 0)
+                {
+                    // Projection delivery cancels runs BEFORE the session registry disposes deleted
+                    // windows. A proven-deleted member has no committed geometry to restore. Its
+                    // layout lease was released above; retire its input until normal disposal.
+                    // Missing/unreadable state and every still-existing member remain strict failures.
+                    if (committed is not null && participant.PosterId is { } removedId && !committed.PostersById.ContainsKey(removedId))
+                    {
+                        participant.SuspendInput();
+                        log.Write("info", "spatial.deleted_participant_retired", new { requestId, posterId = removedId, committed.Revision });
+                    }
+                    else restored = false;
+                }
             }
             catch (Exception exception)
             {

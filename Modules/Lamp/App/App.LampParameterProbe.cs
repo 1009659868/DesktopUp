@@ -74,6 +74,36 @@ internal sealed partial class PosterVisualWindow
         PaintSceneMotion(seconds, physical, !spatial.SceneReducedMotion);
         return ReadLampNativeForProbe();
     }
+
+    internal void VerifyHeldLampFollowForProbe()
+    {
+        // Same synchronous handler turn: no native cursor injection or timer race.
+        var before = ReadCompositionForProbe();
+        void Follow(double x)
+        {
+            var size = ReadLampSceneForProbe();
+            var point = new LampScenePoint(size.Width * x, size.Height * .55);
+            var painted = PaintLampMotionForProbe(1, point).Scene;
+            RefreshScene(); // the old implementation reset to the default light here
+            var refreshed = ReadLampSceneForProbe();
+            if (!painted.FollowingPointer || !refreshed.FollowingPointer ||
+                painted.LightX != refreshed.LightX || painted.LightY != refreshed.LightY ||
+                Math.Abs(refreshed.LightX - point.X) > 2)
+                throw new InvalidOperationException("A repaint or held gesture reset the lamp pointer.");
+        }
+        Follow(.22);
+        try
+        {
+            _ = BeginIndependentItemDragForProbe(); // original published-input protocol; never release/commit
+            if (!HasContentGesture) throw new InvalidOperationException("Expected held Item gesture.");
+            Follow(.3); Follow(.7); Follow(.2);
+        }
+        finally { CancelContentGesture("lamp-follow-probe"); }
+        Follow(.6);
+        if (HasContentGesture || ReadCompositionForProbe().StoredJson != before.StoredJson ||
+            ReadCompositionForProbe().Revision != before.Revision)
+            throw new InvalidOperationException("Read-only lamp follow wrote or retained a gesture.");
+    }
 }
 
 internal sealed partial class PosterSpatialRuntime
@@ -376,7 +406,66 @@ public partial class App
                             "Current template reset touched content, another poster or more than one revision.");
                         Observe("current-template-reset-only", window!, Bound(a, LampTemplatePolicy.Defaults), current);
                         motionFrames = _spatialRuntime.ReadLampNativeForProbe(a).Scene.MotionFrames;
-                        revision = current.Revision; Next(27, 650); break;
+                        revision = current.Revision; window!.RevealTitleColorsForProbe(); Next(260, 650); break;
+                    case 260:
+                        baseline = Bound(a, LampTemplatePolicy.Defaults);
+                        Require(_spatialRuntime.BackdropWindowForProbe(a).VerifyTitleChromeForProbe(), "Default title slots are not transparent/aligned.");
+                        window!.OpenTitleColorForProbe(false); window.SetTitleColorForProbe("#85B9ED"); Next(261); break;
+                    case 261:
+                        Require(current.Revision == revision && window!.CommonSettingsForProbe.Preview?.TitleColors?.Text == "#85B9ED",
+                            "Title preview did not retain its original target without writing.");
+                        Require(_spatialRuntime.BackdropWindowForProbe(a).VerifyTitleChromeForProbe(), "Title preview did not paint bare glyphs.");
+                        SameGeometry(baseline!, Bound(a, LampTemplatePolicy.Defaults), true);
+                        window!.FinishLampColorForProbe(false); Next(262); break;
+                    case 262:
+                        Require(current.Revision == revision && current.PostersById[a].Presentation.Parameters.TitleColors is null,
+                            "Cancelling title color wrote state.");
+                        window!.OpenTitleColorForProbe(false); window.SetTitleColorForProbe("#85B9ED");
+                        window.FinishLampColorForProbe(true); Next(263); break;
+                    case 263:
+                        Require(current.Revision == revision + 1 && current.PostersById[a].Presentation.Parameters.TitleColors == new PosterTitleColors("#85B9ED"),
+                            "Title text color did not save once.");
+                        Require(_spatialRuntime.BackdropWindowForProbe(a).VerifyTitleChromeForProbe(), "Saved title color mismatch.");
+                        SameGeometry(baseline!, Bound(a, LampTemplatePolicy.Defaults), true);
+                        window!.OpenTitleColorForProbe(true); window.SetTitleColorForProbe("#E4BF7A");
+                        window.FinishLampColorForProbe(true); Next(264); break;
+                    case 264:
+                        Require(current.Revision == revision + 2 &&
+                            current.PostersById[a].Presentation.Parameters.TitleColors == new PosterTitleColors("#85B9ED", "#E4BF7A") &&
+                            current.PostersById[b].Presentation.Parameters.TitleColors is null,
+                            "Action color lost the title color or leaked to peer.");
+                        Require(_spatialRuntime.BackdropWindowForProbe(a).VerifyTitleChromeForProbe(), "Saved action ink mismatch.");
+                        SameGeometry(baseline!, Bound(a, LampTemplatePolicy.Defaults), true);
+                        Observe("transparent-title-colors-preview-cancel-single-commit-peer-isolation", window!, Bound(a, LampTemplatePolicy.Defaults), current);
+                        revision = current.Revision;
+                        capture = Capture(window!, a, "title-ink"); Next(265, 0); break;
+                    case 265:
+                        if (capture?.IsCompleted != true) break;
+                        capture.GetAwaiter().GetResult();
+                        baseline = Bound(a, LampTemplatePolicy.Defaults);
+                        window!.SetTitleVisibilityForProbe(false); Next(266); break;
+                    case 266:
+                        Require(current.Revision == revision + 1 && current.PostersById[a].Presentation.Parameters.ShowTitle == false &&
+                            current.PostersById[b].Presentation.Parameters.ShowTitle is null &&
+                            window!.VerifyTitleVisibilityControlForProbe(false) &&
+                            _spatialRuntime.BackdropWindowForProbe(a).VerifyTitleVisibilityForProbe(false),
+                            "Title toggle did not hide both name copies/save once, or changed peer/action visibility.");
+                        SameGeometry(baseline!, Bound(a, LampTemplatePolicy.Defaults), true);
+                        Observe("title-visibility-immediate-single-commit-keeps-name-geometry-and-peer", window!, Bound(a, LampTemplatePolicy.Defaults), current);
+                        capture = Capture(window!, a, "title-hidden"); Next(267, 0); break;
+                    case 267:
+                        if (capture?.IsCompleted != true) break;
+                        capture.GetAwaiter().GetResult();
+                        window!.SetTitleVisibilityForProbe(true); Next(268); break;
+                    case 268:
+                        Require(current.Revision == revision + 2 && window!.VerifyTitleVisibilityControlForProbe(true) &&
+                            _spatialRuntime.BackdropWindowForProbe(a).VerifyTitleVisibilityForProbe(true),
+                            "Showing title again did not retain name/controls or save once.");
+                        SameGeometry(baseline!, Bound(a, LampTemplatePolicy.Defaults), true);
+                        revision = current.Revision;
+                        window!.RevealLampParametersForProbe();
+                        motionFrames = _spatialRuntime.ReadLampNativeForProbe(a).Scene.MotionFrames;
+                        Next(27, 650); break;
                     case 27:
                         var moving = Bound(a, LampTemplatePolicy.Defaults);
                         observations.Add(new { name = "motion-gate-readback", previousFrames = motionFrames, moving.Scene,
@@ -402,6 +491,8 @@ public partial class App
                             Require(!idle1.Scene.FollowingPointer && idle0.Scene.FixtureAngle != idle1.Scene.FixtureAngle &&
                                 idle0.Scene.LightX != idle1.Scene.LightX, "Pointer leave did not restore lamp and light idle sway.");
                             SameGeometry(moving, idle1, true); idleHandlerObserved = true;
+                            _spatialRuntime.BackdropWindowForProbe(a).VerifyHeldLampFollowForProbe();
+                            observations.Add(new { name = "held-item-and-refresh-keep-lamp-following", nativePointer = false, persisted = false });
                             observations.Add(new { name = "pointer-follow-and-leave-shared-paint-handler", followed = followed.Scene,
                                 idleStart = idle0.Scene, idleLater = idle1.Scene, nativePointer = false });
                         }

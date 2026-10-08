@@ -25,6 +25,15 @@ public sealed partial class ControlCenterWindow
         if (!LampInputAvailable() || _lampColorFlyout is not null || !_lampSwatches.ContainsKey(key) ||
             _settings.ProtectsInteraction ||
             DesktopInteractionConflicts(_lampRenderedPosterId!)) return;
+        OpenPosterColorPicker(key, _lampSwatches[key].Button, _lampColors[key].Text,
+            LampInputAvailable, color => _lampColors[key].Text = $"#{color.R:X2}{color.G:X2}{color.B:X2}");
+    }
+
+    // One popup owner and the original settings draft/cancel/commit lifecycle for both
+    // template-specific colors and the host's title colors. Never a second persistence path.
+    private void OpenPosterColorPicker(string key, Button anchor, string initialColor,
+        Func<bool> available, Action<global::Windows.UI.Color> changed)
+    {
         var body = new StackPanel { Spacing = 10, Width = 240, RequestedTheme = UiCRoot.ActualTheme };
         // Popup content is outside the center's visual subtree. Give newly created controls
         // the same scoped resources, instead of relying on the application's system defaults.
@@ -37,9 +46,9 @@ public sealed partial class ControlCenterWindow
         }
         var picker = new ColorPicker { IsAlphaEnabled = false, IsMoreButtonVisible = false,
             IsColorSliderVisible = true, IsColorChannelTextInputVisible = false, IsHexInputVisible = false, Width = 240 };
-        if (TryLampColor(_lampColors[key].Text, out var initial)) picker.Color = initial;
+        if (TryLampColor(initialColor, out var initial)) picker.Color = initial;
         var flyout = new Flyout { Content = body };
-        _lampColorFlyout = flyout; _lampColorPicker = picker; _lampColorTarget = _lampRenderedPosterId; _lampColorKey = key;
+        _lampColorFlyout = flyout; _lampColorPicker = picker; _lampColorTarget = _view?.SelectedPosterId; _lampColorKey = key;
         _settingsHeld = true; _settingsTimer?.Stop();
         body.Children.Add(new TextBlock { Text = "当前海报 · 颜色", FontSize = 12 }); body.Children.Add(picker);
         var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
@@ -54,9 +63,9 @@ public sealed partial class ControlCenterWindow
         };
         picker.ColorChanged += (_, e) =>
         {
-            if (!ReferenceEquals(_lampColorPicker, picker) || _lampColorTarget != _view?.SelectedPosterId || !LampInputAvailable()) return;
+            if (!ReferenceEquals(_lampColorPicker, picker) || _lampColorTarget != _view?.SelectedPosterId || !available()) return;
             // TextChanging synchronously registers the same six-field session draft.
-            _lampColors[key].Text = $"#{e.NewColor.R:X2}{e.NewColor.G:X2}{e.NewColor.B:X2}";
+            changed(e.NewColor);
         };
         flyout.Closed += (_, _) =>
         {
@@ -64,12 +73,12 @@ public sealed partial class ControlCenterWindow
             CompleteLampColorPicker(false);
         };
         SettingsInteractionChanged?.Invoke(); RenderTemplateSamples();
-        flyout.ShowAt(_lampSwatches[key].Button);
+        flyout.ShowAt(anchor);
     }
     private void CompleteLampColorPicker(bool apply)
     {
         if (_lampColorFlyout is null) return;
-        if (apply && _lampColorTarget == _view?.SelectedPosterId && _settings.Preview?.Setting is (PosterSetting.Lamp or PosterSetting.TemplateParameters))
+        if (apply && _lampColorTarget == _view?.SelectedPosterId && _settings.Preview?.Setting is (PosterSetting.Lamp or PosterSetting.TemplateParameters or PosterSetting.TitleColors))
         {
             // Invalid text in another field remains protected; choosing a color cannot save it.
             if (!_settings.IsPreviewValid) { RenderSettings(); return; }

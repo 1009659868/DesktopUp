@@ -54,7 +54,7 @@ internal sealed class PortableProfileController(
         var pending = plan.PendingPosterIds.Select(id => all.TryGetValue(id, out var p) ? p.Title : id);
         return (plan.IsRetry ? $"可安置 {plan.Updates.Count} 张。" :
             $"{(plan.Mode == PortableImportMode.Append ? "追加" : "替换")}：导入 {plan.Creates.Count} 张，移除本机 {plan.Removes.Count} 张海报配置。\n" +
-            $"全局偏好：{(plan.ImportSettings ? "应用文件中的提示动效/性能偏好" : "保持本机")}。不会移动或删除真实文件。") +
+            $"全局偏好：{(plan.ImportSettings ? "应用文件中的中心主题/动效/性能偏好（旧包未包含的设置保持本机）" : "保持本机")}。模板册及海报专属参数独立导入；替换海报不会清空本机模板册。不会移动或删除真实文件。") +
             $"\n等待安置 {plan.PendingPosterIds.Count} 张（保留原尺寸与状态，暂不显示）：\n" +
             string.Join("\n", pending.Select(n => "• " + n)) + "\n" + string.Join("\n", plan.Warnings.Distinct());
     }

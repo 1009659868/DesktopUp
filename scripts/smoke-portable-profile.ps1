@@ -4,6 +4,7 @@ param(
     [string]$FixtureDirectory,
     [string]$OutputRoot,
     [int[]]$PosterCounts = @(0,1,3),
+    [switch]$FullConfiguration,
     [switch]$CheckOnly
 )
 $ErrorActionPreference = 'Stop'
@@ -49,6 +50,7 @@ $taskResults = @()
 function Invoke-PortableGate {
     param([int]$Count, [string]$Data, [switch]$Restart)
     $taskFlags = '--portable-smoke --exit-after-ms=70000'
+    if ($FullConfiguration) { $taskFlags += ' --portable-full' }
     if ($Restart) { $taskFlags += ' --portable-restart' }
     $taskLog = Join-Path $Data 'logs\desktopup.jsonl'
     $taskPreviousLines = if (Test-Path -LiteralPath $taskLog) { [IO.File]::ReadAllLines($taskLog).Count } else { 0 }
@@ -71,6 +73,10 @@ function Invoke-PortableGate {
         $taskDone[0].data.checks -lt 1 -or (!$Restart -and @($taskDone[0].data.cases).Count -lt 7)) {
         throw 'The completion evidence does not match the requested count, mode or complete case list.'
     }
+    if ($FullConfiguration -and !$Restart -and
+        @($taskDone[0].data.cases) -notcontains 'full-template-catalog-instances-hidden-title-and-theme-seeded') {
+        throw 'The complete-configuration setup did not run.'
+    }
     if ((Get-FileHash -LiteralPath $taskExecutable -Algorithm SHA256).Hash -ne $taskExeHash -or
         (Get-FileHash -LiteralPath $taskAppAssembly -Algorithm SHA256).Hash -ne $taskAppHash -or
         (Get-FileHash -LiteralPath $taskFixtureAssembly -Algorithm SHA256).Hash -ne $taskFixtureHash) {
@@ -79,7 +85,7 @@ function Invoke-PortableGate {
     [pscustomobject]@{Result='PASS - AUTOMATED CONTROLLER/RUNTIME ONLY'; Posters=$Count; Restart=[bool]$Restart;
         ProcessId=$taskProcess.Id; ExitCode=$taskProcess.ExitCode; Checks=$taskDone[0].data.checks;
         Cases=@($taskDone[0].data.cases); ResourcesAfterExit=$taskStopped[0].data.activeResources;
-        DataRoot=$Data; NativePicker=$false; NativeMouse=$false; RealCrossHost=$false;
+        DataRoot=$Data; FullConfiguration=[bool]$FullConfiguration; NativePicker=$false; NativeMouse=$false; RealCrossHost=$false;
         AppExeHash=$taskExeHash; AppHash=$taskAppHash; FixtureHash=$taskFixtureHash}
 }
 foreach ($taskCount in ($PosterCounts | Sort-Object -Unique)) {

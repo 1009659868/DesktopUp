@@ -192,7 +192,11 @@ public partial class App : Microsoft.UI.Xaml.Application
             else if (_startupIntent.Arguments.Contains("--rain-scene-probe", StringComparer.Ordinal)) RunRainSceneProbe(actual, false);
             else if (_startupIntent.Arguments.Contains("--rain-scene-restart", StringComparer.Ordinal)) RunRainSceneProbe(actual, true);
 #endif
-            else if (_startupIntent.Arguments.Contains("--posture-groups-probe", StringComparer.Ordinal)) RunPostureGroupsProbe(_startupIntent.Arguments.Contains("--rr-chain"));
+            else if (_startupIntent.Arguments.Contains("--posture-groups-probe", StringComparer.Ordinal))
+            {
+                if (_startupIntent.Arguments.Contains("--rr-combinations")) RunPostureCombinationProbe(_startupIntent.Arguments.Contains("--rr-chain"));
+                else RunPostureGroupsProbe(_startupIntent.Arguments.Contains("--rr-chain"));
+            }
             else if (_startupIntent.Arguments.Contains("--scene-module-probe", StringComparer.Ordinal)) RunSceneModuleProbe(actual);
             else if (_startupIntent.Arguments.Contains("--content-source-probe", StringComparer.Ordinal)) RunContentSourceProbe(actual);
             else if (_startupIntent.Arguments.Contains("--content-browse-probe", StringComparer.Ordinal)) RunContentBrowseProbe(actual);

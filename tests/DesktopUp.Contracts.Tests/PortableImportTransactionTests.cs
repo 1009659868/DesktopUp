@@ -244,7 +244,7 @@ public sealed class PortableImportTransactionTests
             {
                 Posters = Enumerable.Range(1, count).Select(i => poster with { Key = "p" + i,
                     Title = "Imported " + i, StackOrder = i - 1 }).ToArray(),
-                Settings = new(true, DesktopUpPerformanceMode.Static)
+                Settings = new(true, DesktopUpPerformanceMode.Static) { CenterTheme = "light" }
             };
             int id = 0;
             return PortableProfilePlanner.Plan(document, Repository.Read(), topology ?? Topology(), mode, importSettings,

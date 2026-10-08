@@ -17,6 +17,7 @@ public readonly record struct SceneFrameContext(double Width, double Height, dou
     public double ContentTop { get; init; }
     public double FooterTop { get; init; }
     public DesktopUp.Domain.PosterTitleChromeKind TitleChrome { get; init; }
+    public bool TitleMotionPaused { get; init; }
 
     public static SceneFrameContext Create(double width, double height, double seconds,
         ScenePointer? pointer, bool visible, ScenePauseReason pauseReasons)
