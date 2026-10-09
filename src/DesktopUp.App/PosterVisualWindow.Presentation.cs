@@ -67,7 +67,7 @@ internal sealed partial class PosterVisualWindow
         static bool XamlNumber(double actual,double expected)=>double.IsFinite(actual) && double.IsFinite(expected) &&
             (actual==expected || actual==(double)(float)expected);
         var expected=target.Presentation;
-        if(_presentation!=expected || _renderedTitle!=target.Poster.Title || _window?.Title!="DesktopUp V3 · "+target.Poster.Title ||
+        if(!PresentationReadbackEquality.Same(_presentation,expected) || _renderedTitle!=target.Poster.Title || _window?.Title!="DesktopUp V3 · "+target.Poster.Title ||
             !VerifyWindowBackdrop() || _surface?.Child is not Grid structure ||
             !XamlNumber(structure.RowDefinitions[1].Height.Value,target.Poster.IsCollapsed?0:expected.MetaHeightDip) ||
             _contentCanvas is null || _itemsGrid?.Children.Contains(_contentCanvas)!=true || _contentSnapshot is not { } snapshot ||

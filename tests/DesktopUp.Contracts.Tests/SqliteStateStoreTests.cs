@@ -17,7 +17,7 @@ public sealed class SqliteStateStoreTests
 
         Assert.True(first.Succeeded);
         Assert.Equal(StateStoreInitializationStatus.Created, first.Status);
-        Assert.Equal(12, first.Head?.SchemaVersion);
+        Assert.Equal(14, first.Head?.SchemaVersion);
         Assert.Equal(0, first.Head?.Revision);
         Assert.Equal(StateStoreInitializationStatus.Ready, second.Status);
         Assert.Equal(first.Head?.Revision, second.Head?.Revision);
@@ -113,7 +113,7 @@ public sealed class SqliteStateStoreTests
         Assert.True(backup.Succeeded);
         Assert.Equal(1, backup.Revision);
         Assert.True(validation.IsValid);
-        Assert.Equal(12, validation.SchemaVersion);
+        Assert.Equal(14, validation.SchemaVersion);
         Assert.Equal(1, validation.Revision);
         Assert.Empty(Directory.EnumerateFiles(
             fixture.Paths.Backups,
@@ -144,7 +144,7 @@ public sealed class SqliteStateStoreTests
         Assert.True(File.Exists(Path.Combine(
             fixture.Paths.Backups,
             result.PreMigrationBackupFileName!)));
-        Assert.Equal(12, result.Head?.SchemaVersion);
+        Assert.Equal(14, result.Head?.SchemaVersion);
     }
 
     [Fact]
@@ -160,7 +160,7 @@ public sealed class SqliteStateStoreTests
         Assert.True(result.Succeeded, result.Error);
         Assert.Equal(StateStoreInitializationStatus.Migrated, result.Status);
         Assert.Equal(1, result.PreviousSchemaVersion);
-        Assert.Equal(12, result.Head?.SchemaVersion);
+        Assert.Equal(14, result.Head?.SchemaVersion);
         string backupPath = Path.Combine(
             fixture.Paths.Backups,
             result.PreMigrationBackupFileName!);

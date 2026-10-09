@@ -92,6 +92,8 @@ public sealed record ContentItemView(string ItemId, string Name, string Monogram
 {
     // Availability belongs to the source, never to stored placement/heat/pin intent.
     public bool IsAvailable { get; init; } = true;
+    public string? TypeName { get; init; }
+    public bool RequestAssetWhenUnavailable { get; init; }
 }
 public interface IContentItemViewSource
 {

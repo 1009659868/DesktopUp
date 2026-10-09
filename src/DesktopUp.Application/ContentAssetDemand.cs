@@ -21,7 +21,7 @@ public static class ContentAssetDemand
         var keys = new List<ContentAssetKey>();
         foreach (var tile in tiles)
         {
-            if (!seen.Add(tile.ItemId) || !byId.TryGetValue(tile.ItemId, out var view) || !view.IsAvailable ||
+            if (!seen.Add(tile.ItemId) || !byId.TryGetValue(tile.ItemId, out var view) || !view.IsAvailable && !view.RequestAssetWhenUnavailable ||
                 string.IsNullOrWhiteSpace(view.AssetKey) || view.AssetKey.Length > 256 || view.AssetKey.Any(char.IsControl)) continue;
             if (tile.SourceIndex < 0 || tile.SourceIndex >= document.Placements.Count ||
                 document.Placements[tile.SourceIndex].ItemId != tile.ItemId) throw new ArgumentException("Foreign asset tile.");

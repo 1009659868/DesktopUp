@@ -38,6 +38,8 @@ internal static class PortableTemplateMerge
             .Concat(document.Posters.Select(p => p.LayoutParametersJson)))
         {
             using var parsed = JsonDocument.Parse(json);
+            if (parsed.RootElement.TryGetProperty("headingVisibility", out var headings) && headings.ValueKind == JsonValueKind.Object)
+                foreach (var entry in headings.EnumerateObject()) reserved.Add(entry.Name);
             if (parsed.RootElement.TryGetProperty("recipes", out var entries) && entries.ValueKind == JsonValueKind.Array)
                 foreach (var entry in entries.EnumerateArray())
                     if (entry.TryGetProperty("definition", out var definition) && definition.TryGetProperty("id", out var id) &&
@@ -93,6 +95,7 @@ internal static class PortableTemplateMerge
         {
             var root = JsonNode.Parse(poster.LayoutParametersJson)!.AsObject();
             string selected = catalogMapping.GetValueOrDefault(poster.TemplateKey, poster.TemplateKey);
+            var instanceMapping = new Dictionary<string, string>(catalogMapping, StringComparer.Ordinal);
             bool rewritten = false;
             if (root["recipes"] is JsonArray instances)
                 foreach (var entry in instances)
@@ -100,10 +103,22 @@ internal static class PortableTemplateMerge
                     var definition = entry!["definition"]!.AsObject();
                     var recipe = TemplateRecipeCodec.Parse(definition.ToJsonString(), stored: true);
                     string target = Register(recipe, false);
+                    instanceMapping[recipe.Id] = target;
                     // An embedded variant wins over a different same-ID source catalog definition.
                     if (recipe.Id == poster.TemplateKey) selected = target;
                     if (recipe.Id != target) { definition["id"] = target; rewritten = true; }
                 }
+            if (root["headingVisibility"] is JsonObject headings)
+            {
+                var mappedHeadings = new JsonObject();
+                foreach (var pair in headings)
+                {
+                    string id = instanceMapping.GetValueOrDefault(pair.Key, pair.Key);
+                    if (mappedHeadings.ContainsKey(id)) throw new ArgumentException("Conflicting heading identities after template merge.");
+                    mappedHeadings.Add(id, pair.Value?.DeepClone()); rewritten |= id != pair.Key;
+                }
+                root["headingVisibility"] = mappedHeadings;
+            }
             posters.Add(poster with { TemplateKey = selected,
                 LayoutParameters = rewritten ? JsonSerializer.SerializeToElement(root) : poster.LayoutParameters });
         }

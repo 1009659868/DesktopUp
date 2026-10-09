@@ -1248,6 +1248,7 @@ public sealed class PosterInputIslandManager : IInputRegionHost
 // Query only while handling a wheel event already routed to the current poster. No hook or key capture.
 public static class NativeInputKeys
 {
+    public static bool ControlDown => (GetAsyncKeyState(0x11) & 0x8000) != 0;
     public static bool ShiftDown => (GetAsyncKeyState(0x10) & 0x8000) != 0;
 
     [DllImport("user32.dll")]

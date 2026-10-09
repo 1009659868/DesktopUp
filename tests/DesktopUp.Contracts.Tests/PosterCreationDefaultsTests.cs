@@ -6,6 +6,30 @@ namespace DesktopUp.Contracts.Tests;
 public sealed class PosterCreationDefaultsTests
 {
     [Fact]
+    public void Common_new_poster_is_basic_storage_without_heading_or_scene_override()
+    {
+        var poster = PosterConfigurationFactory.NewBasicBox("new", "DISPLAY");
+        var resolved = PosterPresentationPolicy.Resolve(poster);
+        Assert.Equal("basic-box", poster.TemplateKey); Assert.Equal("", poster.Subtitle);
+        Assert.True(resolved.CanEdit); Assert.False(resolved.IsContentHeadingVisible); Assert.Equal(0, resolved.MetaHeightDip);
+        Assert.Null(resolved.SceneCapability); Assert.Null(resolved.Parameters.Lamp); Assert.Null(resolved.Parameters.RecipeInstances);
+        Assert.Equal(PosterPresentationPolicy.Defaults("basic-box"), resolved.Parameters);
+    }
+
+    [Fact]
+    public void Shipped_preview_settings_use_the_same_basic_storage_default()
+    {
+        using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", "preview-package-settings.json")));
+        var root = doc.RootElement;
+        Assert.Equal("basic-box", root.GetProperty("defaultTemplate").GetString());
+        Assert.Equal(System.Text.Json.JsonValueKind.Null, root.GetProperty("backgroundOpacityPercent").ValueKind);
+        var configuration = PosterCreationDefaults.Parse(System.Text.Json.JsonSerializer.Serialize(new
+        { schemaVersion = 1, templateKey = root.GetProperty("defaultTemplate").GetString(), backgroundOpacityPercent = (double?)null }));
+        var seed = PosterConfigurationFactory.NewBasicBox("new", "DISPLAY");
+        Assert.Equal(seed, configuration.ApplyToNew(seed));
+    }
+
+    [Fact]
     public void NewLampIsTwentyFivePercentOpaqueWithoutChangingGeometryOrGlobalReset()
     {
         var config = PosterCreationDefaults.Parse("""{"schemaVersion":1,"templateKey":"lamp","backgroundOpacityPercent":25}""");

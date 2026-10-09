@@ -114,6 +114,8 @@ internal static class StateCommandPolicy
         PosterDefinition? source = Find(state, command.SourcePosterId);
         if (source is null) return Missing();
         source = source with { Title = command.Title ?? source.Title };
+        if (state.ContentCatalog.Bindings.Any(b => b.PosterId == source.PosterId))
+            return Invalid("真实内容海报的复制配置尚未定义引用选择；请新建海报后显式复用内容，不能静默变回 DEMO。");
         if (command.Placement is not { } placement) return Create(state, source);
         if (!ControlCenterSpatial.CompleteReads(command.ReadSet, state) || !ControlCenterSpatial.SceneReadsCurrent(placement.Initial, state)) return Invalid("Placement requires complete current catalog/scene reads.");
         var placed = ControlCenterSpatial.Place(source, placement.Initial);

@@ -27,6 +27,7 @@
     <ProjectReference Include="..\DesktopUp.Domain\DesktopUp.Domain.csproj" />
     <ProjectReference Include="..\DesktopUp.Infrastructure\DesktopUp.Infrastructure.csproj" />
     <ProjectReference Include="..\DesktopUp.Windows\DesktopUp.Windows.csproj" />
+    <ProjectReference Include="..\DesktopUp.ContentWorker\DesktopUp.ContentWorker.csproj" ReferenceOutputAssembly="false" GlobalPropertiesToRemove="OutputPath;OutDir;PublishDir" />
   </ItemGroup>
   <!-- WinUI 2.3.6 concatenates OutputPath + XAML filename when preparing XBF/PRI.
        A CLI -o path without a trailing slash silently creates wrong resource names. -->
@@ -38,4 +39,21 @@
   <ItemGroup>
     <Content Include="../../config/poster-animation.json" Link="config/poster-animation.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
+  <!-- Dedicated Shell helper follows every build/publish entry, not just one review script. -->
+  <Target Name="CopyContentWorker" AfterTargets="Build">
+    <MSBuild Projects="../DesktopUp.ContentWorker/DesktopUp.ContentWorker.csproj" Targets="GetTargetPath"
+             Properties="Configuration=$(Configuration);Platform=$(Platform)" RemoveProperties="OutputPath;OutDir;PublishDir">
+      <Output TaskParameter="TargetOutputs" ItemName="_ContentWorkerTarget" />
+    </MSBuild>
+    <PropertyGroup><_ContentWorkerDirectory>@(_ContentWorkerTarget->'%(RootDir)%(Directory)')</_ContentWorkerDirectory></PropertyGroup>
+    <ItemGroup>
+      <_ContentWorkerFiles Include="$(_ContentWorkerDirectory)*" Exclude="$(_ContentWorkerDirectory)*.pdb" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_ContentWorkerFiles)" DestinationFolder="$(TargetDir)content-worker" SkipUnchangedFiles="true" />
+  </Target>
+  <Target Name="PublishContentWorker" AfterTargets="Publish">
+    <MSBuild Projects="../DesktopUp.ContentWorker/DesktopUp.ContentWorker.csproj" Targets="Restore;Publish"
+             Properties="Configuration=$(Configuration);Platform=$(Platform);SelfContained=$(SelfContained);PublishDir=$(PublishDir)content-worker/;DesktopUpPreviewRuntimeVersion=$(DesktopUpPreviewRuntimeVersion)"
+             RemoveProperties="OutputPath;OutDir;PublishProfile;WindowsAppSDKSelfContained" />
+  </Target>
 </Project>

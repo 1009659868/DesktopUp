@@ -27,6 +27,7 @@ public partial class App : Microsoft.UI.Xaml.Application
     private Window? _desktopEnvironmentAnchor;
     private IDisposable? _desktopEnvironmentAnchorLease;
     private IStateProjectionCoordinator? _stateCoordinator;
+    private LocalContentWorkerClient? _realContentWorker;
     private IStateCommandService? _stateCommands;
     private IStructuredLog? _log;
     private IResourceLedger? _ledger;
@@ -153,6 +154,10 @@ public partial class App : Microsoft.UI.Xaml.Application
             () => _posterSessions?.GloballyHidden == true, id => _controlCenter?.HasPosterDraft(id) == true,
             (id, entity, document) => _controlCenter?.OwnsContentFieldDraft(id, entity, document) == true);
         _spatialRuntime.EffectiveLayoutChanged += RefreshControlCenterRuntime;
+        var openJournal = new SqliteContentOpenJournal(_services.GetRequiredService<SqliteStateStore>());
+        openJournal.RetireInterruptedRequests();
+        _realContentWorker = new LocalContentWorkerClient(Path.Combine(AppContext.BaseDirectory, "content-worker", "DesktopUp.ContentWorker.exe"), _ledger);
+        _spatialRuntime.ConfigureRealContent(_realContentWorker, openJournal);
         _spatialRuntime.ConfigureSceneMotionLedger(_ledger);
         StartAutoPosture();
         _spatialRuntime.RecoveryRequired += () => QueueDesktopRecovery(
@@ -173,13 +178,13 @@ public partial class App : Microsoft.UI.Xaml.Application
         }
 
         ScheduleSmokeExitIfRequested(_startupIntent.Arguments);
-        string[] smokeFlags = ["--posture-groups-probe", "--rain-resource-probe", "--rain-scene-probe", "--rain-scene-restart", "--scene-module-probe", "--content-source-probe", "--content-browse-probe", "--backdrop-probe", "--lamp-pointer-probe", "--template-recipe-probe", "--template-recipe-restart", "--content-composition-probe", "--content-fields-probe", "--content-rejected-heat-probe", "--content-protocol-probe", "--content-native-probe", "--content-native-mouse-probe", "--content-interaction-restart", "--lamp-parameter-probe", "--ui-c-sample-probe", "--content-layout-smoke", "--content-layout-restart", "--picker-smoke", "--portable-smoke", "--tray-smoke", "--control-center-smoke", "--title-surface-smoke", "--auto-measurement", "--auto-lifetime-smoke", "--auto-settings-smoke", "--auto-posture-smoke", "--continuity-smoke", "--continuity-arrange", "--menu-smoke", "--presentation-smoke", "--spatial-smoke", "--input-confirmation-smoke", "--multi-instance-smoke", "--multi-instance-restart"];
+        string[] smokeFlags = ["--content-reference-probe", "--posture-groups-probe", "--rain-resource-probe", "--rain-scene-probe", "--rain-scene-restart", "--scene-module-probe", "--content-source-probe", "--content-browse-probe", "--backdrop-probe", "--lamp-pointer-probe", "--template-recipe-probe", "--template-recipe-restart", "--content-composition-probe", "--content-fields-probe", "--content-rejected-heat-probe", "--content-protocol-probe", "--content-native-probe", "--content-native-mouse-probe", "--content-interaction-restart", "--lamp-parameter-probe", "--ui-c-sample-probe", "--content-layout-smoke", "--content-layout-restart", "--picker-smoke", "--portable-smoke", "--tray-smoke", "--control-center-smoke", "--title-surface-smoke", "--auto-measurement", "--auto-lifetime-smoke", "--auto-settings-smoke", "--auto-posture-smoke", "--continuity-smoke", "--continuity-arrange", "--menu-smoke", "--presentation-smoke", "--spatial-smoke", "--input-confirmation-smoke", "--multi-instance-smoke", "--multi-instance-restart"];
         if (_startupIntent.Arguments.Count(a => smokeFlags.Contains(a, StringComparer.OrdinalIgnoreCase)) > 1)
         {
             _log.Write("error", "contract.smoke_refused", new { reason = "one-smoke-per-process" });
             return;
         }
-        if (_startupIntent.Arguments.Any(a => a is "--posture-groups-probe" or "--rain-resource-probe" or "--rain-scene-probe" or "--rain-scene-restart" or "--scene-module-probe" or "--content-source-probe" or "--content-browse-probe" or "--backdrop-probe" or "--lamp-pointer-probe" or "--template-recipe-probe" or "--template-recipe-restart" or "--content-composition-probe" or "--content-fields-probe" or "--content-rejected-heat-probe" or "--content-protocol-probe" or "--content-native-probe" or "--content-native-mouse-probe" or "--content-interaction-restart" or "--lamp-parameter-probe" or "--ui-c-sample-probe" or "--content-layout-smoke" or "--content-layout-restart" or "--picker-smoke" or "--portable-smoke" or "--tray-smoke" or "--control-center-smoke" or "--title-surface-smoke" or "--auto-posture-smoke" or "--auto-settings-smoke" or "--auto-lifetime-smoke" or "--auto-measurement"))
+        if (_startupIntent.Arguments.Any(a => a is "--content-reference-probe" or "--posture-groups-probe" or "--rain-resource-probe" or "--rain-scene-probe" or "--rain-scene-restart" or "--scene-module-probe" or "--content-source-probe" or "--content-browse-probe" or "--backdrop-probe" or "--lamp-pointer-probe" or "--template-recipe-probe" or "--template-recipe-restart" or "--content-composition-probe" or "--content-fields-probe" or "--content-rejected-heat-probe" or "--content-protocol-probe" or "--content-native-probe" or "--content-native-mouse-probe" or "--content-interaction-restart" or "--lamp-parameter-probe" or "--ui-c-sample-probe" or "--content-layout-smoke" or "--content-layout-restart" or "--picker-smoke" or "--portable-smoke" or "--tray-smoke" or "--control-center-smoke" or "--title-surface-smoke" or "--auto-posture-smoke" or "--auto-settings-smoke" or "--auto-lifetime-smoke" or "--auto-measurement"))
         {
             string? testRoot = Environment.GetEnvironmentVariable("DESKTOPUP_V3_TEST_DATA_ROOT");
             string normalRoot = Path.GetFullPath(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DesktopUp", "V3"));
@@ -198,6 +203,7 @@ public partial class App : Microsoft.UI.Xaml.Application
                 else RunPostureGroupsProbe(_startupIntent.Arguments.Contains("--rr-chain"));
             }
             else if (_startupIntent.Arguments.Contains("--scene-module-probe", StringComparer.Ordinal)) RunSceneModuleProbe(actual);
+            else if (_startupIntent.Arguments.Contains("--content-reference-probe", StringComparer.Ordinal)) RunContentReferenceProbe(actual);
             else if (_startupIntent.Arguments.Contains("--content-source-probe", StringComparer.Ordinal)) RunContentSourceProbe(actual);
             else if (_startupIntent.Arguments.Contains("--content-browse-probe", StringComparer.Ordinal)) RunContentBrowseProbe(actual);
 #if SCENE_LAMP
@@ -248,11 +254,12 @@ public partial class App : Microsoft.UI.Xaml.Application
             {
                 var modes = _startupIntent.Arguments.Where(a => a.StartsWith("--lifetime-mode=", StringComparison.Ordinal)).ToArray();
                 string mode = modes.Length == 0 ? "exercise" : modes[0]["--lifetime-mode=".Length..];
-                if (modes.Length > 1 || mode is not ("exercise" or "enabled-exit" or "restart"))
+                if (modes.Length > 1 || mode is not ("exercise" or "enabled-exit" or "restart" or "continuous"))
                 {
                     _log.Write("error", "auto_lifetime.smoke_refused", new { reason = "invalid-mode" });
                     ExitApplication();
                 }
+                else if (mode == "continuous") RunContinuousLifetimeProbe();
                 else RunAutoLifetimeSmoke(mode);
             }
             else if (_startupIntent.Arguments.Contains("--auto-settings-smoke", StringComparer.Ordinal)) RunAutoSettingsSmoke(actual);
@@ -1025,6 +1032,9 @@ public partial class App : Microsoft.UI.Xaml.Application
         StopDesktopEnvironmentMonitoring();
         _posterSessions?.Dispose();
         _posterSessions = null;
+        if (_realContentWorker is not null) await _realContentWorker.StopAsync();
+        if (_spatialRuntime is not null) await _spatialRuntime.WaitForContentOperationsAsync();
+        _realContentWorker = null;
         // Cancellation completes on the UI dispatcher before DI/logging and the final ledger close.
         await Task.WhenAll(_desktopRecoveryTasks.ToArray());
         _desktopRecoveryTasks.Clear();

@@ -12,7 +12,8 @@ public static class TemplatePresentationRefreshPolicy
             previous.EffectiveTemplateKey is not (LampTemplatePolicy.TemplateKey or "night-ops" or "basic-box") ||
             previous with { Parameters = next.Parameters } != next) return false;
         var before = previous.Parameters; var after = next.Parameters;
-        if (before.Content != after.Content || before.Theme != after.Theme || before.Preferences != after.Preferences) return false;
+        if (before.Content != after.Content || before.Theme != after.Theme || before.Preferences != after.Preferences ||
+            before.HeadingVisibility != after.HeadingVisibility) return false;
 
         string selected = previous.SelectedRecipeId ?? previous.EffectiveTemplateKey;
         bool builtIn = selected == LampTemplatePolicy.TemplateKey;

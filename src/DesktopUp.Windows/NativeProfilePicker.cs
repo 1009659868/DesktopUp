@@ -4,6 +4,8 @@ using DesktopUp.Application;
 
 namespace DesktopUp.Windows;
 
+public enum NativePickerPurpose { Profile, ReferenceFile, ReferenceFolder }
+
 /// <summary>
 /// Owns exactly one common-item dialog and one STA message endpoint. Cancel posts to that
 /// apartment and requests WM_CLOSE on that dialog's verified HWND; Completion is published only after Show returns
@@ -21,17 +23,19 @@ public sealed class NativeProfilePicker
     private readonly IResourceLedger _ledger;
     private readonly string _id = Guid.NewGuid().ToString("N");
     private readonly bool _save;
+    private readonly NativePickerPurpose _purpose;
     private readonly nint _owner;
     public Task<string?> Completion => _completion.Task;
     public Task<nint> Shown => _shown.Task;
 
     public NativeProfilePicker(nint owner, bool save, IResourceLedger ledger, IStructuredLog log,
-        bool initiallyCancelled = false)
+        bool initiallyCancelled = false, NativePickerPurpose purpose = NativePickerPurpose.Profile)
     {
         if (!IsWindow(owner)) throw new ArgumentException("A live owner window is required.", nameof(owner));
         GetWindowThreadProcessId(owner, out uint process);
         if (process != Environment.ProcessId) throw new ArgumentException("Picker owner must belong to this process.");
-        _owner = owner; _save = save; _ledger = ledger; _log = log;
+        if (!Enum.IsDefined(purpose) || save && purpose != NativePickerPurpose.Profile) throw new ArgumentException("Invalid picker purpose.");
+        _owner = owner; _save = save; _ledger = ledger; _log = log; _purpose = purpose;
         if (initiallyCancelled) _gate.Cancel();
         var thread = new Thread(Run) { IsBackground = true, Name = "DesktopUp profile picker" };
         thread.SetApartmentState(ApartmentState.STA);
@@ -120,10 +124,13 @@ public sealed class NativeProfilePicker
                 Marshal.ThrowExceptionForHR(dialog.GetOptions(out uint options));
                 // Filesystem only, do not change cwd or write test files. Save retains overwrite prompt.
                 Marshal.ThrowExceptionForHR(dialog.SetOptions(options | 0x40 | 0x8 | 0x800 | 0x02000000 |
-                    (_save ? 0x2u : 0x1000u)));
-                Marshal.ThrowExceptionForHR(dialog.SetFileTypes(1, [new("DesktopUp 配置", "*.json")]));
-                Marshal.ThrowExceptionForHR(dialog.SetDefaultExtension("json"));
-                Marshal.ThrowExceptionForHR(dialog.SetTitle(_save ? "导出 DesktopUp 习惯配置" : "导入 DesktopUp 习惯配置"));
+                    (_save ? 0x2u : 0x1000u) | (_purpose == NativePickerPurpose.Profile ? 0u : 0x100000u) |
+                    (_purpose == NativePickerPurpose.ReferenceFolder ? 0x20u : 0u)));
+                if (_purpose != NativePickerPurpose.ReferenceFolder)
+                    Marshal.ThrowExceptionForHR(dialog.SetFileTypes(1, [new(_purpose == NativePickerPurpose.Profile ? "DesktopUp 配置" : "所有文件", _purpose == NativePickerPurpose.Profile ? "*.json" : "*.*")]));
+                if (_purpose == NativePickerPurpose.Profile) Marshal.ThrowExceptionForHR(dialog.SetDefaultExtension("json"));
+                Marshal.ThrowExceptionForHR(dialog.SetTitle(_purpose == NativePickerPurpose.ReferenceFolder ? "选择要引用的文件夹" :
+                    _purpose == NativePickerPurpose.ReferenceFile ? "选择要引用的文件（不移动原文件）" : _save ? "导出 DesktopUp 习惯配置" : "导入 DesktopUp 习惯配置"));
                 if (_save) Marshal.ThrowExceptionForHR(dialog.SetFileName("DesktopUp-habits.desktopup.json"));
                 string documents = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
                 if (Directory.Exists(documents))

@@ -17,7 +17,9 @@ internal sealed partial class PosterVisualWindow
         ArgumentNullException.ThrowIfNull(ports.Views); ArgumentNullException.ThrowIfNull(ports.Assets);
         ArgumentNullException.ThrowIfNull(ports.Open);
         if (_disposed || ports.Views.Version < 1) throw new InvalidOperationException("Invalid or disposed content source.");
+        if (ReferenceEquals(_contentPorts, ports) && (ports.Views is not IObservableContentItemViewSource || _contentSourceChanged is not null)) return;
         ReleaseContentSourceSubscription();
+        _contentOpenLifetime++;
         ReleaseContentAssets();
         _contentPorts = ports; _contentSourceVersion = 0;
         if (ports.Views is IObservableContentItemViewSource observable)
@@ -67,6 +69,7 @@ internal sealed partial class PosterVisualWindow
 
     private void ReleaseContentSourceSubscription()
     {
+        if (_disposed) { _contentOpenLifetime++; _contentOpenCancellation.Cancel(); }
         if (_contentSourceChanged is not null && _contentPorts.Views is IObservableContentItemViewSource previous)
             previous.Changed -= _contentSourceChanged;
         _contentSourceChanged = null;

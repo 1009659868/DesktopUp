@@ -934,25 +934,20 @@ internal sealed partial class PosterVisualWindow(
     {
         PosterPlacementState placement = PlacementFromBounds(bounds, monitor);
         DesktopPixelRect work = monitor.WorkArea;
-        return new PosterDefinition(
-            BuiltInStateIdentities.PrimaryPosterId,
-            "NIGHT OPS",
-            "TACTICAL ARCHIVE / 01",
-            monitor.DeviceName,
-            (bounds.X - work.X) / monitor.ScaleX,
-            (bounds.Y - work.Y) / monitor.ScaleY,
-            bounds.Width / monitor.ScaleX,
-            bounds.Height / monitor.ScaleY,
-            placement.HorizontalAnchor,
-            placement.VerticalAnchor,
-            Math.Clamp(bounds.Width / (double)work.Width, 0.000001, 1),
-            Math.Clamp(bounds.Height / (double)work.Height, 0.000001, 1),
-            IsLocked: false,
-            IsCollapsed: false,
-            AutoCollapseEnabled: false,
-            LayoutKind: PosterPresentationPolicy.AdaptiveGridLayout,
-            LayoutParametersJson: PosterPresentationPolicy.Serialize(PosterPresentationPolicy.Defaults()),
-            TemplateKey: "night-ops");
+        // First launch and both Add entry points share the same minimal presentation.
+        // Only initial placement/identity differ; saved posters never pass through this seed.
+        return PosterConfigurationFactory.NewBasicBox("我的收纳", monitor.DeviceName) with
+        {
+            PosterId = BuiltInStateIdentities.PrimaryPosterId,
+            FallbackXDip = (bounds.X - work.X) / monitor.ScaleX,
+            FallbackYDip = (bounds.Y - work.Y) / monitor.ScaleY,
+            WidthDip = bounds.Width / monitor.ScaleX,
+            ExpandedHeightDip = bounds.Height / monitor.ScaleY,
+            HorizontalAnchor = placement.HorizontalAnchor,
+            VerticalAnchor = placement.VerticalAnchor,
+            NormalizedWidth = Math.Clamp(bounds.Width / (double)work.Width, 0.000001, 1),
+            NormalizedExpandedHeight = Math.Clamp(bounds.Height / (double)work.Height, 0.000001, 1)
+        };
     }
 
     private bool AdoptPosterProjection(

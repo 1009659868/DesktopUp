@@ -6,7 +6,9 @@ namespace DesktopUp.Application;
 public sealed record StateReadSet(
     IReadOnlyDictionary<string, long> Posters,
     long? SettingsVersion = null,
-    long? CatalogVersion = null)
+    long? CatalogVersion = null,
+    [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    long? ContentVersion = null)
 {
     public static StateReadSet ForPoster(string id, long version) =>
         new(new ReadOnlyDictionary<string, long>(new Dictionary<string, long> { [id] = version }));
@@ -24,6 +26,8 @@ public sealed record StateReadSet(
 public sealed record StateReadConflict(string Kind, string Id, long Expected, long? Actual, string Reason);
 public sealed record DesktopStateSnapshot(PosterCatalogSnapshot Catalog, SettingsStateSnapshot Settings)
 {
+    public ContentCatalogSnapshot ContentCatalog { get; init; } = ContentCatalogSnapshot.Empty;
+    public long ContentVersion { get; init; }
     public long Revision => Catalog.Revision;
     public IReadOnlyList<SpatialOperationProof> SpatialOperations { get; init; } = Array.Empty<SpatialOperationProof>();
     public IReadOnlyList<SpatialContinuityState> SpatialContinuities { get; init; } = Array.Empty<SpatialContinuityState>();
@@ -63,6 +67,8 @@ public sealed record StateTransactionRequest(
     string RequestId, string Fingerprint, long ObservedRevision, StateReadSet? ReadSet);
 public sealed record StateMutationPlan
 {
+    public ContentCatalogSnapshot? ContentCatalog { get; init; }
+    public IReadOnlyList<Guid> ExplicitDetachedRelations { get; init; } = [];
     public IReadOnlyList<PosterDefinition> Updates { get; init; } = Array.Empty<PosterDefinition>();
     public IReadOnlyList<PosterDefinition> Creates { get; init; } = Array.Empty<PosterDefinition>();
     public IReadOnlyList<string> Removes { get; init; } = Array.Empty<string>();
@@ -74,7 +80,7 @@ public sealed record StateMutationPlan
     public SpatialOperationProof? NewSpatialProof { get; init; }
     public string? ConsumeSpatialOperationId { get; init; }
     public SpatialContinuityState? NewContinuity { get; init; }
-    public bool HasChanges => Updates.Count + Creates.Count + Removes.Count > 0 || Settings is not null;
+    public bool HasChanges => Updates.Count + Creates.Count + Removes.Count > 0 || Settings is not null || ContentCatalog is not null;
     public static StateMutationPlan Reject(StateCommandStatus status, string error) =>
         new() { Rejection = status, Error = error };
 }

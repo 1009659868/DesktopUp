@@ -209,6 +209,7 @@ public sealed partial class ControlCenterWindow
             RenderTemplateParameters(active?.Setting is (PosterSetting.Lamp or PosterSetting.TemplateParameters) ? active.TemplateValues ?? (active.Lamp is { } oldValues ? LegacyLampValues.ToValues(oldValues) : null) : null);
             RenderTemplateSamples();
             RenderTitleColors();
+            RenderContentHeading();
             UpdateContentDraftPresentation();
         }
         finally { _renderingSettings = false; }

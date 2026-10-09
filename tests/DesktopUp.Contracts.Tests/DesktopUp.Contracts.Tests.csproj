@@ -12,6 +12,8 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\DesktopUp.Application\DesktopUp.Application.csproj" />
+    <ProjectReference Include="../../src/DesktopUp.ContentWorker/DesktopUp.ContentWorker.csproj" ReferenceOutputAssembly="false" GlobalPropertiesToRemove="OutputPath;OutDir;PublishDir" />
+    <ProjectReference Include="../DesktopUp.ContentFixture/DesktopUp.ContentFixture.csproj" ReferenceOutputAssembly="false" GlobalPropertiesToRemove="OutputPath;OutDir;PublishDir" />
     <ProjectReference Include="..\..\src\DesktopUp.Domain\DesktopUp.Domain.csproj" />
     <ProjectReference Include="..\..\src\DesktopUp.Infrastructure\DesktopUp.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\DesktopUp.Windows\DesktopUp.Windows.csproj" />
@@ -22,6 +24,16 @@
     <Compile Include="../Shared/MeasurementFixtureData.cs" Link="MeasurementFixtureData.cs" />
     <Compile Include="../../scripts/MeasurementMath.cs" Link="MeasurementMath.cs" />
     <Compile Include="../../scripts/M08MeasurementRules.cs" Link="M08MeasurementRules.cs" />
+    <Compile Include="../../src/DesktopUp.App/PresentationReadbackEquality.cs" Link="PresentationReadbackEquality.cs" />
     <None Include="../../scripts/fixtures/portable-p4-pending.desktopup.json" Link="Fixtures/portable-p4-pending.desktopup.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../../packaging/preview/package-settings.json" Link="Fixtures/preview-package-settings.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
+  <Target Name="CopyContentTestHelpers" AfterTargets="Build">
+    <MSBuild Projects="../../src/DesktopUp.ContentWorker/DesktopUp.ContentWorker.csproj;../DesktopUp.ContentFixture/DesktopUp.ContentFixture.csproj"
+             Targets="GetTargetPath" Properties="Configuration=$(Configuration);Platform=$(Platform)" RemoveProperties="OutputPath;OutDir;PublishDir">
+      <Output TaskParameter="TargetOutputs" ItemName="_HelperTargets" />
+    </MSBuild>
+    <ItemGroup><_HelperFiles Include="%(_HelperTargets.RootDir)%(_HelperTargets.Directory)*" /></ItemGroup>
+    <Copy SourceFiles="@(_HelperFiles)" DestinationFolder="$(TargetDir)content-test-helpers" SkipUnchangedFiles="true" />
+  </Target>
 </Project>

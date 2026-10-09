@@ -154,8 +154,8 @@ internal sealed partial class PosterVisualWindow
         _contentCanvas.Clip = new RectangleGeometry { Rect = new global::Windows.Foundation.Rect(0, 0, viewport.WidthDip, viewport.HeightDip) };
         _itemColumnCount = snapshot.Columns;
         var doc = ContentDocument;
-        if (_footer?.Children.OfType<TextBlock>().FirstOrDefault() is { } count) count.Text=$"{doc.Placements.Count} DEMO ITEMS";
-        if (_metaPanel?.Children.OfType<TextBlock>().LastOrDefault() is { } metaCount) metaCount.Text=$"{doc.Placements.Count:00} DEMO ITEMS";
+        if (_footer?.Children.OfType<TextBlock>().FirstOrDefault() is { } count) count.Text=$"{doc.Placements.Count} {(IsRealContent ? "ITEMS" : "DEMO ITEMS")}";
+        if (_metaPanel?.Children.OfType<TextBlock>().LastOrDefault() is { } metaCount) metaCount.Text=$"{doc.Placements.Count:00} {(IsRealContent ? "ITEMS" : "DEMO ITEMS")}";
         // Lamp paint and host title ink never invalidate card identity or solver geometry.
         var cardPresentation = _presentation with { Parameters = _presentation.Parameters with { Lamp = null, TitleColors = null, ShowTitle = null } };
         string paintKey = $"{doc.DocumentVersion}/{_contentSourceVersion}/{_mode}/{_selectedContentItem}/{cardPresentation}/{doc.ShowBaselineGrid}/{doc.ShowSpanLabels}";
@@ -205,16 +205,18 @@ internal sealed partial class PosterVisualWindow
         // No scrollbar chrome on either edge. Content stays reachable through the wheel, the drag-edge
         // auto-scroll and the clamped extent; hiding a bar is never used to make content unreachable.
         if (_contentParseReadOnly || _contentProjectionFault || doc.Placements.Count == 0)
-            _contentCanvas.Children.Add(new TextBlock { Text=_contentProjectionFault ? "当前布局无法安全呈现 · 原配置保留" : _contentReadOnly ? "布局版本暂不支持 · 原配置只读保留" : "暂无内容 · DEMO 布局", FontSize=12, TextWrapping=TextWrapping.Wrap, Width=viewport.WidthDip, Foreground=ColorBrush(_presentation.Parameters.Theme.Foreground,170) });
+            _contentCanvas.Children.Add(new TextBlock { Text=_contentProjectionFault ? "当前布局无法安全呈现 · 原配置保留" : _contentReadOnly ? "布局版本暂不支持 · 原配置只读保留" : IsRealContent ? "暂无内容 · 可添加引用" : "暂无内容 · DEMO 布局", FontSize=12, TextWrapping=TextWrapping.Wrap, Width=viewport.WidthDip, Foreground=ColorBrush(_presentation.Parameters.Theme.Foreground,170) });
     }
 
     private FrameworkElement CreateContentCard(ContentItemView item, ContentPlacement placement, ContentResolvedPlacement slot)
     {
-        // Selection remains available for opening and direct dragging in daily use. Only the
-        // editing adornments depend on the mode; card bounds and content identity do not.
-        bool selected = IsEditing && _selectedContentItem == item.ItemId;
+        // Explicit modifier selection can contain just one item. Plain browsing clicks/open
+        // keep their target without an outline; editing handles retain their existing scope.
+        bool selected = ContentCardPresentationPolicy.ShowOutline(SelectedContentIds(), item.ItemId,
+            IsRealContent && _contentSelection.ShowHighlight, IsEditing);
         var cell = new Grid { Width=slot.Bounds.Width, Height=slot.Bounds.Height, IsHitTestVisible=false };
         double labelHeight = Math.Max(20, ContentParameters.LabelHeightDip+7);
+        var imageArea = ContentCardPresentationPolicy.ImageArea(slot.Bounds.Width, slot.Bounds.Height, labelHeight);
         cell.RowDefinitions.Add(new RowDefinition { Height=new GridLength(1,GridUnitType.Star) });
         cell.RowDefinitions.Add(new RowDefinition { Height=new GridLength(labelHeight) });
         byte r=(byte)(item.Color>>16), g=(byte)(item.Color>>8), b=(byte)item.Color;
@@ -234,11 +236,23 @@ internal sealed partial class PosterVisualWindow
             imageBox.Height=Math.Max(1,Math.Min(size,slot.Bounds.Height-labelHeight-8));
             imageBox.HorizontalAlignment=HorizontalAlignment.Center; imageBox.VerticalAlignment=VerticalAlignment.Center;
         }
+        if (IsRealContent)
+        {
+            imageBox.Width = imageArea.Width; imageBox.Height = imageArea.Height;
+            imageBox.Stretch = Stretch.Uniform;
+        }
         var imageHost = new Grid { IsHitTestVisible=false };
         imageHost.Children.Add(imageBox);
+        if (_contentVisibleAssetKeys.TryGetValue(item.ItemId, out var assetKey) && _contentBitmaps.TryGetValue(assetKey, out var bitmap))
+        {
+            imageHost.Children.Clear();
+            imageHost.Children.Add(new Image { Source = bitmap, Stretch = placement.ImageFit == ContentImageFit.Cover ? Stretch.UniformToFill : Stretch.Uniform,
+                Width = imageArea.Width, Height = imageArea.Height,
+                HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, IsHitTestVisible = false });
+        }
         imageHost.Clip = new RectangleGeometry { Rect=new global::Windows.Foundation.Rect(0,0,Math.Max(0,slot.Bounds.Width-2),Math.Max(0,slot.Bounds.Height-labelHeight-2)) };
-        var card = new Border { Background=Brush(228,22,24,29), BorderThickness=new Thickness(selected ? 2 : .8),
-            BorderBrush=selected ? ColorBrush(_presentation.Parameters.Theme.Accent) : Brush(32,255,255,255), CornerRadius=new CornerRadius(5), Child=imageHost };
+        var card = new Border { Background=IsRealContent ? null : Brush(228,22,24,29), BorderThickness=new Thickness(selected ? 2 : IsRealContent ? 0 : .8),
+            BorderBrush=selected ? ColorBrush(_presentation.Parameters.Theme.Accent) : IsRealContent ? null : Brush(32,255,255,255), CornerRadius=new CornerRadius(5), Child=imageHost };
         ApplyTemplateCardPaint(card, selected);
         cell.Children.Add(card);
         var name = new TextBlock { Text=item.Name + (item.IsAvailable ? "" : " · 暂不可用"), FontSize=ContentParameters.LabelFontSizeDip, MaxLines=1, TextTrimming=TextTrimming.CharacterEllipsis,
@@ -265,7 +279,7 @@ internal sealed partial class PosterVisualWindow
                 ? "旧硬位置，需兼容转换后才能解除" : $"顺序图钉，第 {placement.PinnedIndex} 位；右键图钉解除");
             cell.Children.Add(pin);
         }
-        if (selected && !_geometry.IsLocked && !_contentReadOnly)
+        if (selected && IsEditing && _selectedContentItem == item.ItemId && !_geometry.IsLocked && !_contentReadOnly)
         {
             var handle = new Border { Width=14, Height=14, Background=ColorBrush(_presentation.Parameters.Theme.Accent), CornerRadius=new CornerRadius(2),
                 HorizontalAlignment=HorizontalAlignment.Right, VerticalAlignment=VerticalAlignment.Bottom, IsHitTestVisible=false };

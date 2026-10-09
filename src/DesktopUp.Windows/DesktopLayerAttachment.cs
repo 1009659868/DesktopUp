@@ -559,23 +559,14 @@ internal sealed class DesktopWindowNativeApi : IDesktopWindowApi
     {
         DesktopPixelRect? native = GetWindowRect(window, out var windowRect) ? Pixels(windowRect) : null;
         DesktopPixelRect? client = GetClientRect(window, out var clientRect) ? Pixels(clientRect) : null;
-        DesktopPixelRect? clip = null;
-        int? regionResult = null, boxResult = null;
-        nint region = CreateRectRgn(0, 0, 0, 0);
-        if (region != 0)
-        {
-            try
-            {
-                regionResult = GetWindowRgn(window, region);
-                if (regionResult != 0)
-                {
-                    boxResult = GetRgnBox(region, out var clipRect);
-                    if (boxResult != 0) clip = Pixels(clipRect);
-                }
-            }
-            finally { _ = DeleteObject(region); }
-        }
-        return DesktopVisualSurfaceReadback.Compare(surface, visible, native, client, clip, regionResult, boxResult);
+        // Verification needs the INSTALLED bounding rectangle, not a GDI region copy.
+        // BUG-021 captured GetWindowRgn returning ERROR followed immediately by a valid
+        // region, without a SetWindowRgn/restore between the reads. Query the HWND's
+        // rectangle directly once; do not retry, reinstall or accept ERROR/empty/mismatch.
+        int regionResult = GetWindowRgnBox(window, out var clipRect);
+        DesktopPixelRect? clip = regionResult != 0 ? Pixels(clipRect) : null;
+        return DesktopVisualSurfaceReadback.Compare(surface, visible, native, client, clip,
+            regionResult, regionResult) with { RegionReadMethod = "GetWindowRgnBox" };
     }
 
     private static DesktopPixelRect Pixels(SurfaceRect rect) =>
@@ -586,10 +577,9 @@ internal sealed class DesktopWindowNativeApi : IDesktopWindowApi
     private static extern bool GetWindowRect(nint window, out SurfaceRect rect);
     [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool GetClientRect(nint window, out SurfaceRect rect);
-    [DllImport("user32.dll")] private static extern int GetWindowRgn(nint window, nint region);
+    [DllImport("user32.dll")] private static extern int GetWindowRgnBox(nint window, out SurfaceRect rect);
     [DllImport("gdi32.dll")] private static extern nint CreateRectRgn(int left, int top, int right, int bottom);
     [DllImport("gdi32.dll")] private static extern int CombineRgn(nint result, nint first, nint second, int mode);
-    [DllImport("gdi32.dll")] private static extern int GetRgnBox(nint region, out SurfaceRect rect);
 
     [DllImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]

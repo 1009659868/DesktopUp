@@ -50,6 +50,7 @@ internal sealed partial class PosterSpatialRuntime(IStateProjectionCoordinator s
     public void OnProjection(StateProjectionChangedEventArgs change)
     {
         foreach (var id in _contentSources.Keys.Where(id => !change.Projection.PostersById.ContainsKey(id)).ToArray()) _contentSources.Remove(id);
+        RefreshReferenceSources(change);
         RefreshSceneMotionSurfaces();
         _effective.RemoveMissing(change.Projection);
         if (_title is { } title && title.Session.Intent.Token.OperationId != change.RequestId &&

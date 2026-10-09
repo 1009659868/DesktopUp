@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <AssemblyName>DesktopUp.ContentWorker</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Update="Microsoft.NETCore.App" RuntimeFrameworkVersion="$(DesktopUpPreviewRuntimeVersion)" Condition="'$(DesktopUpPreviewRuntimeVersion)' != ''" />
+    <ProjectReference Include="../DesktopUp.Application/DesktopUp.Application.csproj" />
+    <Compile Include="../DesktopUp.Infrastructure/LocalContentReferenceProbe.cs" Link="LocalContentReferenceProbe.cs" />
+  </ItemGroup>
+</Project>

@@ -86,6 +86,7 @@ public sealed class SqliteStateCommandRepository(SqliteStateStore store) : IStat
             SqliteSpatialProofRepository.Apply(connection, transaction, plan.NewSpatialProof, plan.ConsumeSpatialOperationId, committedRevision.Value);
             if (plan.NewContinuity is { } continuity)
                 SqliteSpatialContinuityRepository.Write(connection, transaction, continuity, committedRevision.Value);
+            SqliteContentRepository.Apply(connection, transaction, before, plan, committedRevision.Value);
             AdvanceHead(connection, transaction, before.Revision, request.RequestId);
         }
         using (SqliteCommand receipt = connection.CreateCommand())
@@ -112,7 +113,9 @@ public sealed class SqliteStateCommandRepository(SqliteStateStore store) : IStat
     private static DesktopStateSnapshot ReadSnapshot(SqliteConnection connection, SqliteTransaction transaction) =>
         new(SqlitePosterCatalogRepository.ReadCatalog(connection, transaction),
             SqliteSettingsRepository.ReadSettings(connection, transaction))
-            { SpatialOperations = SqliteSpatialProofRepository.Read(connection, transaction),
+            { ContentCatalog = SqliteContentRepository.Read(connection, transaction),
+                ContentVersion = SqliteContentRepository.ReadVersion(connection, transaction),
+                SpatialOperations = SqliteSpatialProofRepository.Read(connection, transaction),
                 SpatialContinuities = SqliteSpatialContinuityRepository.Read(connection, transaction) };
 
     private static IReadOnlyList<StateReadConflict> CheckReadSet(DesktopStateSnapshot state, StateTransactionRequest request)
@@ -137,12 +140,15 @@ public sealed class SqliteStateCommandRepository(SqliteStateStore store) : IStat
                 conflicts.Add(new("settings", "app", settings, state.Settings.EntityVersion, "Conflict"));
             if (reads.CatalogVersion is { } catalog && catalog != state.Catalog.CatalogVersion)
                 conflicts.Add(new("catalog", "posters", catalog, state.Catalog.CatalogVersion, "Conflict"));
+            if (reads.ContentVersion is { } content && content != state.ContentVersion)
+                conflicts.Add(new("catalog", "content", content, state.ContentVersion, "Conflict"));
         }
         return conflicts.AsReadOnly();
     }
 
     private static string? ValidatePlan(DesktopStateSnapshot before, StateReadSet? reads, StateMutationPlan plan)
     {
+        if (ContentReferenceIntegrity.ValidateMutation(before, reads, plan) is { } contentError) return contentError;
         var ids = new HashSet<string>(StringComparer.Ordinal);
         var existing = before.Catalog.Posters.ToDictionary(p => p.Poster.PosterId, StringComparer.Ordinal);
         foreach (PosterDefinition poster in plan.Updates.Concat(plan.Creates))

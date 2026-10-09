@@ -204,6 +204,13 @@
            <StackPanel Orientation="Horizontal" Spacing="12"><Button x:Name="TemplatePrevious" Content="←" Click="TemplatePrevious_Click" Style="{StaticResource UiCAction}" Background="Transparent" BorderThickness="0" AutomationProperties.Name="翻看上一组模板"/><TextBlock x:Name="TemplateSampleRange" Text="1–3 / 3" FontFamily="Consolas" FontSize="11" Opacity="0.75" VerticalAlignment="Center"/><Button x:Name="TemplateNext" Content="→" Click="TemplateNext_Click" Style="{StaticResource UiCAction}" Background="Transparent" BorderThickness="0" AutomationProperties.Name="翻看下一组模板"/></StackPanel>
            <StackPanel Grid.Column="1" x:Name="TemplateLibraryActionsHost" Orientation="Horizontal" Spacing="12"/>
           </Grid>
+          <Expander x:Name="ContentHeadingFolder" Header="内容介绍文字" IsExpanded="False" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+           <StackPanel Spacing="12">
+            <ToggleSwitch x:Name="ContentHeadingSwitch" Header="显示内容介绍" OnContent="显示" OffContent="隐藏" Toggled="ContentHeading_Changed" AutomationProperties.AutomationId="ContentHeadingVisibility" ToolTipService.ToolTip="副标题、大标题与数量组成的介绍区。仅记忆当前海报的当前模板；隐藏会收回占位，不隐藏顶部标题栏或图标名称。"/>
+            <TextBox x:Name="ContentHeadingSubtitle" Header="副标题" MaxLength="512" TextChanging="ContentHeadingSubtitle_Changing" LostFocus="ContentHeadingSubtitle_LostFocus" KeyDown="ContentHeadingSubtitle_KeyDown" AutomationProperties.AutomationId="ContentHeadingSubtitle" ToolTipService.ToolTip="可留空。文字属于当前海报，换模板不丢失；Enter或离开输入框保存，Esc取消当前输入。"/>
+            <Button x:Name="ContentHeadingRename" Content="修改海报名称…" Click="RenamePoster_Click" Style="{StaticResource UiCAction}" ToolTipService.ToolTip="介绍区大标题使用海报名称；项目数量自动更新，不需要手动编辑。"/>
+           </StackPanel>
+          </Expander>
           <StackPanel x:Name="TemplateSection"/>
          </StackPanel>
         </Expander>
@@ -302,6 +309,10 @@
          <Button Content="取消当前修改" Click="ContentDraftCancel_Click" Style="{StaticResource UiCAction}"/>
         </StackPanel>
         <StackPanel Orientation="Horizontal" Spacing="18"><CheckBox x:Name="ContentGridSwitch" Content="网格辅助" Checked="ContentGuides_Changed" Unchecked="ContentGuides_Changed" FontSize="11"/><CheckBox x:Name="ContentSpanSwitch" Content="跨度提示" Checked="ContentGuides_Changed" Unchecked="ContentGuides_Changed" FontSize="11"/></StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="10">
+         <Button Content="＋ 添加内容…" Click="AddReferences_Click" Style="{StaticResource UiCAction}" AutomationProperties.AutomationId="AddContentReferences" ToolTipService.ToolTip="仅建立本机文件／文件夹引用，不移动原文件。"/>
+         <Button Content="修复所选引用…" Click="RepairReference_Click" Style="{StaticResource UiCAction}" AutomationProperties.AutomationId="RepairContentReference"/>
+        </StackPanel>
         <TextBlock x:Name="ContentLayoutNotice" FontSize="11" TextWrapping="Wrap"/>
        </StackPanel></ContentControl>
        <TextBlock x:Name="CommonSettingsNotice" TextWrapping="Wrap" FontSize="11" Opacity="0.7"/>

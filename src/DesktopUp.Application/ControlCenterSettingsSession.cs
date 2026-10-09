@@ -3,7 +3,7 @@ using DesktopUp.Domain;
 
 namespace DesktopUp.Application;
 
-public enum PosterSetting { Scale, Spacing, Template, Subtitle, Content, Theme, AutoEnabled, AutoDelay, Lamp, TemplateParameters, TitleColors, TitleVisibility }
+public enum PosterSetting { Scale, Spacing, Template, Subtitle, Content, Theme, AutoEnabled, AutoDelay, Lamp, TemplateParameters, TitleColors, TitleVisibility, ContentHeadingVisibility }
 public sealed record PosterSettingEdit(PosterSurfaceProjection Basis, PosterSetting Setting,
     double Number = 0, string Text = "", PosterContentParameters? Content = null, PosterThemeParameters? Theme = null,
     LampTemplateParameters? Lamp = null, TemplateRecipe? Recipe = null, TemplateParameterValues? TemplateValues = null,
@@ -35,6 +35,10 @@ public sealed record PosterSettingEdit(PosterSurfaceProjection Basis, PosterSett
             PosterSetting.Template => draft with { TemplateKey = Text, Parameters = Recipe is null ? parameters :
                 Recipe.Id == Text ? TemplateRecipeInstancePolicy.Select(parameters, Recipe) : throw new ArgumentException("Recipe target mismatch.") },
             PosterSetting.Subtitle => draft with { Subtitle = Text },
+            PosterSetting.ContentHeadingVisibility => draft with { Parameters = parameters with {
+                HeadingVisibility = Number is 0 or 1 && Basis.Presentation.CanShowContentHeading
+                    ? (parameters.HeadingVisibility ?? new([])).Set(draft.TemplateKey, Number == 1)
+                    : throw new ArgumentException("Invalid or unavailable content heading toggle.") } },
             PosterSetting.Content => draft with { Parameters = parameters with { Content = Content ?? throw new ArgumentException("Missing content parameters.") } },
             PosterSetting.Theme => draft with { Parameters = parameters with { Theme = Theme ?? throw new ArgumentException("Missing theme parameters.") } },
             PosterSetting.TitleColors => draft with { Parameters = parameters with { TitleColors = TitleColors ?? throw new ArgumentException("Missing title colors.") } },

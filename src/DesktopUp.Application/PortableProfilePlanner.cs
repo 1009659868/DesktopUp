@@ -21,6 +21,8 @@ public static class PortableProfilePlanner
         DisplayTopologySnapshot topology, PortableImportMode mode, bool importSettings, Func<string>? idFactory = null)
     {
         document = PortableProfileCodec.Freeze(document);
+        if (mode == PortableImportMode.Replace && current.ContentCatalog.Bindings.Count > 0)
+            throw new ArgumentException("当前存在真实内容引用，暂不支持用旧便携格式替换；可追加导入或使用本机备份恢复。");
         if (!Enum.IsDefined(mode)) throw new ArgumentException("Unknown import mode.");
         topology = FreezeTopology(topology);
         // Decoding an archive proves preservation, not permission to instantiate its contents.

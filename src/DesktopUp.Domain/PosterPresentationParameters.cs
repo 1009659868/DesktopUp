@@ -15,7 +15,7 @@ public sealed record PosterTitleColors(string Text = "#F2F2F2", string Actions =
 public sealed record PosterPresentationParameters(PosterContentParameters Content, PosterThemeParameters Theme,
     PosterContentPreferences? Preferences = null, LampTemplateParameters? Lamp = null,
     IReadOnlyDictionary<string, TemplateRecipeInstance>? RecipeInstances = null, PosterTitleColors? TitleColors = null,
-    bool? ShowTitle = null)
+    bool? ShowTitle = null, TemplateHeadingVisibility? HeadingVisibility = null)
 {
     // Absent in older configurations: preserve the original visible title without a write.
     public bool IsTitleVisible => ShowTitle ?? true;
@@ -34,14 +34,23 @@ public sealed record ResolvedPosterPresentation(string EffectiveTemplateKey, Pos
     public PosterTitleChromeKind TitleChrome => SceneCapability?.TitleChrome ?? PosterTitleChromeKind.Basic;
     public double HeaderHeightDip => TitleChrome == PosterTitleChromeKind.Cloud
         ? PosterTitleChromePolicy.ExpandedCloudHeightDip : PosterTitleBarLayoutPolicy.HeaderHeightDip;
-    public double MetaHeightDip => TitleChrome == PosterTitleChromeKind.Cloud || EffectiveTemplateKey == "basic-box"
-        ? 0 : Math.Ceiling(81 + Parameters.Content.TitleFontSizeDip * 1.35);
+    public bool CanShowContentHeading => TitleChrome != PosterTitleChromeKind.Cloud && SceneCapability?.ReplacesMetaText != true;
+    public bool IsContentHeadingVisible
+    {
+        get
+        {
+            string id = SelectedRecipeId ?? EffectiveTemplateKey;
+            bool baseline = TemplateRecipeInstancePolicy.RecipeFor(Parameters, id)?.Base.Heading ?? EffectiveTemplateKey != "basic-box";
+            return CanShowContentHeading && (Parameters.HeadingVisibility?.Resolve(id, baseline) ?? baseline);
+        }
+    }
+    public double MetaHeightDip => IsContentHeadingVisible ? Math.Ceiling(81 + Parameters.Content.TitleFontSizeDip * 1.35) : 0;
 }
 
 public static class PosterPresentationPolicy
 {
     public const string AdaptiveGridLayout = "adaptive-grid";
-    public const int SchemaVersion = 6;
+    public const int SchemaVersion = 7;
     public const int MaximumJsonLength = 2 * 1024 * 1024;
     public const double HorizontalPaddingDip = 28;
     public static bool IsBuiltIn(string? key) => key is "night-ops" or "basic-box" or LampTemplatePolicy.TemplateKey || SceneCapabilityRegistry.Templates.Any(r => r.Id == key);
@@ -139,6 +148,10 @@ public static class PosterPresentationPolicy
                 return "Presentation edits must retain title colors; reset by writing defaults explicitly.";
             if (Read(oldDoc.RootElement, previous.TemplateKey, out _).ShowTitle is not null && value.ShowTitle is null)
                 return "Presentation edits must retain title visibility; reset by writing true explicitly.";
+            var oldHeading = Read(oldDoc.RootElement, previous.TemplateKey, out _).HeadingVisibility;
+            if (oldHeading is not null && (value.HeadingVisibility is null ||
+                oldHeading.Values.Keys.Any(id => !value.HeadingVisibility.Values.ContainsKey(id))))
+                return "Presentation edits must retain template heading overrides.";
             var expectedLegacy = LegacyPayload(oldDoc.RootElement);
             var actualLegacy = newDoc.RootElement.TryGetProperty("legacy", out var retained) ? retained : (JsonElement?)null;
             if (expectedLegacy is { } expected && (actualLegacy is null || !JsonElement.DeepEquals(expected, actualLegacy.Value)) ||
@@ -169,7 +182,8 @@ public static class PosterPresentationPolicy
                     value = value with { Preferences = value.Preferences ?? retained.Preferences, Lamp = value.Lamp ?? retained.Lamp,
                         RecipeInstances = value.RecipeInstances ?? retained.RecipeInstances,
                         TitleColors = value.TitleColors ?? retained.TitleColors,
-                        ShowTitle = value.ShowTitle ?? retained.ShowTitle };
+                        ShowTitle = value.ShowTitle ?? retained.ShowTitle,
+                        HeadingVisibility = value.HeadingVisibility ?? retained.HeadingVisibility };
                 }
             }
             catch (Exception e) when (e is JsonException or InvalidOperationException or OverflowException or KeyNotFoundException)
@@ -181,7 +195,7 @@ public static class PosterPresentationPolicy
         {
             // Explicit visibility edits use v6; untouched older payloads keep their format.
             // Older readers must refuse v6 instead of silently discarding hidden-title intent.
-            writer.WriteStartObject(); writer.WriteNumber("schemaVersion", value.ShowTitle is not null ? SchemaVersion : value.TitleColors is not null ? 5 :
+            writer.WriteStartObject(); writer.WriteNumber("schemaVersion", value.HeadingVisibility is not null ? SchemaVersion : value.ShowTitle is not null ? 6 : value.TitleColors is not null ? 5 :
                 value.RecipeInstances is not null || value.Lamp is not null ? 4 : value.Preferences is null ? 1 : 2);
             writer.WritePropertyName("content"); writer.WriteStartObject();
             writer.WriteNumber("itemWidthDip", value.Content.ItemWidthDip);
@@ -197,6 +211,12 @@ public static class PosterPresentationPolicy
             writer.WriteString("accent", value.Theme.Accent.ToUpperInvariant());
             writer.WriteEndObject();
             if (value.ShowTitle is { } showTitle) writer.WriteBoolean("showTitle", showTitle);
+            if (value.HeadingVisibility is { } heading)
+            {
+                writer.WritePropertyName("headingVisibility"); writer.WriteStartObject();
+                foreach (var p in heading.Values.OrderBy(p => p.Key, StringComparer.Ordinal)) writer.WriteBoolean(p.Key, p.Value);
+                writer.WriteEndObject();
+            }
             if (value.TitleColors is { } ink)
             {
                 writer.WritePropertyName("titleColors"); writer.WriteStartObject();
@@ -308,19 +328,20 @@ public static class PosterPresentationPolicy
         else if (v == 3) Members(root, "schemaVersion", "content", "theme", "legacy", "preferences", "templates");
         else if (v == 4) Members(root, "schemaVersion", "content", "theme", "legacy", "preferences", "templates", "recipes");
         else if (v == 5) Members(root, "schemaVersion", "content", "theme", "legacy", "preferences", "templates", "recipes", "titleColors");
-        else Members(root, "schemaVersion", "content", "theme", "legacy", "preferences", "templates", "recipes", "titleColors", "showTitle");
+        else if (v == 6) Members(root, "schemaVersion", "content", "theme", "legacy", "preferences", "templates", "recipes", "titleColors", "showTitle");
+        else Members(root, "schemaVersion", "content", "theme", "legacy", "preferences", "templates", "recipes", "titleColors", "showTitle", "headingVisibility");
         if (root.TryGetProperty("legacy", out var retained) && retained.ValueKind != JsonValueKind.Object)
             throw new ArgumentException("Legacy payload must be an object.");
         if (v == 4 && !root.TryGetProperty("templates", out _) && !root.TryGetProperty("recipes", out _))
             throw new ArgumentException("Missing v4 template parameters.");
         PosterTitleColors? titleColors = null;
         bool? showTitle = null;
-        if (v == 6)
+        if (v == 6 || v >= 7 && root.TryGetProperty("showTitle", out _))
         {
             if (!root.TryGetProperty("showTitle", out _)) throw new ArgumentException("Missing v6 title visibility.");
             showTitle = Boolean(root, "showTitle", true);
         }
-        if (v == 5 || v == 6 && root.TryGetProperty("titleColors", out _))
+        if (v == 5 || v >= 6 && root.TryGetProperty("titleColors", out _))
         {
             if (!root.TryGetProperty("titleColors", out var ink)) throw new ArgumentException("Missing v5 title colors.");
             Members(ink, "text", "actions");
@@ -382,7 +403,15 @@ public static class PosterPresentationPolicy
             }
             recipes = new System.Collections.ObjectModel.ReadOnlyDictionary<string, TemplateRecipeInstance>(items);
         }
-        return new(c, t, preferences, lamp, recipes, titleColors, showTitle);
+        TemplateHeadingVisibility? heading = null;
+        if (v >= 7)
+        {
+            if (!root.TryGetProperty("headingVisibility", out var node)) throw new ArgumentException("Missing v7 heading visibility.");
+            Unique(node);
+            heading = new(node.EnumerateObject().Select(p => new KeyValuePair<string, bool>(p.Name,
+                Boolean(node, p.Name, true))));
+        }
+        return new(c, t, preferences, lamp, recipes, titleColors, showTitle, heading);
     }
 
     private static LampTemplateParameters ReadLamp(JsonElement node)

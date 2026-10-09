@@ -13,7 +13,7 @@ internal sealed partial class PosterSpatialRuntime
     {
         string[] cases = ["prepare-partial", "submit-before", "submit-partial", "restore-partial", "complete",
             "handoff-reuse", "handoff-grow", "translate-fast", "prepare-region-reset",
-            "handoff-reset-reuse", "handoff-reset-grow"];
+            "handoff-reset-reuse", "handoff-reset-grow", "final-restore-region-reset"];
         var timer = dispatcher.CreateTimer(); timer.Interval = TimeSpan.FromMilliseconds(100);
         var deadline = DateTime.UtcNow.AddSeconds(20);
         PosterVisualWindow? owner = null;
@@ -30,7 +30,9 @@ internal sealed partial class PosterSpatialRuntime
         {
             if (!active) return;
             driver?.Cancel("surface-fixture-finish");
-            Require(RestorePresentedGroup(owner!, participants, request), "shared committed restore failed");
+            Require(RestorePresentedGroup(owner!, participants, request,
+                cases[index] == "final-restore-region-reset" ? owner!.ResetVisualRegionForProbe : null),
+                "shared committed restore failed");
             active = false;
         }
         void Stop()

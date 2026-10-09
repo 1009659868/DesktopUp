@@ -66,6 +66,7 @@ internal sealed partial class ControlCenterService(
                     });
                 stage = "apply-projection";
                 pendingWindow.ConfigureContentLayout(() => spatialRuntime?.Invoke());
+                pendingWindow.ConfigureReferences(command => { var result = commands.Execute(command); ShowCommandResult(result); return result; });
                 pendingWindow.ConfigureCenterTheme(theme =>
                 {
                     if (!state.TryGetCurrent(out var current) || current is null) return;

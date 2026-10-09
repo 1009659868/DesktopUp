@@ -1,5 +1,7 @@
 using DesktopUp.Application;
 using DesktopUp.Domain;
+using System.Runtime.InteropServices.WindowsRuntime;
+using Microsoft.UI.Xaml.Media.Imaging;
 
 namespace DesktopUp;
 
@@ -16,8 +18,8 @@ internal sealed partial class PosterVisualWindow
     private PosterPresentationParameters? _contentAssetTheme;
     private long _contentAssetThemeVersion=1, _contentAssetLifetime;
 
-    // L06 binds the real lifetime and bounded request path, but not file extraction or image decoding.
-    // DEMO views currently have no AssetKey; their existing vector/monogram fallback remains unchanged.
+    // Shared visible-demand budget; real Shell work is isolated behind the asset provider.
+    // DEMO has no AssetKey and keeps its existing vector fallback.
     private void SyncContentAssets(ContentLayoutDocument document,ContentLayoutSnapshot snapshot,
         ContentLayoutViewport viewport,IReadOnlyList<ContentItemView> views)
     {
@@ -51,6 +53,7 @@ internal sealed partial class PosterVisualWindow
             inputSession.Epoch, _monitor.DpiX, _monitor.DpiY, _contentAssetThemeVersion, _contentSourceVersion))
             _contentVisibleAssetKeys.Add(key.ItemId, key);
         _contentAssetAttempted.IntersectWith(_contentVisibleAssetKeys.Values);
+        foreach (var expired in _contentBitmaps.Keys.Where(k => !_contentVisibleAssetKeys.Values.Contains(k)).ToArray()) _contentBitmaps.Remove(expired);
         _contentAssets.SetVisible(_contentVisibleAssetKeys.Values);
         PumpContentAssets();
     }
@@ -68,7 +71,8 @@ internal sealed partial class PosterVisualWindow
         {
             if (_contentAssets.RunningLoads >= 4) break;
             if (_contentAssetAttempted.Contains(key) || _contentAssets.IsLoading(key)) continue;
-            if(_contentAssets.TryGet(key,out _) || !_contentAssetRequests.Add(key)) continue;
+            // A cached byte payload may return after its decoded bitmap was evicted offscreen.
+            if(_contentBitmaps.ContainsKey(key) || !_contentAssetRequests.Add(key)) continue;
             _contentAssetAttempted.Add(key);
             var lease=ledger.Acquire("content.asset-request:"+Guid.NewGuid().ToString("N"),key.ItemId);
             _contentAssetRequestLeases[key]=lease;
@@ -102,14 +106,25 @@ internal sealed partial class PosterVisualWindow
                 !_contentVisibleAssetKeys.TryGetValue(key.ItemId,out var currentKey) || currentKey!=key ||
                 !cache.TryGet(key,out var payload) || payload is null) return;
             _contentAssetAcceptedCount++;
-            // No bitmap decoder is registered in this stage. A future renderer may consume this
-            // bounded payload only after this same stable-key check, with its own decoded-pixel cap.
+            if (payload.MediaType == "image/bgra32" && LocalContentProtocol.ValidPixels(payload.Bytes.ToArray(), payload.PixelWidth, payload.PixelHeight))
+            {
+                var bitmap = new WriteableBitmap(payload.PixelWidth, payload.PixelHeight);
+                using (var stream = bitmap.PixelBuffer.AsStream()) stream.Write(payload.Bytes.Span);
+                bitmap.Invalidate();
+                _contentBitmaps[key] = bitmap;
+                _contentPaintKey = null;
+                if (!HasContentGesture && _transitionLayout is null) RefreshContentSurface();
+                spatial.NotifyContentEditorChanged(PosterId);
+            }
+            // Only bounded, already-rasterized BGRA is consumed here. Shell/image decoding
+            // remains outside this UI process, after the same stable-key check.
             // Do not interpret SourceKey as a path or mutate item selection/layout here.
         });
     }
 
     private void ReleaseContentAssets()
     {
+        _contentBitmaps.Clear();
         _contentAssetLifetime=unchecked(_contentAssetLifetime+1);
         if (_contentAssets is not null && _contentAssetSlotFreed is not null) _contentAssets.LoadFinished -= _contentAssetSlotFreed;
         _contentAssets?.Dispose();_contentAssets=null;

@@ -207,7 +207,15 @@ public sealed partial class ControlCenterWindow
                 current?.EntityVersion == view?.EntityVersion && current?.Document.DocumentVersion == view?.Document.DocumentVersion) action();
             else ContentLayoutNotice.Text = "所选项目已变化，请在当前项目重新打开菜单。";
         }
-        Add("打开所选项目", () => ForSameItem(() => ContentOpen_Click(ContentKeyboardPad, new RoutedEventArgs())), ContentKeyboardPad.IsEnabled);
+        Add("打开当前项", () => ForSameItem(() => ContentOpen_Click(ContentKeyboardPad, new RoutedEventArgs())), ContentKeyboardPad.IsEnabled);
+        bool real = target is not null && _contentRuntime?.Invoke()?.ContentSourceFor(target).Open is DesktopUp.Application.IAsyncContentActions;
+        if (real)
+        {
+            Add("在资源管理器中定位", () => ForSameItem(() => ContentAction((runtime, id) => runtime.RevealContentEditor(id))), !OtherContentOwner);
+            Add("刷新来源状态与图标", () => ForSameItem(() => ContentAction((runtime, id) => runtime.RefreshRealContentEditor(id))), !OtherContentOwner);
+            Add($"从此海报移除 {view?.SelectedIds.Count ?? 0} 项引用…", () => ForSameItem(() => _ = RemoveSelectedReference()), writable);
+            Add("全选引用 · Ctrl+A", () => ForSameItem(() => ContentAction((runtime, id) => runtime.SelectAllRealContent(id))), !OtherContentOwner);
+        }
         if (placement is not null)
         {
             Add(placement.PinnedIndex is not null ? "解除顺序图钉" : "固定顺序图钉",

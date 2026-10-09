@@ -45,6 +45,8 @@ public static class PortableProfileCodec
     public static byte[] Export(DesktopStateSnapshot state)
     {
         ArgumentNullException.ThrowIfNull(state);
+        if (state.ContentCatalog.Bindings.Count > 0)
+            throw new ArgumentException("当前便携格式尚不携带真实引用关系；请使用本机备份，避免导出后内容变为 DEMO。原配置未改变。");
         if (state.Catalog.Revision != state.Settings.Revision)
             throw new ArgumentException("Export requires one committed state snapshot.");
         using var catalog = JsonDocument.Parse(state.Settings.Settings.TemplateCatalogJson, new() { MaxDepth = MaximumDepth });

@@ -15,7 +15,7 @@ internal sealed partial class PosterVisualWindow
             request.Frame != _bounds || inputRouter.ResolveContext(request.Hit, request.ScreenPoint, [inputSession], request.PressScreenPoint) is null ||
             request.ContentSnapshotGeneration != _contentSnapshot?.ViewportGeneration ||
             !inputRouter.IsCurrent(inputSession, request.Hit.LayoutRevision)) return;
-        if (SelectContentItem(request.ContentItemId) is { } error)
+        if (SelectContentItem(request.ContentItemId, preserveSet: true) is { } error)
         { ReportContentFailure(error); return; }
         args.Handled = true;
         PublishContentFeedback(null);
@@ -64,7 +64,7 @@ internal sealed partial class PosterVisualWindow
             };
             flyout.Items.Add(item);
         }
-        Add("打开（演示）", "open", () =>
+        Add(IsRealContent ? "打开当前项" : "打开（演示）", "open", () =>
         {
             // A menu command is one deliberate activation. Its real focus must not leave an
             // Enter-held activation in the independent center keyboard route.
@@ -72,6 +72,27 @@ internal sealed partial class PosterVisualWindow
             try { return ActivateSelectedContent(false); }
             finally { ReleaseContentActivationKey(); }
         }, ContentActivationTargetFor(itemId) is not null);
+        if (IsRealContent)
+        {
+            Add("在资源管理器中定位", "reveal", RevealSelectedContent);
+            Add("刷新来源状态与图标", "refresh-source", RefreshRealContent);
+            if (spatial.TryGetProjection(out var basis) && basis!.PostersById.TryGetValue(doc.PosterId, out var owner))
+            {
+                var removal = new ContentDetachCommand("detach-" + Guid.NewGuid().ToString("N"), StateCommandSource.Poster,
+                    basis.Revision, new(new Dictionary<string,long> { [doc.PosterId] = owner.EntityVersion }, ContentVersion: basis.ContentVersion),
+                    doc.PosterId, SelectedContentIds(), true);
+                var confirm = new MenuFlyoutSubItem { Text = $"从此海报移除 {removal.ItemIds.Count} 项引用…", IsEnabled = writable };
+                var only = StyleMenuItem(new MenuFlyoutItem { Text = "确认移除 · 原文件和其他海报不变" });
+                only.Click += (_, _) =>
+                {
+                    if (!current("item-detach")) return;
+                    flyout.Hide();
+                    if (spatial.DetachContent(removal) is { } failure) ReportContentFailure(failure);
+                    else PublishContentFeedback("已从此海报移除；原文件未删除。", transient: true);
+                };
+                confirm.Items.Add(only); flyout.Items.Add(confirm);
+            }
+        }
         flyout.Items.Add(new MenuFlyoutSeparator());
         if (doc.Mode != ContentLayoutMode.Manual)
         {

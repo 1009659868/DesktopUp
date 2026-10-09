@@ -23,11 +23,8 @@ internal sealed partial class PosterVisualWindow
     // A drawing-only toast over the cards would leave invisible cards clickable beneath it.
     private void AddContentFeedback(Grid structure)
     {
-        if (!TestContentFeedbackEnabled)
-        {
-            RenderContentFeedback();
-            return;
-        }
+        // The same surface may later be converted from DEMO to real references.
+        // Allocate the inert footer once; Render controls its visibility.
         _contentFeedbackText = new TextBlock
         {
             FontSize = 11, TextWrapping = TextWrapping.Wrap, MaxLines = 2,
@@ -56,7 +53,7 @@ internal sealed partial class PosterVisualWindow
     private void RenderContentFeedback()
     {
         RenderContentSpaceNavigation();
-        if (!TestContentFeedbackEnabled)
+        if (!TestContentFeedbackEnabled && !IsRealContent)
         {
             // Preserve the reserved footer geometry so hiding diagnostic text cannot move or
             // enlarge live card hit regions. Center errors and the underlying notice stay intact.
@@ -74,7 +71,7 @@ internal sealed partial class PosterVisualWindow
         _contentFeedbackCallout.Visibility = !_disposed && !_geometry.IsCollapsed &&
             !_contentPresentationSuspended && visible is not null ? Visibility.Visible : Visibility.Collapsed;
         if (_footer is not null)
-            _footer.Visibility = _geometry.IsCollapsed || _contentFeedbackCallout.Visibility == Visibility.Visible
+            _footer.Visibility = IsRealContent || _geometry.IsCollapsed || _contentFeedbackCallout.Visibility == Visibility.Visible
                 ? Visibility.Collapsed : Visibility.Visible;
     }
 

@@ -41,6 +41,7 @@ internal sealed partial class PosterVisualWindow
 
     internal string? ActivateSelectedContent(bool isRepeat)
     {
+        if (_contentPorts.UnavailableOpenReason is { } reason) return reason;
         if (HasContentGesture || spatial.IsPosterSpatialBusy(PosterId!) || PosterId is { } id && spatial.HasCenterDraft(id))
             return "请先完成或取消当前修改。";
         if (ContentActivationTargetFor(_selectedContentItem) is not { } target)
@@ -55,6 +56,10 @@ internal sealed partial class PosterVisualWindow
     private void DispatchContentOpen(ContentOpenIntent intent)
     {
         if (ContentActivationTargetFor(intent.Target.ItemId) != intent.Target) return;
+        if (_contentPorts.UnavailableOpenReason is { } reason)
+        { PublishContentFeedback(reason, transient: true); return; }
+        if (_contentPorts.Open is IAsyncContentActions actions)
+        { DispatchRealContentOpen(intent, actions); return; }
         try { _contentPorts.Open.Open(intent); }
         catch (Exception) { PublishContentFeedback("内容暂时无法打开，布局未改变。", transient: true); return; }
         // DEMO sink only. V3-05 supplies the real open adapter; layout commands never execute files.

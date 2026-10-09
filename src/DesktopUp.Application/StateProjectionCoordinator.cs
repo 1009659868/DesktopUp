@@ -148,7 +148,7 @@ public sealed partial class StateProjectionCoordinator(
                     throw new ArgumentException("Request id, source or observed revision is invalid.");
                 StateReadSet? reads = readSet?.Freeze();
                 if (reads is not null && (reads.Posters.Any(p => string.IsNullOrWhiteSpace(p.Key) || p.Key.Length > 128 || p.Value < 1) ||
-                    reads.SettingsVersion is < 1 || reads.CatalogVersion is < 0))
+                    reads.SettingsVersion is < 1 || reads.CatalogVersion is < 0 || reads.ContentVersion is < 0))
                     throw new ArgumentException("Entity read set contains invalid identities or versions.");
                 T frozen = freeze(reads);
                 string hash = StateRequestFingerprint.Compute(new
@@ -257,6 +257,7 @@ public sealed partial class StateProjectionCoordinator(
             { VisiblePosterCount = visible, PendingPlacementPosterCount = pending, LockedPosterCount = locked, LockSummary = summary,
                 AutoPostureEnabledPosterCount = posters.Count(p => p.Poster.AutoCollapseEnabled) };
         return new(state.Revision, selected, center, tray) { ProfileInitialized = state.Catalog.ProfileInitialized,
+            ContentCatalog = state.ContentCatalog, ContentVersion = state.ContentVersion,
             SpatialOperations = state.SpatialOperations, SpatialContinuities = state.SpatialContinuities };
     }
 }

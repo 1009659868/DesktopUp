@@ -81,7 +81,7 @@ public sealed partial class ControlCenterWindow
             ContentUndoButton.IsEnabled = idle && view?.CanUndo == true;
             ContentRedoButton.IsEnabled = idle && view?.CanRedo == true;
             foreach (var sample in ContentSamples.Children.OfType<Grid>().SelectMany(grid => grid.Children.OfType<Button>()))
-                sample.IsEnabled = idle && sample.Tag as string != "landscape";
+                sample.IsEnabled = idle && sample.Tag as string != "landscape" && _readCommitted?.Invoke()?.ContentCatalog.Bindings.All(b => b.PosterId != id) != false;
             var placement = view?.Document.Placements.FirstOrDefault(p => p.ItemId == view.SelectedItemId);
             ContentFixedButton.IsEnabled = idle && placement is { FixedPosition: false } && view!.Document.Mode != ContentLayoutMode.Manual;
             ContentFixedButton.Content = placement?.FixedPosition == true ? "旧硬位置 · 保留" : placement?.PinnedIndex is not null ? "解除顺序图钉" : "固定顺序图钉";
@@ -104,9 +104,13 @@ public sealed partial class ControlCenterWindow
             ContentLoopSwitch.IsOn = view.Document.LoopScroll;
             ContentGridSwitch.IsChecked = view.Document.ShowBaselineGrid;
             ContentSpanSwitch.IsChecked = view.Document.ShowSpanLabels;
-            var items = new DemoContentItemViewSource().Read(view.Document);
+            var items = DesktopUp.Application.ContentSourceProjection.Read(
+                _contentRuntime?.Invoke()?.ContentSourceFor(view.Document.PosterId).Views ?? new DemoContentItemViewSource(), view.Document);
             if (ContentItemSelector.ItemsSource is not IReadOnlyList<ContentItemView> existing || !existing.SequenceEqual(items)) ContentItemSelector.ItemsSource = items;
             ContentItemSelector.SelectedItem = ((IReadOnlyList<ContentItemView>)ContentItemSelector.ItemsSource).FirstOrDefault(p => p.ItemId == view.SelectedItemId);
+            var selectedView = ContentItemSelector.SelectedItem as ContentItemView;
+            ToolTipService.SetToolTip(ContentItemSelector, selectedView is null ? null : selectedView.Name + "\n" + selectedView.TypeName +
+                (selectedView.IsAvailable ? "" : "\n来源暂不可用，可刷新或修复引用。"));
             RenderContentFields(view);
             string? draftError = _contentFieldDraft is { } draft ? ValidateContentFields(draft, view, out _) : null;
             ContentLayoutNotice.Text = draftError ?? _contentFieldNotice ?? view.Notice ?? (view.Document.Mode == ContentLayoutMode.Manual && view.Document.SavedAutomaticMode is null
@@ -184,6 +188,10 @@ public sealed partial class ControlCenterWindow
     private void ContentKeyboard_KeyDown(object sender, KeyRoutedEventArgs e)
     {
         if (!ContentKeyboardHasFocus) return;
+        if (e.Key == VirtualKey.A && DesktopUp.Windows.NativeInputKeys.ControlDown)
+        { e.Handled = true; ContentAction((r, id) => r.SelectAllRealContent(id)); return; }
+        if (e.Key == VirtualKey.Delete && !e.KeyStatus.WasKeyDown)
+        { e.Handled = true; _ = RemoveSelectedReference(); return; }
         if (e.Key == VirtualKey.F10 && DesktopUp.Windows.NativeInputKeys.ShiftDown)
         {
             e.Handled = true;
@@ -209,6 +217,7 @@ public sealed partial class ControlCenterWindow
             e.Handled = true;
             ReleaseContentActivation();
             CancelContentFieldDraft();
+            if (_view?.SelectedPosterId is { } target) _contentRuntime?.Invoke()?.SelectAllRealContent(target, clear: true);
             ContentItemSelector.Focus(FocusState.Programmatic);
         }
     }

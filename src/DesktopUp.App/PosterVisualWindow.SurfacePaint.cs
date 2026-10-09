@@ -37,6 +37,9 @@ internal sealed partial class PosterVisualWindow
 
     private void ApplyTemplateCardPaint(Border card, bool selected, Grid? cell = null)
     {
+        // Real references are icon-only surfaces. Scene ticks/theme changes must not paint
+        // a card plate back underneath them; geometry and transparent hit regions stay intact.
+        if (IsRealContent) { card.Background = null; return; }
         // Static surface remains available before a module is created, after a module fails,
         // or when the registry has no decoration. Never change dimensions or selection state.
         if ((_sceneInstance is null || _sceneFailure.Failure is not null) &&

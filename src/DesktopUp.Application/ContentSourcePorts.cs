@@ -16,6 +16,7 @@ public sealed class DemoContentOpenHandler : IContentOpenHandler
 
 public sealed record ContentSourcePorts(IContentItemViewSource Views, IContentAssetProvider Assets, IContentOpenHandler Open)
 {
+    public string? UnavailableOpenReason { get; init; }
     public static ContentSourcePorts Demo { get; } = new(new DemoContentItemViewSource(), NullContentAssetProvider.Instance, DemoContentOpenHandler.Instance);
 }
 

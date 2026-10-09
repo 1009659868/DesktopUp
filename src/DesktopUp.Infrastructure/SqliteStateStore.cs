@@ -10,9 +10,8 @@ public sealed class SqliteStateStore : IStateStore
 {
     private const int ApplicationId = 0x44555033; // "DUP3"
     private const int BusyTimeoutMilliseconds = 5_000;
-    // 11 registers support for content layout document v2 (single flow axis + optional heat-driven
-    // size). It adds no column: those members live inside content_layout_json and are validated on read.
-    private const int CurrentSchemaVersion = 12;
+    // 14 adds durable opening receipts/facts. Earlier migration text/checksums stay frozen.
+    private const int CurrentSchemaVersion = 14;
     private const string DatabaseFileName = "desktopup.sqlite3";
     private static readonly Migration[] Migrations =
     [
@@ -227,7 +226,9 @@ public sealed class SqliteStateStore : IStateStore
                 CHECK (center_theme IN ('light', 'ink', 'blue', 'system'));
             ALTER TABLE app_settings ADD COLUMN template_catalog_json TEXT NOT NULL DEFAULT '[]'
                 CHECK (json_valid(template_catalog_json));
-            """)
+            """),
+        new(13, "non-destructive-content-references", SqliteContentRepository.MigrationSql),
+        new(14, "content-opening-receipts", SqliteContentOpenJournal.MigrationSql)
     ];
 
     private readonly object _gate = new();
@@ -614,6 +615,8 @@ public sealed class SqliteStateStore : IStateStore
             if (migration.Version >= 9) VerifyPendingPlacementSchema(connection, transaction);
             if (migration.Version >= 10) VerifyContentLayoutSchema(connection, transaction);
             if (migration.Version >= 12) VerifyTemplateSettingsSchema(connection, transaction);
+            if (migration.Version >= 13) SqliteContentRepository.Verify(connection, transaction);
+            if (migration.Version >= 14) SqliteContentOpenJournal.Verify(connection, transaction);
 
             string appliedUtc = DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture);
             using (SqliteCommand ledger = connection.CreateCommand())
@@ -727,6 +730,8 @@ public sealed class SqliteStateStore : IStateStore
         if (expectedVersion >= 9) VerifyPendingPlacementSchema(connection, null);
         if (expectedVersion >= 10) VerifyContentLayoutSchema(connection, null);
         if (expectedVersion >= 12) VerifyTemplateSettingsSchema(connection, null);
+        if (expectedVersion >= 13) SqliteContentRepository.Verify(connection, null);
+        if (expectedVersion >= 14) SqliteContentOpenJournal.Verify(connection, null);
         if (head.SchemaVersion != version)
         {
             throw new InvalidDataException(

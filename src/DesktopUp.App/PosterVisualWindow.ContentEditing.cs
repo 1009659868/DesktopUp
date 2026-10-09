@@ -17,7 +17,7 @@ internal sealed partial class PosterVisualWindow
     public bool HasContentGesture => _contentGesture is not null;
     internal ContentLayoutEditorView ReadContentEditor() => new(ContentDocument, _posterEntityVersion, _selectedContentItem,
         IsEditing, !_contentReadOnly && !_geometry.IsLocked && !_disposed && !_contentPresentationSuspended, _contentNotice)
-        { SelectedSlot = _contentSnapshot?.Items.FirstOrDefault(p => p.ItemId == _selectedContentItem),
+        { SelectedIds = SelectedContentIds(), SelectedSlot = _contentSnapshot?.Items.FirstOrDefault(p => p.ItemId == _selectedContentItem),
           CanUndo = _contentHistory.CanUndo(ContentDocument), CanRedo = _contentHistory.CanRedo(ContentDocument),
           SpaceEpoch = _contentSpaceEpoch, SpaceSession = _contentSurfaceSession };
 
@@ -41,8 +41,13 @@ internal sealed partial class PosterVisualWindow
             if (_disposed || _contentPresentationSuspended || _monitor is null || _inputIsland is null || _transitionLayout is not null || spatial.IsPosterSpatialBusy(PosterId!) ||
                 _contentSnapshot is null || args.ContentSnapshotGeneration != _contentSnapshot.ViewportGeneration || args.Capture is null) return true;
             PublishContentFeedback(null);
-            _selectedContentItem = args.ContentItemId;
+            bool modifySelection = IsRealContent && args.TargetKind == PosterInputTargetKind.ContentItem &&
+                (DesktopUp.Windows.NativeInputKeys.ControlDown || DesktopUp.Windows.NativeInputKeys.ShiftDown);
+            SetContentSelection(args.ContentItemId, modifySelection && DesktopUp.Windows.NativeInputKeys.ControlDown,
+                modifySelection && DesktopUp.Windows.NativeInputKeys.ShiftDown);
             spatial.NotifyContentEditorChanged(PosterId);
+            if (modifySelection)
+            { _contentActivation.Reset(); args.Handled = true; RefreshContentSurface(); return true; }
             if (args.TargetKind == PosterInputTargetKind.ContentViewport)
             { _contentActivation.Reset(); RefreshContentSurface(); return true; }
             var doc = ContentDocument;
@@ -315,17 +320,20 @@ internal sealed partial class PosterVisualWindow
         spatial.NotifyContentEditorChanged(PosterId);
         return message;
     }
-    internal string? SelectContentItem(string? id)
+    internal string? SelectContentItem(string? id, bool preserveSet = false)
     {
         if (_disposed || _contentPresentationSuspended) return "内容呈现已暂停，请等待恢复。";
         if (HasContentGesture || spatial.IsPosterSpatialBusy(PosterId!) || PosterId is { } posterId && spatial.HasCenterDraft(posterId))
             return "请先完成或取消当前修改，再切换项目。";
         if(id is not null && !ContentDocument.Placements.Any(p=>p.ItemId==id)) return "内容已变化，请重新选择。";
         _contentActivation.Reset();
-        _selectedContentItem=id; RefreshContentSurface(); spatial.NotifyContentEditorChanged(PosterId); return null;
+        if (!preserveSet || id is null || !SelectedContentIds().Contains(id)) SetContentSelection(id);
+        else _selectedContentItem = id;
+        RefreshContentSurface(); spatial.NotifyContentEditorChanged(PosterId); return null;
     }
     internal string? NudgeContent(int x,int y,bool resize)
     {
+        if (SelectedContentIds().Length > 1) return "精细移动／尺寸调整只作用于单项，请先单独选择。";
         if (_disposed || _contentPresentationSuspended) return "内容呈现已暂停，请等待恢复。";
         if(_selectedContentItem is not { } id) return "请先选择卡片。";
         var slot=EnsureContentSnapshot(_bounds).Items.FirstOrDefault(p=>p.ItemId==id);
@@ -409,6 +417,7 @@ internal sealed partial class PosterVisualWindow
 
 internal sealed record ContentLayoutEditorView(ContentLayoutDocument Document,long EntityVersion,string? SelectedItemId,bool IsEditing,bool CanEdit,string? Notice)
 {
+    public IReadOnlyList<string> SelectedIds { get; init; } = [];
     public long SpaceEpoch { get; init; }
     public Guid SpaceSession { get; init; }
     public ContentResolvedPlacement? SelectedSlot { get; init; }

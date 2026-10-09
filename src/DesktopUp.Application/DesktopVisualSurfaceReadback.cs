@@ -11,6 +11,8 @@ public readonly record struct DesktopVisualSurfaceReadback(
     int? WindowRegionResult = null,
     int? RegionBoxResult = null)
 {
+    // Disambiguates new direct-HWND evidence from historical copy-then-GetRgnBox logs.
+    public string? RegionReadMethod { get; init; }
     public static DesktopVisualSurfaceReadback Compare(
         DesktopPixelRect surface, DesktopPixelRect visible,
         DesktopPixelRect? window, DesktopPixelRect? client, DesktopPixelRect? region,

@@ -149,6 +149,8 @@ public sealed record DesktopUpProjection(
     ControlCenterProjection ControlCenter,
     TrayProjection Tray)
 {
+    public ContentCatalogSnapshot ContentCatalog { get; init; } = ContentCatalogSnapshot.Empty;
+    public long ContentVersion { get; init; }
     public IReadOnlyDictionary<string, PosterSurfaceProjection> PostersById => ControlCenter.PostersById;
     public IReadOnlyList<PosterSurfaceProjection> Posters => ControlCenter.Posters;
     public IReadOnlyList<SpatialOperationProof> SpatialOperations { get; init; } = Array.Empty<SpatialOperationProof>();
@@ -182,6 +184,8 @@ public interface IStateProjectionCoordinator
 
 public interface IStateCommandService
 {
+    StateCommandResult Execute(ContentReferenceCommand command) => throw new NotSupportedException("Reference commands are unavailable.");
+    StateCommandResult Execute(ContentDetachCommand command) => throw new NotSupportedException("Content detach commands are unavailable.");
     StateCommandResult Execute(RegisterTemplateCommand command) => throw new NotSupportedException("Template registration is not supported by this adapter.");
     StateCommandResult Execute(ContentLayoutCommand command) => throw new NotSupportedException("Content layout commands are not supported by this test adapter.");
     StateCommandResult Execute(PosterStateCommand command);

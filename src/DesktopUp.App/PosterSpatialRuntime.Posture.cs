@@ -233,7 +233,8 @@ internal sealed partial class PosterSpatialRuntime
     }
 
     // Both posture and title owners finish through this exact R4 release/readback path.
-    private bool RestorePresentedGroup(PosterVisualWindow owner, IReadOnlyList<PosterVisualWindow> participants, string requestId)
+    private bool RestorePresentedGroup(PosterVisualWindow owner, IReadOnlyList<PosterVisualWindow> participants, string requestId,
+        Action? afterNativeBatchForProbe = null)
     {
         var restorations = new List<PosterVisualWindow.PreparedSpatialFrame>();
         bool restored = true;
@@ -266,7 +267,7 @@ internal sealed partial class PosterSpatialRuntime
         }
         try
         {
-            if (restorations.Count > 0) restored &= owner.CommitSpatialFrames(restorations, DesktopFramePhase.FinalRestore);
+            if (restorations.Count > 0) restored &= owner.CommitSpatialFrames(restorations, DesktopFramePhase.FinalRestore, afterNativeBatchForProbe);
         }
         catch (Exception exception)
         {

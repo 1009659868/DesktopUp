@@ -4,7 +4,11 @@ namespace DesktopUp.Application;
 public sealed record ContentAssetKey(string PosterId, string ItemId, long SessionEpoch, long DocumentVersion,
     long ItemSetVersion, long PlacementVersion, string SourceKey, int PixelWidth, int PixelHeight,
     uint DpiX, uint DpiY, long ThemeVersion, long SourceVersion = 1);
-public sealed record ContentAssetPayload(string MediaType, ReadOnlyMemory<byte> Bytes);
+public sealed record ContentAssetPayload(string MediaType, ReadOnlyMemory<byte> Bytes)
+{
+    public int PixelWidth { get; init; }
+    public int PixelHeight { get; init; }
+}
 public enum ContentAssetStatus { Cached, Loaded, Missing, Stale, Capacity, Failed }
 public sealed record ContentAssetResult(ContentAssetKey Key, ContentAssetStatus Status, ContentAssetPayload? Payload = null);
 public sealed record ContentAssetCacheOptions(int MaximumEntries = 64, long MaximumBytes = 16 * 1024 * 1024,
@@ -124,7 +128,8 @@ public sealed class ContentAssetCache : IDisposable
             var supplied = await _provider.LoadAsync(flight.Key, flight.Cancellation.Token).ConfigureAwait(false);
             if (supplied is not null)
             {
-                if (supplied.MediaType is not ("image/png" or "image/jpeg" or "image/webp") || supplied.Bytes.IsEmpty ||
+                if (supplied.MediaType is not ("image/png" or "image/jpeg" or "image/webp" or "image/bgra32") || supplied.Bytes.IsEmpty ||
+                    supplied.MediaType == "image/bgra32" && !LocalContentProtocol.ValidPixels(supplied.Bytes.ToArray(), supplied.PixelWidth, supplied.PixelHeight) ||
                     supplied.Bytes.Length > _options.MaximumPayloadBytes)
                     throw new ArgumentException("Unsupported or oversized raster asset payload.");
                 payload = supplied with { Bytes = supplied.Bytes.ToArray() };

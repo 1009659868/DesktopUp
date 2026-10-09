@@ -65,7 +65,7 @@ public sealed partial class AutoPostureSettingsTests
             "poster_catalog_operations", "spatial_operations", "spatial_participants", "spatial_continuity"];
         var before = tables.ToDictionary(t => t, t => Rows(f, t));
         var result = f.Store.Initialize(); Assert.True(result.Succeeded, result.Error);
-        Assert.Equal(6, result.PreviousSchemaVersion); Assert.Equal(12, result.Head!.SchemaVersion); Assert.Equal(8, result.Head.Revision);
+        Assert.Equal(6, result.PreviousSchemaVersion); Assert.Equal(14, result.Head!.SchemaVersion); Assert.Equal(8, result.Head.Revision);
         string backup = Path.Combine(f.Paths.Backups, result.PreMigrationBackupFileName!);
         Assert.Equal(6L, f.Scalar("PRAGMA user_version;", backup)); Assert.Equal("ok", f.Scalar("PRAGMA integrity_check;", backup));
         Assert.Equal(0L, f.Scalar("SELECT COUNT(*) FROM pragma_table_info('posters') WHERE name='auto_collapse_delay_seconds';", backup));
@@ -139,7 +139,7 @@ public sealed partial class AutoPostureSettingsTests
     public void Current_schema_missing_delay_column_fails_closed()
     {
         using var f = new Fixture(); f.Execute("ALTER TABLE posters DROP COLUMN auto_collapse_delay_seconds;");
-        Assert.False(f.Store.Initialize().Succeeded); Assert.Equal(12L, f.Scalar("PRAGMA user_version;"));
+        Assert.False(f.Store.Initialize().Succeeded); Assert.Equal(14L, f.Scalar("PRAGMA user_version;"));
     }
 
     [Fact]
@@ -149,8 +149,8 @@ public sealed partial class AutoPostureSettingsTests
         var backup = f.Store.CreateBackup("m08-settings"); Assert.True(backup.Succeeded, backup.Error);
         string path = Path.Combine(f.Paths.Backups, backup.FileName!); Assert.True(f.Store.ValidateBackup(path).IsValid);
         Assert.Equal(300L, f.Scalar("SELECT auto_collapse_delay_seconds FROM posters;", path));
-        // 12 is the current schema; 13 is the next unrelated future version and must still be rejected.
-        f.Execute("PRAGMA user_version=13;");
+        // 14 is the current schema; 15 is the next unrelated future version and must still be rejected.
+        f.Execute("PRAGMA user_version=15;");
         Assert.False(f.Store.Initialize().Succeeded); Assert.Equal(300L, f.Scalar("SELECT auto_collapse_delay_seconds FROM posters;"));
     }
 
