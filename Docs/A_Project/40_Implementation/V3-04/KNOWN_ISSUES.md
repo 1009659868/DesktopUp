@@ -4,6 +4,8 @@
 
 ## Bug清单
 
+2026-10-09出口审查：R7-D已询问D1/D2/D4均USER PASS，review09三进程正常停止/error0/退出资源0；最新退出picker=false，不新增选择器打开退出的日志认证。R7完整验收仍OPEN，D3及未单列原生/跨机范围归[§12携带表](LR_MILESTONE_EXECUTION.md#123-携带清单未验不改pass不创建重复bug)，R8假源交接完成不关闭001/004/006/026/031/035，也不证明另一测试机动效问题的根因。下面保留各Bug原始证据；仅定点校正011/016落后的“尚未接线”状态。
+
 2026-10-08 R7-0更新：BUG-019有确定锁时序反例、修复及全量自动证据，按首次seed/快照读写范围关闭；BUG-021已修复并验证准备/交接缓存失效子类，长时原生范围继续观察。candidate02/final02的2362合同、16门、42进程通过，失败记录保留，见[R7§11.4](LR_MILESTONE_EXECUTION.md#114-r7-0可靠基线实施2026-10-08)。这不关闭白条031、云体验035或R7全部可靠性余项；下方“R7未开始”为历史。
 
 2026-10-08收口：candidate15标题无底板/独立颜色与射灯交互跟随用户通过，BUG-030/034关闭，RR-06 CLOSED；新增BUG-035为Rain标题遮住可见动效，按[模块§13](LR_SCENE_MODULE_EXECUTION.md#13-rr-06收口与r7前增量修订2026-10-08)解决后再R7。BUG-031仍延期；下方早期待验描述为历史。
@@ -24,23 +26,23 @@
 | V3-BUG-008 | 有限/循环滚动边界与轴向混用，短内容偏移、反向接缝及小增量异常 | PARTIAL FIX / WHEEL CODE + APP HANDLER PASS（候选25） | 起点反向预夹紧/逐事件Round已修；47相关/2115全量、两轴12场景102处理器事件/XAML/命中及八组同包门通过。用户确认大致可用，新报停顿续滚另列026延期；循环抓取/被动恢复归R6，不写成全场景已修，见[报告§9](LR_R5_POINTER_AND_MODULE_REVIEW.md#9-候选25循环起点反向滚动与主线审阅节点) |
 | V3-BUG-009 | 横向区域局部坐标误碰撞，容量与纵向不对称 | FIXED / SOURCE + MODEL（R3） | 现solver按主/交叉轴求解并转换区域全局坐标；两轴1000个最大跨度及旧区域语义合同通过。原100项非对称反例为历史；App横向组合仍归R6/R7 |
 | V3-BUG-010 | 横向只改变高度时宿主遗漏布局失效 | PARTIAL FIX / SOURCE + MODEL | EnsureContentSnapshot已有HeightDip失效键与锚恢复，Reclip拒绝横向旧高度见证；原遗漏已修。横向单改高度与R4动画/终态实际连续证据归R6 |
-| V3-BUG-011 | 自动未固定项纯模型可移动，生产鼠标编辑门仍拒绝 | R5 FINITE FIXED；R6 LOOP CODE + MANAGED HANDLER，NATIVE PENDING | R5有限首拖及原分项证据保留；2026-09-28已解除活动循环拒绝门，实际副本/累计导航/结束锚两轴两模式托管App验证通过，见[R6记录](LR_R6_CONTINUOUS_OPERATIONS.md)。循环原生鼠标/人工及完整组合未验，不扩称全场景通过 |
+| V3-BUG-011 | 自动未固定项纯模型可移动，生产鼠标编辑门仍拒绝 | R5/R6 CODE + AUTO；R6已问拖动/循环USER PASS | 原循环拒绝门已解除；R6§8.1已确认两模式首拖/反向/再次拖、Esc、撤销及循环拖缩，不能继续写全部人工未验。当前R8假源失效/迟到松手复验通过；新候选接缝handle/完整键盘等细项仍归R7-CARRY-02，不扩称全场景通过 |
 | V3-BUG-012 | 旧“恢复自动”清位置/尺寸/序号的预期与结果不一致 | SUPERSEDED / DEC-020、023、024；R4新合同已实现 | 退出A恢复保存的自动来源，解除图钉和恢复尺寸独立；不能恢复“全清”旧预期。旧Manual无返回来源明确拒绝退出A，旧硬约束不静默转换；不是所有旧数据均可自由转换 |
 | V3-BUG-013 | Manual切方向提案版本+2被真实命令拒绝，并包含清位置固定的转换 | FIXED / POLICY + CONTRACT；APP WIRED | SetFlowAxis现只改方向与版本+1，保留模式/loop/坐标/返回态，冲突拒绝；App沿正式提交。动作专属原生/SQLite连续验收不冒填，归R6/R7 |
 | V3-BUG-014 | 便携导出/导入静默清空ReservedSpaces | FIXED / CODE+AUTO（2026-09-26） | R2独立包：10新红测→定向25/25、全1664/1664；非空留白经真实SQLite/store重开保真。见[验证记录](VERIFICATION.md)；R7复验另列，非App重启或文件丢失声明 |
 | V3-BUG-015 | 热度尺寸关闭标记未控制ResolveHeat投影 | FIXED / INJECTED MODEL + R4 AUTO | ResolveHeat现遵循AllowHeatDrivenSize及ManualSize，手动模式不改；R4红绿及1868合同支持。真实统计/热度公式仍未接入 |
-| V3-BUG-016 | 真实可用空间不足时的准入/裁切/导航未闭环 | PARTIAL FIX / MODEL READY；APP NOT WIRED | solver已区分真实不足与旧约束冲突并保留跨度，ContentSpacePolicy有受限/恢复模型；App尚未消费该策略/ReadOnlyOverflow，也未接最大完整Item主动最小值；R6必须接线并验证 |
+| V3-BUG-016 | 真实可用空间不足时的准入/裁切/导航未闭环 | R6 APP WIRED + AUTO；真实环境未验 | R6 2A/2B已接ContentFrameMinimumPolicy、ContentSpacePolicy及ReadOnlyOverflow，不能再写App未接线。模型/隔离空间证据见[R6记录](LR_R6_CONTINUOUS_OPERATIONS.md)；D3真实显示/DPI/不足冷启动由用户保留未验，归R7-CARRY-01，不把主动缩框或消息注入当真实环境通过 |
 | V3-BUG-017 | 旧布局人工候选manifest与实际DLL不匹配 | HISTORICAL CANDIDATE INVALID / REPLACEMENT VERIFIED | 旧CheckOnly失败与禁用保留，不修改hash绕过。后续候选25已有新同包证据/445源码/402产物，启动预检复核成功；旧包不继承新PASS，当前不再被旧失配阻塞 |
 | V3-BUG-018 | 中心缩窄/增宽动画误用等宽收展表面，导致安全取消 | FIXED / CODE+AUTO（2026-09-27） | `alignment-composition-01`原生失败；新geometry lease同步prepared Content/Input/Clip，`alignment-v9-composition`104帧全部一致，100项缩窄/承接/放宽/撤销及重启通过；取消/宽高/DPI另有9项合同，非全环境人工认证 |
 | V3-BUG-019 | 两个Store并发首次初始化偶发SQLite table locked | CLOSED / FIXED + AUTO PASS（首次seed与快照读写） | R7固定读/写锁时序旧实现两项Error6，改Private cache＋WAL，保留原事务、CAS与5秒等待；快照/回滚及32轮新库并发通过。candidate02/final02全量2362与16门通过；旧失败保留。不是并发schema迁移/断电认证，详见[R7§11.4](LR_MILESTONE_EXECUTION.md#114-r7-0可靠基线实施2026-10-08) |
-| V3-BUG-020 | 海报原生菜单排列返回error5并立即安全关闭 | OPEN / FIX IMPLEMENTED，NATIVE HIT PENDING | candidate11/12复现foreign锚点error5；candidate13自身input单步实验成功。candidate14正式两步、严格层级/输入透明/全序见证通过，32菜单合同和2001全量通过；15命中点被外进程遮挡，完整六状态/原生鼠标未通过，暂不关闭。详见对齐记录§7.3 |
-| V3-BUG-021 | 预分配/复用表面间歇读不到窗口区域并安全取消 | 缓存失效子类FIXED / 原生长时余项OPEN | 自有HWND清除区域反例复现“缓存成功但实际Region=null”；准备/交接及FinalRestore在batch后重装一次，正常动画仍复用、严格读回及失败恢复不放宽。新11案例含3重置，三轮定向及candidate02/final02完整16门通过，当前同包无读回失败。自然发生时哪条系统消息移除区域尚未证明，不将所有同类症状或白条判根除；[R7§11.4](LR_MILESTONE_EXECUTION.md#114-r7-0可靠基线实施2026-10-08) |
+| V3-BUG-020 | 海报原生菜单排列返回error5并立即安全关闭 | FIX + D1 USER PASS（本次问项范围） | 2026-10-09 review09用户确认三模板展开/收起的原生“…”菜单可点击且不误触Item、标题/云可拖；旧foreign锚点和被遮挡的坐标失败证据保留。不将本次反馈扩展为任意层级/全部透明度状态认证；见[R7§11.9](LR_MILESTONE_EXECUTION.md#119-bug-021读回路径整改与r7-d准入2026-10-09) |
+| V3-BUG-021 | 预分配/最终恢复间歇读不到窗口区域并安全取消 | COPY-READ PATH FIX / C1 AUTO PASS / D1+D2 USER PASS | diagnostic07捕获复制初读0、无重设补查3；改单次GetWindowRgnBox直接读边界，实际缺失/错误仍拒绝。candidate09完整2424合同、17进程及R4 12案例/4清除通过，用户D1/D2询问范围通过；Win32内部原因及真实显示环境不据此推定。旧final05 FAIL保留，见[§11.9](LR_MILESTONE_EXECUTION.md#119-bug-021读回路径整改与r7-d准入2026-10-09) |
 
 本轮新增：
 
 | Bug ID | 问题 | 当前状态 | 依据与边界 |
 | --- | --- | --- | --- |
-| V3-BUG-022 | 内容Viewport整幅HRGN截获日常空白下的桌面操作 | FIX IMPLEMENTED / NATIVE REGION VERIFIED / GESTURES PENDING | 候选18实际应用区域243空白点均排除、216交互点保留；没有实际执行桌面框选/右键/双击，不能作为USER PASS；不是网格绘制造成 |
+| V3-BUG-022 | 内容Viewport整幅HRGN截获日常空白下的桌面操作 | FIX + D1 USER PASS（透明留白/圆角外桌面操作） | 旧候选18的243空白点/216交互点证据保留。2026-10-09 review09用户确认D1问项：留白及圆角外仍能操作桌面，三模板原生命中正常；不虚构本次未单列的桌面双击或其他完整鼠标矩阵。见[R7§11.9](LR_MILESTONE_EXECUTION.md#119-bug-021读回路径整改与r7-d准入2026-10-09) |
 | V3-BUG-023 | 真实鼠标进入Item后仍不能驱动Lamp跟随 | FIXED / CODE + REAL POINTER（候选20，2026-09-27） | v19真实移动复现：NVIDIA Overlay整体alpha=0仍被当成遮挡；v20按成功原生读取排除全透明窗口，两个点实际跟随、离开轻摆通过，2102合同及NativeMouse通过。未知/非零alpha仍阻挡；产品视觉待人工，不扩大为全环境认证 |
 | V3-BUG-024 | 控制中心默认按钮深色、悬停才恢复主题 | FIXED / CODE + CONTROL STATES（候选21，2026-09-27） | system浅色模式写到框架共享画刷，真实红测复现Normal深灰/PointerOver浅色；本地资源隔离、完整状态与弹窗样式修复。四主题及保存system重启共378状态读回通过；不是OS hover或高对比认证，见输入报告§6 |
 | V3-BUG-025 | 半透明Lamp展开过程及终态标题下浅灰 | FIXED / NATIVE PHASE PIXELS + USER ACCEPTED UI/ANIMATION（候选24） | 候选23仅修终态，候选24在每次HRGN扩大后清新区域，四组三阶段24点差值0。用户随后明确“目前的UI，动画等都做得挺不错了”，登记当前体验认可；不扩为原速全部GPU帧/HDR/混合DPI认证，见[报告§8](LR_R5_POINTER_AND_MODULE_REVIEW.md#8-候选24展开过程灰底与ab不透明度对照) |
@@ -115,7 +117,13 @@ D移除模块全链中的physical-03复现：BackupDatabase把源库WAL journal�
 
 ## V3-BUG-021：尺寸动画窗口区域读回间歇失败
 
-2026-10-08最新：R7-0已确认并修正“表面准备/交接后仍信任同尺寸旧HRGN缓存”的应用缺口；真实区域清除注入先红后绿，完整candidate02/final02已封存。保持严格起点/终态读回，不接受null区域，不增加无限重试。原生长时和其他失效时序继续留R7-C验证；以下candidate17等原始观察保留，完整证据归[R7§11.4](LR_MILESTONE_EXECUTION.md#114-r7-0可靠基线实施2026-10-08)。
+2026-10-09本轮处置：**复制读回假阴性路径已修订 / 完整C1 AUTO PASS / D真实环境待验**。diagnostic07 PID44072第5轮展开自然失败，GetWindowRgn=0后没有区域重设或恢复、同线程只读补查得到3；不能把复制API的0直接等同于HRGN不存在，也不能据此解释所有旧失败或Win32内部原因。几何验证现在只调用一次GetWindowRgnBox取得实际区域边界，无临时副本/重试/修复；真实缺失、空区域和错位仍失败。R7-0安装守卫保留。
+
+candidate09/final09完整2424合同、0/1/3/6各20轮及17进程通过，12故障案例含4次原生HRGN清除（新增FinalRestore），退出error/资源0。证据、读回语义和边界见[里程碑§11.9](LR_MILESTONE_EXECUTION.md#119-bug-021读回路径整改与r7-d准入2026-10-09)。本轮不宣称所有环境永久消除此类错误；若直接查询也失败，仍沿严格失败/共享恢复路径保留现场。人工review09待反馈，C2仍后置；以下为修订前历史，final05不改记PASS。
+
+2026-10-09最新：C1连续0/1/3张各20轮通过，6张第11轮第三张极简模板收起FinalRestore失败。`out/r7-continuity/final05/continuous-6/logs/desktopup.jsonl`，PID7196，App SHA `C695E9D573AC29CC478957B08E84EC7BEF9A89F0C0C413A6348BE52FA6DA82C5`，request `c1-posture-1d7d208a781942edb20729c5b671dca0`，revision253。窗口/客户区300×60，native/matches/input/region设置true，surfaceReadback为window-region-read-failed、GetWindowRgn=0。FinalRestore已强制重装，不能直接断言是原缓存分支；具体原生消息/时序尚待证明。原R4故障门在同候选独立11案例/3区域清除注入仍通过。C1未通过，不进D；下一步定点观测安装到读回边界及committed恢复，再小范围修复/完整复验。失败进程正常退出/资源0不代表恢复成功或缺陷已解决。
+
+2026-10-08历史：R7-0已确认并修正“表面准备/交接后仍信任同尺寸旧HRGN缓存”的应用缺口；真实区域清除注入先红后绿，完整candidate02/final02已封存。保持严格起点/终态读回，不接受null区域，不增加无限重试。短时余项继续C1，真实环境归D，长测按DEC-033移至基础功能完成后；以下candidate17等原始观察保留，完整证据归[R7§11.4](LR_MILESTONE_EXECUTION.md#114-r7-0可靠基线实施2026-10-08)。
 
 - 2026-09-27，App SHA256 `4BBBC824BCD4A19D93EB985E0742D44B655FDC2A1CCB63CB58CCC91C35F6637A`，`alignment-v17-composition/data/logs/desktopup.jsonl` PID18068。basic-box/100项夹具，无Lamp动效，因此没有证据把故障归于本次Lamp根ledger修正。
 - 540×720准备及两次ready回调成功，逻辑缩到528×720时尺寸、输入、区域设置均返回成功；预分配surface实际GetWindowRgn=0，`window-region-read-failed`，不放松表面读回门。取消后`spatial.presentation_restored`的restored/layoutsReleased均true，未见几何命令提交，退出资源0。

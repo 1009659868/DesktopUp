@@ -16,8 +16,8 @@
 | --- | --- |
 | version / fileVersion | 应用版本 / 四段Windows文件版本 |
 | runtimeVersion | 随包.NET运行时版本；调整前核对官方安全补丁，构建时严格检查实际发布版本 |
-| defaultTemplate | `lamp`深夜书桌、`basic-box`基础收纳、`night-ops`夜航；只支持已实现内置模板 |
-| backgroundOpacityPercent | 当前25，0全透明/100不透明，只影响深夜书桌的背景；其他两种模板必须填`null`，不静默忽略不支持的参数 |
+| defaultTemplate | 当前为`basic-box`基础收纳；也支持`lamp`深夜书桌、`night-ops`夜航 |
+| backgroundOpacityPercent | 当前`null`；使用深夜书桌时可填0～100（0全透明/100不透明），仅影响背景；其他两种模板必须填`null` |
 
 命令行覆盖不修改设置文件：
 
@@ -28,8 +28,8 @@
 # 常规一键构建；无需填写机器专属路径。
 ./scripts/package-preview.ps1
 
-# 自定义编号和本次背景不透明度。
-./scripts/package-preview.ps1 -ReleaseId 20260928.2 -BackgroundOpacityPercent 40
+# 本次改用深夜书桌并指定背景不透明度，不改变默认配置文件。
+./scripts/package-preview.ps1 -DefaultTemplate lamp -BackgroundOpacityPercent 40
 
 # 切换无灯光模板时显式清空其不支持的透明度。
 ./scripts/package-preview.ps1 -DefaultTemplate basic-box -BackgroundOpacityPercent $null
@@ -49,4 +49,4 @@
 - `evidence/resolved-settings.json`、源码指纹、原始发布/NSIS日志、payload清单和Setup SHA256用于绑定；`Verified:false`只是尚未执行运行验收，编译成功不等于验收通过。
 - 成品默认未签名；不要为了测试关闭系统防护。跨机/普通权限与人工向导须另验。
 
-历史20260928.1固定路径安装器已按用户要求撤回到回收站，不再是当前下载入口；记录和配置保留。主线仍停在R6第二批2B之前，本次只维护打包流程。
+历史20260928.1固定路径安装器已按用户要求撤回到回收站，不再是当前下载入口；记录和配置保留。2026-10-09默认模板统一为基础收纳，本轮未重新生成安装器；当前主线见[V3-05记录](../../Docs/A_Project/40_Implementation/V3-05/REAL_CONTENT_DISPLAY_AND_ACTIONS.md)。

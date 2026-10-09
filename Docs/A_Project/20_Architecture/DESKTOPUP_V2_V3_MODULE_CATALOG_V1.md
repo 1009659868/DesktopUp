@@ -1,10 +1,10 @@
 # DesktopUp V2 V3 模块分类与端口目录 V1
 
-2026-09-24场景模板UI探索：[模板分层建议](CONTENT_TEMPLATE_SCENES_REVIEW.md)区分结构度量、表面绘制、被动效果与宿主生命周期，并预留AI声明式计划。对应已有E15/D07/D08方向，不新增生产引擎或布局权威；顶灯/雨夜仅Docs原型，结构化主题完整实施仍归V3-07/08。
+2026-10-09实现映射：Lamp/Rain仍为可信可选源码模块，不加载用户DLL。UI C、便携v5和R8端口保持；05-04正式引用已获用户确认。[05-05／06](../40_Implementation/V3-05/REAL_CONTENT_DISPLAY_AND_ACTIONS.md)新增DesktopUp.ContentWorker（4类固定stdio动作，隔离提取/默认打开/定位）、ReferenceContentRuntime/Actions、SqliteContentOpenJournal与Detach命令。自动通过、人工待验；不是通用Shell插件平台或物理文件传输实现，便携v5不携带真实引用关系。
 
-2026-09-23内容布局增量评审：[整改设计V2](CONTENT_LAYOUT_REMEDIATION_DESIGN_V2.md)§9按既有Domain/Application/Infrastructure/App、空间/R4、中心/托盘和生命周期划分职责。它是待批准的模型建议，不宣称新服务已实现；保留本目录已有模块与代码映射。当前工作区缺陷及实际能力见[审查](../40_Implementation/V3-04/CONTENT_LAYOUT_REVIEW_2026-09-23.md)，L旧自动结论不认证未提交修订。
+历史设计起点（2026-09-23）：布局V2评审已由后续R1～R8推进；保留旧审查材料，不用当时“待批准/未实现”覆盖现在的源码/证据。
 
-状态：`DESIGN BASELINE — MODULE RESPONSIBILITIES ALIGNED 2026-09-17`（L01～06实际布局职责已落地，L07人工待验；未来端口不冒充实现）
+状态：`DESIGN BASELINE / IMPLEMENTATION MAPPING ALIGNED 2026-10-09`。下方建议类名/未来进程不等于已有代码；生产/验证边界归C层。
 
 建立日期：2026-09-03
 
@@ -20,9 +20,9 @@
 | B13 | PosterStackCoordinator | 正常布局无重叠；保留异常重叠命中防御和cluster顺序；不得以抬层消除碰撞或盖住普通程序 | V3-04-M04-06 |
 | D11 | PosterCatalogApplicationService | Create/CloneConfig/Rename/Remove/List，profile 初始化与零实例 | V3-04-M01/02 |
 | D12 | ScopedCommandCoordinator | Entity/ReadSet CAS、全局提交序列、批量状态事务和 NotFound | V3-04-M02 |
-| D13 | PortableProfile职责（现有代码承接） | Application/PortableProfileCodec、Planner及StateProjectionCoordinator.Portable：一致快照/严格解析/确定性映射/完整CAS；App/PortableProfileController及中心全局入口：选择/预览/确认；Infrastructure/PortableProfileFile和StateBackupRecovery：原子文件及离线恢复，均不形成第二权威 | V3-04-06已接入，剩余验证归C；L03扩展布局载荷/映射，完整主题素材仍V3-07-04 |
-| E14 | ContentCapabilities | 文件/应用/Shell/虚拟流能力和 DropIntent；不越权搬运 | V3-05-01/07/13 |
-| E15 | PosterThemeParameterContract（M05最小实现已接入） | Domain/PosterPresentationPolicy解析v1参数/旧兼容/安全fallback，Application/PosterPresentationDraft与SetPresentation复用实体CAS；每实例Presentation.Metrics供renderer/输入/展开/恢复，不强制固定NIGHT OPS；完整manifest/主题加载仍V3-07 | V3-04-M05、V3-07 |
+| D13 | PortableProfile职责（现代码承接） | Codec/Planner/TemplateMerge及原单事务；便携v5携带声明/实例/主题，与SQLite12完整备份恢复分工 | R7-A/B及D4分项证据；跨机仍未验，外部素材平台归V3-07-04 |
+| E14 | ContentCapabilities / V3-05-01纯合同PASS；生产为R8基础 | 正式实体/关系/能力/打开结果纯模型已落Domain/Application；App仍DEMO，SQL/真实提供方/DropIntent未接 | [05-01合同/代码](../40_Implementation/V3-05/CONTENT_ENTITY_AND_OPEN_CONTRACT.md)，05-04接持久关系，05-06接打开，07/13接扩展能力 |
+| E15 | PosterThemeParameterContract（已演进） | presentation v7追加按模板的介绍区显隐，原v6标题显隐保持；TemplateParameterSchema/Values、通用场景宿主、可选Lamp/Rain，仍复用CAS | UI C/模块/RR/R7及05-05文字区分项证据；完整平台/目录监听/AI仍V3-07/08 |
 | F13 | CollectionSubscriptionHub | 共享来源 watcher 引用计数、取消、事件合并，更新多个关联视图 | V3-05-11 |
 | D07/D08 扩展 | Existing Theme/AI Services | 共享服务但每次计划带目标 IDs/实体版本，实例覆盖与草稿独立 | V3-07/08 |
 

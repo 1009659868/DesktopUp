@@ -1,5 +1,70 @@
 # V3-04 代码锚点
 
+## 2026-10-09 Git源码检查点
+
+当前实现保存于`d8a1fda`：覆盖下方R7可靠性与V3-05实体、引用、显示使用及模板/默认值锚点。提交准备仅整理12个新增文件的EOF空白，不新增功能。2607合同与Release构建证据见[本轮验证](VERIFICATION.md#2026-10-09-git提交前复验)，最近续作仍为工作流§6.4；历史源码/候选绑定不改写。
+
+## 2026-10-09 默认基础收纳
+
+`PosterVisualWindow.CreateDefaultPoster`复用`PosterConfigurationFactory.NewBasicBox`，保留首次定位；中心/托盘新增仍走原同一工厂及DistributionBuild默认覆盖。`packaging/preview/package-settings.json`默认basic-box/null；`PosterCreationDefaultsTests`新增2例绑定该配置。已有海报不迁移。验证/范围归[§10](../V3-05/REAL_CONTENT_DISPLAY_AND_ACTIONS.md#10-默认基础收纳2026-10-09)。
+
+## 2026-10-09 模板内容介绍区
+
+Domain/TemplateHeadingVisibility及PosterPresentationParameters的presentation v7负责逐模板偏好/兼容和MetaHeight；Application/ControlCenterSettingsSession原事务、TemplatePresentationRefreshPolicy结构刷新、PortableTemplateMerge同ID映射；App/ControlCenterWindow.ContentHeading.cs和XAML模板夹入口，TemplateRecipe副本继承。ContentHeadingTests新增16例，App.ContentReferenceProbe通过真实控件事件及XAML/命中坐标读回验证关/开/关和重启。证据与边界归[§9](../V3-05/REAL_CONTENT_DISPLAY_AND_ACTIONS.md#9-模板内容介绍区2026-10-09)，SQLite仍14，05-05-V1尚未实施。
+
+## 2026-10-09 无底板与高清图标
+
+`ContentSelection.ShowHighlight`、`ContentCardPresentationPolicy.ShowOutline`与原ContentSelection/Content.cs接线区分普通目标与显式集合；SurfacePaint阻止模板回画真实卡片底板。`ContentWorker/LargeShellIcon.cs`封装IShellItemImageFactory/GDI资源，原Program保留回退；`ContentIconPresentationTests`7项、RealContentNativeTests多尺寸ICO1项、App.ContentReferenceProbe无底板/普通无描边/Ctrl单项检查。当前证据归[§8](../V3-05/REAL_CONTENT_DISPLAY_AND_ACTIONS.md#8-修饰键选择与无底板高清图标2026-10-09)。自定义图标覆盖只进入设计/计划，源码尚无资产存储/上传入口。
+
+## 2026-10-09 05-05／06三项增量
+
+`Application/ContentCardPresentationPolicy.cs`统一真实卡片图片区/选中判定，接`App/PosterVisualWindow.Content.cs`；`Application/ContentReferencePreviewPolicy.cs`按活跃PosterItem查复用海报，接`App/ControlCenterWindow.References.cs`。`ContentUsageRefinementTests.cs`8例；`App.ContentReferenceProbe.cs`读回Image实际比例尺寸与单选边框、验证跨海报选择隔离和重启。现候选/启动入口归[修订§7](../V3-05/REAL_CONTENT_DISPLAY_AND_ACTIONS.md#7-人工反馈后三项修订2026-10-09)，不改正式关系移除/打开事实合同。
+
+## 2026-10-09 V3-05-05／06 真实显示与动作
+
+当前入口：[05-05／06代码锚点](../V3-05/REAL_CONTENT_DISPLAY_AND_ACTIONS.md#5-代码和验证入口)。新增ReferenceContentRuntime/Actions、LocalContentProtocol、独立ContentWorker、LocalContentWorkerClient、SqliteContentOpenJournal、ContentDetachCommand、ContentSelection，接回原海报/中心输入、可见缓存及CAS。schema14只追加迁移；Shell只默认打开/定位，不做磁盘传输。以下未接线描述均限定其历史阶段。
+
+## 2026-10-09 V3-05-04正式引用生产接线
+
+当前入口见[05-04代码锚点](../V3-05/NON_DESTRUCTIVE_REFERENCE_ADD.md#6-代码锚点)：ContentReferenceCommand/Integrity、SqliteContentRepository、LocalContentReferenceProbe、ReferenceContentViewSource、ControlCenterWindow.References及原NativeProfilePicker退出通道。不是新增第二状态源，也未接真实Shell打开。后续05-01段仅描述纯合同落地时的范围。
+
+## 2026-10-09 V3-05-01纯合同完成
+
+新增Domain/RealContent.cs、ContentCapabilityPolicy.cs；Application/ContentRelations.cs、ContentOpenContract.cs、ContentCatalogCodec.cs、ContentLegacyCompatibility.cs及RealContent*Tests。属于纯实体/命令准备/结果归约/兼容夹具，未替换现App的DEMO void处理器或引入第二持久状态。
+
+当前主线的合同、代码锚点、验证与交接转[V3-05实施记录](../V3-05/CONTENT_ENTITY_AND_OPEN_CONTRACT.md)。以下05-01准备/R7/R8记录保持原日期范围，不作为新模型尚未实现的判断依据。
+
+## 2026-10-09 对齐审计与05-01准备（无新代码）
+
+差异/版本域见[执行§14](LR_MILESTONE_EXECUTION.md#14-文档源码对齐审计与05-01准备2026-10-09)，下一步任务归[工作流§6.1](../../30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md#61-v3-05-01实施准备实体能力与打开结果)。现Open为void/DEMO no-op，Assets无图像解码；ContentLayout/ContentPlacement是本地布局，不是已实现的正式内容库。下列R8入口可复用，05-01正式实体/结果类型尚不存在。ContentLayout.cs热度注释落后于ResolveHeat的注入Rank能力，登记为后续局部注释同步项，不冒称真实热度已接。
+
+## 2026-10-09 R8接入交接（现有代码，无新生产实现）
+
+- Domain/ContentLayout.cs：ContentPlacement/ContentLayoutDocument版本与布局局部身份；IContentItemViewSource/IObservableContentItemViewSource元数据端口，正式ContentItem映射仍归05-01。
+- Application/ContentSourcePorts.cs：Views/Assets/Open统一可信宿主绑定，ContentSourceProjection不允许元数据修改成员/顺序；App/PosterSpatialRuntime.ContentSource.cs负责目录级绑定。
+- App/PosterVisualWindow.ContentSource.cs：UI排队、版本/旧草稿失效、R4预制树的恢复安全点、订阅释放；源adapter须提供快照，不把慢I/O放Read/Version。
+- Application/ContentAssetDemand.cs、ContentAssetCache.cs与App/PosterVisualWindow.ContentAssets.cs：可见tile需求/循环去重、有界缓存与迟到结果准入；真图提取/解码和跨海报总预算尚未接入。
+- Application/ContentActivationSession.cs与App/PosterVisualWindow.ContentActivation.cs：激活去重/呈现见证/DEMO打开分发；同步void不等于真实打开成功结果合同。
+- App/App.ContentSourceProbe.cs与scripts/probe-content-source.ps1：受控内存假源五场景；本轮同一final09候选1/3/6张全部通过。原C1相关62合同与新三进程证据层级分开，见[交接§13](LR_MILESTONE_EXECUTION.md#13-r8真实item接入交接2026-10-09)。
+
+## 2026-10-09 BUG-021定点整改与R7-D入口
+
+- `DesktopLayerAttachment.cs / DesktopWindowNativeApi.InspectVisualSurface`：一次直接GetWindowRgnBox替代临时HRGN副本，只改边界读取；实际缺失/尺寸错误继续失败，区域重装及事务不变。`DesktopVisualSurfaceReadback.RegionReadMethod`区分历史读回方式。
+- `VisualRegionNativeReadbackTests.cs`：11项原生正反例/只读不修复/单次查询约束；无效复制目标故障仅证明API语义，不冒充自然故障的内部原因。原始自然失败及低干扰观察归里程碑§11.9。
+- `PosterSpatialRuntime.Posture.cs / RestorePresentedGroup`的可选探针回调、`PosterSpatialRuntime.TitleSurfaceSmoke.cs`：新增最终恢复阶段真实HRGN清除；正常调用不安装回调，12案例/4清除由`smoke-title-surface.ps1`强制检查。
+- `smoke-auto-lifetime.ps1`：continuous不使用硬上限60秒的通用启动退出参数，保留175秒探针取消/185秒脚本等待；不更改生产退出逻辑。
+- `verify-r7-continuity.ps1`：2424合同门，17进程，18份proof含正常关闭的三模板DEMO种子及进程清理。`start-r7-review.ps1`：同包/源码/证明校验、独立数据目录与重开绑定，真实原生验收不代填PASS。
+- 结果：final09 C1 AUTO COMPLETE；review09 D1/D2/D4已问范围USER PASS、D3未验；最终退出现场差异待核对，随后R7出口审查。本次只更新记录，无新增代码锚点，详见[§11.9](LR_MILESTONE_EXECUTION.md#119-bug-021读回路径整改与r7-d准入2026-10-09)。
+
+## 2026-10-09 R7-C1短时连续可靠性
+
+- `App.ContinuousLifetimeProbe.cs`：复用隔离lifetime入口，0/1/3/6张、每组20轮中心开→收起→全隐藏→中心关→重显→展开；原命令/CAS、会话代次、XAML/原生读回及资源所有权，不合成OS手势。新夹具仅首轮允许本机坐标物化，实际外框/用户字段不变，后续完整定义无漂移。
+- `PresentationReadbackEquality.cs`、`PosterVisualWindow.Presentation.cs`的`VerifyPresentation`：验证专用的完整值比较；修正模板重读后字典/声明列表引用不同导致的假阴性，不改变生产绘制/空间策略，也不把paint-only准入当配置相等。
+- `PresentationReadbackEqualityTests.cs`：17项同值重读/字典顺序/选中与未选参数/声明/丢失新增/标题等反例；链接同一验证helper，不复制测试模型。
+- `scripts/smoke-auto-lifetime.ps1 -Mode continuous`：要求恰好20轮、正常退出/清理；原restart核对完整海报定义与revision。原exercise仍验证本机自有环境HWND消息分类与恢复；零海报提前完成路径不冒充系统信号已注入。
+- `scripts/verify-r7-continuity.ps1`：冻结源码/候选/证明，组合12个lifetime进程、4个原组隔离/连续操作进程及1个R4故障进程；任何门失败不封存PASS，不强杀，不覆盖旧包。最终执行结果归[里程碑§11.8](LR_MILESTONE_EXECUTION.md#118-r7-c1短时连续可靠性实施2026-10-09)。
+- C1不是原生菜单/桌面空白手势、真实锁屏/显示器/DPI、桌面合成像素或长测认证；这些分别留R7-D和总计划§14.1。
+
 ## 2026-10-08 R7-A/B完整配置往返
 
 - Application/PortableProfileCodec.cs：v5必需中心主题/模板册，presentation v1～6严格数据验证；旧v1～4字段边界保持；raw参数不经过渲染投影重写。

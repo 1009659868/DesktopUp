@@ -1,5 +1,9 @@
 # DesktopUp V2 当前执行入口
 
+2026-10-09当前：**V3-05真实引用已接生产，默认模板统一为基础收纳**。首次/新增及Preview默认均为basic-box，已有海报不改写；旧review07/PID42348已正常退出、资源归零，旧包/库保留。最新实现及验证见[§10](../A_Project/40_Implementation/V3-05/REAL_CONTENT_DISPLAY_AND_ACTIONS.md#10-默认基础收纳2026-10-09)；§9介绍文字控件仍待人工确认，不补记PASS。最近下一步仍[05-05-V1资产与安全迁移](../A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md#64-卡片独立图标与构造入口下一步)，未实现自定义图标。R7携带/C2后置保持。本次按用户授权同步当前V3分支，范围与验证归[交接](../A_Project/40_Implementation/V3-04/HANDOFF.md)；本地记忆、配置和运行产物不上传，下方“未提交/未推送”等仅为历史。
+
+## 历史检查点（不覆盖页首当前入口）
+
 Git同步检查点（2026-10-08，本次用户授权）：源码`f2f6804`与相邻文档提交保存RR-06/Rain/标题修订及R7-0、R7-A/B当前状态；只同步`origin/impl/poster-redesign-V3`，不合入`main`或`dev/mainline`。2396合同本次复跑通过，原final04指纹复核一致，详见[交接](../A_Project/40_Implementation/V3-04/HANDOFF.md)。当前仍R7-A/B CODE/AUTO COMPLETE、整体R7未关闭；下一步R7-C，再R7-D。下方未提交/无Git授权均为此前实施快照，最终远端状态以Git核对；不上传本地笔记、配置或运行产物。
 
 2026-10-08当前：**R7-A/B实现及自动门完成，整体R7未关闭**。便携v5携带模板册、当前/未选模板实例、标题显隐/颜色、内容布局和中心主题；DEC-032同ID异定义保留两份，导入副本确定性映射，原单事务/CAS/备份守卫保持。唯一同包证据为`out/r7-portable/final04`：2396合同、4项门、14个应用进程及Lamp/Rain各5段缺模块便携检查通过，error/退出资源0，544源码/161产物指纹未变。原始失败及旧包/配置保留，详见[R7-A/B合同与实施](../A_Project/40_Implementation/V3-04/LR_MILESTONE_EXECUTION.md#116-r7-ab实施与验证2026-10-08)。下一步R7-C长时资源与连续可靠性，再R7-D真实显示/DPI、原生选择器/手势与人工验收；不把本轮当整体R7关闭，不进入R8。本轮未启动新人工包、无Git提交推送。下方R7-0或更早“尚未实现/下一步A/B”等是历史范围，不转授旧证据给当前源码。
@@ -62,15 +66,15 @@ A→B→C：[DEC-019～025与需求§13](../A_Project/10_Requirements/REQUIREMEN
 
 历史（04-04滑块交付）：[滑块修订](../A_Project/40_Implementation/V3-04/CONTROL_CENTER_SLIDER_REFINEMENT.md)1283/六组自动门PASS，点选/微调待复验；当时的列表排查/暂缓05指令已由用户后续进入05替代。运行事实及证据只查最新[HANDOFF](../A_Project/40_Implementation/V3-04/HANDOFF.md)，不沿用旧PID。
 
-最后检查：2026-09-27；R1～R4出口保持，R5核心收口；E1旧反馈及遗留项保留，当前候选25，不启动旧L07候选。
+最后检查：2026-10-09。正式实体/能力/结果纯模型已通过05-01，生产仍DEMO；不从历史PID/候选号推断当前状态。
 
 | 层级 | 权威入口 | 当前状态 |
 | --- | --- | --- |
 | A 需求 | [七份需求](REQUIREMENTS_INDEX.md) | 通用内容、多海报、唯一中心/托盘、独立主题、热度与 AI |
 | A 架构 | [总体架构](../A_Project/20_Architecture/DESKTOPUP_V2_V3_ARCHITECTURE_V1.md)、[多海报合同](../A_Project/20_Architecture/GENERAL_CONTENT_MULTI_POSTER_CONTRACT_V1.md) | 当前设计基线 |
 | B 模块 | [模块分类](../A_Project/20_Architecture/DESKTOPUP_V2_V3_MODULE_CATALOG_V1.md) | 共享宿主恢复、独立海报会话 |
-| C 总计划/任务索引 | [制作计划](../A_Project/30_Plans/DESKTOPUP_V2_V3_IMPLEMENTATION_PLAN_V1.md)、[细化工作流](../A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md)、[04-L整改评审](../A_Project/30_Plans/V3_04_L_REMEDIATION_REVIEW_PLAN.md) | R1～R4出口保持，R5/R6核心收口；模块B/C/D自动门通过；Rain自动门通过/人工发现四项问题，待修订，随后R7 |
-| C 当前工作/携带门 | [R5收口审计](../A_Project/40_Implementation/V3-04/LR_R5_CLOSEOUT_AND_PLAN_AUDIT.md)、[布局审查](../A_Project/40_Implementation/V3-04/CONTENT_LAYOUT_REVIEW_2026-09-23.md)、[缺陷清单](../A_Project/40_Implementation/V3-04/KNOWN_ISSUES.md) | 008～017已逐项核对现代码，非全部未修；026延期，019～022等边界保留，旧35门不转授当前工作区 |
+| C 总计划/任务索引 | [制作计划](../A_Project/30_Plans/DESKTOPUP_V2_V3_IMPLEMENTATION_PLAN_V1.md)、[细化工作流](../A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md)、[LR计划](../A_Project/30_Plans/V3_04_L_REMEDIATION_REVIEW_PLAN.md) | 05-01/04/05/06已接生产；下一步05-05-V1，增量人工及R7携带项以C记录为准 |
+| C 当前工作/携带门 | [V3-05合同/验证/交接](../A_Project/40_Implementation/V3-05/CONTENT_ENTITY_AND_OPEN_CONTRACT.md)、[R7携带清单](../A_Project/40_Implementation/V3-04/LR_MILESTONE_EXECUTION.md#12-r7出口审查与运行差异收清2026-10-09) | 纯实现与生产接线分开，旧包不认证新源码 |
 | C 历史呈现修复 | [R4](../A_Project/40_Implementation/V3-04/M07_ANIMATION_R4.md) | 白条人工确认；保留方法论与历史证据，非本轮修改 |
 | C 交接/代码/证据 | [HANDOFF](../A_Project/40_Implementation/V3-04/HANDOFF.md)、[CODE_ANCHORS](../A_Project/40_Implementation/V3-04/CODE_ANCHORS.md)、[VERIFICATION](../A_Project/40_Implementation/V3-04/VERIFICATION.md) | 当前事实与历史证据分开 |
 
@@ -78,17 +82,17 @@ A→B→C：[DEC-019～025与需求§13](../A_Project/10_Requirements/REQUIREMEN
 
 ABC资料归属见[文档入口](../README.md#abc归属与历史记录)；当前任务状态归细化工作流，登记表只导航，旧版任务卡/日志按对应日期和产物理解。
 
-用户决定统一登记于[A层索引](../A_Project/10_Requirements/REQUIREMENTS_RISKS_AND_OPEN_QUESTIONS.md)：V2-DEFER-005/006按需无排期，V2-DEC-001由M08补齐必要自动收展；V2-TBD-017已于2026-09-11明确确认。本处仅导航，不另行改变决定；本次设置入口完成不代表M08整体体验门已通过，主线不变。
+用户决定统一登记于[A层索引](../A_Project/10_Requirements/REQUIREMENTS_RISKS_AND_OPEN_QUESTIONS.md)，包括DEC-032模板碰撞、DEC-033长测后置和DEC-034成功交接统计门；登记表不另立决定或补PASS。
 
-用户确认 R4 看起来解决白条；原位重绘、高频诊断和过时 R2/R3/R4 分叉启动器已收敛。当前动画入口仅 `scripts/start-m07-animation.ps1`，参数仍只在启动读取。
+历史M07/R4及其启动器仅对应当时包；不能以旧白条通过关闭现BUG-031。当前候选入口查HANDOFF/绑定校验，不将scripts/start-m07-animation.ps1称为全项目唯一启动路径。
 方法论见 [呈现问题排查](../A_Project/20_Architecture/PRESENTATION_DIAGNOSIS_PLAYBOOK_V1.md)。保留根表面容量验证、内容租约、统一恢复及纯回归，不改变空间策略或 SQLite 合同。
 
 ## 最近步骤
 
-1. [04-L专项计划](../A_Project/30_Plans/V3_04_L_CONTENT_LAYOUT_PLAN.md)保留L01～06历史证据；当前按[LR计划§8](../A_Project/30_Plans/V3_04_L_REMEDIATION_REVIEW_PLAN.md#8-当前出口和最近下一步)从R5收口进入R6组合，不重做已交付R4/R5或运行指纹失配旧候选。
-2. 原05-03单张目标子菜单由V2-DEC-006取消，不改号另派任务；旧合同测试不作为当前托盘交付。
-3. 05-02/04已接原通道；TBD-020保持隐藏新增已实现，05-05人工用户通过。新增外观链路另验，不扩大旧PASS范围。
-4. DEC-008直接推进04-L01～07 → V3-05真实内容纵向闭环；原04-06剩余验收和04-07/08收口延期。04-06已有版本化便携外壳，L03补跨格载荷/映射及针对性兼容验证；L新增输入/资源随本阶段验收，不预先补全旧阶段。磁盘执行仍以前置恢复账本为门。
+1. 从[V3-05-01合同与交接](../A_Project/40_Implementation/V3-05/CONTENT_ENTITY_AND_OPEN_CONTRACT.md)进入05-04非破坏性引用添加，先持久关系/安全迁移，不重做R5/R6。
+2. **V3-04-05-03**（托盘单张子菜单）已取消，不是**V3-05-03**（Managed Collection）；后者仍在计划。
+3. V3-04-05-02/04托盘全局操作已实现，V3-04-05-05人工已过；不与V3-05真实内容任务混号。
+4. 布局基础已按DEC-008/后续LR前移；V3-05按01→04引用→05/06展示使用推进，真实磁盘执行仍先05-08账本。原04-06余门/04-07/08延期保持。
 
 “回归主线”指开发计划，**不是未经授权合并 dev/mainline 或 main**。历史检查点73c7f85于2026-09-14推送；2026-09-16用户另行授权将之后的当前V3实现/测试/文档同步至origin/impl/poster-redesign-V3，具体检查点范围查[HANDOFF](../A_Project/40_Implementation/V3-04/HANDOFF.md)，提交hash与远端状态以Git记录为准。不同步到发布分支，不改变未通过门项或发布基线。
 

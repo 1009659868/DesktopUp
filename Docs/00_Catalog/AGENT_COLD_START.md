@@ -1,5 +1,9 @@
 # DesktopUp：agent 冷启动提示词
 
+2026-10-09当前：**V3-05真实引用已接生产，默认模板统一为基础收纳**。首次/新增及Preview默认均为basic-box，已有海报不改写；旧review07/PID42348已正常退出、资源归零，旧包/库保留。最新实现及验证见[§10](../A_Project/40_Implementation/V3-05/REAL_CONTENT_DISPLAY_AND_ACTIONS.md#10-默认基础收纳2026-10-09)；§9介绍文字控件仍待人工确认，不补记PASS。最近下一步仍[05-05-V1资产与安全迁移](../A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md#64-卡片独立图标与构造入口下一步)，未实现自定义图标。R7携带/C2后置保持。本次按用户授权同步当前V3分支，范围与验证归[交接](../A_Project/40_Implementation/V3-04/HANDOFF.md)；本地记忆、配置和运行产物不上传，下方“未提交/未推送”等仅为历史。
+
+## 历史检查点（以下时间线不作为当前任务指令）
+
 2026-09-30 Git检查点：本次用户授权同步当前V3到同名origin，源码`5f753e1`及相邻文档提交；Release构建与2274合同复验通过。实际HEAD/远端每次现场核对。RR-06未完成、白条延期，阶段不因提交变化；本地`.workbuddy/`和`out/`不上传。下方“无Git授权/未提交”是该次同步前历史，不构成后续自动提交或推送授权。
 
 最新实施状态：RR-01基线保全；RR-02云标题/动作、RR-04时间呈现与RR-05核心分组收展已接生产，RR-03/BUG-031用户延期。candidate07全量2274和双组WinUI/R4/模块移除恢复通过；RR-06未完成，桌面锁定使指针不可读，动效、资源和原生人工待解锁续验。见[模块§10](../A_Project/40_Implementation/V3-04/LR_SCENE_MODULE_EXECUTION.md#10-rr整改生产接线与同包验证2026-09-30)，不以旧包PASS封存新包。下方“尚未接标题/下一步RR-02”为历史。
@@ -14,16 +18,16 @@
 
 2026-09-28合并上下文：远端`impl/poster-redesign-V3-wb@fc8c920`合入本机当前`impl/poster-redesign-V3`，实际工作区为`G:\A_\Tools\DesktopUp_V2`；本次不推送。下方`D:\Project\Desktop-up`、wb分支和候选基线属于此前机器的校验快照，不是切换目录/分支指令。本地独有的[旧LR-R1提示词](../A_Project/40_Implementation/V3-04/AGENT_HANDOFF_PROMPT.md)已标历史，当前接手以本页、最新决定和实际Git为准。
 
-维护日期：2026-09-28。用途：给新agent建立可追溯的项目认知，并按本次用户任务接手工作。本文件是阅读与接手入口，不取代需求、计划或验收记录；下方基线是校验快照，每次启动仍须检查真实工作区。更新阶段时同步本页的基线、下一步和限制，详细任务只维护在主计划与执行记录中。
+维护日期：2026-10-09。用途：建立可追溯的认知与当前任务入口，不取代需求、计划或验收。下方历史基线不是切分支或运行旧PID的指令；详细待办只维护在工作流与执行记录。
 
-本机最新核对（2026-09-30）：`impl/poster-redesign-V3@e698a3e`加前轮2B和本轮未提交修改；实际项目在`G:\A_\Tools\DesktopUp_V2`。R6第三批核心已接线，2206合同通过，完整候选/连续门及未验项以[R6记录§7～8](../A_Project/40_Implementation/V3-04/LR_R6_CONTINUOUS_OPERATIONS.md)和HANDOFF最新段为准。历史候选PASS不转授新包，不将UI C样板/托管XAML视为原生人工验收。
+历史本机核对（2026-09-30）：当时为impl/poster-redesign-V3@e698a3e加未提交修改；R6第三批2206合同属于当时证据。当前实际Git、候选和分项证据以HANDOFF最新段及只读检查为准。
 
 ## 可直接复制的启动提示
 
 ```text
 项目目录：G:\A_\Tools\DesktopUp_V2（若运行环境不同，以实际检出的项目根为准；不要误进旧G:\A_\Tools\DesktopUp）。
 请读取并执行 Docs/00_Catalog/AGENT_COLD_START.md 的冷启动流程，实际核对文档、Git、源码与可用证据后再报告，不只复述摘要。
-目前已知：LR-R5/R6核心收口，模块B/C/D原门保持。RR-01基线保全；RR-02/04及RR-05核心接线已完成，candidate07 App D81CE7C441881572A9EC6C663FA72E3A0B9663FF1C2953FC99AF899261F1E7A9、全2274合同/双组WinUI/R4/两模块物理移除恢复通过。BUG-031用户延期，绝不是修复；RR-06同包动效/资源/组合余项和人工未完成，桌面锁定导致指针采样安全暂停，等待解锁后按模块§10继续，不进R7。旧包/日常库保留；Git无授权，运行进程和新增结果现场核对。
+目前已知：R5/R6核心及RR-06已收口；R7核心已验、完整验收OPEN，未验/延期仍携带，C2按DEC-033后置。R8交接完成；V3-05-01/04/05/06已接正式关系、SQLite14、非破坏性添加/共享修复、隔离Shell图标/打开/定位及移除关联。先读V3-05/REAL_CONTENT_DISPLAY_AND_ACTIONS.md的§8～10，再按工作流§6.4推进05-05-V1独立图标资产/安全迁移；不要重做添加合同、把成功打开事实当热度消费者或立即搬移文件。默认基础收纳不改已有海报，介绍文字控件仍待人工确认。最近一次Git同步不授予后续任务自动提交/推送权。
 如果本次仅要求冷启动或开发准备，完成《项目开发准备摘要》后等待任务；如果本次已指定开发任务或明确要求继续主线，完成必要理解后直接在授权范围推进，不重复询问已确认的产品选择。
 保留已有改动、配置、旧包和失败证据；区分需求、实现、测试与人工体验。不要凭历史记录切分支、重开延期Bug、提交推送或执行真实文件搬移。
 ```
@@ -54,10 +58,10 @@ git remote -v
 | 顺序 | 必读资料 | 需要回答的问题 |
 | --- | --- | --- |
 | 1 | [ACTIVE_PATH](ACTIVE_PATH.md)、[HANDOFF最新段](../A_Project/40_Implementation/V3-04/HANDOFF.md) | 当前工作在哪，最近交付是什么；哪些下方记录仅为历史 |
-| 2 | [需求决定索引§3.1](../A_Project/10_Requirements/REQUIREMENTS_RISKS_AND_OPEN_QUESTIONS.md#31-已明确的近期优先级)及[需求目录](REQUIREMENTS_INDEX.md) | DEC-019～029的有效行为、用户授权与延期；DEC-029已取代DEC-028等待方向审阅 |
-| 3 | [LR计划§4、§4.3、§8](../A_Project/30_Plans/V3_04_L_REMEDIATION_REVIEW_PLAN.md)、[细化工作流当前状态](../A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md) | 本阶段范围、依赖、验收和后续顺序；不要从旧总计划直接跳到V3-05 |
+| 2 | [需求决定索引§3.1](../A_Project/10_Requirements/REQUIREMENTS_RISKS_AND_OPEN_QUESTIONS.md#31-已明确的近期优先级)及[需求目录](REQUIREMENTS_INDEX.md) | DEC-019～034有效规则；DEC-032模板副本、033长测后置、034成功交接 |
+| 3 | [LR计划§8](../A_Project/30_Plans/V3_04_L_REMEDIATION_REVIEW_PLAN.md)、[工作流§6.1](../A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md#61-v3-05-01实施准备实体能力与打开结果) | 05-01完成范围及05-04下一步；R7未验与文件安全门不因交接取消 |
 | 4 | [R5收口及代码/计划审计](../A_Project/40_Implementation/V3-04/LR_R5_CLOSEOUT_AND_PLAN_AUDIT.md)、[KNOWN_ISSUES](../A_Project/40_Implementation/V3-04/KNOWN_ISSUES.md) | 已实现/部分实现/未实现分别是什么，哪些Bug延期或仍影响后续出口 |
-| 5 | [执行记录§1～2、§9](../A_Project/40_Implementation/V3-04/LR_MILESTONE_EXECUTION.md)、[CODE_ANCHORS](../A_Project/40_Implementation/V3-04/CODE_ANCHORS.md)、[VERIFICATION最新段](../A_Project/40_Implementation/V3-04/VERIFICATION.md) | 修改入口、协作归属、工具链、候选绑定和证据层级 |
+| 5 | [执行记录§12～14](../A_Project/40_Implementation/V3-04/LR_MILESTONE_EXECUTION.md#12-r7出口审查与运行差异收清2026-10-09)、[CODE_ANCHORS](../A_Project/40_Implementation/V3-04/CODE_ANCHORS.md)、[VERIFICATION](../A_Project/40_Implementation/V3-04/VERIFICATION.md) | 未验/延期、R8现有端口、审计和候选证据层级 |
 | 6 | [总体架构](../A_Project/20_Architecture/DESKTOPUP_V2_V3_ARCHITECTURE_V1.md)、[模块目录](../A_Project/20_Architecture/DESKTOPUP_V2_V3_MODULE_CATALOG_V1.md) | 状态权威、输入/呈现/空间与各层职责；按涉及模块展开 |
 | 7 | [UI C说明](../A_Project/20_Architecture/CONTENT_TEMPLATE_SCHEMA_UI_C.md)、[原型C](../A_Project/20_Architecture/Designs/content-layout-controls-c.html)、[E1已确认体验§4及§6](../A_Project/20_Architecture/CONTENT_LAYOUT_EXPERIENCE_REVIEW_V1.md)、[BM/CA组合核对](../A_Project/20_Architecture/CONTENT_LAYOUT_COMBINATION_AUDIT_V1.md) | 视觉及用户操作意图；HTML里的旧“整理内容”前置已被后续决定取代 |
 
@@ -72,12 +76,12 @@ DesktopUp是Windows桌面海报式内容收纳入口，目标支持文件、文�
 | R1～R4 | 行为合同、可恢复基线、布局/浏览模型、编辑保存合同及原生样板达到各自出口；不等于所有生产组合通过 |
 | R5 | CORE CLOSED：UI C核心、有限路径两模式操作、配方与Lamp等有分项证据及用户认可；不是R7全面可靠性验收 |
 | R6 | CORE CLOSED / DEC-030。三批核心及2206合同、32进程自动门和部分直接/循环/缩框人工通过；未验系统显示/DPI/冷启动等转R7，不补记PASS |
-| 模块解耦 / 雨夜窗边 | B/C/D通用值/可选编译/物理移除恢复通过；Rain已使用独立schema/绘制器，最终自动门通过，当前人工发现四项问题，待修订。旧Lamp DTO仅留兼容，原始参数不重置；最终证据查模块记录，之后R7 |
-| R7 / R8 / V3-05 | 未开始。配置完整往返、最终同包可靠性、假源接入和真实内容能力分别取得证据，不能凭交接文档关闭 |
+| 模块解耦 / 雨夜窗边 | B/C/D、Rain生产接线及RR-06已收口；后续云尺寸/风摆/标题显隐有各自证据，具体范围查模块记录；BUG-031等仍携带 |
+| R7 / R8 / V3-05 | R7核心已验、完整验收OPEN；R8交接完成；05-01纯模型PASS，生产未接，下一步05-04；原携带与文件安全门不豁免 |
 | BUG-026 | 纵向循环在原顶部/底部停顿后续滚可能失效；用户明确大致可用、后续再修。只携带记录，不自动排查修复、不阻塞R5 |
-| 其余风险 | BUG-019初始化竞态、020菜单完整命中、021动画区域读回、022空白桌面实际手势等按清单保留证据边界；001/004/006原处置保持，不随里程碑或Git同步关闭 |
+| 其余风险 | BUG-019首次seed/快照子类和021读回子类已有修复证据；其他原生/环境细项及001/004/006/026/031/035等按清单和执行§12携带，不用里程碑或Git关闭 |
 
-最新数据边界：SQLite schema12已持久化模板目录/中心主题；Lamp为10参数并支持跟随/闲置。旧“schema11、静态六参数、只读配方”描述为历史。Portable v4遇自定义目录、非light中心主题或RecipeInstances会明确拒绝导出；这能防止静默丢字段，**不满足R7完整往返出口**，后续需补版本化携带与恢复，不能自行降低验收标准。
+当前数据边界：SQLite schema12；portable v5已携带模板目录、参数实例、中心主题与布局；content layout schema3、presentation schema6独立演进。R7-A/B自动门及D4已问往返/备份恢复通过，真实跨机/环境余项仍未验。旧v4拒绝上述配置是历史限制，不再作为当前未实现缺口。正式内容身份/关系纯模型已在05-01实现；持久化归05-04，不把DEMO布局记录当真实内容库。
 
 ## 4. 用源码追踪至少一条真实链路
 
@@ -85,13 +89,13 @@ DesktopUp是Windows桌面海报式内容收纳入口，目标支持文件、文�
 
 可选核心追踪：`PosterInputRouter`及原生输入岛 → `PosterVisualWindow.ContentEditing.HandleContentInput/FlushContentMotion` → `ContentDragPolicy.Map`和`ContentLayoutEditing` → `CommitContentDocument` → `ContentLayoutCommandPolicy.Prepare`/权威事务 → SQLite → 状态投影 → 布局快照、实际tile、绘制和输入区域重发布。确认选择/浏览仅改临时状态，合法语义编辑才提交，冲突/非法/取消不覆盖原配置。
 
-接续R6先读[R6记录§4](../A_Project/40_Implementation/V3-04/LR_R6_CONTINUOUS_OPERATIONS.md#4-下一批入口和剩余风险)及§6：第一批、2A、2B核心已实现；下一步tile资源可见集/假源及完整连续门。保留既有wheel、TileKey、空间准入和成功发布见证；实际系统显示/DPI、原生输入/像素和完整复杂组合尚未认证，不由托管探针PASS替代。
+接续V3-05-04先追踪：ContentSourcePorts → PosterSpatialRuntime.ContentSource → ContentAssetDemand/Cache → ContentActivationSession → IContentOpenHandler。现处理器仍DEMO void/no-op，不是实际Shell打开成功；缓存为请求/载荷边界，不含真实图标解码。复用空间/CAS/R4，正式实体、能力、异步结果纯模型见V3-05合同§6；后续适配器不得绕过它直接宣称成功。
 
 ## 5. 不得丢失的产品与协作约束
 
 - 新建默认纵向、循环关闭；切方向与循环开关独立，旧显式配置不重置，内容不足一屏不实际循环。
 - 单击选择、双击/有效焦点区Enter产生打开意图；按住移动直接拖，无“整理按钮/定时长按”前置。自动拖动固定读序图钉，手动保存网格位置/留白；退出手动按A恢复保存来源，旧无来源明确拒绝，不猜测或全清。
-- 普通选择无高亮描边/右下锚点，编辑时才显示；新建网格/跨度辅助关；日常不显示测试提示。图钉用图标，右键解除走正式事务。空白穿透桌面，Item保留交互，装饰不扩大原生输入区域。
+- DEC-037澄清：仅Ctrl/Shift形成的选择集合（含单项）日常描边，普通点击/双击不描边，缩放锚点仍仅编辑时显示。真实Item无底板但逻辑命中不变；自定义图标只影响当前PosterItem、不改共享路径，尚待§6.4实现。新建网格/跨度辅助关；日常不显示测试提示。图钉用图标，右键解除走正式事务；装饰不扩大输入区域。
 - UI C已采纳，不重选风格或重做已认可UI；锁定/收展归行为，基线/占比等中心设置不塞回海报“…”；只保留一套窗口标题。中心主题与逐海报模板独立。专属参数由配方声明，不按模板名称硬编码中心表单，不将AI说明/测试内容混入产品。
 - 唯一状态权威、完整CAS/单revision、输入岛、空间owner、R4呈现与恢复通道继续复用；不引入第二solver、数据库或持久状态，不以未知字段清空/默认化解决兼容问题。
 - 多agent协作先核对当前授权与分工。历史agent均已交回文件，旧分配不再有效；主agent重新登记各自任务、文件所有者、共享接口、依赖和验收。公共schema/接口先协调；构建/GUI由唯一队列串行，避免共同bin/obj和单实例冲突。子agent完成消息不等于里程碑验收。
@@ -132,6 +136,6 @@ dotnet --version
 7. 差异、风险与待确认项：来源、影响、是否阻塞；已有答案不重复询问。
 8. 就绪结论：已可接任务/仅特定范围/具体阻塞，明确未覆盖范围。
 
-末尾给其他agent的短交接须含：实际基线、当前任务与所有权、权威入口、完成证据、剩余问题/下一步。只冷启动则到此等待；已明确续主线则按R6实施入口继续，任务另有指定则遵循该范围。影响任务范围、架构取舍、验收或可行性的未决问题集中询问，其余记录并继续独立工作。
+末尾给其他agent的短交接须含：实际基线、当前任务/所有权、权威入口、证据、携带项和下一步。只冷启动则等待；已明确续主线则从工作流§6.1完成出口转V3-05-04非破坏性引用添加，具体请求另有限定则遵循其范围。影响范围、架构或安全的未决问题集中询问，已明确的产品选择不重复询问。
 
 完成开发单元后按项目流程同步需求决定（如有变化）→方案/接口→计划/分工→代码与针对性测试→绑定证据→HANDOFF/VERIFICATION/CODE_ANCHORS/KNOWN_ISSUES及阶段状态。不要把本提示词维护成第二份详细任务清单，也不要仅更新聊天而漏掉共享文档。

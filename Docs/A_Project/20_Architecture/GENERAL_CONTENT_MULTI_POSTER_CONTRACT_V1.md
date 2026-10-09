@@ -1,8 +1,8 @@
 # 通用内容与多海报架构合同 V1
 
-状态：DESIGN BASELINE — M01/M02 IMPLEMENTED / M03 AUTO PASS / SHORT MANUAL PENDING
+状态：DESIGN BASELINE；2026-10-09：05-04引用已获用户确认；[05-05／06](../40_Implementation/V3-05/REAL_CONTENT_DISPLAY_AND_ACTIONS.md)接SQLite14打开收据/事实、隔离Shell提取与打开/定位和移除关联，自动通过、人工待验。磁盘搬移/删除、映射目录、真实热度消费未接。下表职责设计与当前生产映射分开，具体预算/证据以C层为准。
 日期：2026-09-07
-适用：impl/poster-redesign-V3；不替代七份需求权威；M03 已接多会话，后续输入/参数/管理入口仍按计划推进，不声称完整多海报产品已完成。
+适用：impl/poster-redesign-V3；不替代七份需求。当前工程/人工范围查[05-04实施](../40_Implementation/V3-05/NON_DESTRUCTIVE_REFERENCE_ADD.md)，R7/R8原出口与携带项保留[执行§12～14](../40_Implementation/V3-04/LR_MILESTONE_EXECUTION.md#12-r7出口审查与运行差异收清2026-10-09)，不沿用M03初次待验状态判断全库。
 
 ## 1. 输入与明确不变项
 
@@ -18,12 +18,12 @@
 | --- | --- | --- |
 | 应用唯一 | AppBootstrap、SingleInstance、ControlCenterService、TrayService、StateStore、CommandCoordinator | 单张海报的几何、草稿或主题覆盖 |
 | 环境共享 | DesktopEnvironmentCoordinator、ShellLocator、DisplayTopology、恢复 generation | 将一张海报恢复成功等同全部成功 |
-| 空间共享（设计） | PosterSpatialCoordinator＋纯几何策略，候选占位/碰撞/推让/条件归位，完整障碍读集 | 另建状态权威；靠抬层容许重叠；改变邻居主题/内容/尺寸 |
+| 空间共享（已接线） | PosterSpatialRuntime＋纯几何策略、完整障碍读集/推让/条件归位 | 另建状态权威；以抬层容许重叠；改变邻居主题/内容/尺寸 |
 | 海报会话 | PosterSessionRegistry[PosterId] → PosterSession → WindowCluster、输入、布局、主题呈现 | 全局可写 currentPoster、跨实例输入缓存 |
-| 内容共享 | CollectionCatalog、ItemCatalog、文件操作协调、图标缓存、真实打开事实 | 把共享文件身份当作每张相同排序 |
-| 每海报持久化 | PosterDefinition、ThemeInstance、ContentMetrics、LayoutPolicy、PosterItem 关系 | HWND、物理像素、捕获句柄 |
+| 内容共享（本机引用已接） | ContentSourcePorts/可见缓存＋ReferenceContentRuntime；单应用LocalContentWorkerClient池；SQLite14收据/成功事实，元数据不重排构图 | 将共享身份当每张相同排序；将排队当打开成功；将Shell交接当外部应用加载完成 |
+| 每海报持久化 | PosterDefinition/参数/ContentLayoutDocument；05-04已持久化PosterItem映射，与正式集合/内容共用原事务 | HWND/捕获句柄；将布局局部ID当全局文件身份 |
 | 每海报暂态 | capture/gesture、选中项、scroll offset、候选帧、草稿、恢复状态、取消 token | 每次 pointer move 都写库 |
-| 高风险边界 | ShellProxy、将来受限 ThemeHost | 把进程拆分本身当成权限沙箱 |
+| 高风险边界 | 当前DesktopUp.ContentWorker负责固定Shell动作；完整Shell提供方与受限ThemeHost仍为后续 | 把进程拆分本身当成权限沙箱；向helper传任意脚本/verb |
 
 App 只组合服务和生命周期入口。逐步把当前 App 内的单海报恢复逻辑提取为环境协调器，把 PosterVisualWindow 内的数据构造/布局策略移出；不为“类图好看”重写已验证的底层算法。移植时保留基线用例，新增多实例上下文。
 
@@ -38,14 +38,23 @@ App 只组合服务和生命周期入口。逐步把当前 App 内的单海报�
 | Collection | CollectionId、Reference/Mapped/Managed、来源身份、目录、所有权标志、能力、source revision | 可被多个海报引用；解除最后关联不自动清空存储 |
 | ContentItem | ItemId、source identity/type、目标或 Shell identity、能力、元数据、有效性 | 路径不是唯一身份；应用对象不要求有 exe 路径 |
 | CollectionMembership | CollectionId、ItemId、来源关系 | 映射清单由来源事实维护；引用集合由用户命令维护 |
-| PosterItem | PosterId、ItemId、order key、锚定、局部显示覆盖 | 仅实例呈现，不携带第二份可变源文件 |
+| PosterItem | 05-01纯模型：Guid Id、PosterId、MembershipId、Version；派生局部布局键，顺位/锚定/跨度仍仅在ContentLayoutDocument | 仅实例关系，不携带第二份可变源文件或独立排列权威 |
 | ThemeInstance | InstanceId、PosterId、模板版本、参数/素材/结构覆盖、entity version | 克隆配置产生新实例；模板包可共享 |
 | ActivityEvent | EventId、ItemId、来源 PosterId、时刻、打开结果 | 幂等事实；排名不能伪造或重复计数 |
 | FileOperation/Journal | OperationId、批次/逐项状态、来源、目标、恢复信息 | 必须先于磁盘 mutation；保留未完成操作 |
 
 初版每海报一个主集合；多海报可以共享集合，混合引用集合可容纳不同类型入口。多目录聚合与查询集合留作扩展，不自动等于已承诺首批功能。
 
-迁移不可改写已发布的 v1/v2 migration 或 checksum。新增版本保存 poster-main 的全部旧字段，赋予独立实例身份关系；无真实 Item 时不得把六张演示卡片灌入用户正式库。初始化、失败保留、迁移前备份、幂等及旧库恢复测试必须保留。M01 的 [schema v3/目录仓储](../40_Implementation/V3-04/POSTER_CATALOG_SCHEMA_V3.md) 已实现并通过隔离旧库夹具；未迁移用户真实数据库。Collection/ContentItem 的 SQL 留待 V3-05-01。
+迁移不可改写已发布的 migration 或 checksum。新增版本保存全部旧字段；无真实 Item 时不得把六张演示卡片灌入用户正式库。初始化、失败保留、迁移前备份、幂等及旧库恢复测试必须保留。M01 的 [schema v3/目录仓储](../40_Implementation/V3-04/POSTER_CATALOG_SCHEMA_V3.md) 保留原历史范围。V3-05-04已追加schema13正式关系、旧layout显式归档与单事务提交，并验证12升级/失败保留/本机备份恢复；未迁移日常用户库。用户确认DEC-035共享修复全部影响范围，完整读集校验，不允许部分成功；详见[实施合同](../40_Implementation/V3-05/NON_DESTRUCTIVE_REFERENCE_ADD.md)。
+
+
+### 3.1 卡片独立图标与来源分离补充
+
+DEC-037确认作用域：默认图标来自共享ContentItem对应的提供方，用户替换只覆盖当前PosterItem的视觉资产。外观覆盖不参与来源重复判断，不修改ContentOpenTarget/Arguments/WorkingDirectory；A换图不影响B。恢复默认仅清除当前覆盖引用。当前schema14没有持久图标覆盖/上传UI，下述是下一步实现约束，不是已交付能力。
+
+建议以内容寻址的应用自有静态图像资产加PosterItem引用表达，避免把绝对图片路径写作长期依赖，也不将图像字节塞进布局JSON。原上传文件只读；在隔离解码中验证格式/尺寸/字节预算，规范化再保存。资产与关系同库事务提交可纳入既有本机备份；新增schema而不改历史迁移，未知旧客户端拒绝打开新格式。资源哈希、解码代次和可见需求进入缓存身份，不复用替换前的旧图。
+
+构造卡片是“选择已有真实来源＋可选本地图标＋确认添加引用”，不是新建磁盘文件或编辑共享来源的后门；须复用05-04独立/复用/跳过及完整CAS。失败/取消时海报、旧图、路径保持，选图/预览不能打开目标或产生热度。原05-09的新建真实文件/快捷方式与05-07真实拖放安全门不因此前移。分批出口归[工作流§6.4](../30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md#64-卡片独立图标与构造入口下一步)。
 
 ## 4. Revision、命令与查询
 
@@ -117,7 +126,7 @@ V3-04-M05 先冻结 ContentMetrics 和 ThemeParameterSchema 最小合同：稳�
 
 每个 Poster 有独立模板实例和资源作用域；共享不可变模板/素材缓存，禁止全局替换 Application.Resources 污染所有海报。热更新先预备、验证，再切目标实例；损坏时保留原模板和版本。样式字典不是执行沙箱，受限代码另行安全门。
 
-热度引擎可共享代码与真实打开事实，每海报拥有独立算法参数、模式、锚定和布局快照。游戏风格不是硬编码的六张卡片；通用文件格也不被强制自动排序。最终公式与打开手势留在相应产品门，禁止 UI 临时裁决。
+热度引擎可共享代码与真实打开事实，每海报拥有独立算法参数、模式、锚定和布局快照。游戏风格不是硬编码的六张卡片；通用文件格也不被强制自动排序。最终公式仍待产品门；打开手势按DEC-023、成功交接门按DEC-034，禁止UI临时裁决。
 
 AIChangePlan 明确 targets、expected entity versions、允许操作、diff、确认与撤销。请求期间切换控制中心选择不改变执行目标。只经核心命令更新主题/布局，不赋予通用文件移动或删除权限。
 
@@ -125,7 +134,7 @@ AIChangePlan 明确 targets、expected entity versions、允许操作、diff、�
 
 [V2-DEC-005](../10_Requirements/REQUIREMENTS_RISKS_AND_OPEN_QUESTIONS.md)由[首版可用性设计](CONTROL_CENTER_USABILITY_DESIGN_V1.md)承接：用户偏好→版本化ContentMetrics映射；每Item热度结果→独立相对层级/排序；二者与视口一起交给布局，不因UI简化永久绑定等尺寸格子。值按PosterId持久化，节点只为UI快捷值，未知参数版本不丢失。
 
-撤掉中心桌面缩略画布；选择/定位提示是目标会话内有期限的视觉状态，不写业务revision、不创建新的窗口层或输入所有者。常用参数预览与自动提交由Application目标会话协调，App调用原呈现/恢复；命令仍走同一CAS/事务。几何查询使用真实有效快照，不将fallback当当前位置；只修改用户明确字段，但完整空间证明和原子提交不减弱。新增设计待UX步骤验证，旧代码事实不冒充已经改好。
+撤掉中心桌面缩略画布；选择/定位提示是目标会话内有期限的视觉状态，不写业务revision、不创建新的窗口层或输入所有者。常用参数预览与自动提交由Application目标会话协调，App调用原呈现/恢复；命令仍走同一CAS/事务。几何查询使用真实有效快照，不将fallback当当前位置；只修改用户明确字段，但完整空间证明和原子提交不减弱。这些UX核心已接实现；各自代码/验证归C层，不从设计文字直接推断原生人工全部通过。
 
 ## 8. DeskBox 参考吸收清单
 
@@ -145,7 +154,30 @@ AIChangePlan 明确 targets、expected entity versions、允许操作、diff、�
 
 实际移植前补读取来源文件/依赖/测试，登记精确 commit、移植片段、许可证、修改点和新增用例。不以 DeskBox 的测试结果当成本项目 PASS；此次未复制源码。
 
-## 9. 必须关闭的实现缺口
+### 8.1 V3-05-01参考入口复核（2026-10-09）
+
+用户再次明确：真实内容的关系、能力、合同、手势和边界优先参考本地DeskBox，不从零另造文件管理交互。已只读核对同一commit `64f27e1aa0f16867abe20074f35ea05cd7b12ce7`，工作树干净；未运行DeskBox、未复制代码、未执行其测试。本节为具体来源映射，不改变DesktopUp已定产品规则。
+
+以下路径相对 `G:\A_\Tools\reference\DeskBox`：
+
+| 参考范围/已读入口 | 可吸收的实现事实 | DesktopUp适配与验证责任 |
+| --- | --- | --- |
+| Models/WidgetItem.cs、WidgetConfig.cs | 文件/目录/快捷方式元数据；映射路径、受管目录名和本地顺序 | 来源在src/DeskBox下。WidgetItem同时含BitmapImage/选择状态，不直接作为Domain实体；全局ContentItem、集合成员、海报内关系和临时UI状态仍须分开；不以路径直接替代稳定身份 |
+| Models/FileWidgetInteractionState.cs、Helpers/FileDropIntentPolicy.cs | 选择命令状态与Reference/Copy/Move/Shortcut等意图；修饰键、源支持能力、虚拟临时数据强制复制 | 菜单启用不能只按选中数量推定真实文件权限；能力、可用性、集合所有权与运行中保护分别判定。海报内构图调整不等同磁盘移动 |
+| Controls/WidgetContents/FileSurfaceContent.xaml及其SelectionAndMenus、KeyboardNavigation、Navigation部分 | 共享ItemClick/DoubleTapped/DragStarting入口、选择/键盘处理、文件夹导航与外部打开分发 | 复用Windows交互经验，保留DEC-023单击选择/双击或Enter打开、按住移动即拖；透明留白穿透、跨格布局与图钉仍走DesktopUp输入/CAS，不整搬其完整矩形控件 |
+| Services/FileOpenRequestGate.cs、FileService.OpenItem.cs；Helpers/BoundedStaOperationRunner.cs | 打开去重、失败可重试；请求前快照；2并发/6排队/2秒排队准入；后台STA持有资源直至原生调用结束 | 这些数值是参考实现，不预先冻结为DesktopUp默认。原生调用开始后的取消不代表已终止；排队超时不代表Shell执行超时；ActivationId、启动参数/提供方身份和迟到结果要补合同 |
+| Controls/WidgetContents/FileSurfaceContent.Opening.cs | 先显示打开反馈；generation/Dispose保护迟到UI；OpenedOrHandled只保证Windows接受或处理请求 | 失效快捷方式分支也可能返回Handled，不能一概记为真实打开成功/热度事件；01-C分清受理、已处理、成功与失败/取消的证据强度 |
+| Services/FileService.cs、FileTransferSessionRegistry.cs | 枚举区分空/部分/不可用/拒绝访问；跨窗口传输状态按来源/目标保护，复制源可读、移动源与未完成目标受保护 | 暂时不可用不能当空目录清成员；内存会话登记不是持久恢复账本，05-08安全门保留 |
+| Helpers/NativeDropEffectPolicy.cs | 拖放视觉反馈与完成效果分开；异步接收时不通过MOVE返回值再授权来源删除，避免双重源清理 | 05-07/08需完整验证目标接管、异步结果、源清理责任与故障补偿；不能照搬单一返回值而脱离整个协议 |
+| tests/DeskBox.Tests/FileInteractionPolicyTests.cs、FileOpenInteractionContractTests.cs | 拖放策略/去重有可执行单元测试；打开接线部分以源码字符串断言检查 | 可作为反例来源；存在测试不等于已在本机运行，字符串断言不等于OS行为通过，仍需DesktopUp自己的纯合同与后续原生门 |
+
+许可/来源核对：该快照的LICENSE_CHANGE.md和README声明GPL-3.0-only；DesktopUp现THIRD_PARTY_NOTICES.md已登记同一commit及许可，不是新的选型阻断。真实移植仍逐片段更新既有provenance并核对依赖、通知和改动，不以“参考成熟项目”省略登记；本节没有复制实现。
+
+后续制作方式：每个05-01合同先列“DeskBox具体处理 → DesktopUp复用/调整原因 → 新增反例”，优先落最小可用合同，不因名称差异重新设计成熟的通用操作。Reference/Mapped/Managed与文件安全需求保持；跨海报关系、热度事实、单权威事务和恢复账本是必须补齐的本项目差异，不从参考测试自动继承PASS。
+
+## 9. 历史缺口检查点（2026-09-07）
+
+以下列表保留M02/M03当时的缺口与证据，不是当前任务清单。现多实例、空间/CAS/呈现、管理/恢复已按C层推进；05-01正式身份纯模型已完成，生产持久化、Shell打开、真实图标和磁盘执行仍由V3-05后续承接。原审计§14为实施前快照，新增范围见[05-01合同](../40_Implementation/V3-05/CONTENT_ENTITY_AND_OPEN_CONTRACT.md)。
 
 1. M03 已去掉 App 单 _poster，PosterSessionRegistry 按 ID 消费集合投影；动态 Tray count 沿用 M02。
 2. M03 已将实际0..N窗口及显隐/删除恢复改为 catalog 驱动，共享 Shell/显示调度；163/163 与真实0/1/3进程通过，短人工门待确认。

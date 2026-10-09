@@ -1,6 +1,6 @@
 # DesktopUp V2 V3 技术路线与总体架构 V1
 
-状态：`DESIGN BASELINE — GENERAL CONTENT / MULTI-POSTER`；文档归属检查：2026-09-16（DEC-008与已有实现边界对齐）
+状态：`DESIGN BASELINE — GENERAL CONTENT / MULTI-POSTER`；2026-10-09：SQLite14、portable5、content3、presentation6为不同版本域。[V3-05-05／06](../40_Implementation/V3-05/REAL_CONTENT_DISPLAY_AND_ACTIONS.md)已接独立有界Shell辅助进程、真实图标/默认打开/定位及同库打开收据/事实；05-04引用已获用户确认，本轮自动通过、人工待验。不做物理搬移/删除或真实热度消费。便携v5不含真实关系，有绑定时禁止导出及替换导入；本机备份包含关系/收据。进程隔离不是权限沙箱，目标拓扑不等于所有提供方已实现。
 
 建立日期：2026-09-03
 
@@ -51,7 +51,7 @@ DeskBox 是实现证据，不是 DesktopUp 的产品需求。DeskBox 已实现�
 | WorkerW | 不主动强制创建；启动时等待桌面图标宿主稳定 | 采用，避免与 Explorer 图标恢复竞争 |
 | 层级 | DefView owner、非置顶、`WS_EX_NOACTIVATE`、原子 bottom/show、`WM_MOUSEACTIVATE` guard 和 owner 组内顺序 | 采用并增加 DesktopUp 精确层级验证 |
 | 无边框窗口 | `AppWindow` + `OverlappedPresenter.SetBorderAndTitleBar(false, false)` | 采用，禁止系统标题栏和白条 |
-| 收起/展开 | 同一窗口、独立 expanded/compact bounds、显式状态机、按帧批量移动/缩放 | 采用“顶部锚点不动”的简化状态机 |
+| 收起/展开 | 同一窗口、独立expanded/compact bounds、显式状态机、批呈现 | 现SpatialExpansionPolicy先下后上、最小高度/完整障碍读集与条件归位；不是永远顶部锚点不动；复用R4 |
 | 拖动/缩放 | Pointer capture、帧节流、结束时一次持久化、DPI/工作区约束 | 采用 |
 | 文件格子 | 映射已有文件夹或使用受管文件夹，文件仍由真实文件系统承载 | 采用双模式 |
 | 文件变化 | 文件夹 watcher、变更合并、退避和稳定后刷新 | 采用 |

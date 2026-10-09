@@ -1,5 +1,87 @@
 # V3-04 验证记录
 
+## 2026-10-09 Git提交前复验
+
+源码检查点`d8a1fda`。初轮及清理12个新增文件的EOF空白后，全量合同各2607通过，0失败/跳过；最终记录`out/git-sync-20261009/final/contracts/contracts.trx`。最终App输出`out/git-sync-20261009/final/app/`，Release x64构建0警告错误，DLL SHA256 `8BF0E32EDCD640D4F8F3E26428F2D7A6A7D0EFAA95A419F0DE09C39059032D92`。Git staged diff --check通过；提交范围排除本地记忆/运行数据/二进制产物，常见凭据模式扫描无匹配。
+
+本轮没有重新执行人工交互或完整R7长测，不扩大此前分项通过范围，也不覆写旧候选manifest。Git同步范围与最近下一步见[交接](HANDOFF.md#2026-10-09-git同步检查点)。
+
+## 2026-10-09 默认基础收纳
+
+独立out/default-basic/candidate01构建0警告错误；final02全量2607通过。final01旧Shell交接测试清理helper时文件占用的单项失败保留。fresh01应用46908完成12个托管托盘场景，37112同库重启指纹一致；只读SQLite确认首次/隐藏新增basic-box、主动修改的night-ops不被重启覆盖，error/退出资源0。打包CheckOnly默认及显式lamp25均通过，未新打安装器/未人工验收。证据及边界归[§10](../V3-05/REAL_CONTENT_DISPLAY_AND_ACTIONS.md#10-默认基础收纳2026-10-09)。
+
+## 2026-10-09 内容介绍显隐与占位
+
+candidate07/final07：2605/2605合同（本轮16新增），App/fixture构建零警告错误；添加PID46624/重启PID46692共33/19断言，error/退出码/资源0。真实ToggleSwitch事件、介绍Grid行归零、Canvas实际位置与已发布Item命中对齐，B/排布/关系保持；不是原生鼠标人工认证。严格入口打开review07/PID42348，后续SessionLock；新入口和视觉待人工确认。详情和SHA归[§9](../V3-05/REAL_CONTENT_DISPLAY_AND_ACTIONS.md#9-模板内容介绍区2026-10-09)，旧包/证据未覆盖、未Git同步。
+
+## 2026-10-09 选择澄清、无底板与高分辨率图源
+
+candidate06/final06：2589/2589（本轮8新增）；App/fixture构建0警告错误；应用2256/38008分别26/14断言，error/退出码/资源0。原生ICO测试确实读取256青色大帧而非红色小帧放大，透明度/单像素细节/源文件不变通过。普通单击无描边、Ctrl单项描边、底板null等由托管窗口探针验证；肉眼/鼠标仍待验。完整证据、App哈希与启动入口见[§8](../V3-05/REAL_CONTENT_DISPLAY_AND_ACTIONS.md#8-修饰键选择与无底板高清图标2026-10-09)，自定义卡片尚未实现，不扩大PASS。
+
+## 2026-10-09 05-05／06三项修订自动门
+
+candidate05/final05：2581/2581（本修订8新增），构建零警告错误；应用44172/49284共23/11断言，错误/退出码/退出资源均0。窗口托管探针验证图标比例尺寸、单选描边及隔离，预览区分休眠历史与活跃共享，同库重启重复检查。final03/diagnostic04记录检查器将请求框误当实际等比图像尺寸的失败与读回，保留不抹除；详见[修订§7](../V3-05/REAL_CONTENT_DISPLAY_AND_ACTIONS.md#7-人工反馈后三项修订2026-10-09)。用户此前其余已测项通过，PID28060正常退出；三项增量仍USER PENDING，不把托管探针冒充鼠标/视觉人工验收。
+
+## 2026-10-09 V3-05-05／06 最终同包自动门
+
+candidate02/final02：2573/2573（32新增），App/fixture构建零警告错误；应用48284/33696分别17/5断言，错误0、退出码0、资源0。原生worker测试真实图标、自建程序打开、失败/取消；App探针不执行用户文件。源/全产物清单绑定，NativeInput=false、HumanAccepted=false，原生人工待验。完整范围/发布检查及不可继承项见[本轮记录§6](../V3-05/REAL_CONTENT_DISPLAY_AND_ACTIONS.md#6-验证记录与人工出口)。05-04用户已确认通过，原自动seal保持不改。
+
+## 2026-10-09 V3-05-04同包自动门
+
+最终candidate03/final03：2541/2541测试通过，新增35；App/fixture Release/x64构建零警告错误。应用添加/复用/共享修复PID45836、同库重启PID37516均正常退出，error0、ActiveResources0；source sentinel不变。全产物和src/tests/scripts指纹绑定，旧失败保留；详见[证据及人工清单](../V3-05/NON_DESTRUCTIVE_REFERENCE_ADD.md#7-验证记录)。NativeInput=false、HumanAccepted=false、ShellExecuted=false；本轮人工未验，不承接旧R7人工结论。
+
+## 2026-10-09 V3-05-01纯合同完成
+
+最终full-02.trx：2506/2506通过，其中本步82例；Release/x64整项目构建零警告零错误。证据out/v3-05-01/contracts；SDK10.0.103。未启动GUI/调用真实Shell/迁移日常库；旧R7/R8 seal不认证新增源码，原未验/延期不变。
+
+当前主线的合同、代码锚点、验证与交接转[V3-05实施记录](../V3-05/CONTENT_ENTITY_AND_OPEN_CONTRACT.md)。以下05-01准备/R7/R8记录保持原日期范围，不作为新模型尚未实现的判断依据。
+
+## 2026-10-09 DeskBox参考只读核对
+
+- 用户指定本地DeskBox，HEAD=64f27e1aa0f16867abe20074f35ea05cd7b12ce7，git status为空。已读根AGENTS、README/许可变更、实体/配置、意图策略、打开去重/STA/结果、传输保护及相关测试源；记录在[通用合同§8.1](../../20_Architecture/GENERAL_CONTENT_MULTI_POSTER_CONTRACT_V1.md#81-v3-05-01参考入口复核2026-10-09)。
+- 本轮仅追加参考映射并更新05-01入口/交接；未运行DeskBox或DesktopUp，未执行参考测试，未复制源码、未更改生产模型，不产生新的测试PASS或Git提交。
+
+## 2026-10-09 文档源码对齐与V3-05-01准备
+
+- 范围：活动ABC/冷启动/任务正文及下一步相关架构、模板和内容合同；差异表见[执行§14](LR_MILESTONE_EXECUTION.md#14-文档源码对齐审计与05-01准备2026-10-09)，准备任务见[工作流§6.1](../../30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md#61-v3-05-01实施准备实体能力与打开结果)。历史记录未删除，不将目标架构当现实现。
+- 源码只读核对：SQLite12、portable5、content layout3、presentation6；独立Lamp/Rain、先下后上空间策略、可见tile、源/资源/激活端口与DEMO no-op/无解码边界。正式ContentItem等实体与真实打开仍待V3-05。
+- 文档检查：15份范围内文档的本地文件链接无缺失；git diff --check通过。仅校验链接目标和差异格式，不把文本检查当产品测试。
+- 运行绑定：start-r7-review.ps1以final09/review09执行CheckOnly，返回READY - NOT STARTED，App FDC0C5B40AFBE164A4B168835EFC8A3C1A50F3A5A5870DC4F0631608E28D9931、seal F299A6C247355E2BB0EEC8C963EA69607EC6800BFBA609455426C9896D245F0E保持；未启动应用、未重跑2424合同/进程门。
+- 本轮只改文档，保留既有dirty代码/脚本及本地材料；05-01纯模型/新测试尚未编写。R7完整验收OPEN、携带项和DEC-033长测后置不变，无Git提交/推送。
+
+## 2026-10-09 R7退出核清与R8现候选假源复验
+
+- review09：8796、32876、39792均有application.stopped/activeResources=0、error0；最后39792于12:08:35停止。该次portable取消记录picker=false，不能当作选择器打开退出的自动测试；D4该情形仍为USER PASS。停止后日志哈希及边界见[§12.1](LR_MILESTONE_EXECUTION.md#121-进程差异的最终事实)。
+- R8新跑：out/r8-handoff/source-one-01、source-3-01、source-6-01，1/3/6张分别29/31/34检查、五场景全部通过；PID3332/19872/9360均exit0/error0/资源0，每组121候选/脚本文件绑定稳定。托管假源/请求生命周期测试，不是原生输入、真图解码、真实文件或长测。
+- 原final09 C1候选/550源码/119产物/18proof在运行前后CheckOnly通过，未打开人工包。2424项中的激活23/缓存23/需求16共62项既有合同结果核查通过，**本轮未重跑全量合同**。
+- 本轮汇总out/r8-handoff/r8-handoff.json含六份证明的SHA，逐份复核一致；C1/人工旧manifest不回写。R7核心可交接、完整验收仍OPEN；R8交接完成但V3-05未开始，携带项归[§12/13](LR_MILESTONE_EXECUTION.md#12-r7出口审查与运行差异收清2026-10-09)。
+
+## 2026-10-09 BUG-021整改后C1完整通过，D1/D2/D4问项人工通过
+
+用户已回复D1、D2全部通过，限定在异步问题实际列出的菜单/拖动/留白桌面与多海报收展/隐藏/中心开关组合；D4配置往返通过，最后一组显式备份恢复/原生选择器退出也回复“两项均通过，已正常退出”。D3因条件不足明确保留未验；低透明度专项、Item Esc、人工重启、同ID异定义/跨机等未单列项不据此补PASS。
+
+退出核对与用户体验分列：review09日志确认原PID8796、恢复PID32876正常停止且activeResources=0，备份创建revision260；恢复后的PID39792于11:58现场仍在运行，无退出/选择器取消完成记录，已询问是否验后重开，待核对。三进程当前error0不等于最终退出已完成。未改封存manifest/binding，不补全人工或资源PASS；详细时间线与下一步R7出口审查归§11.9。以下启动时“D1～D4均待验”为历史状态。
+
+当前证据仅`out/r7-continuity/final09/r7-continuity.json`：2424/2424合同、0/1/3/6各20轮＋重启＋生命周期、4个组/组合进程、12项R4故障（4真实清除），17进程全部无error、正常退出资源0。550源码/119产物前后稳定，18份proof；App SHA `FDC0C5B40AFBE164A4B168835EFC8A3C1A50F3A5A5870DC4F0631608E28D9931`。
+
+定点证据：diagnostic07 PID44072初次GetWindowRgn=0、无重设只读补查=3，原门仍判FAIL，共享恢复true；并未证明Win32内部失败原因。去除几何验证不需要的区域复制，改一次直接边界读取；缺失/空/错位保持严格。11项增量测试的架构红例、40项相关绿例留在bug021-regression；green.trx的注释匹配误报已保留并修正。诊断06硬60秒退出冲突单列修正；诊断08未再现，不声称其抓到了失败点的直接边界值。具体限制及原始路径见[§11.9](LR_MILESTONE_EXECUTION.md#119-bug-021读回路径整改与r7-d准入2026-10-09)。
+
+人工启动守卫正例/6反例通过，`guard09-results.json`；已启动独立review09（初始PID8796），D1～D4均USER PENDING，不把应用命令/模拟信号当原生手势或真实显示变化。C2仍后置NOT RUN，R7不关闭，旧final05失败不改写，本轮无Git操作。
+
+## 历史：2026-10-09 R7-C1短时连续门（部分通过，整套FAIL）
+
+完整范围/失败时序归[§11.8](LR_MILESTONE_EXECUTION.md#118-r7-c1短时连续可靠性实施2026-10-09)。candidate05构建0警告0错误；`out/r7-continuity/final05`有2413/2413合同、0/1/3张各20轮与正常重启/生命周期PASS，**6张PID7196第11轮收起FinalRestore失败**，无成功manifest。初次native边界/input/区域设置true，GetWindowRgn=0，Region=null，revision253，随后触发共享恢复及正常退出，根因仍待定点证据。
+
+`remaining05`仅独立补验：6张启用/重启/生命周期、independent/chain组与组合4进程、R4 11案例含3清除区域注入通过。合计18应用进程17个无error、失败进程2条error；全部正常退出/资源0。548源码/119产物复核不变，App SHA `C695E9D573AC29CC478957B08E84EC7BEF9A89F0C0C413A6348BE52FA6DA82C5`。不得将两个目录合称C1 PASS，不用退出资源0认证长期无泄漏。
+
+验证器本身修订留痕：run01/diagnostic02/03发现模板集合引用假阴性，diagnostic03实际/期望JSON相同；改完整值比较及17项反例。run04拦住夹具比例锚第一次像素物化，改首轮核对实际外框/全部用户字段、后续完整保存值。preflight05单海报20轮通过。旧失败不删，不把此后真正的原生区域失败归为同一种测试问题。
+
+BUG-019固定时序合同复验保持PASS；BUG-021自然最终恢复子类待修，020/022仍待原生手势。C1未完成，下一步BUG-021定点反例/修复/完整复验；D未验，原C2 MOVED / NOT RUN。无OS手势模拟、无真实系统锁屏/显示变更、无长测、无Git操作。
+
+## 2026-10-09 R7-C长测移交（非测试结果）
+
+按DEC-033最新补充，原R7-C2已移交[基础功能完成后的联合长时验证](../../30_Plans/DESKTOPUP_V2_V3_IMPLEMENTATION_PLAN_V1.md#141-基础功能完成后的联合长时验证原r7-c2)，MOVED / NOT RUN；不再阻塞R7其余门通过后收口或真实内容开发。未启动新进程、未创建候选/运行探针，无新PASS/FAIL。C1必要短时连续可靠性为最近下一步、尚未实施；原2396合同与final04仅属于A/B。阶段收口不代表长期稳定/资源达标，文件安全与原预算不后置或删除；调整后的依赖见[里程碑§11.7](LR_MILESTONE_EXECUTION.md#117-r7-c长时资源与连续可靠性2026-10-09)。
+
 ## 2026-10-08 Git同步前复核
 
 源码检查点`f2f6804`：Release合同2396/2396通过、失败0/跳过0，新增记录`out/git-sync/r7-ab-20261008-180238/contracts.trx`。原R7-A/B final04的544源码/161产物/4份proof哈希一致；本轮只复跑合同并复核既有证据，未重跑14进程门/旧16门、未新增原生或人工认证。用户授权同步当前V3同名远端，Git范围见[交接](HANDOFF.md#2026-10-08-git同步检查点用户授权)；下一步R7-C/D不变，下方无Git操作说明为历史。

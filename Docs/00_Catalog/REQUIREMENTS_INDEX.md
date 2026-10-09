@@ -2,13 +2,13 @@
 
 状态：`FROZEN PRODUCT DIRECTION — USER REVISION 2026-09-08`
 
-最后检查：2026-09-24（DEC-022/023操作基线与受限双轴已确认；不新增需求权威）
+最后检查：2026-10-09（DEC-037限定Ctrl/Shift集合描边，真实Item无底板；自定义图标属于当前卡片，真实路径与其他海报不变。DEC-035共享来源修复保持）
 
-先以[体验评审](../A_Project/20_Architecture/CONTENT_LAYOUT_EXPERIENCE_REVIEW_V1.md)检查基础手势和两重点风险，再细化控件。既有DEC-017～020保持；E1反馈后用户明确采用DEC-023基础手势/退出A及DEC-022受限双轴，不是从原型默认值推定。
+历史设计过程：先以[体验评审](../A_Project/20_Architecture/CONTENT_LAYOUT_EXPERIENCE_REVIEW_V1.md)核对基础手势和两重点风险；E1后用户采用DEC-023基础手势/退出A及DEC-022受限双轴。该评审已完成相应出口，不是当前重新评审指令。
 
-UI C及DEC-019两模式/直接操作保持；DEC-020确认局部让位、每次进入手动从当前画面建立构图、适配编辑后保存新图并可撤销，需求§13已同步。基础手势/退出A和被动双轴边界已定；具体几何、双入口交接、特殊约束/兼容与循环仍待评审，见[决定索引](../A_Project/10_Requirements/REQUIREMENTS_RISKS_AND_OPEN_QUESTIONS.md)和[整改计划](../A_Project/30_Plans/V3_04_L_REMEDIATION_REVIEW_PLAN.md)，未接生产。
+UI C及DEC-019/020两模式、直接操作、局部让位与有效编辑承接保持；后续决定查[决定索引](../A_Project/10_Requirements/REQUIREMENTS_RISKS_AND_OPEN_QUESTIONS.md)，DEC-034确认成功交接统计门，DEC-035确认统一修复共享内容且预先列出受影响海报。05-04已获用户确认；05-05／06真实图标/打开/定位/仅移除关联已接，当前人工待验。证据与当前入口查[ACTIVE_PATH](ACTIVE_PATH.md)，本索引不代替验收，也不扩展物理文件操作权限。
 
-近期明确决定统一查[需求决定索引§3.1](../A_Project/10_Requirements/REQUIREMENTS_RISKS_AND_OPEN_QUESTIONS.md#31-已明确的近期优先级)：DEC-005简洁控制中心/宏观参数与热度分层，DEC-006托盘仅整体操作，DEC-007可编辑跨格布局及两个独立辅助开关，DEC-008前移布局阶段。此处只导航；当前执行状态查[ACTIVE_PATH](ACTIVE_PATH.md)，不在需求索引重建待办或将设计认可算作生产验收。
+近期决定统一查[需求决定索引§3.1](../A_Project/10_Requirements/REQUIREMENTS_RISKS_AND_OPEN_QUESTIONS.md#31-已明确的近期优先级)：DEC-005～008原方向保持，后续操作/模块规则及DEC-032模板碰撞、DEC-033长测后置均以该处为准。本页只导航，不在需求索引重建待办或将设计认可算作生产验收。
 
 2026-09-10用户优先级决定：完整收展减少动效、手动快速连点最后意图按需保留；指针/计时自动收展必要。目标仍是稳定可用工具，不绕过真实Item安全前置或无限扩展外壳。决定集中于[统一索引](../A_Project/10_Requirements/REQUIREMENTS_RISKS_AND_OPEN_QUESTIONS.md)的V2-DEC-001、V2-DEFER-005/006，手动抑制行为归V2-TBD-017；此处仅导航，不另外维护决定状态。
 
