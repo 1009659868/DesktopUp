@@ -1,3 +1,4 @@
+﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 18
 VisualStudioVersion = 18.0.10908.64
@@ -12,7 +13,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DesktopUp.Infrastructure", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DesktopUp.Windows", "src\DesktopUp.Windows\DesktopUp.Windows.csproj", "{C0D836B8-84D1-4C5B-A77B-9AF0D7F31005}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DesktopUp.Contracts.Tests", "tests\DesktopUp.Contracts.Tests\DesktopUp.Contracts.Tests.csproj", "{C0D836B8-84D1-4C5B-A77B-9AF0D7F31006}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DesktopUp.ContentWorker", "src\DesktopUp.ContentWorker\DesktopUp.ContentWorker.csproj", "{C0D836B8-84D1-4C5B-A77B-9AF0D7F31006}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

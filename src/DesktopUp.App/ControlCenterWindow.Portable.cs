@@ -82,9 +82,6 @@ public sealed partial class ControlCenterWindow
         finally { if (ReferenceEquals(_portableDialog, dialog)) _portableDialog = null; }
     }
 
-    internal NativeProfilePicker? ActivePortablePickerForProbe => _portablePicker;
-    internal Task RunPortablePickerForProbe(bool save, bool initiallyCancelled = false, NativePickerPurpose purpose=NativePickerPurpose.Profile) =>
-        PortableAction(async () => { _ = await PickPortableFile(save, initiallyCancelled, purpose); });
 
     private async Task<string?> PickPortableFile(bool save, bool initiallyCancelled = false, NativePickerPurpose purpose=NativePickerPurpose.Profile)
     {

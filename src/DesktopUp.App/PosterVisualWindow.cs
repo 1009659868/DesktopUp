@@ -47,7 +47,6 @@ internal sealed partial class PosterVisualWindow(
     private TextBlock? _moreGlyph;
     private TextBlock? _modeLabel;
     private MenuFlyout? _posterMenu;
-    private MenuInputDiagnostic? _menuDiagnostic;
     private DesktopMenuInteraction? _menuInteraction;
     private nint _windowHandle;
     private IDisposable? _windowLease;
@@ -126,8 +125,7 @@ internal sealed partial class PosterVisualWindow(
         // Preparation must not clip or resize a live surface before its peers move.
         return new(this, frame, input, _contentSnapshot ?? EnsureContentSnapshot(frame), _contentViewport!, _contentSpaceCandidate);
     }
-    public bool CommitSpatialFrames(IReadOnlyList<PreparedSpatialFrame> frames, DesktopFramePhase phase = DesktopFramePhase.Regular,
-        Action? afterNativeBatchForProbe = null)
+    public bool CommitSpatialFrames(IReadOnlyList<PreparedSpatialFrame> frames, DesktopFramePhase phase = DesktopFramePhase.Regular)
     {
         var layouts = new List<(FrameworkElement Root, double Width, double Height)>();
         try
@@ -194,9 +192,6 @@ internal sealed partial class PosterVisualWindow(
         }
         bool applied = attachment.ApplyPreparedBoundsBatch(windows, phase);
         bool nativeApplied = applied;
-        // Isolated component probe only: reproduce a native region reset at the allocation
-        // boundary. Ordinary callers never supply this hook; it cannot replace verification.
-        afterNativeBatchForProbe?.Invoke();
         // Always read every participant after a partial native failure. Recovery then uses the
         // single committed projection, not whichever windows happened to move first.
         foreach (var frame in frames)
@@ -1479,7 +1474,6 @@ internal sealed partial class PosterVisualWindow(
         long menuEntity = _posterEntityVersion;
         var menuContentTarget = contentItemId is null ? null : ContentActivationTargetFor(contentItemId);
         if (contentItemId is not null && (_selectedContentItem != contentItemId || menuContentTarget is null)) return;
-        MenuInputDiagnostic? diagnostic = null;
         DesktopMenuInteraction? interaction = null;
         var flyout = new MenuFlyout();
         var menuGate = new PosterMenuActionGate();
@@ -1488,7 +1482,6 @@ internal sealed partial class PosterVisualWindow(
             bool accepted = !_disposed && _posterEntityVersion == menuEntity && inputRouter.IsCurrent(inputSession, menuLayout) &&
                 (contentItemId is null || _selectedContentItem == contentItemId && ContentActivationTargetFor(contentItemId) == menuContentTarget) &&
                 (command == "control-center" || !spatial.HasCenterDraft(inputSession.PosterId));
-            diagnostic?.Guard(command, accepted, menuEntity, menuLayout);
             return accepted;
         }
         bool MenuCurrent(string command) => menuGate.TryConsume(ReferenceEquals(_posterMenu, flyout) && MenuBasisCurrent(command));
@@ -1539,13 +1532,6 @@ internal sealed partial class PosterVisualWindow(
         }
 
         _posterMenu = flyout;
-        _menuDiagnostic?.Dispose();
-        _menuDiagnostic = MenuInputDiagnostics.Enabled ? MenuInputDiagnostic.TryCreate(flyout, _window.DispatcherQueue, log,
-            () => new { PosterId, inputSession.Epoch, mode = _mode.ToString(), _posterEntityVersion,
-                menuEntity, menuLayout, appliedLayout = _inputIsland?.AppliedLayoutRevision,
-                current = !_disposed && _posterEntityVersion == menuEntity && inputRouter.IsCurrent(inputSession, menuLayout),
-                frame = _bounds, visual = $"0x{_windowHandle:X}", island = $"0x{_inputIsland?.WindowHandle:X}" }) : null;
-        diagnostic = _menuDiagnostic;
         flyout.Opened += (_, _) =>
         {
             if (ReferenceEquals(_posterMenu, flyout) && interaction?.ActivatePopup() == false && contentItemId is not null)
@@ -1556,8 +1542,6 @@ internal sealed partial class PosterVisualWindow(
             menuGate.Close();
             interaction?.Dispose();
             if (ReferenceEquals(_menuInteraction, interaction)) _menuInteraction = null;
-            diagnostic?.Dispose();
-            if (ReferenceEquals(_menuDiagnostic, diagnostic)) _menuDiagnostic = null;
             if (ReferenceEquals(_posterMenu, flyout))
             {
                 _posterMenu = null;
@@ -1598,8 +1582,6 @@ internal sealed partial class PosterVisualWindow(
             menuGate.Close();
             interaction?.Cancel();
             if (ReferenceEquals(_menuInteraction, interaction)) _menuInteraction = null;
-            diagnostic?.Dispose();
-            if (ReferenceEquals(_menuDiagnostic, diagnostic)) _menuDiagnostic = null;
             _posterMenu = null;
             if (contentItemId is not null) ReportContentFailure("项目菜单未能打开，请重试。原布局未改。");
             _ = ReassertCurrentClusterBottom();
@@ -1953,8 +1935,6 @@ internal sealed partial class PosterVisualWindow(
         _contentHistory.Clear();
         _menuInteraction?.Cancel();
         _menuInteraction = null;
-        _menuDiagnostic?.Dispose();
-        _menuDiagnostic = null;
         StopExpansionFeedback();
         spatial.Remove(this);
         _spatialGesture?.Cancel();

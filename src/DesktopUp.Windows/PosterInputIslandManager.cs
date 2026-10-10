@@ -263,29 +263,6 @@ public sealed class PosterInputIslandManager : IInputRegionHost
         throw new InvalidOperationException("Cannot restore cloud input after rejected publication.");
     }
 
-    // Read-only native evidence, not injection: compare the actual HRGN with published geometry.
-    public bool VerifyTitleRegionForProbe(int height)
-    {
-        if (_layout is null || WindowHandle == 0) return false;
-        nint region = CreateRectRgn(0, 0, 0, 0);
-        if (region == 0) return false;
-        try
-        {
-            if (GetWindowRgn(WindowHandle, region) == 0) return false;
-            for (int y = 0; y < Math.Min(height, _layout.FrameHeight); y++)
-                for (int x = 0; x < _layout.FrameWidth; x++)
-                {
-                    bool expected = PosterInputGeometry.InsideRoundedFrame(x, y, _layout) && _layout.Regions.Any(r =>
-                        PosterInputGeometry.CapturesPointer(r) && x >= r.Bounds.X && x < r.Bounds.Right && y >= r.Bounds.Y && y < r.Bounds.Bottom);
-                    if (PtInRegion(region, x, y) != expected) return false;
-                }
-            return true;
-        }
-        finally { _ = DeleteObject(region); }
-    }
-
-    [DllImport("user32.dll")] private static extern int GetWindowRgn(nint window, nint region);
-    [DllImport("gdi32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool PtInRegion(nint region, int x, int y);
 
     public bool ApplyLayout(
         DesktopPixelRect frame,
@@ -376,7 +353,6 @@ public sealed class PosterInputIslandManager : IInputRegionHost
         nuint wParam,
         nint lParam)
     {
-        MenuInputDiagnostics.Observe(windowHandle, message, lParam, "input-island");
         if (message == WmMouseLeave)
         {
             _trackingPointerLeave = false;
@@ -545,12 +521,6 @@ public sealed class PosterInputIslandManager : IInputRegionHost
     {
         if (PosterContentInputPolicy.IsTarget(hit.Region.Kind) && !PosterContentInputPolicy.HasValidIdentity(hit.Region)) return;
         if (_disposed || _pressedRegion is not null || (_capture = _router.Begin(hit)) is null) return;
-        if (MenuInputDiagnostics.Collecting) MenuInputDiagnostics.Route(WindowHandle, new
-        {
-            phase = "capture-begin", hit.Session, hit.LayoutRevision, hit.Frame,
-            target = hit.Region.Kind.ToString(), hit.Region.Index, hit.Region.Bounds,
-            screenX = point.X, screenY = point.Y
-        });
         _pressedRegion = hit.Region;
         _pressFrame = hit.Frame;
         _gestureMoved = false;
@@ -764,11 +734,6 @@ public sealed class PosterInputIslandManager : IInputRegionHost
             : _gestureMoved
                 ? PosterInputEventKind.GestureCompleted
                 : PosterInputEventKind.Invoked;
-        if (MenuInputDiagnostics.Collecting) MenuInputDiagnostics.Route(WindowHandle, new
-        {
-            phase = "dispatch", session = _session, kind = eventKind.ToString(), target = target.Kind.ToString(),
-            target.Index, target.Bounds, cancelled, owns, screenX = cursor.X, screenY = cursor.Y
-        });
         RaiseInput(eventKind, target, deltaX, deltaY);
         _gestureMoved = false;
     }

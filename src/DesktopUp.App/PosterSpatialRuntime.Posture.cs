@@ -8,8 +8,6 @@ namespace DesktopUp;
 
 internal sealed partial class PosterSpatialRuntime
 {
-    // Off for every normal launch; enabled only by the existing isolated spatial probe.
-    private bool _measurePostureFrames;
     public event Action? RecoveryRequired;
 
     public void ToggleCollapsed(PosterVisualWindow window)
@@ -141,14 +139,6 @@ internal sealed partial class PosterSpatialRuntime
         if (_postures.GetValueOrDefault(run.Command.RequestId) != run) return;
         if (!TrySnapshot(run.Owner, out var scene, out var current) || scene!.Environment != run.Initial.Environment || !run.ReadsCurrent(current!))
         { CancelPosture("environment-or-read-set-stale", specific: run); return; }
-        // Only the explicit isolated backdrop probe installs this observer. Keep the native
-        // frame stable while its own-HWND capture completes; the existing watchdog remains on.
-        if (run.BackdropObservation is { } observation)
-        {
-            if (!observation.IsCompleted) return;
-            run.BackdropObservation = null;
-            observation.GetAwaiter().GetResult();
-        }
         if (!run.Cursor.Complete)
         {
             if (run.AnimationOriginMs is null)
@@ -162,34 +152,13 @@ internal sealed partial class PosterSpatialRuntime
                 return;
             }
             if (!run.Cursor.TryTake(run.Clock.Elapsed.TotalMilliseconds - run.AnimationOriginMs.Value, out var frame)) return;
-            long probeStart = _measurePostureFrames ? System.Diagnostics.Stopwatch.GetTimestamp() : 0;
             var prepared = frame!.Changes.Select(p => _windows[p.PosterId].PrepareSpatialFrame(Pixels(p.To))).ToArray();
             bool applied = prepared.All(p => p is not null) && run.Owner.CommitSpatialFrames(prepared.Select(p => p!).ToArray(), DesktopFramePhase.Animation);
-            // A live window backdrop is a separate check from HWND/XAML geometry. This does
-            // not claim to measure presented pixels; it prevents a silent return to XAML-only fill.
-            bool? backdropsReady = _measurePostureFrames
-                ? prepared.All(p => p is not null && p.Owner.VerifyWindowBackdrop()) : null;
-            if (_measurePostureFrames) log.Write("info", "spatial.probe_frame", new { run.Command.RequestId, index = run.Cursor.Index,
-                applied, backdropsReady, layoutsStable = prepared.All(p => p is not null && p.Owner.VerifyTransitionLayout(true)),
-                surfacesCoverVisible = prepared.All(p => p is not null && p.Owner.VerifyTransitionSurfaceReady()),
-                qpc = System.Diagnostics.Stopwatch.GetTimestamp(), frequency = System.Diagnostics.Stopwatch.Frequency,
-                maximumEdgeDelta = frame.Changes.Select(c => SpatialAnimationSchedule.EdgeDistance(c.From, c.To)).DefaultIfEmpty().Max(),
-                elapsedMs = run.Clock.Elapsed.TotalMilliseconds,
-                prepareAndCommitMs = System.Diagnostics.Stopwatch.GetElapsedTime(probeStart).TotalMilliseconds });
             if (!applied)
                 CancelPosture("native-batch-failed", specific: run);
             else
             {
                 run.AcceptedFrames = run.Cursor.Index; // Exact refined prefix retained for title handoff.
-                if (BackdropFrameObserverForProbe is { } observer &&
-                    prepared.FirstOrDefault(p => p!.Owner == run.Owner) is { } source)
-                {
-                    var initial = run.Initial.Posters.Single(p => p.PosterId == run.Owner.PosterId).Bounds;
-                    var final = run.Changes.Single(p => p.PosterId == run.Owner.PosterId).After;
-                    run.BackdropObservation = observer(new(run.Command.RequestId, run.Owner.PosterId!,
-                        run.Command.DesiredState.IsCollapsed, run.AcceptedFrames, run.Frames.Count,
-                        Pixels(initial), Pixels(final), source.Bounds));
-                }
             }
             return;
         }
@@ -233,8 +202,7 @@ internal sealed partial class PosterSpatialRuntime
     }
 
     // Both posture and title owners finish through this exact R4 release/readback path.
-    private bool RestorePresentedGroup(PosterVisualWindow owner, IReadOnlyList<PosterVisualWindow> participants, string requestId,
-        Action? afterNativeBatchForProbe = null)
+    private bool RestorePresentedGroup(PosterVisualWindow owner, IReadOnlyList<PosterVisualWindow> participants, string requestId)
     {
         var restorations = new List<PosterVisualWindow.PreparedSpatialFrame>();
         bool restored = true;
@@ -267,7 +235,7 @@ internal sealed partial class PosterSpatialRuntime
         }
         try
         {
-            if (restorations.Count > 0) restored &= owner.CommitSpatialFrames(restorations, DesktopFramePhase.FinalRestore, afterNativeBatchForProbe);
+            if (restorations.Count > 0) restored &= owner.CommitSpatialFrames(restorations, DesktopFramePhase.FinalRestore);
         }
         catch (Exception exception)
         {
@@ -309,7 +277,6 @@ internal sealed partial class PosterSpatialRuntime
         public Stopwatch Clock { get; } = new();
         public int ReadyCallbacks { get; set; }
         public int AcceptedFrames { get; set; }
-        public Task? BackdropObservation { get; set; }
         public double? AnimationOriginMs { get; set; }
         public EventHandler<object>? RenderingHandler { get; set; }
         public IReadOnlyList<PosterVisualWindow> Participants { get; } = participants;

@@ -126,16 +126,6 @@ internal sealed class RainSceneInstance : IPosterSceneInstance, IPosterTitleMoti
         _lastFrame.TitleChrome == PosterTitleChromeKind.Cloud, _pose.X, _lightning.Opacity,
         _values.Number("rain.lightningInterval",RainLightningSchedule.DefaultInterval))
         { CloudSize=TitleCloudPose.Size(_values.Number("cloud.size",1)) };
-    // Isolated rendering probe only. No preference, active clock or authoritative geometry changes.
-    internal TitleCloudPose TitleSampleForProbe(double seconds)
-    { var p = RainSceneMotion.Cloud(seconds, _values.Number("cloud.wind", 35)); return new(p.X, p.Y, p.Angle,p.Vapor,p.Wisp,
-        TitleCloudPose.Size(_values.Number("cloud.size",1))); }
-    internal FrameworkElement PaintLightningSampleForProbe(double seconds, uint seed = 0)
-    {
-        _lightning.Update(_area, RainSceneMotion.Lightning(seconds,
-            _values.Boolean("scene.motion", true) && _values.Boolean("rain.lightning", true)), seed);
-        return _lightning.Root;
-    }
     public void Dispose()
     {
         if (_disposed) return;

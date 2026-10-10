@@ -155,10 +155,6 @@ public sealed class StateRecoveryWindow : Window
 
     public bool IsBusy { get; private set; }
 
-    internal StateRecoveryWindowSnapshot SnapshotForSmoke() => new(
-        IsBusy, _loaded, _recovery.HasPendingRecovery, _backups.Items.Count,
-        _backups.Items.Cast<ListViewItem>().Count(item => ((StateBackupCandidate)item.Tag).IsValid),
-        _restart.IsEnabled, _restore.IsEnabled);
 
     public bool CloseForExit()
     {
@@ -319,5 +315,3 @@ public sealed class StateRecoveryWindow : Window
     }
 }
 
-internal sealed record StateRecoveryWindowSnapshot(
-    bool Busy, bool Loaded, bool Pending, int CandidateCount, int ValidCount, bool CanRestart, bool CanRestore);

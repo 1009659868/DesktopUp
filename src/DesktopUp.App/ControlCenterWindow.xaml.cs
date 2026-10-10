@@ -55,10 +55,6 @@ public sealed partial class ControlCenterWindow : Window
         }
     }
 
-    internal bool VerifyProjection(DesktopUpProjection expected) => _view?.Projection.Revision == expected.Revision &&
-        PosterSelector.ItemsSource is IReadOnlyList<ControlCenterPosterRow> rows &&
-        rows.Select(row => row.PosterId).SequenceEqual(expected.Posters.Select(p => p.Poster.PosterId)) &&
-        PosterTitleText.Text == (_view.SelectedPoster?.Poster.Title ?? "暂无海报") && VerifyMoreMenuForProbe();
 
     public void ApplyView(ControlCenterView view, string? commandError = null)
     {

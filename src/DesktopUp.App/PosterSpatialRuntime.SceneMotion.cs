@@ -157,7 +157,6 @@ internal sealed partial class PosterSpatialRuntime
     }
 
     internal bool SceneMotionRunning => _sceneMotionTimer is not null;
-    internal PosterPointerSampleDiagnostic? ReadScenePointerDiagnosticsForProbe() => _scenePointer?.LastDiagnostics;
     internal bool SceneReducedMotion => !_sceneAnimationsEnabled;
     internal bool SceneGlobalMotionPaused => !state.TryGetCurrent(out var projection) || projection!.Tray.DynamicEffectsPaused;
 }

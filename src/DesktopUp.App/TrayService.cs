@@ -83,15 +83,6 @@ internal sealed class TrayService(IResourceLedger ledger, IStructuredLog log) : 
     public void ApplyRuntime(bool hidden, bool environmentPending)
     { _globallyHidden = hidden; _environmentPending = environmentPending; Render(); }
 
-    internal bool VerifyProjection(TrayProjection projection) => _projectionRevision == projection.Revision &&
-        _icon?.IsCreated == true && _items.Count == 6 &&
-        TrayManagement.Menu(projection, _globallyHidden, _environmentPending).All(e =>
-            _items.TryGetValue(e.Action, out var item) && item.Text == e.Text && item.IsEnabled == e.Enabled &&
-            (e.Checked is null || item is ToggleMenuFlyoutItem toggle && toggle.IsChecked == e.Checked));
-
-    // Runs the real command binding, not native input; isolated process probes explicitly report this limit.
-    internal void InvokeForProbe(TrayAction action)
-    { if (_items.TryGetValue(action, out var item) && item.IsEnabled) item.Command.Execute(null); }
 
     public void Notify(string message, bool error = true)
     {

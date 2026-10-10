@@ -10,7 +10,6 @@ public sealed partial class ControlCenterWindow
     private SqliteStateStore? _transferStore;
     private Action? _refreshTransfers;
     private readonly CancellationTokenSource _transferStopping=new();
-    internal bool TransferGlobalEntryForProbe=>_transferStore is not null && MoreActionsButton.IsEnabled;
     internal void ConfigureTransfers(SqliteStateStore store,Action refresh)
     {
         _transferStore=store;_refreshTransfers=refresh;

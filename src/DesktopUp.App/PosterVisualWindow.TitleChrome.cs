@@ -57,24 +57,6 @@ internal sealed partial class PosterVisualWindow
         _titlePose = pose;
         PaintTitlePose(surface.Frame.Width / _monitor.ScaleX);
     }
-    internal bool VerifyTitleChromeForProbe()
-    {
-        if (_monitor is null || inputRouter.ReadSurface(inputSession) is not { } surface ||
-            _titleName is null || _titleCollapse is null || _titleMore is null) return false;
-        var layout = PosterTitleChromePolicy.Resolve(surface.Frame.Width / _monitor.ScaleX, _geometry.IsCollapsed, _presentation.TitleChrome);
-        bool Place(FrameworkElement element, TitleChromeRect rect) => Math.Abs(Canvas.GetLeft(element) - rect.X) < .01 &&
-            Math.Abs(Canvas.GetTop(element) - rect.Y) < .01 && Math.Abs(element.ActualWidth - rect.Width) < .01 && Math.Abs(element.ActualHeight - rect.Height) < .01;
-        bool Input(PosterInputTargetKind kind, TitleChromeRect rect) => surface.Layout.Regions.Any(r => r.Kind == kind &&
-            r.Bounds.X == (int)Math.Round(rect.X * _monitor.ScaleX) && r.Bounds.Y == (int)Math.Round(rect.Y * _monitor.ScaleY) &&
-            r.Bounds.Width == (int)Math.Round(rect.Width * _monitor.ScaleX) && r.Bounds.Height == (int)Math.Round(rect.Height * _monitor.ScaleY));
-        return Place(_titleName, layout.Name) && Place(_titleCollapse, layout.Collapse) && Place(_titleMore, layout.More) &&
-            Input(PosterInputTargetKind.CollapseButton, layout.Collapse) && Input(PosterInputTargetKind.MoreButton, layout.More) &&
-            _titleName.Background is null && _titleCollapse.Background is null && _titleMore.Background is null &&
-            _titleName.Child is TextBlock name && name.Foreground is SolidColorBrush text &&
-            _collapseGlyph?.Foreground is SolidColorBrush actions && _moreGlyph?.Foreground is SolidColorBrush more &&
-            text.Color == ColorBrush((_presentation.Parameters.TitleColors ?? new()).Text).Color &&
-            actions.Color == ColorBrush((_presentation.Parameters.TitleColors ?? new()).Actions).Color && more.Color == actions.Color;
-    }
     internal void ShowPosturePending(bool pending)
     {
         if (_collapseGlyph is null) return;
@@ -82,14 +64,6 @@ internal sealed partial class PosterVisualWindow
         ToolTipService.SetToolTip(_collapseGlyph, pending ? "已记住操作，等待相关海报让出空间。" : "收起 / 展开");
     }
 
-    internal bool VerifyTitleVisibilityForProbe(bool show) =>
-        _presentation.Parameters.IsTitleVisible == show &&
-        _titleName?.Child is TextBlock name && name.Text == _authoritativePoster?.Title &&
-        name.Opacity == (show ? 1 : 0) && _titleName.Opacity == 1 &&
-        (_metaPanel?.Children.ElementAtOrDefault(1) is not TextBlock metaTitle ||
-            metaTitle.Text == _authoritativePoster?.Title && metaTitle.Opacity == (show ? 1 : 0)) &&
-        _titleCollapse?.Opacity == 1 && _titleMore?.Opacity == 1 &&
-        _collapseGlyph?.Opacity == 1 && _moreGlyph?.Opacity == 1 && VerifyTitleChromeForProbe();
 
     private Grid CreateTitleChrome()
     {

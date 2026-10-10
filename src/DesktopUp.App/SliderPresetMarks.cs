@@ -92,16 +92,6 @@ internal sealed class SliderPresetMarks
         return null;
     }
     internal void Cancel() => _press = null;
-    internal bool ThumbAlignedForProbe()
-    {
-        Refresh(); if (!Ready) return false;
-        var origin = _track!.TransformToVisual(_marks).TransformPoint(new Point());
-        double expected = SliderPresetGeometry.Center(_slider.Minimum, _slider.Maximum, _slider.Value,
-            origin.X, _track.ActualWidth, _thumb!.ActualWidth);
-        double actual = _thumb.TransformToVisual(_marks).TransformPoint(new Point()).X + _thumb.ActualWidth / 2;
-        return Math.Abs(expected - actual) <= 1 / _slider.XamlRoot.RasterizationScale;
-    }
-    internal Point CenterForProbe(int index) { Refresh(); if (!Ready) throw new InvalidOperationException("Native slider track unavailable"); return _marks.TransformToVisual(_slider).TransformPoint(_centers[index]); }
 
     private static FrameworkElement? Find(DependencyObject parent, string name)
     {

@@ -26,7 +26,6 @@ internal sealed partial class PosterSpatialRuntime(IStateProjectionCoordinator s
     public void Remove(PosterVisualWindow window)
     {
         window.StopLocate();
-        _continuityProbeStop?.Invoke();
         if (_title?.Participants.Contains(window) == true) CancelTitle("surface-disposed");
         if (PostureFor(window) is { } posture) CancelPosture("surface-disposed", specific: posture);
         if (window.PosterId is { } pendingId && _pendingPostures.Remove(pendingId, out var pending))

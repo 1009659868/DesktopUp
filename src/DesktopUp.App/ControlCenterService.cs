@@ -26,7 +26,7 @@ internal sealed partial class ControlCenterService(
     private IDisposable? _removalLease;
     public string? SelectedPosterId => _selection.SelectedPosterId;
     public Task CancelPortableAndWaitAsync() => _window?.CancelPortableAndWaitAsync() ?? Task.CompletedTask;
-    internal ControlCenterWindow? WindowForPortableProbe => _window;
+    internal ControlCenterWindow? CurrentWindow => _window;
     // Includes async show/dismiss: cancelling the ticket is not proof the dialog has closed.
     public bool IsRemovalInteractionActive => _removalShowing;
     public event Action? RemovalInteractionChanged;

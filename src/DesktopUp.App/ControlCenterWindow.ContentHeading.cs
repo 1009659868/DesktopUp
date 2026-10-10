@@ -42,7 +42,4 @@ public sealed partial class ControlCenterWindow
         if (args.Key == global::Windows.System.VirtualKey.Enter) { FinishSettings(); args.Handled = true; }
         else if (args.Key == global::Windows.System.VirtualKey.Escape) { CancelSettingsPreview(); args.Handled = true; }
     }
-    internal void SetContentHeadingForProbe(bool visible) => ContentHeadingSwitch.IsOn = visible;
-    internal bool ContentHeadingControlsForProbe(bool visible) => ContentHeadingFolder.Visibility == Visibility.Visible &&
-        ContentHeadingSwitch.IsEnabled && ContentHeadingSwitch.IsOn == visible;
 }

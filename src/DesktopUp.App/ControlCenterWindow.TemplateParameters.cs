@@ -7,13 +7,6 @@ using Microsoft.UI.Xaml.Input;
 
 namespace DesktopUp;
 
-internal sealed record LampParameterControlsObservation(bool Visible, bool Enabled, int ControlCount,
-    string? PosterId, LampTemplateParameters Values, string Notice)
-{
-    public int VisualColorCount { get; init; }
-    public bool HasTemplateReset { get; init; }
-    public bool ColorPickerOpen { get; init; }
-}
 
 public sealed partial class ControlCenterWindow
 {
@@ -237,9 +230,4 @@ public sealed partial class ControlCenterWindow
         finally { _renderingLampParameters = false; }
     }
 
-    internal LampParameterControlsObservation ReadLampParameterControlsForProbe() => new(
-        _lampParameterFolder?.Visibility == Visibility.Visible, _lampParameterFolder?.IsEnabled == true,
-        _lampColors.Count + _lampNumbers.Count + _lampBooleans.Count, _lampRenderedPosterId,
-        _lampParameterFolder is null ? LampTemplatePolicy.Defaults : LegacyLampValues.FromValues(ReadLampControls()), _lampParameterNotice?.Text ?? "")
-    { VisualColorCount = _lampSwatches.Count, HasTemplateReset = _lampReset is not null, ColorPickerOpen = _lampColorFlyout is not null };
 }

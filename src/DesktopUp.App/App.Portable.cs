@@ -13,7 +13,6 @@ public partial class App
     private IDisposable? _recoveryWindowLease;
     private bool _storageInitialized;
     private bool _restartRequested, _restartForRecovery;
-    private string? _restartDataRoot;
 
     private bool TryEnterOfflineRecovery()
     {
@@ -38,7 +37,6 @@ public partial class App
         _recoveryWindow.Closed += (_, _) => { _recoveryWindowLease?.Dispose(); _recoveryWindowLease = null; };
         _recoveryWindow.Activate();
         _log?.Write("info", "state_recovery.opened", new { reason, pending = _offlineRecovery!.HasPendingRecovery });
-        StartOfflineRecoverySmokeIfRequested();
     }
 
     private void ConfigurePortableProfiles()
@@ -58,7 +56,6 @@ public partial class App
         if (_recoveryWindow?.IsBusy == true || Volatile.Read(ref _exiting) != 0) return;
         if (!recovery && _offlineRecovery?.HasPendingRecovery == true) return;
         _restartRequested = true; _restartForRecovery = recovery;
-        _restartDataRoot = Environment.GetEnvironmentVariable("DESKTOPUP_V3_TEST_DATA_ROOT");
         ExitApplication();
     }
 
@@ -72,7 +69,6 @@ public partial class App
             var start = new ProcessStartInfo(Environment.ProcessPath!)
             { UseShellExecute = false, CreateNoWindow = true, WorkingDirectory = AppContext.BaseDirectory };
             start.ArgumentList.Add(_restartForRecovery ? "--recover-state" : "--show-control-center");
-            if (!string.IsNullOrWhiteSpace(_restartDataRoot)) start.Environment["DESKTOPUP_V3_TEST_DATA_ROOT"] = _restartDataRoot;
             Process.Start(start)?.Dispose();
         }
         catch (Exception error)

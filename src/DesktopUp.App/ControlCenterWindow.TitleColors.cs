@@ -80,19 +80,4 @@ public sealed partial class ControlCenterWindow
         }
     }
 
-    internal void RevealTitleColorsForProbe()
-    {
-        ShowWorkspacePage(false); UiCTemplateFolder.IsExpanded = false;
-        LayoutFolder.IsExpanded = true;
-        TitleColorsFolder.IsExpanded = true;
-        UiCRoot.UpdateLayout();
-        TitleColorsFolder.StartBringIntoView(new BringIntoViewOptions { AnimationDesired = false });
-    }
-    internal void OpenTitleColorForProbe(bool actions) => OpenTitleColorPicker(actions);
-    internal void SetTitleColorForProbe(string value)
-    {
-        if (_lampColorKey is not ("@title-text" or "@title-actions") || _lampColorPicker is null || !TryLampColor(value, out var color))
-            throw new InvalidOperationException("Open the real title color picker first.");
-        _lampColorPicker.Color = color;
-    }
 }

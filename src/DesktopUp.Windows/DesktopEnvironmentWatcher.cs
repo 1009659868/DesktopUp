@@ -207,7 +207,6 @@ public sealed class DesktopEnvironmentWatcher : IDisposable
         nuint referenceData)
     {
         if (_guardPosterWindow)
-            MenuInputDiagnostics.Observe(windowHandle, message, lParam, "visual-guard");
         if (message == WmNcDestroy)
         {
             ReleaseSessionNotifications();
