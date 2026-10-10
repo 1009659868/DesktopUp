@@ -6,6 +6,7 @@
 
 | 文档 | 职责 | 状态 |
 | --- | --- | --- |
+| [GIT_STRATEGY](../Rules/GIT_STRATEGY.md) | V3开发／impl/main精简发布源码边界、里程碑合并与返回分支流程 | 当前；不反向合入发布精简、不重写历史 |
 | [DIRECT_TRANSFER_DELIVERY](../A_Project/40_Implementation/V3-05/DIRECT_TRANSFER_DELIVERY.md) | DEC-041自动收尾、基础拖入／拖回桌面、支持矩阵、同包证据与人工入口 | 当前；2942自动门通过，普通权限真实鼠标人工待验 |
 | [MANAGED_TRANSFER_JOURNAL_AND_RECOVERY](../A_Project/40_Implementation/V3-05/MANAGED_TRANSFER_JOURNAL_AND_RECOVERY.md) | schema16账本、17结束、18旧登记目录认领的底层合同与历史证据 | 后端保留；§7～10任务UI／四项人工已退役，不补PASS；满盘延期 |
 | [MANAGED_STORAGE_AND_DROP_CONTRACT](../A_Project/40_Implementation/V3-05/MANAGED_STORAGE_AND_DROP_CONTRACT.md) | 第一批受管归属、意图、共享影响、恢复与连续手势合同 | 第一批纯门已过，后续实施归账本记录 |

@@ -45,12 +45,12 @@ $pkgResolved = [ordered]@{ ReleaseId=$ReleaseId; Version=$pkgSettings.version; F
 if ($CheckOnly) { [pscustomobject]$pkgResolved; return }
 # Snapshot hashes before publish; fail if sources change while this package is built.
 function Get-SourceBinding {
-    $pkgRoots = @('src','tests','config','packaging','scripts')
+    $pkgRoots = @('src','tests','Modules','config','packaging','scripts')
     @(foreach ($pkgArea in $pkgRoots) {
         Get-ChildItem -LiteralPath (Join-Path $pkgRepo $pkgArea) -Recurse -File |
             Where-Object { $_.FullName -notmatch '\\(bin|obj)\\' } |
             ForEach-Object { [ordered]@{ Path=$_.FullName.Substring($pkgRepo.Length+1).Replace('\','/'); SHA256=(Get-FileHash -LiteralPath $_.FullName).Hash } }
-    }; foreach ($pkgName in @('Directory.Build.props','Directory.Packages.props','global.json','Package-Preview.cmd')) {
+    }; foreach ($pkgName in @('Directory.Build.props','Directory.Build.targets','Directory.Packages.props','DesktopUp.sln','global.json','Package-Preview.cmd','LICENSE','THIRD_PARTY_NOTICES.md')) {
         [ordered]@{ Path=$pkgName; SHA256=(Get-FileHash -LiteralPath (Join-Path $pkgRepo $pkgName)).Hash }
     }) | Sort-Object { $_.Path }
 }
@@ -64,7 +64,7 @@ Push-Location $pkgRepo
 try {
     $pkgHead = (& git rev-parse HEAD).Trim()
     $pkgStatus = @(& git status --porcelain)
-    & dotnet publish src/DesktopUp.App/DesktopUp.App.csproj -c Release -p:Platform=x64 -p:PublishProfile=Preview-x64 -p:DesktopUpPreview=true -p:DebugType=none -p:DebugSymbols=false "-p:DesktopUpPreviewRuntimeVersion=$RuntimeVersion" "-p:Version=$($pkgSettings.version)-preview.$ReleaseId" "-p:FileVersion=$($pkgSettings.fileVersion)" "-p:OutputPath=$pkgOutput\build\" "-p:PublishDir=$pkgPayload\" 2>&1 |
+    & dotnet publish src/DesktopUp.App/DesktopUp.App.csproj -c Release -p:Platform=x64 -p:PublishProfile=Preview-x64 -p:DesktopUpPreview=true -p:SelfContained=true -p:DebugType=none -p:DebugSymbols=false "-p:DesktopUpPreviewRuntimeVersion=$RuntimeVersion" "-p:Version=$($pkgSettings.version)-preview.$ReleaseId" "-p:FileVersion=$($pkgSettings.fileVersion)" "-p:OutputPath=$pkgOutput\build\" "-p:PublishDir=$pkgPayload\" 2>&1 |
         Tee-Object -FilePath (Join-Path $pkgEvidence 'publish.log') | Out-Host
     if ($LASTEXITCODE -ne 0) { throw 'Publish failed; partial evidence preserved.' }
     $pkgRuntime = Get-Content -LiteralPath (Join-Path $pkgPayload 'DesktopUp.runtimeconfig.json') -Raw | ConvertFrom-Json

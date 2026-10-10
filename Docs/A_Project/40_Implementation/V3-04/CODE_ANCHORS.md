@@ -1,5 +1,9 @@
 # V3-04 代码锚点
 
+## 2026-10-10 发布源码分支
+
+开发线38187bb保存基础拖放及此前未同步工作；impl/main的d6ca237单独退役测试工程、专用探针、启动分发和测试依赖，六个产品工程保持。scripts/package-preview.ps1显式传播SelfContained到ContentWorker并绑定Modules／Directory.Build.targets等发布输入，此打包修正单独回移开发线。发布线scripts/run.ps1先构建当前源码，避免分支切换后误用旧产物；该入口差异不等于开发线统一启动路径问题已全面解决。分支边界与下一次里程碑合并见[Git规则](../../../Rules/GIT_STRATEGY.md)。
+
 ## 2026-10-10 自动收尾与直接拖放
 
 Infrastructure/AutomaticTransferCompletion：生产执行后与启动收尾；未移动结束、已移动核实关联、保留不明结果，旧占用关闭不重放Move。SqliteTransferJournal.IndexRecovery的automatic门拒绝覆盖已编辑原目标；旧手工诊断API保留。DirectTransferPreparation：真实载荷／卡片映射、活跃引用复用与同卷准入。

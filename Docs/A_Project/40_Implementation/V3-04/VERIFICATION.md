@@ -1,5 +1,15 @@
 # V3-04 验证记录
 
+## 2026-10-10 精简发布源码验证
+
+发布提交d6ca237，树8b51c2bbbb0425f1f3ae62590848ef2f207b692b，311跟踪文件／6产品工程／532文件移除。out/git-release-sync/fresh01直接由待提交树归档展开，不含Docs、tests或旧bin／obj，完整解决方案Release构建0警告／错误。release-app03独立App构建同样通过。所有专用ForProbe／ForSmoke、测试启动参数、测试数据根入口和测试依赖引用扫描无残留；保留实际文件来源探查LocalContentReferenceProbe与生产安全校验，不能按Probe字样盲删。
+
+installer01暴露NETSDK1150：自包含App引用未自包含ContentWorker。显式传递SelfContained后installer02完整publish与NSIS编译通过，主程序／worker均携带.NET10.0.12。安装器67157319字节，SHA256 B5B351ECF701EBF7486E4A102244ADEC9B94C75AB910EA6FC676FE964F2B2D14，载荷811文件（清单记录810项，不包含其自身），无测试载荷、PDB、数据库或日志。未安装、未运行GUI、未做目标机或原生拖放人工；package.json的Verified=false保持。失败日志保留，不能将生成安装器解释为完整产品发布验收。
+
+证据在out/git-release-sync/proof.json，不上传Git。回开发线仅同步打包依赖修正和文档；脚本语法及CheckOnly通过。旧candidate03源码指纹260项差异中259项仅换行、1项为打包脚本，旧证据不改绑，人工候选需重新构建验证。
+
+返回开发分支后再次运行完整合同：out/git-release-sync/dev-restored-contracts/contracts.trx，2942通过、0失败／跳过；确认测试工程和开发探针均保留。远端impl/main已核对为d6ca237，后续开发交接／打包修正由本段所在提交同步，不合入发布文档。
+
 ## 2026-10-10 开发状态 Git 同步前复验
 
 out/git-release-sync/dev-contracts/contracts.trx：2942通过、0失败／跳过。独立dev-app Release x64构建0警告／错误。暂存105个源码、测试、脚本和文档文件；没有本地配置、二进制、日志或.workbuddy。diff检查仅有既存新文件EOF额外空行，不修改已绑定候选的源码字节。该复验不新增原生人工结论；后续impl/main移除探针后的构建／打包须独立验证。
