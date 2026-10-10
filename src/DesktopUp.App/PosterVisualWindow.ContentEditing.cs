@@ -43,7 +43,8 @@ internal sealed partial class PosterVisualWindow
             PublishContentFeedback(null);
             bool modifySelection = IsRealContent && args.TargetKind == PosterInputTargetKind.ContentItem &&
                 (DesktopUp.Windows.NativeInputKeys.ControlDown || DesktopUp.Windows.NativeInputKeys.ShiftDown);
-            SetContentSelection(args.ContentItemId, modifySelection && DesktopUp.Windows.NativeInputKeys.ControlDown,
+            if(modifySelection || args.ContentItemId is null || !SelectedContentIds().Contains(args.ContentItemId))
+                SetContentSelection(args.ContentItemId, modifySelection && DesktopUp.Windows.NativeInputKeys.ControlDown,
                 modifySelection && DesktopUp.Windows.NativeInputKeys.ShiftDown);
             spatial.NotifyContentEditorChanged(PosterId);
             if (modifySelection)
@@ -64,6 +65,7 @@ internal sealed partial class PosterVisualWindow
                 ContentActivationTargetFor(slot.ItemId), _posterEntityVersion, _stateRevision,
                 _bounds, args.TargetKind, _monitor.ScaleX, _monitor.ScaleY, canEdit,
                 ContentDragNavigation.Begin(_contentSnapshot, viewport, tile, x, y, _contentBrowseMode), ledger.Acquire("content.gesture", "pointer-preview"));
+            _contentGesture.TransferSelection=SelectedContentIds();
             args.Handled = true;
             spatial.NotifyContentEditorChanged(PosterId);
             RefreshContentSurface();
@@ -75,6 +77,7 @@ internal sealed partial class PosterVisualWindow
         if (_posterEntityVersion != gesture.EntityVersion || _bounds != gesture.Frame || _monitor is null ||
             _monitor.ScaleX != gesture.ScaleX || _monitor.ScaleY != gesture.ScaleY || _disposed || _contentPresentationSuspended || _transitionLayout is not null)
         { CancelContentGesture("basis-expired"); return true; }
+        if(HandleDesktopTransfer(gesture,args))return true;
         if (args.EventKind is PosterInputEventKind.GesturePreview or PosterInputEventKind.GestureCompleted)
         {
             _contentActivation.Reset();
@@ -410,6 +413,7 @@ internal sealed partial class PosterVisualWindow
         public ContentLayoutEditResult? EditResult {get;set;}
         public ContentDragResult? LastMapping {get;set;}
         public bool IsDragging {get;set;}
+        public string[] TransferSelection {get;set;}=[];
         public double GhostX {get;set;}=tile.Bounds.X;
         public double GhostY {get;set;}=tile.Bounds.Y;
     }

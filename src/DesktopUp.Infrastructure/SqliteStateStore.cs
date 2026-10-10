@@ -11,7 +11,7 @@ public sealed class SqliteStateStore : IStateStore
     private const int ApplicationId = 0x44555033; // "DUP3"
     private const int BusyTimeoutMilliseconds = 5_000;
     // 14 adds durable opening receipts/facts. Earlier migration text/checksums stay frozen.
-    private const int CurrentSchemaVersion = 14;
+    private const int CurrentSchemaVersion = 18;
     private const string DatabaseFileName = "desktopup.sqlite3";
     private static readonly Migration[] Migrations =
     [
@@ -228,7 +228,11 @@ public sealed class SqliteStateStore : IStateStore
                 CHECK (json_valid(template_catalog_json));
             """),
         new(13, "non-destructive-content-references", SqliteContentRepository.MigrationSql),
-        new(14, "content-opening-receipts", SqliteContentOpenJournal.MigrationSql)
+        new(14, "content-opening-receipts", SqliteContentOpenJournal.MigrationSql),
+        new(15, "card-icon-assets", SqliteContentIconStore.MigrationSql),
+        new(16, "managed-transfer-journal", SqliteTransferJournal.MigrationSql),
+        new(17, "preserved-transfer-closures", SqliteTransferJournal.ClosureMigrationSql),
+        new(18, "explicit-legacy-storage-adoption", ManagedStorageAdoption.MigrationSql)
     ];
 
     private readonly object _gate = new();
@@ -245,6 +249,27 @@ public sealed class SqliteStateStore : IStateStore
     }
 
     public int LatestSchemaVersion => CurrentSchemaVersion;
+    internal string TransferLockPath => Path.Combine(_paths.State, "transfer-executor.lock");
+    internal string TransferProfileIdentity => LocalTransferFiles.Identity(_paths.State);
+    internal string StorageProvisionDirectory => Path.Combine(_paths.State,"storage-provisions");
+    internal void PreserveTransferGuard()
+    {
+        string path=Path.Combine(_paths.State,SqliteTransferJournal.GuardFileName);
+        if(File.Exists(path))return; // Never clear/overwrite this out-of-database safety latch.
+        using var guard=new FileStream(path,FileMode.CreateNew,FileAccess.Write,FileShare.Read,4096,FileOptions.WriteThrough);
+        guard.Write("managed-file-history-v1"u8);guard.Flush(true);
+    }
+    internal bool ProtectedTransferPath(string path, bool rootRegistration=false)
+    {
+        string value=LocalTransferFiles.Normalize(path);
+        var protectedRoots=new[] { _paths.Root, AppContext.BaseDirectory,
+            Environment.GetFolderPath(Environment.SpecialFolder.Windows),
+            Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+            Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86) };
+        if(rootRegistration)protectedRoots=protectedRoots.Append(Path.GetTempPath()).ToArray();
+        return protectedRoots.Where(p=>!string.IsNullOrEmpty(p)).Select(p=>Path.TrimEndingDirectorySeparator(Path.GetFullPath(p)))
+            .Any(p=>string.Equals(value,p,StringComparison.OrdinalIgnoreCase)||LocalTransferFiles.Contains(p,value)||LocalTransferFiles.Contains(value,p));
+    }
 
     public StateStoreInitializationResult Initialize()
     {
@@ -295,6 +320,7 @@ public sealed class SqliteStateStore : IStateStore
                 }
 
                 StateStoreHead head = VerifyCurrentSchema(connection);
+                SqliteContentIconStore.Verify(connection, null, verifyPixels: true);
                 StateStoreInitializationStatus status = previousVersion switch
                 {
                     CurrentSchemaVersion => StateStoreInitializationStatus.Ready,
@@ -579,7 +605,7 @@ public sealed class SqliteStateStore : IStateStore
     private static void ConfigureConnectionSession(SqliteConnection connection)
     {
         using SqliteCommand command = connection.CreateCommand();
-        command.CommandText = $"PRAGMA foreign_keys=ON; PRAGMA busy_timeout={BusyTimeoutMilliseconds};";
+        command.CommandText = $"PRAGMA foreign_keys=ON; PRAGMA busy_timeout={BusyTimeoutMilliseconds}; PRAGMA synchronous=FULL;";
         command.ExecuteNonQuery();
     }
 
@@ -617,6 +643,10 @@ public sealed class SqliteStateStore : IStateStore
             if (migration.Version >= 12) VerifyTemplateSettingsSchema(connection, transaction);
             if (migration.Version >= 13) SqliteContentRepository.Verify(connection, transaction);
             if (migration.Version >= 14) SqliteContentOpenJournal.Verify(connection, transaction);
+            if (migration.Version >= 15) SqliteContentIconStore.Verify(connection, transaction);
+            if (migration.Version >= 16) SqliteTransferJournal.Verify(connection, transaction);
+            if (migration.Version >= 17) SqliteTransferJournal.VerifyClosures(connection, transaction);
+            if (migration.Version >= 18) ManagedStorageAdoption.Verify(connection, transaction);
 
             string appliedUtc = DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture);
             using (SqliteCommand ledger = connection.CreateCommand())
@@ -732,6 +762,10 @@ public sealed class SqliteStateStore : IStateStore
         if (expectedVersion >= 12) VerifyTemplateSettingsSchema(connection, null);
         if (expectedVersion >= 13) SqliteContentRepository.Verify(connection, null);
         if (expectedVersion >= 14) SqliteContentOpenJournal.Verify(connection, null);
+        if (expectedVersion >= 15) SqliteContentIconStore.Verify(connection, null);
+        if (expectedVersion >= 16) SqliteTransferJournal.Verify(connection, null);
+        if (expectedVersion >= 17) SqliteTransferJournal.VerifyClosures(connection, null);
+        if (expectedVersion >= 18) ManagedStorageAdoption.Verify(connection, null);
         if (head.SchemaVersion != version)
         {
             throw new InvalidDataException(
@@ -1025,6 +1059,7 @@ public sealed class SqliteStateStore : IStateStore
                     $"State identity mismatch (schema={version}, application_id={applicationId}).");
             }
             StateStoreHead head = VerifySchemaVersion(connection, expectedSchemaVersion);
+            if (expectedSchemaVersion >= 15) SqliteContentIconStore.Verify(connection, null, verifyPixels: true);
             return new StateBackupValidationResult(true, version, head.Revision, null);
         }
         catch (Exception exception)

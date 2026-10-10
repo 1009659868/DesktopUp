@@ -24,6 +24,10 @@ public sealed class SqliteStateCommandRepository(SqliteStateStore store) : IStat
 
     public StateTransactionResult Execute(StateTransactionRequest request,
         Func<DesktopStateSnapshot, StateMutationPlan> prepare) => store.ExecuteWrite((connection, transaction) =>
+            ExecuteInTransaction(connection, transaction, request, prepare));
+
+    internal static StateTransactionResult ExecuteInTransaction(SqliteConnection connection, SqliteTransaction transaction,
+        StateTransactionRequest request, Func<DesktopStateSnapshot, StateMutationPlan> prepare, Guid? authorizedTransferId = null)
     {
         DesktopStateSnapshot before = ReadSnapshot(connection, transaction);
         StateTransactionResult Result(StateCommandStatus status, string? error = null,
@@ -61,6 +65,12 @@ public sealed class SqliteStateCommandRepository(SqliteStateStore store) : IStat
 
         StateMutationPlan plan = prepare(before);
         if (plan.Rejection is { } rejected) return Result(rejected, plan.Error);
+        if (plan.TransferReceiptId != authorizedTransferId)
+            return Result(StateCommandStatus.ValidationFailed, "Only the verified transfer transaction may mutate storage membership.");
+        if (!SqliteTransferJournal.ValidStorageRemoval(connection, transaction, plan))
+            return Result(StateCommandStatus.ValidationFailed, "Missing or mismatched durable file result.");
+        if (!SqliteTransferJournal.AllowsConcurrentMutation(connection, transaction, plan))
+            return Result(StateCommandStatus.Conflict, "A file transfer owns the affected state; finish recovery before editing it.");
         string? coverageError = ValidatePlan(before, request.ReadSet, plan);
         if (coverageError is not null) return Result(StateCommandStatus.ValidationFailed, coverageError);
         long? committedRevision = null;
@@ -108,9 +118,9 @@ public sealed class SqliteStateCommandRepository(SqliteStateStore store) : IStat
         return new StateTransactionResult(plan.HasChanges ? StateCommandStatus.Committed : StateCommandStatus.NoChange,
             ReadSnapshot(connection, transaction), committedRevision, plan.ResultPosterId,
             Array.Empty<StateReadConflict>(), null);
-    });
+    }
 
-    private static DesktopStateSnapshot ReadSnapshot(SqliteConnection connection, SqliteTransaction transaction) =>
+    internal static DesktopStateSnapshot ReadSnapshot(SqliteConnection connection, SqliteTransaction transaction) =>
         new(SqlitePosterCatalogRepository.ReadCatalog(connection, transaction),
             SqliteSettingsRepository.ReadSettings(connection, transaction))
             { ContentCatalog = SqliteContentRepository.Read(connection, transaction),

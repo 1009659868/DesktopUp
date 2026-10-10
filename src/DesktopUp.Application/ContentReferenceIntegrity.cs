@@ -8,6 +8,8 @@ public static class ContentReferenceIntegrity
     public static string? ValidateMutation(DesktopStateSnapshot before, StateReadSet? reads, StateMutationPlan plan)
     {
         var catalog = plan.ContentCatalog ?? before.ContentCatalog;
+        if (plan.IconEdit is not null && !ContentIconPolicy.ValidMutation(before, reads, plan))
+            return "Icon change must be an isolated, versioned card appearance edit.";
         if (plan.ContentCatalog is not null)
         {
             if (reads?.ContentVersion != before.ContentVersion) return "Content mutations require the confirmed catalog version.";
@@ -18,12 +20,20 @@ public static class ContentReferenceIntegrity
                 detached.Any(p => !reads.Posters.ContainsKey(p.PosterId) || plan.Updates.All(u => u.PosterId != p.PosterId)))
                 return "Detach requires an explicit complete relation set and matching poster update.";
             // Explicit detach removes only the poster view; shared content/collection/source remain.
+            var removedStorage = before.ContentCatalog.Memberships.Where(m => !catalog.Memberships.Contains(m)).ToArray();
+            if (!removedStorage.Select(m => m.Id).ToHashSet().SetEquals(plan.RemovedStorageMemberships) ||
+                removedStorage.Any(m => plan.TransferReceiptId is null || m.Origin != ContentMembershipOrigin.Source ||
+                    before.ContentCatalog.Collections.Single(c => c.Id == m.CollectionId).Kind != ContentCollectionKind.Managed ||
+                    catalog.PosterItems.Any(p => p.MembershipId == m.Id)))
+                return "Storage membership removal requires a verified transfer receipt, never a view detach.";
             if (before.ContentCatalog.Items.Any(i => catalog.Items.All(n => n.Id != i.Id)) ||
                 before.ContentCatalog.Collections.Any(c => !catalog.Collections.Contains(c)) ||
-                before.ContentCatalog.Memberships.Any(m => !catalog.Memberships.Contains(m)) ||
                 before.ContentCatalog.Bindings.Any(b => !catalog.Bindings.Contains(b)) ||
-                before.ContentCatalog.PosterItems.Except(detached).Any(p => !catalog.PosterItems.Contains(p)))
+                before.ContentCatalog.PosterItems.Except(detached).Any(p => !catalog.PosterItems.Contains(p) && plan.IconEdit?.PosterItemId != p.Id))
                 return "Reference commands may not silently detach existing relations.";
+            if (catalog.PosterItems.Any(p => p.IconAssetId is not null &&
+                before.ContentCatalog.PosterItems.All(old => old.Id != p.Id) ))
+                return "New card icon import requires an explicit atomic construction contract.";
             foreach (var item in before.ContentCatalog.Items)
             {
                 var next = catalog.Items.Single(i => i.Id == item.Id);

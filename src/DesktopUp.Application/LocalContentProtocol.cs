@@ -3,7 +3,7 @@ using DesktopUp.Domain;
 namespace DesktopUp.Application;
 
 // Trusted host -> dedicated helper. No arbitrary verb, argument line, DLL or provider execution.
-public enum LocalContentAction { Inspect, Icon, Open, Reveal }
+public enum LocalContentAction { Inspect, Icon, Open, Reveal, DecodeIcon }
 public sealed record LocalContentRequest(Guid RequestId, LocalContentAction Action, ContentItem Item);
 public sealed record LocalContentResponse(Guid RequestId, ContentAvailability Availability, string Message,
     string? Name = null, string? TypeName = null, byte[]? Pixels = null, int Width = 0, int Height = 0,
@@ -34,7 +34,7 @@ public static class LocalContentProtocol
         result.RequestId == request.RequestId && Enum.IsDefined(result.Availability) && Enum.IsDefined(result.Evidence) && Enum.IsDefined(result.Outcome) &&
         result.Message is { Length: <= 1024 } && result.Name?.Length is not > 1024 && result.TypeName?.Length is not > 256 &&
         (result.Pixels is null ? result.Width == 0 && result.Height == 0 :
-            request.Action == LocalContentAction.Icon && ValidPixels(result.Pixels, result.Width, result.Height)) &&
+            request.Action is LocalContentAction.Icon or LocalContentAction.DecodeIcon && ValidPixels(result.Pixels, result.Width, result.Height)) &&
         (result.Evidence == ContentOpenEvidence.None || request.Action is LocalContentAction.Open or LocalContentAction.Reveal &&
             result.Availability == ContentAvailability.Available && !result.Cancelled &&
             result.Outcome is ContentOpenOutcome.None or ContentOpenOutcome.Succeeded) &&

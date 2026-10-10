@@ -22,9 +22,9 @@ public partial class App
         try
         {
             Require(mode is "cancel-open" or "cancel-save" or "before-open" or "before-save" or
-                "center-open" or "center-save" or "exit-open" or "exit-save", "unknown picker case");
+                "center-open" or "center-save" or "exit-open" or "exit-save" or "cancel-folder" or "center-folder" or "exit-folder" or "zero-folder", "unknown picker case");
             var ready = Stopwatch.StartNew();
-            while (_controlCenterEnvironmentPending || _inputRouter.ReadyCount != 1)
+            while (_controlCenterEnvironmentPending || _inputRouter.ReadyCount != (mode=="zero-folder"?0:1))
             {
                 Require(ready.Elapsed < TimeSpan.FromSeconds(15), "desktop readiness timeout");
                 await Task.Delay(100);
@@ -34,7 +34,9 @@ public partial class App
             {
                 _controlCenter!.Show();
                 var window = _controlCenter.WindowForPortableProbe!;
-                var scope = window.RunPortablePickerForProbe(save, initiallyCancelled: mode.StartsWith("before-"));
+                Require(window.TransferGlobalEntryForProbe,"global transfer recovery/menu unavailable");
+                var scope = window.RunPortablePickerForProbe(save, initiallyCancelled: mode.StartsWith("before-"),
+                    purpose:mode.EndsWith("-folder",StringComparison.Ordinal)?NativePickerPurpose.ManagedStorageFolder:NativePickerPurpose.Profile);
                 if (mode.StartsWith("before-"))
                 {
                     await scope.WaitAsync(TimeSpan.FromSeconds(8));

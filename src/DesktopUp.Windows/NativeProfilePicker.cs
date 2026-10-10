@@ -4,7 +4,7 @@ using DesktopUp.Application;
 
 namespace DesktopUp.Windows;
 
-public enum NativePickerPurpose { Profile, ReferenceFile, ReferenceFolder }
+public enum NativePickerPurpose { Profile, ReferenceFile, ReferenceFolder, ManagedStorageFolder }
 
 /// <summary>
 /// Owns exactly one common-item dialog and one STA message endpoint. Cancel posts to that
@@ -125,11 +125,11 @@ public sealed class NativeProfilePicker
                 // Filesystem only, do not change cwd or write test files. Save retains overwrite prompt.
                 Marshal.ThrowExceptionForHR(dialog.SetOptions(options | 0x40 | 0x8 | 0x800 | 0x02000000 |
                     (_save ? 0x2u : 0x1000u) | (_purpose == NativePickerPurpose.Profile ? 0u : 0x100000u) |
-                    (_purpose == NativePickerPurpose.ReferenceFolder ? 0x20u : 0u)));
-                if (_purpose != NativePickerPurpose.ReferenceFolder)
+                    (_purpose is NativePickerPurpose.ReferenceFolder or NativePickerPurpose.ManagedStorageFolder ? 0x20u : 0u)));
+                if (_purpose is not (NativePickerPurpose.ReferenceFolder or NativePickerPurpose.ManagedStorageFolder))
                     Marshal.ThrowExceptionForHR(dialog.SetFileTypes(1, [new(_purpose == NativePickerPurpose.Profile ? "DesktopUp 配置" : "所有文件", _purpose == NativePickerPurpose.Profile ? "*.json" : "*.*")]));
                 if (_purpose == NativePickerPurpose.Profile) Marshal.ThrowExceptionForHR(dialog.SetDefaultExtension("json"));
-                Marshal.ThrowExceptionForHR(dialog.SetTitle(_purpose == NativePickerPurpose.ReferenceFolder ? "选择要引用的文件夹" :
+                Marshal.ThrowExceptionForHR(dialog.SetTitle(_purpose == NativePickerPurpose.ManagedStorageFolder ? "选择持久收纳根目录（不移动现有文件）" : _purpose == NativePickerPurpose.ReferenceFolder ? "选择要引用的文件夹" :
                     _purpose == NativePickerPurpose.ReferenceFile ? "选择要引用的文件（不移动原文件）" : _save ? "导出 DesktopUp 习惯配置" : "导入 DesktopUp 习惯配置"));
                 if (_save) Marshal.ThrowExceptionForHR(dialog.SetFileName("DesktopUp-habits.desktopup.json"));
                 string documents = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);

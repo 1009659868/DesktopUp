@@ -157,6 +157,9 @@
        <MenuFlyoutSeparator/>
        <MenuFlyoutItem Text="创建本机备份" Click="PortableBackup_Click" AutomationProperties.AutomationId="PortableBackup"/>
        <MenuFlyoutItem Text="从本机备份恢复…" Click="PortableRecovery_Click" AutomationProperties.AutomationId="PortableRecovery"/>
+       <MenuFlyoutSeparator/>
+       <MenuFlyoutItem Text="收纳存储目录…" Click="ManagedStorage_Click" AutomationProperties.AutomationId="ManagedStorage"/>
+       <MenuFlyoutItem x:Name="TransferRecoveryMenu" Text="异常文件位置…" Visibility="Collapsed" Click="TransferRecovery_Click" AutomationProperties.AutomationId="TransferRecovery"/>
       </MenuFlyoutSubItem>
      </MenuFlyout></DropDownButton.Flyout></DropDownButton>
     </Grid>

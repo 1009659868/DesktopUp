@@ -83,6 +83,9 @@ public sealed class StateBackupRecovery
                 operationRoot = OperationRoot(operationId);
                 Directory.CreateDirectory(operationRoot);
                 PreparedBackup prepared = PrepareBackup(fileName, Path.Combine(operationRoot, "staging"));
+                if(File.Exists(StatePath(SqliteTransferJournal.GuardFileName)))
+                    throw new InvalidDataException("Managed file history cannot be rewound by configuration recovery; preserve current state and use transfer recovery.");
+                RefuseTransferRewind(prepared.DatabasePath);
                 _fault?.Invoke("recovery-after-validation");
 
                 List<FileStream> leases = [];
@@ -279,6 +282,18 @@ public sealed class StateBackupRecovery
         if (File.Exists(stagedDatabase + "-wal") || File.Exists(stagedDatabase + "-shm"))
             throw new InvalidDataException("Recovery stage still has SQLite sidecars.");
         return new(stagedDatabase, sourceVersion, initialized.Head!.Revision);
+    }
+
+    private static void RefuseTransferRewind(string database)
+    {
+        if (!File.Exists(database)) return;
+        using var c = new SqliteConnection($"Data Source={database};Mode=ReadOnly;Pooling=False"); c.Open();
+        using var q = c.CreateCommand();
+        q.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='content_transfers'";
+        if (Convert.ToInt64(q.ExecuteScalar()) == 0) return;
+        q.CommandText = "SELECT COUNT(*) FROM content_transfers";
+        if (Convert.ToInt64(q.ExecuteScalar()) != 0)
+            throw new InvalidDataException("Managed file history cannot be rewound by restoring a configuration database. Preserve current state and use transfer recovery.");
     }
 
     private void RequireOffline()

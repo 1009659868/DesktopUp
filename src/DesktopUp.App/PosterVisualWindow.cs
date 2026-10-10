@@ -402,6 +402,7 @@ internal sealed partial class PosterVisualWindow(
             return false;
         }
 
+        AttachFileDrop();
         if (!ReassertDesktopBottom(desktopHost))
         {
             Dispose();
@@ -1975,6 +1976,7 @@ internal sealed partial class PosterVisualWindow(
         }
         if (_inputIsland is not null)
         {
+            Cleanup(() => { _fileDrop?.Dispose(); _fileDrop = null; });
             _inputIsland.Input -= OnInput;
             _inputIsland.TitleInput -= OnTitleInput;
             _inputIsland.ContextRequested -= OnContentContextRequested;

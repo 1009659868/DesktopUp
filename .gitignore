@@ -20,6 +20,7 @@ TestResults/
 
 # Editors and operating system
 .idea/
+.workbuddy/
 .vscode/
 .DS_Store
 Thumbs.db

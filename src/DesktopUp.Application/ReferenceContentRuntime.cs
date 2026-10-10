@@ -9,17 +9,21 @@ public sealed class ReferenceContentRuntime : IObservableContentItemViewSource, 
     private readonly Dictionary<string, ContentItem> items;
     private readonly Dictionary<string, (bool Available, string Name, string Type)> metadata = new();
     private readonly ILocalContentWorker worker;
+    private readonly IContentIconStore? iconStore;
+    private readonly Dictionary<string, string?> icons;
     private long version;
     public long Version { get { lock (gate) return version; } }
     public event EventHandler? Changed;
-    public ReferenceContentRuntime(ContentCatalogSnapshot catalog, string posterId, long version, ILocalContentWorker worker)
+    public ReferenceContentRuntime(ContentCatalogSnapshot catalog, string posterId, long version, ILocalContentWorker worker, IContentIconStore? iconStore = null)
     {
+        this.iconStore = iconStore;
         this.worker = worker; this.version = Math.Max(1, version);
         catalog = ContentCatalogPolicy.Freeze(catalog);
         var members = catalog.Memberships.ToDictionary(m => m.Id);
         var entities = catalog.Items.ToDictionary(i => i.Id);
         items = catalog.PosterItems.Where(p => p.PosterId == posterId).ToDictionary(p => p.LayoutItemId,
             p => entities[members[p.MembershipId].ContentItemId]);
+        icons = catalog.PosterItems.Where(p => p.PosterId == posterId).ToDictionary(p => p.LayoutItemId, p => p.IconAssetId);
         foreach (var (id, item) in items) metadata[id] = (item.Availability == ContentAvailability.Available, item.DisplayName, item.Kind.ToString());
     }
     public IReadOnlyList<ContentItemView> Read(ContentLayoutDocument document)
@@ -30,12 +34,26 @@ public sealed class ReferenceContentRuntime : IObservableContentItemViewSource, 
                 var item = items[p.ItemId]; var observed = metadata[p.ItemId];
                 return new ContentItemView(p.ItemId, observed.Name.Length > 256 ? observed.Name[..256] : observed.Name,
                     item.Kind == ContentKind.Folder ? "DIR" : item.Kind == ContentKind.Shortcut ? "LINK" : "FILE",
-                    0xFF718DAB, AssetKey(item)) { IsAvailable = observed.Available, TypeName = observed.Type, RequestAssetWhenUnavailable = true };
+                    0xFF718DAB, AssetKeyFor(p.ItemId, item)) { IsAvailable = observed.Available, TypeName = observed.Type, RequestAssetWhenUnavailable = true };
             }).ToArray();
     }
     public async ValueTask<ContentAssetPayload?> LoadAsync(ContentAssetKey key, CancellationToken cancellation)
     {
-        if (!items.TryGetValue(key.ItemId, out var item) || key.SourceKey != AssetKey(item)) return null;
+        if (!items.TryGetValue(key.ItemId, out var item) || key.SourceKey != AssetKeyFor(key.ItemId, item)) return null;
+        if (icons[key.ItemId] is { } iconId)
+        {
+            if (iconStore is null) return null; // Missing/corrupt custom asset is not silently replaced by a source icon.
+            var icon = await iconStore.ReadAsync(iconId, cancellation).ConfigureAwait(false);
+            cancellation.ThrowIfCancellationRequested();
+            if (icon is null || icon.Id != iconId) return null;
+            // Appearance overrides must not freeze source availability/name observations.
+            // Inspect metadata only: never replace the custom pixels with a provider icon.
+            var inspection = new LocalContentRequest(Guid.NewGuid(), LocalContentAction.Inspect, item);
+            var observed = await worker.RunAsync(inspection, cancellation).ConfigureAwait(false);
+            cancellation.ThrowIfCancellationRequested();
+            if (LocalContentProtocol.Validate(inspection, observed)) Observe(key.ItemId, observed);
+            return new("image/bgra32", icon.Pixels) { PixelWidth = icon.Width, PixelHeight = icon.Height };
+        }
         var request = new LocalContentRequest(Guid.NewGuid(), LocalContentAction.Icon, item);
         var result = await worker.RunAsync(request, cancellation).ConfigureAwait(false);
         if (!LocalContentProtocol.Validate(request, result)) return null;
@@ -63,6 +81,7 @@ public sealed class ReferenceContentRuntime : IObservableContentItemViewSource, 
     }
     public void Refresh() { lock (gate) version = checked(version + 1); Changed?.Invoke(this, EventArgs.Empty); }
     public static string AssetKey(ContentItem item) => $"local-icon:{item.Id:N}:{item.Version}";
+    private string AssetKeyFor(string id, ContentItem item) => icons[id] is { } custom ? "custom:" + custom : AssetKey(item);
 }
 
 public interface IContentOpenJournal

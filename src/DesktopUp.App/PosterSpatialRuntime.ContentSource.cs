@@ -10,8 +10,9 @@ internal sealed partial class PosterSpatialRuntime
     private readonly Dictionary<string, (long Version, ContentSourcePorts Ports)> _referenceSources = new(StringComparer.Ordinal);
     private ILocalContentWorker? _referenceWorker;
     private IContentOpenJournal? _openJournal;
-    internal void ConfigureRealContent(ILocalContentWorker worker, IContentOpenJournal journal)
-    { _referenceWorker = worker; _openJournal = journal; }
+    private IContentIconStore? _iconStore;
+    internal void ConfigureRealContent(ILocalContentWorker worker, IContentOpenJournal journal, IContentIconStore? icons = null)
+    { _referenceWorker = worker; _openJournal = journal; _iconStore = icons; }
     internal ContentSourcePorts ContentSourceFor(string id)
     {
         if (TryGetProjection(out var projection) && projection!.ContentCatalog.Bindings.Any(b => b.PosterId == id))
@@ -21,7 +22,7 @@ internal sealed partial class PosterSpatialRuntime
                 ContentSourcePorts ports;
                 if (_referenceWorker is not null && _openJournal is not null)
                 {
-                    var source = new ReferenceContentRuntime(projection.ContentCatalog, id, projection.ContentVersion, _referenceWorker);
+                    var source = new ReferenceContentRuntime(projection.ContentCatalog, id, projection.ContentVersion, _referenceWorker, _iconStore);
                     ports = new(source, source, new ReferenceContentActions(
                         () => TryGetProjection(out var live) ? live!.ContentCatalog : ContentCatalogSnapshot.Empty,
                         source, _referenceWorker, _openJournal));

@@ -67,8 +67,12 @@ public sealed record StateTransactionRequest(
     string RequestId, string Fingerprint, long ObservedRevision, StateReadSet? ReadSet);
 public sealed record StateMutationPlan
 {
+    public ContentIconEdit? IconEdit { get; init; }
     public ContentCatalogSnapshot? ContentCatalog { get; init; }
     public IReadOnlyList<Guid> ExplicitDetachedRelations { get; init; } = [];
+    public IReadOnlyList<Guid> RemovedStorageMemberships { get; init; } = [];
+    public Guid? TransferReceiptId { get; init; }
+    public int TransferReceiptIndex { get; init; }
     public IReadOnlyList<PosterDefinition> Updates { get; init; } = Array.Empty<PosterDefinition>();
     public IReadOnlyList<PosterDefinition> Creates { get; init; } = Array.Empty<PosterDefinition>();
     public IReadOnlyList<string> Removes { get; init; } = Array.Empty<string>();

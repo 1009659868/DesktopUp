@@ -1,5 +1,61 @@
 # V3-04 代码锚点
 
+## 2026-10-10 自动收尾与直接拖放
+
+Infrastructure/AutomaticTransferCompletion：生产执行后与启动收尾；未移动结束、已移动核实关联、保留不明结果，旧占用关闭不重放Move。SqliteTransferJournal.IndexRecovery的automatic门拒绝覆盖已编辑原目标；旧手工诊断API保留。DirectTransferPreparation：真实载荷／卡片映射、活跃引用复用与同卷准入。
+
+Windows/NativeFileDropTarget：既有输入岛上的IDropTarget、CF_HDROP有界快照、Ctrl／Alt／右拖拒绝、NONE完成反馈、不授源重复清理；注册与撤销资源计数。NativeDesktopDropSite：只读验证Shell桌面归属，不注入或设置图标坐标。Application/DirectDesktopDropPolicy：正常捕获中的内外边界／完成判定。
+
+App/PosterSpatialRuntime.Transfers＋PosterVisualWindow.Transfers：单一文件执行协调、原捕获拖回桌面、当前代次／版本和退出等待；Pointer按目标保护收纳交互不影响其他海报。ControlCenterWindow.Transfers只保留存储选址、必要源路径确认、异常位置；旧恢复任务控件已移除。App.Transfers启动自动收尾不重放Move。
+
+新增AutomaticTransferCompletionTests／DirectTransferPreparationTests／DirectDesktopDropPolicyTests／NativeFileDropTargetTests共36项。当前证据、普通权限启动脚本、限制与人工清单见[交付](../V3-05/DIRECT_TRANSFER_DELIVERY.md)；下方旧锚点按历史范围理解。
+
+## 2026-10-10 显式认领与schema18
+
+Infrastructure/ManagedStorageAdoption.cs：已登记旧目录只读预览、配置/根/子文件身份及清单绑定、准备记录先行、排他凭证、二次核对和事务激活；拒绝未知/其他配置/未结束操作，不自动入库额外内容。ManagedStorageProvisioner.ValidateRegistration同时识别完成的旧目录认领；新创建不得覆盖认领凭证。SqliteStateStore仅追加18，1～17不改。
+
+Infrastructure/LocalTransferFiles.cs：CopyFileExW进度取消、原生回调异常隔离、FAIL_IF_EXISTS、复制验证/收据先于源处理；STOP后的真实目标需检查，不保证系统必留部分文件。ManagedStorageAdoptionTests与ManagedTransferCopyProgressTests新增34项（含独立进程边界）；TransferFixture新增--adoption-crash与--prepare-adoption-review。
+
+App/ControlCenterWindow.Transfers.cs：在现有全局存储入口合并显式认领选择与说明，不增加日常管理面板；App启动仍只读发现。scripts/start-transfer-adoption-review.ps1绑定独立candidate01/review02及当前proof。当前完整2906与人工待验边界见[实施§10](../V3-05/MANAGED_TRANSFER_JOURNAL_AND_RECOVERY.md#10-旧目录显式认领与剩余故障边界)。
+
+## 2026-10-10 保留停止与schema17
+
+Infrastructure/SqliteTransferJournal.Closures.cs：停止票据、当前revision/原证据确认、独立结束记录及schema17。DurableTransferItem.IsFinished统一调度、占用、恢复和App提示；原阶段不改，旧票据不能复活，未知/不匹配结束记录拒绝执行。
+
+Infrastructure/ManagedStorageProvisioner.Closures.cs：目录创建停止与历史、配置归属/未登记校验、幂等和事务；不认领外部目录。ManagedStorageProvisioner.Preview/Confirm及SqliteTransferJournal.Register均拒绝绕过已停止创建。App/ControlCenterWindow.Transfers.cs将这两项放入异常入口，混合待办保留已结束位置查询；无日常任务中心。
+
+ManagedTransferClosureTests、ManagedStorageClosureTests新增40项；SqliteStateStore追加17而不改历史迁移。完整2872与candidate02证据归[实施§9](../V3-05/MANAGED_TRANSFER_JOURNAL_AND_RECOVERY.md#9-保留文件停止重试与目录创建中断出口)。下方§8分段的schema16是历史；旧目录认领、新界面人工、原生仍OPEN。
+
+## 2026-10-10 已移动文件关联恢复与简化入口
+
+Infrastructure/SqliteTransferJournal.IndexRecovery.cs：只读预览、独立确认票据、当前共享影响与完整读集、文件证明租约、单事务IndexPlan/回执/完成标记；原始移动批次与兄弟读集不重写。SqliteTransferJournal.IndexPlan的confirmedRecovery只允许已删除取出卡片不重建，不为普通命令开放存储移除。
+
+App/ControlCenterWindow.Transfers.cs与XAML：收纳恢复备用入口、仅显示待处理项、技术详情折叠、统一继续完成动作、选择现有海报；启动仍只读发现。测试ManagedTransferIndexRecoveryTests新增24项，当前证据/余项见[实施§8](../V3-05/MANAGED_TRANSFER_JOURNAL_AND_RECOVERY.md#8-异常入口简化与已移动文件关联恢复)。schema16保持，原生拖放未接。
+
+## 2026-10-10 用户可达恢复与存储所有权
+
+Infrastructure/ManagedStorageProvisioner负责选址预演、预写创建意图、配置/根/集合真实身份与可证阶段恢复；SqliteTransferJournal.Recovery提供只读列表、原子换新意图和安全释放未移动项。App/ControlCenterWindow.Transfers复用PortableAction、既有选择器取消和全局菜单；App.Transfers只读启动发现且退出等待。NativeProfilePicker增加ManagedStorageFolder目的，不新增第二套STA取消。
+
+ManagedTransferRecoveryTests新增28、ManagedTransferSafetyTests新增6；TransferFixture追加仅项目out新目录的人工夹具生成。scope/证据及余门归[实施§7](../V3-05/MANAGED_TRANSFER_JOURNAL_AND_RECOVERY.md#7-恢复入口与目录所有权)。原生拖放未接，不复用早期“未实现恢复UI”的历史判断。
+
+## 2026-10-10 持久账本与受限文件后端
+
+Infrastructure/SqliteTransferJournal负责schema16注册、预写/占用/阶段和共享索引事务；LocalTransferPreview组合实际文件事实与原纯计划；LocalTransferFiles负责有界清单、文件/卷身份、句柄保护和验证；LocalTransferExecutor负责执行、取消、持久恢复。SqliteStateCommandRepository内部事务授权与ContentReferenceIntegrity共同限制存储成员移除，StateBackupRecovery受库外guard保护。
+
+新增ManagedTransferPersistenceTests共50项及独立DesktopUp.TransferFixture；原纯70项保持。证据/限制见[实施记录](../V3-05/MANAGED_TRANSFER_JOURNAL_AND_RECOVERY.md)。App/原生拖放与恢复UI未接；下方第一批“没有文件移动器/schema16”仅为历史。
+
+## 2026-10-10 受管存储与拖放纯合同
+
+Domain/ContentDropIntent：根目录资格、载荷分类及修饰键/能力矩阵。Application/ContentTransferPlanning：冻结计划、共享/后代影响、StateReadSet、确认指纹和关系差量；ContentTransferRecoveryPolicy：逐项事实恢复、执行/提交门和受管集合注册共存；ContentTransferGesture：对原ContentGesture附加内外边界仲裁，尚未接App或替代原布局算法。
+
+测试ManagedStorageDropContractTests与ContentTransferContinuityTests共70项；[实施记录](../V3-05/MANAGED_STORAGE_AND_DROP_CONTRACT.md)列出DeskBox→适配→反例。没有文件移动器、原生DropTarget或schema16；这些仍归后续账本/安全与接线。
+
+## 2026-10-10 独立图标资产
+
+Domain/ContentIconAsset与PosterItem.IconAssetId；Application/ContentIconImport、ContentIconCommand及ContentReferenceIntegrity最终屏障；Infrastructure/SqliteContentIconStore、SqliteContentRepository和schema15追加迁移；ContentWorker/IconImageDecoder固定WIC解码；ReferenceContentRuntime复用既有缓存并由App注入同库读取。源路径／共享关系与单卡覆盖分离。
+
+新增ContentIconPersistenceTests 21、ContentIconDecodeTests 15、ContentIconRuntimeTests 11项；App.ContentReferenceProbe追加真实WriteableBitmap字节、恢复默认及重启读回。完整实现与预算见[V1记录](../V3-05/CONTENT_ICON_ASSETS.md)。生产读取已接，V2控件未接；下方“SQLite14／图标资产未实施”为当时历史。
+
 ## 2026-10-09 Git源码检查点
 
 当前实现保存于`d8a1fda`：覆盖下方R7可靠性与V3-05实体、引用、显示使用及模板/默认值锚点。提交准备仅整理12个新增文件的EOF空白，不新增功能。2607合同与Release构建证据见[本轮验证](VERIFICATION.md#2026-10-09-git提交前复验)，最近续作仍为工作流§6.4；历史源码/候选绑定不改写。

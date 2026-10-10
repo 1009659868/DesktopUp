@@ -100,6 +100,7 @@ public partial class App : Microsoft.UI.Xaml.Application
             return;
         }
         _storageInitialized = true;
+        _transferDiscovery=DiscoverStartupTransfers(_services.GetRequiredService<SqliteStateStore>());
         try
         {
             SettingsStateSnapshot settings =
@@ -135,7 +136,8 @@ public partial class App : Microsoft.UI.Xaml.Application
             ExecuteControlCenterPosterCommand,
             () => ToggleDynamicEffectsPaused(StateCommandSource.ControlCenter),
             _stateCoordinator, _stateCommands, _inputRouter,
-            target => _spatialRuntime?.GetEffectiveLayout(target), () => _spatialRuntime, _portableController);
+            target => _spatialRuntime?.GetEffectiveLayout(target), () => _spatialRuntime, _portableController,
+            _services.GetRequiredService<SqliteStateStore>());
         _tray = new TrayService(_ledger, _log);
         _tray.Create(QueueTrayAction);
         _log.Write("info", "application.started", new
@@ -157,8 +159,13 @@ public partial class App : Microsoft.UI.Xaml.Application
         var openJournal = new SqliteContentOpenJournal(_services.GetRequiredService<SqliteStateStore>());
         openJournal.RetireInterruptedRequests();
         _realContentWorker = new LocalContentWorkerClient(Path.Combine(AppContext.BaseDirectory, "content-worker", "DesktopUp.ContentWorker.exe"), _ledger);
-        _spatialRuntime.ConfigureRealContent(_realContentWorker, openJournal);
+        _spatialRuntime.ConfigureRealContent(_realContentWorker, openJournal, new SqliteContentIconStore(_services.GetRequiredService<SqliteStateStore>()));
         _spatialRuntime.ConfigureSceneMotionLedger(_ledger);
+        _spatialRuntime.ConfigureTransfers(_services.GetRequiredService<SqliteStateStore>(),_transferDiscovery,
+            async()=>{_controlCenter.Show();await Task.Yield();return _controlCenter.WindowForPortableProbe is {} center?await center.EnsureTransferStorageAsync():null;},
+            async message=>{_controlCenter.Show();await Task.Yield();return _controlCenter.WindowForPortableProbe is {} center&&await center.ConfirmDirectTransferAsync(message);},
+            ()=>_controlCenter.IsSettingsInteractionActive||_controlCenter.IsRemovalInteractionActive,
+            message=>{_controlCenter.Show();_controlCenter.WindowForPortableProbe?.ShowTransferFailure(message);});
         StartAutoPosture();
         _spatialRuntime.RecoveryRequired += () => QueueDesktopRecovery(
             DesktopEnvironmentChangeKind.DesktopShell | DesktopEnvironmentChangeKind.DisplayTopology,
@@ -1026,6 +1033,8 @@ public partial class App : Microsoft.UI.Xaml.Application
         _log?.Write("info", "application.exit_requested");
         StopAutoPosture();
         if (_controlCenter is not null) await _controlCenter.CancelPortableAndWaitAsync();
+        if (_spatialRuntime is not null) await _spatialRuntime.StopTransfersAsync();
+        await _transferDiscovery;
         _inputRouter.Suspend();
         _controlCenter?.CancelRemoval("application-exit");
         DebugSettings.XamlResourceReferenceFailed -= OnXamlResourceReferenceFailed;

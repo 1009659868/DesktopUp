@@ -1,11 +1,15 @@
 # DesktopUp V2 V3 文档登记表
 
-最后检查：2026-09-30（RR-02/04与RR-05核心实现，RR-03白条延期；candidate07部分同包门通过，RR-06余门/人工待解锁，不进R7）
+最后增量检查：2026-10-10（补登记05-03/07纯合同、05-08/12账本实施与参考；未逐篇重审下方旧阶段证据，当前任务只以工作流/HANDOFF为准）
 
 本表只登记文档职责与资料类型，不独立裁决任务状态：当前任务查[细化工作流](../A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md)，运行交接查[HANDOFF](../A_Project/40_Implementation/V3-04/HANDOFF.md)，产品决定查[统一索引](../A_Project/10_Requirements/REQUIREMENTS_RISKS_AND_OPEN_QUESTIONS.md)。HISTORICAL表示对应版本证据，不是新待办；PLANNED不表示已有实现。
 
 | 文档 | 职责 | 状态 |
 | --- | --- | --- |
+| [DIRECT_TRANSFER_DELIVERY](../A_Project/40_Implementation/V3-05/DIRECT_TRANSFER_DELIVERY.md) | DEC-041自动收尾、基础拖入／拖回桌面、支持矩阵、同包证据与人工入口 | 当前；2942自动门通过，普通权限真实鼠标人工待验 |
+| [MANAGED_TRANSFER_JOURNAL_AND_RECOVERY](../A_Project/40_Implementation/V3-05/MANAGED_TRANSFER_JOURNAL_AND_RECOVERY.md) | schema16账本、17结束、18旧登记目录认领的底层合同与历史证据 | 后端保留；§7～10任务UI／四项人工已退役，不补PASS；满盘延期 |
+| [MANAGED_STORAGE_AND_DROP_CONTRACT](../A_Project/40_Implementation/V3-05/MANAGED_STORAGE_AND_DROP_CONTRACT.md) | 第一批受管归属、意图、共享影响、恢复与连续手势合同 | 第一批纯门已过，后续实施归账本记录 |
+| [DESKBOX_COLLECTION_REFERENCE_V1](../A_Project/20_Architecture/DESKBOX_COLLECTION_REFERENCE_V1.md) | DeskBox分类/执行/手势证据与本项目适配取舍 | REFERENCE，不继承参考项目验收 |
 | [PREVIEW_INSTALLER_DELIVERY](../A_Project/40_Implementation/V3-04/PREVIEW_INSTALLER_DELIVERY.md) | Preview一键打包、自选路径、新建默认值、配置隔离、撤回与验证证据 | 旧包已回收；脚本2175合同/本机门通过，目标机/普通权限未验；不代替R6/R7出口 |
 | [AGENT_COLD_START](AGENT_COLD_START.md) | 可复制的agent冷启动入口、当前Git/阶段快照、分层阅读、实现核对、协作与证据边界 | 当前接手入口；只导航/核对，不独立裁决产品状态 |
 | [LR_R5_CLOSEOUT_AND_PLAN_AUDIT](../A_Project/40_Implementation/V3-04/LR_R5_CLOSEOUT_AND_PLAN_AUDIT.md) | R5原出口证据、用户认可边界、现源码与旧计划差异、遗留项和R6入口 | CORE CLOSED / 携带明确限制；不是R7验收 |

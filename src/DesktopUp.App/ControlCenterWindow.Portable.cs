@@ -16,6 +16,7 @@ public sealed partial class ControlCenterWindow
     internal async Task CancelPortableAndWaitAsync()
     {
         _portableStopping = true;
+        _transferStopping.Cancel();
         _portableLog?.Write("info", "portable.cancel_requested", new { picker = _portablePicker is not null, busy = _portableBusy });
         _portableDialog?.Hide();
         _portablePicker?.Cancel();
@@ -54,7 +55,7 @@ public sealed partial class ControlCenterWindow
         try { await action(); }
         catch (Exception error)
         {
-            if (!_editingClosed && !_portableStopping) await PortableDialog("操作未完成", error.Message + "\n当前配置未被静默替换。");
+            if (!_editingClosed && !_portableStopping) await PortableDialog("操作未完成", error.Message + "\n请核对具体结果；文件任务以持久记录为准，不自动删除或回滚文件。");
         }
         finally
         {
@@ -82,13 +83,13 @@ public sealed partial class ControlCenterWindow
     }
 
     internal NativeProfilePicker? ActivePortablePickerForProbe => _portablePicker;
-    internal Task RunPortablePickerForProbe(bool save, bool initiallyCancelled = false) =>
-        PortableAction(async () => { _ = await PickPortableFile(save, initiallyCancelled); });
+    internal Task RunPortablePickerForProbe(bool save, bool initiallyCancelled = false, NativePickerPurpose purpose=NativePickerPurpose.Profile) =>
+        PortableAction(async () => { _ = await PickPortableFile(save, initiallyCancelled, purpose); });
 
-    private async Task<string?> PickPortableFile(bool save, bool initiallyCancelled = false)
+    private async Task<string?> PickPortableFile(bool save, bool initiallyCancelled = false, NativePickerPurpose purpose=NativePickerPurpose.Profile)
     {
         var operation = new NativeProfilePicker(WinRT.Interop.WindowNative.GetWindowHandle(this),
-            save, _portableLedger!, _portableLog!, initiallyCancelled);
+            save, _portableLedger!, _portableLog!, initiallyCancelled,purpose);
         _portablePicker = operation;
         try { return await operation.Completion; }
         finally { if (ReferenceEquals(_portablePicker, operation)) _portablePicker = null; }

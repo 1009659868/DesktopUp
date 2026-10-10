@@ -1,6 +1,8 @@
 # DesktopUp V2 当前执行入口
 
-2026-10-09当前：**V3-05真实引用已接生产，默认模板统一为基础收纳**。首次/新增及Preview默认均为basic-box，已有海报不改写；旧review07/PID42348已正常退出、资源归零，旧包/库保留。最新实现及验证见[§10](../A_Project/40_Implementation/V3-05/REAL_CONTENT_DISPLAY_AND_ACTIONS.md#10-默认基础收纳2026-10-09)；§9介绍文字控件仍待人工确认，不补记PASS。最近下一步仍[05-05-V1资产与安全迁移](../A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md#64-卡片独立图标与构造入口下一步)，未实现自定义图标。R7携带/C2后置保持。本次按用户授权同步当前V3分支，范围与验证归[交接](../A_Project/40_Implementation/V3-04/HANDOFF.md)；本地记忆、配置和运行产物不上传，下方“未提交/未推送”等仅为历史。
+DEC-039排期已确认：03受管／08账本／07双向拖放核心闭环前置于V2图标UI和V3构造卡片。旧引用拖出也移动原对象且须确认源路径；先做合同与隔离验证，安全门通过前不执行真实用户文件移动。
+
+2026-10-10当前（DEC-041）：**失败自动收尾＋基础原生拖放，准备人工验收。** 旧恢复任务界面退役，§10.4四项人工不再执行、不补PASS。普通失败直接重新拖动；内部账本、身份／防覆盖保护和schema18保留。[当前实施与验收](../A_Project/40_Implementation/V3-05/DIRECT_TRANSFER_DELIVERY.md)记录自动收尾、CF_HDROP拖入、原捕获手势拖回真实桌面与支持矩阵。本批同卷本机文件／目录／快捷方式，跨卷及任意Explorer目标未开放；真实满盘继续延期。旧包和证据保留，未操作用户文件、未Git提交推送。下方旧阶段只作历史。
 
 ## 历史检查点（不覆盖页首当前入口）
 
@@ -8,7 +10,7 @@ Git同步检查点（2026-10-08，本次用户授权）：源码`f2f6804`与相�
 
 2026-10-08当前：**R7-A/B实现及自动门完成，整体R7未关闭**。便携v5携带模板册、当前/未选模板实例、标题显隐/颜色、内容布局和中心主题；DEC-032同ID异定义保留两份，导入副本确定性映射，原单事务/CAS/备份守卫保持。唯一同包证据为`out/r7-portable/final04`：2396合同、4项门、14个应用进程及Lamp/Rain各5段缺模块便携检查通过，error/退出资源0，544源码/161产物指纹未变。原始失败及旧包/配置保留，详见[R7-A/B合同与实施](../A_Project/40_Implementation/V3-04/LR_MILESTONE_EXECUTION.md#116-r7-ab实施与验证2026-10-08)。下一步R7-C长时资源与连续可靠性，再R7-D真实显示/DPI、原生选择器/手势与人工验收；不把本轮当整体R7关闭，不进入R8。本轮未启动新人工包、无Git提交推送。下方R7-0或更早“尚未实现/下一步A/B”等是历史范围，不转授旧证据给当前源码。
 
-最新续做（2026-10-08）：用户追加云尺寸及更强起伏/倾斜，转[模块§16](../A_Project/40_Implementation/V3-04/LR_SCENE_MODULE_EXECUTION.md#16-云尺寸参数与增强起伏倾斜2026-10-08)。review28已正常退出，旧包/库保留；新参数0.60～1.10倍、默认1，绘制/命中共用缩放与边界拟合，风力提升升降/转角占比。rain-size candidate04已通过final04完整16门、2338合同与42进程，536源码/161产物指纹不变，error/退出资源0。严格入口已打开独立review04（初始PID3276，中心显示/启动日志正常），当前AUTO GATES COMPLETE / USER PENDING。参数与风摆准入分离、失败证据及短时资源限制见§16；不继承旧人工结论，确认后再R7，RR-06仍关闭、BUG-031延期，无Git操作。下方§15及更早候选是历史范围。
+最新续做（2026-10-08）：用户追加云尺寸及更强起伏/倾斜，转[模块§16](../A_Project/40_Implementation/V3-04/LR_SCENE_MODULE_EXECUTION.md#16-云尺寸参数与增强起伏倾斜2026-10-08)。review28已正常退出，旧包/库保留；新参数0.60～1.10倍、默认1，绘制/命中共用缩放与边界拟合，风力提升升降/转角占比。rain-size candidate05已通过final04完整16门、2338合同与42进程，536源码/161产物指纹不变，error/退出资源0。严格入口已打开独立review04（初始PID3276，中心显示/启动日志正常），当前AUTO GATES COMPLETE / USER PENDING。参数与风摆准入分离、失败证据及短时资源限制见§16；不继承旧人工结论，确认后再R7，RR-06仍关闭、BUG-031延期，无Git操作。下方§15及更早候选是历史范围。
 
 最新增量（2026-10-08）：candidate25云风感/裁切用户未通过，贯穿闪电形态认可；当前按[模块§15](../A_Project/40_Implementation/V3-04/LR_SCENE_MODULE_EXECUTION.md#15-ui-c风感对齐整周期防裁切与随机闪电2026-10-08)对齐UI C复合风摆、防裁切及可调间隔/随机落点。candidate28已通过final28b完整同包16门、2327合同及42进程；严格入口已启动独立review28（初始PID42520），当前AUTO GATES COMPLETE / USER PENDING。失败重试与资源短样本限制保留在§15，不代填真实鼠标/桌面合成PASS。RR-06仍CLOSED，BUG-031延期，人工确认后再R7；下方§14及更早候选为历史。
 
@@ -66,15 +68,15 @@ A→B→C：[DEC-019～025与需求§13](../A_Project/10_Requirements/REQUIREMEN
 
 历史（04-04滑块交付）：[滑块修订](../A_Project/40_Implementation/V3-04/CONTROL_CENTER_SLIDER_REFINEMENT.md)1283/六组自动门PASS，点选/微调待复验；当时的列表排查/暂缓05指令已由用户后续进入05替代。运行事实及证据只查最新[HANDOFF](../A_Project/40_Implementation/V3-04/HANDOFF.md)，不沿用旧PID。
 
-最后检查：2026-10-09。正式实体/能力/结果纯模型已通过05-01，生产仍DEMO；不从历史PID/候选号推断当前状态。
+最后检查：2026-10-10。2B-1人工通过；2B-2关联恢复与入口简化分段自动门通过，复杂余项/新界面人工/原生仍OPEN。实际分支impl/poster-redesign-V3；不授予Git操作权。
 
 | 层级 | 权威入口 | 当前状态 |
 | --- | --- | --- |
 | A 需求 | [七份需求](REQUIREMENTS_INDEX.md) | 通用内容、多海报、唯一中心/托盘、独立主题、热度与 AI |
 | A 架构 | [总体架构](../A_Project/20_Architecture/DESKTOPUP_V2_V3_ARCHITECTURE_V1.md)、[多海报合同](../A_Project/20_Architecture/GENERAL_CONTENT_MULTI_POSTER_CONTRACT_V1.md) | 当前设计基线 |
 | B 模块 | [模块分类](../A_Project/20_Architecture/DESKTOPUP_V2_V3_MODULE_CATALOG_V1.md) | 共享宿主恢复、独立海报会话 |
-| C 总计划/任务索引 | [制作计划](../A_Project/30_Plans/DESKTOPUP_V2_V3_IMPLEMENTATION_PLAN_V1.md)、[细化工作流](../A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md)、[LR计划](../A_Project/30_Plans/V3_04_L_REMEDIATION_REVIEW_PLAN.md) | 05-01/04/05/06已接生产；下一步05-05-V1，增量人工及R7携带项以C记录为准 |
-| C 当前工作/携带门 | [V3-05合同/验证/交接](../A_Project/40_Implementation/V3-05/CONTENT_ENTITY_AND_OPEN_CONTRACT.md)、[R7携带清单](../A_Project/40_Implementation/V3-04/LR_MILESTONE_EXECUTION.md#12-r7出口审查与运行差异收清2026-10-09) | 纯实现与生产接线分开，旧包不认证新源码 |
+| C 总计划/任务索引 | [制作计划](../A_Project/30_Plans/DESKTOPUP_V2_V3_IMPLEMENTATION_PLAN_V1.md)、[细化工作流](../A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md)、[LR计划](../A_Project/30_Plans/V3_04_L_REMEDIATION_REVIEW_PLAN.md) | 2B-1人工过，2B-2进行中；DEC-040恢复仅作异常兜底，原生HOLD |
+| C 当前工作/携带门 | [当前账本记录](../A_Project/40_Implementation/V3-05/MANAGED_TRANSFER_JOURNAL_AND_RECOVERY.md#9-保留文件停止重试与目录创建中断出口)、[剪切式拖放§6.5](../A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md#65-桌面与海报的剪切式拖放主路径)、[R7携带清单](../A_Project/40_Implementation/V3-04/LR_MILESTONE_EXECUTION.md#12-r7出口审查与运行差异收清2026-10-09) | 保留文件停止/目录中断出口分段自动门过，完整2872通过；旧目录认领/故障余项/新界面人工/原生未完成 |
 | C 历史呈现修复 | [R4](../A_Project/40_Implementation/V3-04/M07_ANIMATION_R4.md) | 白条人工确认；保留方法论与历史证据，非本轮修改 |
 | C 交接/代码/证据 | [HANDOFF](../A_Project/40_Implementation/V3-04/HANDOFF.md)、[CODE_ANCHORS](../A_Project/40_Implementation/V3-04/CODE_ANCHORS.md)、[VERIFICATION](../A_Project/40_Implementation/V3-04/VERIFICATION.md) | 当前事实与历史证据分开 |
 
@@ -89,7 +91,7 @@ ABC资料归属见[文档入口](../README.md#abc归属与历史记录)；当前
 
 ## 最近步骤
 
-1. 从[V3-05-01合同与交接](../A_Project/40_Implementation/V3-05/CONTENT_ENTITY_AND_OPEN_CONTRACT.md)进入05-04非破坏性引用添加，先持久关系/安全迁移，不重做R5/R6。
+1. 按[工作流§6.5](../A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md#65-桌面与海报的剪切式拖放主路径)：2B-1人工已过；2B-2保留停止出口已接，继续旧无声明目录显式认领/迁移和故障余门，再新分支人工、原生双向与闭环；稳定出口后接V2/V3。V1底层保留，不重做R5/R6，不重复旧人工组。
 2. **V3-04-05-03**（托盘单张子菜单）已取消，不是**V3-05-03**（Managed Collection）；后者仍在计划。
 3. V3-04-05-02/04托盘全局操作已实现，V3-04-05-05人工已过；不与V3-05真实内容任务混号。
 4. 布局基础已按DEC-008/后续LR前移；V3-05按01→04引用→05/06展示使用推进，真实磁盘执行仍先05-08账本。原04-06余门/04-07/08延期保持。
@@ -98,6 +100,6 @@ ABC资料归属见[文档入口](../README.md#abc归属与历史记录)；当前
 
 ## 不可越过的边界
 
-- 当前六卡为 DEMO ITEMS；预写恢复账本/故障夹具前不开放真实文件移动。
+- 未绑定内容的样片仍为DEMO；正式引用已接，但不等于物理收纳。预写恢复账本/故障夹具前不开放真实文件移动。
 - 不把 Win32 返回成功或布局读回当作 GPU 呈现/视觉 PASS；不把主屏验证扩称多屏/混合 DPI 认证。
 - 原始故障日志、运行包、日常配置保留；旧固定版本入口不能作为当前版本认证。

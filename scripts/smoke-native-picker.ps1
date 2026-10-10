@@ -4,7 +4,7 @@ $ErrorActionPreference='Stop'
 . (Join-Path $PSScriptRoot 'Start-DesktopUpFixtureProcess.ps1')
 $taskRepo=Split-Path -Parent $PSScriptRoot
 $taskPackage=if ($PackageDirectory) { [IO.Path]::GetFullPath($PackageDirectory) } else { Join-Path $taskRepo 'out\verify\v3-04-06-picker-r3' }
-$taskAllowed=@('before-open','before-save','cancel-open','cancel-save','center-open','center-save','exit-open','exit-save')
+$taskAllowed=@('before-open','before-save','cancel-open','cancel-save','center-open','center-save','exit-open','exit-save','cancel-folder','center-folder','exit-folder','zero-folder')
 if (!$Cases.Count -or @($Cases | Where-Object { $_ -notin $taskAllowed }).Count) { throw 'Unknown native picker case.' }
 if (Get-Process DesktopUp -ErrorAction SilentlyContinue) { throw 'Exit DesktopUp normally first. No process was stopped.' }
 $taskExe=Join-Path $taskPackage 'app\DesktopUp.exe'
@@ -15,7 +15,9 @@ $taskRoot=Join-Path $taskPackage ('picker-gates-' + [Guid]::NewGuid().ToString('
 $taskResults=@()
 foreach ($taskCase in $Cases) {
     $taskData=Join-Path $taskRoot $taskCase
-    & $taskFixture $taskData 1 --measure-expanded | Out-Null
+    $taskPosterCount=if($taskCase -eq 'zero-folder'){0}else{1}
+    if($taskPosterCount -eq 0){ & $taskFixture $taskData 0 | Out-Null }
+    else { & $taskFixture $taskData $taskPosterCount --measure-expanded | Out-Null }
     if ($LASTEXITCODE -ne 0) { throw 'Could not create isolated picker fixture.' }
     $taskDb=Join-Path $taskData 'state\desktopup.sqlite3'
     $taskDbHash=(Get-FileHash -LiteralPath $taskDb).Hash

@@ -53,7 +53,7 @@ internal sealed partial class PosterVisualWindow
     private void RenderContentFeedback()
     {
         RenderContentSpaceNavigation();
-        if (!TestContentFeedbackEnabled && !IsRealContent)
+        if (!TestContentFeedbackEnabled && !IsRealContent && !_fileTransferFeedback)
         {
             // Preserve the reserved footer geometry so hiding diagnostic text cannot move or
             // enlarge live card hit regions. Center errors and the underlying notice stay intact.
@@ -122,6 +122,7 @@ internal sealed partial class PosterVisualWindow
         // A result timer must never erase that newer explanation or a live drag preview.
         if (_contentNotice == expiring && !HasContentGesture)
         {
+            _fileTransferFeedback=false;
             _contentNotice = null;
             RenderContentFeedback();
             spatial.NotifyContentEditorChanged(PosterId);

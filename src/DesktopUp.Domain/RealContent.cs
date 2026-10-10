@@ -39,6 +39,8 @@ public sealed record ContentPosterBinding(string PosterId, Guid CollectionId, [p
 // Membership resolves to the shared content entity; this is not another copy of its source.
 public sealed record PosterItem(Guid Id, string PosterId, Guid MembershipId, [property: JsonRequired] long Version = 1)
 {
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? IconAssetId { get; init; }
     [JsonIgnore]
     public string LayoutItemId => $"{PosterId}:content-{Id:N}";
 }
@@ -145,6 +147,7 @@ public static class ContentCatalogPolicy
         var bindingMap = bindings.ToDictionary(x => x.PosterId, StringComparer.Ordinal);
         foreach (var poster in posters)
             Require(poster.Id != Guid.Empty && poster.Version > 0 && Text(poster.PosterId, 128) &&
+                (poster.IconAssetId is null || ContentIconAsset.ValidId(poster.IconAssetId)) &&
                 memberMap.TryGetValue(poster.MembershipId, out var member) &&
                 bindingMap.TryGetValue(poster.PosterId, out var binding) && member.CollectionId == binding.CollectionId,
                 "Poster item must belong to its poster's main collection.");

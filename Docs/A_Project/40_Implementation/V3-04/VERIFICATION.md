@@ -1,5 +1,69 @@
 # V3-04 验证记录
 
+## 2026-10-10 开发状态 Git 同步前复验
+
+out/git-release-sync/dev-contracts/contracts.trx：2942通过、0失败／跳过。独立dev-app Release x64构建0警告／错误。暂存105个源码、测试、脚本和文档文件；没有本地配置、二进制、日志或.workbuddy。diff检查仅有既存新文件EOF额外空行，不修改已绑定候选的源码字节。该复验不新增原生人工结论；后续impl/main移除探针后的构建／打包须独立验证。
+
+## 2026-10-10 DEC-041 自动收尾与基础原生接线
+
+out/direct-transfer/final03/contracts/contracts.trx完整2942通过、0失败／跳过（较2906新增36）。覆盖普通失败新拖重试、未执行意图不重放、已移动核实、外部改名、不完整副本保留、索引故障、原海报删除／编辑不重建、同名／批量重叠／同卷边界、内外返回／Esc／非桌面落点、原生接收注册与回调清理。NativeFileDropTarget测试创建自有原生窗口并直接调用回调，不冒充Explorer鼠标拖放。
+
+candidate03 App/SessionFixture Release x64构建0警告／错误；添加／重启进程50832／51264通过43／31断言；三张海报均记录transfer.native_target_ready，无unavailable。四个最终目录选择器门21156／11104／11968／48744通过，全部退出0／资源0／DB字节不变。旧candidate02同类自动门也通过，但只认candidate03为人工候选。
+
+proof.json绑定614源码／130产物、最终TRX／进程结果；四核心DLL与测试依赖一致。管理员工具环境的测试不证明普通权限Shell输入，脚本要求用户普通权限运行，真实人工保持PENDING。review01/profile已准备，未启动驻留进程。无用户文件／VHD／Git动作；真实满盘仍延期。旧恢复四任务按DEC-041退役，不记失败也不补PASS。下一步见[交付§5](../V3-05/DIRECT_TRANSFER_DELIVERY.md#5-人工启动与操作)。
+
+## 2026-10-10 旧目录认领与复制进度故障门
+
+最终out/transfer-adoption/full03/contracts.trx：**2906/2906，0失败/跳过**，新增34项。schema17→18保真及失败回滚、确认指纹/当前revision/清单/文件身份、未知声明、复制配置、半写凭证、SQL准备/激活失败、执行租约；四个独立进程在IntentWritten/RootClaimed/ChildClaimed/Activated退出74后，仅凭持久数据恢复，未激活绝不启动自动认领。
+
+真实32MiB自建跨卷文件在CopyFileExW非最终进度回调取消/受控异常，源哈希完整、没有复制收据或成功索引；本机STOP目标实际消失，不能断言必留半份，也不是进程硬崩溃证明。额外4MiB正常复制验证收据先于源处理。已有目录rename后并发变化、拒绝跨卷树/ADS等一并完整复验。真实满盘用户本轮延期，未创建/挂载虚拟磁盘。
+
+candidate01 App和SessionFixture构建0警告/错误。picker-gates-445d543c1b17400da1a8446a35573738四进程：40016/16872/45712/44316，均退出0、资源0、DB字节不变；NativePicker=true、NativeMouse=false、FileIO=false。四核心DLL与完整测试依赖一致，proof绑定617源码/130产物。独立review02初始PID5444启动/中心/只读发现日志正常、error/fatal0；新增四分支人工及退出重启待反馈，不借用2B-1旧USER PASS。当前是提升权限开发环境，普通权限原生拖放未验。
+
+失败保留：targeted01的2旧schema断言；targeted02/copy-debug01/02的STOP必留目标假设失败；review01夹具准备顺序触发生产写保护。原文件均自建；已修正为按实际目标状态恢复、先登记存储再制造未完成操作。full01/2901与full02/2906是中间范围，最终full03及review02。未Git同步，旧候选/配置/失败现场不清理。当前验收与准入界限见[§10](../V3-05/MANAGED_TRANSFER_JOURNAL_AND_RECOVERY.md#10-旧目录显式认领与剩余故障边界)。
+
+## 2026-10-10 2B-2保留停止出口
+
+最终`out/transfer-recovery-b2-stop/full02/contracts.trx`：**2872/2872，0失败/跳过**，新增40项。验证明确停止与取消/成功分离、五种未完成阶段、双份/变化/失踪、旧票据、重启、兄弟项隔离、SQL失败、共享关系保留、目录创建缺凭证/被替换/未知声明、跨配置拒绝、低层Register绕过拒绝、schema16→17保真及升级失败回滚、guard不因结束解除。
+
+candidate02的App及SessionFixture独立构建0警告/错误；picker-gates-6e7fabdb75ca4982ade32bda4387392f的cancel/center/exit/zero-folder四进程通过，退出码/资源0，DB字节不变。核心四DLL与完整测试依赖哈希一致，613源码/130产物绑定在同目录proof.json。真实原生选择器、程序化命令；NativeMouse=false、HumanAccepted=false，不证明新停止界面体验或原生拖放。
+
+targeted01有7项失败，原因是测试对含反序列化List的record进行引用相等断言，已改完整证据指纹核对；保留失败TRX。targeted02/146、full01/2870、candidate01均是新增低层绕过及guard两门前的中间结果。只用自建数据，无用户文件/日常库/Git动作；真实满盘、普通权限与旧目录认领仍未验，范围见[§9](../V3-05/MANAGED_TRANSFER_JOURNAL_AND_RECOVERY.md#9-保留文件停止重试与目录创建中断出口)。
+
+## 2026-10-10 2B-1人工收口与2B-2关联恢复分段
+
+用户确认2B-1的三项文件测试、退出/重启均符合预期；仅对原candidate05范围记USER PASS。DEC-040采纳简化异常入口，不构成新界面的人工验收。
+
+2B-2本段新增24项；最终out/transfer-recovery-b2/full02/contracts.trx为2832/2832、0失败/跳过。覆盖显式重新关联、原海报/卡片删除、共享排布、CAS/SQL回滚/重放、来源重现、目标变化、跨卷复制收据/保留两份及目录新增内容。仅自建fixture，不测真实用户文件。
+
+最终candidate03/app与fixture构建0警告/错误；picker-gates-350ffbcf972d41bbb257bda11beac811四个真实选择器进程正常退出、资源0、DB字节不变。NativeMouse=false；这四门只证明既有选择器/退出，不代替新恢复对话框的人工体验。完整测试所用Domain/Application/Infrastructure/Windows DLL与candidate03相同。指纹归out/transfer-recovery-b2/proof.json。
+
+保留失败：targeted01的两项测试夹具错误（列名、主题实例ID），candidate01的对话框StackPanel参数类型错误；targeted02/03、full01及candidate02仅为中间范围。2B-2余项、真实满盘及普通权限拖放仍未通过，见[§8.4](../V3-05/MANAGED_TRANSFER_JOURNAL_AND_RECOVERY.md#84-下一步仍在2b-2)。未Git同步，未启动持续人工包。
+
+## 2026-10-10 恢复入口与选址限定门
+
+最终out/transfer-recovery/full03/contracts.trx：2808/2808，0失败/跳过，新34项。candidate05/app及fixture构建0警告错误；picker-gates-dc577951c9d147f79d7323bd29a72dba的cancel/center/exit/zero-folder四组通过，4个实际应用进程均退出0、资源0、DB字节不变。原生窗口＋程序化命令，不是人工或原生鼠标输入。review01正常启动PID32572只发现3项待办，自建源字节不变、退出资源0。
+
+失败和限制见[实施§7](../V3-05/MANAGED_TRANSFER_JOURNAL_AND_RECOVERY.md#7-恢复入口与目录所有权)。targeted04的82项在最终两项所有权反例之前，最终由full03包含全部84项传输持久/恢复/安全测试；全量2808是最终代码范围。ACL是真实权限，部分复制/写满是复制后注入，真实满盘/断电未验。没有Git操作/用户文件动作。人工入口已备，未代填PASS。
+
+## 2026-10-10 持久账本与恢复隔离门
+
+最终out/transfer-journal/targeted09：120/120，本轮50项；full03：2774/2774，0失败/跳过。build02独立Release x64，0警告/错误。真实自建数据验证同卷、C→G跨卷单文件、目录后代、共享图标/布局、CAS/部分完成与3个独立进程中断；不计断电、满盘/ACL完整矩阵、原生拖放或人工PASS。源码/产物绑定归proof.json。
+
+targeted01/03/04、full01与targeted07的失败证据保留，原因和修订归[本轮§4](../V3-05/MANAGED_TRANSFER_JOURNAL_AND_RECOVERY.md#4-验证与证据)。full02/targeted08/build01是末次幂等/存储根保护增量前的版本，不替代最终。整体05-08/12未关闭，先补恢复入口/安全余项，未Git操作。
+
+## 2026-10-10 受管存储与拖放纯合同
+
+最终out/managed-drop-contract/targeted03：70/70新增纯测试通过；full02：2724/2724全量通过，0失败/跳过。build01独立Release x64 App构建0警告/错误；没有启动人工候选，不计原生输入、物理移动、用户文件或人工PASS。
+
+targeted01的23失败/40通过来自测试夹具图标ID格式不符合既有icon-v1合同，改用ContentIconAsset工厂后修正；原TRX保留。targeted02/full01为补充边界前63/2717通过，不能取代最终结果。源码、测试程序集、App程序集和TRX哈希见out/managed-drop-contract/proof.json；范围与后续门见[第一批记录](../V3-05/MANAGED_STORAGE_AND_DROP_CONTRACT.md)。既有V1失败/候选和日常配置保留，未Git操作。
+
+## 2026-10-10 独立图标资产与安全迁移
+
+out/v3-05-v1/candidate03 + final03：**2654/2654**，0失败／跳过；App及SessionFixture Release x64构建0警告／错误。应用48916（添加）43断言、20508（重启）31断言，error／退出码／ActiveResources为0。App SHA256 AEFF2B64B3EC6CD88D7EE90932CE219A1327ACED12928860D5B93E619CC11333；sources/artifacts/content-usage三份JSON绑定本次源与候选。
+
+新增47项覆盖规范化、真实PNG/JPEG/ICO隔离解码及取消／退出、单卡CAS、旧库／未来库、故障回滚、备份、回收及迟到缓存；真实窗口读回像素并重启保持。NativeInput=false、HumanAccepted=false、UserFiles=false，不计上传UI或人工PASS。targeted01投影比较及full01未来版本旧断言两份失败保留，原因及完整范围归[V1记录](../V3-05/CONTENT_ICON_ASSETS.md)。未Git同步、不改旧证据。
+
 ## 2026-10-09 Git提交前复验
 
 源码检查点`d8a1fda`。初轮及清理12个新增文件的EOF空白后，全量合同各2607通过，0失败/跳过；最终记录`out/git-sync-20261009/final/contracts/contracts.trx`。最终App输出`out/git-sync-20261009/final/app/`，Release x64构建0警告错误，DLL SHA256 `8BF0E32EDCD640D4F8F3E26428F2D7A6A7D0EFAA95A419F0DE09C39059032D92`。Git staged diff --check通过；提交范围排除本地记忆/运行数据/二进制产物，常见凭据模式扫描无匹配。
@@ -88,7 +152,7 @@ BUG-019固定时序合同复验保持PASS；BUG-021自然最终恢复子类待�
 
 2026-10-08当前：**R7-A/B实现及自动门完成，整体R7未关闭**。便携v5携带模板册、当前/未选模板实例、标题显隐/颜色、内容布局和中心主题；DEC-032同ID异定义保留两份，导入副本确定性映射，原单事务/CAS/备份守卫保持。唯一同包证据为`out/r7-portable/final04`：2396合同、4项门、14个应用进程及Lamp/Rain各5段缺模块便携检查通过，error/退出资源0，544源码/161产物指纹未变。原始失败及旧包/配置保留，详见[R7-A/B合同与实施](LR_MILESTONE_EXECUTION.md#116-r7-ab实施与验证2026-10-08)。下一步R7-C长时资源与连续可靠性，再R7-D真实显示/DPI、原生选择器/手势与人工验收；不把本轮当整体R7关闭，不进入R8。本轮未启动新人工包、无Git提交推送。下方R7-0或更早“尚未实现/下一步A/B”等是历史范围，不转授旧证据给当前源码。
 
-最新续做（2026-10-08）：用户追加云尺寸及更强起伏/倾斜，转[模块§16](LR_SCENE_MODULE_EXECUTION.md#16-云尺寸参数与增强起伏倾斜2026-10-08)。review28已正常退出，旧包/库保留；新参数0.60～1.10倍、默认1，绘制/命中共用缩放与边界拟合，风力提升升降/转角占比。rain-size candidate04已通过final04完整16门、2338合同与42进程，536源码/161产物指纹不变，error/退出资源0。严格入口已打开独立review04（初始PID3276，中心显示/启动日志正常），当前AUTO GATES COMPLETE / USER PENDING。参数与风摆准入分离、失败证据及短时资源限制见§16；不继承旧人工结论，确认后再R7，RR-06仍关闭、BUG-031延期，无Git操作。下方§15及更早候选是历史范围。
+最新续做（2026-10-08）：用户追加云尺寸及更强起伏/倾斜，转[模块§16](LR_SCENE_MODULE_EXECUTION.md#16-云尺寸参数与增强起伏倾斜2026-10-08)。review28已正常退出，旧包/库保留；新参数0.60～1.10倍、默认1，绘制/命中共用缩放与边界拟合，风力提升升降/转角占比。rain-size candidate05已通过final04完整16门、2338合同与42进程，536源码/161产物指纹不变，error/退出资源0。严格入口已打开独立review04（初始PID3276，中心显示/启动日志正常），当前AUTO GATES COMPLETE / USER PENDING。参数与风摆准入分离、失败证据及短时资源限制见§16；不继承旧人工结论，确认后再R7，RR-06仍关闭、BUG-031延期，无Git操作。下方§15及更早候选是历史范围。
 
 ## 2026-10-08 最新：云风感/裁边整改与随机闪电，同包通过、人工待验
 

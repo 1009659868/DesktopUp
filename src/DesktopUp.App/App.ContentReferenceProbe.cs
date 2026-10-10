@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Runtime.InteropServices.WindowsRuntime;
 using DesktopUp.Application;
 using DesktopUp.Domain;
 using DesktopUp.Infrastructure;
@@ -20,6 +21,15 @@ internal sealed partial class PosterVisualWindow
             Math.Abs(origin.Y - ContentTopDip) < .51 && content.CanvasMatches && content.InputMatches && content.Clipped;
     }
     internal bool RealIconReadyForProbe => _contentBitmaps.Count > 0;
+    internal bool CustomIconForProbe(ContentIconAsset asset)
+    {
+        var bitmap = _contentBitmaps.FirstOrDefault(p => p.Key.SourceKey == "custom:" + asset.Id).Value;
+        if (bitmap is not Microsoft.UI.Xaml.Media.Imaging.WriteableBitmap raster ||
+            raster.PixelWidth != asset.Width || raster.PixelHeight != asset.Height) return false;
+        using var stream = raster.PixelBuffer.AsStream();
+        var pixels = new byte[asset.Pixels.Length]; stream.ReadExactly(pixels);
+        return pixels.SequenceEqual(asset.Pixels);
+    }
     internal string? SelectOneRealContentForProbe(bool modifier = false)
     {
         string id = ReadContentViews().First().ItemId;
@@ -65,6 +75,7 @@ internal sealed partial class PosterSpatialRuntime
 {
     internal bool ContentHeadingSurfaceForProbe(string id, bool visible) => _windows.TryGetValue(id, out var window) && window.ContentHeadingSurfaceForProbe(visible);
     internal bool RealIconReadyForProbe(string id) => _windows.TryGetValue(id, out var window) && window.RealIconReadyForProbe;
+    internal bool CustomIconForProbe(string id, ContentIconAsset asset) => _windows.TryGetValue(id, out var window) && window.CustomIconForProbe(asset);
     internal string? SelectOneRealContentForProbe(string id, bool modifier = false) => _windows[id].SelectOneRealContentForProbe(modifier);
     internal object RealCardReadbackForProbe(string id) => _windows[id].RealCardReadbackForProbe();
     internal bool RealCardPresentationForProbe(string id, bool selected) => _windows.TryGetValue(id, out var window) && window.RealCardPresentationForProbe(selected);
@@ -190,6 +201,42 @@ public partial class App
                     state.PostersById[a].Poster.ContentLayoutJson == retained.PostersById[a].Poster.ContentLayoutJson &&
                     state.ContentVersion == retained.ContentVersion, "Heading edit changed another poster, authoring or real references.");
             }
+            // V1 exercises the existing production store/provider/bitmap path, not an upload UI.
+            var icon = ContentIconAsset.Create(64, 32, Enumerable.Range(0, 64 * 32)
+                .SelectMany(_ => new byte[] { 120, 30, 10, 128 }).ToArray());
+            state = _stateCoordinator.Refresh();
+            Require(state.ContentCatalog.PosterItems.Single(p => p.PosterId == a).IconAssetId == (restart ? icon.Id : null),
+                "Custom icon did not survive the cold restart.");
+            if (restart) await Until(() => _spatialRuntime!.CustomIconForProbe(a, icon));
+            var iconBefore = state;
+            void SetIcon(ContentIconAsset? desired)
+            {
+                var live = _stateCoordinator.Refresh();
+                var card = live.ContentCatalog.PosterItems.Single(p => p.PosterId == a);
+                var witness = ContentRelationPolicy.Resolve(live.ContentCatalog, a, card.LayoutItemId)!.Witness;
+                var edit = new ContentIconCommand(Guid.NewGuid().ToString("N"), StateCommandSource.ControlCenter, live.Revision,
+                    StateReadSet.ForPoster(a, live.PostersById[a].EntityVersion) with { ContentVersion = live.ContentVersion },
+                    witness, desired, true);
+                var result = ((StateProjectionCoordinator)_stateCoordinator).Execute(edit, cancellation.Token);
+                Require(result.Succeeded, result.Error ?? "Icon command failed.");
+                Require(result.CurrentRevision == live.Revision + 1, "Icon edit was not one revision.");
+            }
+            if (restart) SetIcon(null);
+            SetIcon(icon);
+            await Until(() => _spatialRuntime!.CustomIconForProbe(a, icon));
+            Require(true, "Owned BGRA bytes reached the actual WriteableBitmap.");
+            SetIcon(null);
+            await Until(() => _spatialRuntime!.RealIconReadyForProbe(a) && !_spatialRuntime.CustomIconForProbe(a, icon));
+            Require(true, "Restore default replaced custom bitmap with provider icon.");
+            SetIcon(icon);
+            await Until(() => _spatialRuntime!.CustomIconForProbe(a, icon));
+            state = _stateCoordinator.Refresh();
+            Require(state.ContentCatalog.Items.SequenceEqual(iconBefore.ContentCatalog.Items) &&
+                state.PostersById[a].Poster == iconBefore.PostersById[a].Poster &&
+                state.PostersById[b].Poster == iconBefore.PostersById[b].Poster &&
+                state.PostersById[b].EntityVersion == iconBefore.PostersById[b].EntityVersion &&
+                state.ContentCatalog.PosterItems.Single(p => p.PosterId == b).IconAssetId is null,
+                "Icon editing changed a target, layout, template or another poster.");
             passed = true;
         }
         catch (Exception failure) { error = failure.ToString(); }

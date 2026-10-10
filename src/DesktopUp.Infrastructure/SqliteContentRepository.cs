@@ -117,6 +117,7 @@ internal static class SqliteContentRepository
     internal static void Apply(SqliteConnection c, SqliteTransaction t, DesktopStateSnapshot before,
         StateMutationPlan plan, long revision)
     {
+        if (plan.IconEdit?.Asset is { } asset) SqliteContentIconStore.Put(c, t, asset);
         if (plan.ContentCatalog is { } next)
         {
             foreach (var id in plan.ExplicitDetachedRelations)
@@ -125,6 +126,13 @@ internal static class SqliteContentRepository
                 remove.CommandText = "DELETE FROM content_poster_items WHERE relation_id=$id;";
                 remove.Parameters.AddWithValue("$id", id.ToString());
                 if (remove.ExecuteNonQuery() != 1) throw new InvalidDataException("Reference detach target disappeared.");
+            }
+            foreach (var id in plan.RemovedStorageMemberships)
+            {
+                using var remove = c.CreateCommand(); remove.Transaction = t;
+                remove.CommandText = "DELETE FROM content_memberships WHERE membership_id=$id;";
+                remove.Parameters.AddWithValue("$id", id.ToString());
+                if (remove.ExecuteNonQuery() != 1) throw new InvalidDataException("Storage membership disappeared.");
             }
             foreach (var b in next.Bindings.Where(b => before.ContentCatalog.Bindings.All(old => old.PosterId != b.PosterId)))
             {
@@ -143,8 +151,9 @@ internal static class SqliteContentRepository
             foreach (var v in next.Bindings) Put(c,t,"content_poster_bindings","poster_id",v.PosterId,v,
                 ("collection_id",v.CollectionId.ToString()));
             foreach (var v in next.PosterItems) Put(c,t,"content_poster_items","relation_id",v.Id,v,
-                ("poster_id",v.PosterId), ("membership_id",v.MembershipId.ToString()));
+                ("poster_id",v.PosterId), ("membership_id",v.MembershipId.ToString()), ("icon_asset_id",v.IconAssetId));
         }
+        if (plan.ContentCatalog is not null || plan.Removes.Count != 0) SqliteContentIconStore.CollectAndCheck(c, t);
         if (plan.ContentCatalog is not null || before.ContentCatalog.Bindings.Any(b => plan.Removes.Contains(b.PosterId)))
         {
             using var q = c.CreateCommand(); q.Transaction = t;
@@ -155,7 +164,7 @@ internal static class SqliteContentRepository
     }
 
     private static void Put<T>(SqliteConnection c, SqliteTransaction t, string table, string key, object id,
-        T value, params (string Column, string Value)[] fields)
+        T value, params (string Column, string? Value)[] fields)
     {
         using var q = c.CreateCommand(); q.Transaction=t;
         var columns = new[] { key, "body_json" }.Concat(fields.Select(f => f.Column)).ToArray();
@@ -163,7 +172,7 @@ internal static class SqliteContentRepository
             $"ON CONFLICT({key}) DO UPDATE SET " + string.Join(",",columns.Skip(1).Select(n=>$"{n}=excluded.{n}")) + ";";
         q.Parameters.AddWithValue("$p0",id.ToString()!);
         q.Parameters.AddWithValue("$p1",JsonSerializer.Serialize(value,Json));
-        for(int i=0;i<fields.Length;i++)q.Parameters.AddWithValue("$p"+(i+2),fields[i].Value);
+        for(int i=0;i<fields.Length;i++)q.Parameters.AddWithValue("$p"+(i+2),(object?)fields[i].Value ?? DBNull.Value);
         q.ExecuteNonQuery();
     }
 }

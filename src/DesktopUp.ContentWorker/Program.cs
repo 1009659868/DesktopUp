@@ -34,6 +34,7 @@ internal static partial class Program
 
     private static LocalContentResponse Execute(LocalContentRequest request)
     {
+        if (request.Action == LocalContentAction.DecodeIcon) return IconImageDecoder.Decode(request);
         var preview = LocalContentReferenceProbe.Inspect(request.Item.Target.Locator, request.Item.Id);
         if (preview.Item is not { } live)
             return new(request.RequestId, ContentAvailability.Unavailable, preview.Message);

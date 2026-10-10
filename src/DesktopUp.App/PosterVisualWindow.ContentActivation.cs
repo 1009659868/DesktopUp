@@ -32,6 +32,7 @@ internal sealed partial class PosterVisualWindow
 
     private void ClickContent(ContentGesture gesture, PosterInputEventArgs args)
     {
+        SetContentSelection(gesture.Slot.ItemId);
         var target = ContentActivationTargetFor(gesture.Slot.ItemId);
         if (target is null || target != gesture.ActivationTarget)
         { _contentActivation.Reset(); return; }

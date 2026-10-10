@@ -14,6 +14,7 @@
     <ProjectReference Include="..\..\src\DesktopUp.Application\DesktopUp.Application.csproj" />
     <ProjectReference Include="../../src/DesktopUp.ContentWorker/DesktopUp.ContentWorker.csproj" ReferenceOutputAssembly="false" GlobalPropertiesToRemove="OutputPath;OutDir;PublishDir" />
     <ProjectReference Include="../DesktopUp.ContentFixture/DesktopUp.ContentFixture.csproj" ReferenceOutputAssembly="false" GlobalPropertiesToRemove="OutputPath;OutDir;PublishDir" />
+    <ProjectReference Include="../DesktopUp.TransferFixture/DesktopUp.TransferFixture.csproj" ReferenceOutputAssembly="false" GlobalPropertiesToRemove="OutputPath;OutDir;PublishDir" />
     <ProjectReference Include="..\..\src\DesktopUp.Domain\DesktopUp.Domain.csproj" />
     <ProjectReference Include="..\..\src\DesktopUp.Infrastructure\DesktopUp.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\DesktopUp.Windows\DesktopUp.Windows.csproj" />
@@ -29,7 +30,7 @@
     <None Include="../../packaging/preview/package-settings.json" Link="Fixtures/preview-package-settings.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <Target Name="CopyContentTestHelpers" AfterTargets="Build">
-    <MSBuild Projects="../../src/DesktopUp.ContentWorker/DesktopUp.ContentWorker.csproj;../DesktopUp.ContentFixture/DesktopUp.ContentFixture.csproj"
+    <MSBuild Projects="../../src/DesktopUp.ContentWorker/DesktopUp.ContentWorker.csproj;../DesktopUp.ContentFixture/DesktopUp.ContentFixture.csproj;../DesktopUp.TransferFixture/DesktopUp.TransferFixture.csproj"
              Targets="GetTargetPath" Properties="Configuration=$(Configuration);Platform=$(Platform)" RemoveProperties="OutputPath;OutDir;PublishDir">
       <Output TaskParameter="TargetOutputs" ItemName="_HelperTargets" />
     </MSBuild>

@@ -9,7 +9,8 @@ internal sealed partial class ControlCenterService(
     Action toggleDynamicEffectsPaused,
     IStateProjectionCoordinator state, IStateCommandService commands, PosterInputRouter inputRouter,
     Func<PosterSurfaceProjection, EffectivePosterLayout?> effectiveLayout,
-    Func<PosterSpatialRuntime?>? spatialRuntime = null, PortableProfileController? portable = null) : IDisposable
+    Func<PosterSpatialRuntime?>? spatialRuntime = null, PortableProfileController? portable = null,
+    DesktopUp.Infrastructure.SqliteStateStore? transferStore = null) : IDisposable
 {
     private ControlCenterWindow? _window;
     private IDisposable? _lease;
@@ -93,6 +94,7 @@ internal sealed partial class ControlCenterService(
                     () => spatialRuntime?.Invoke()?.CancelControlCenterVisuals(),
                     id => spatialRuntime?.Invoke()?.LocateControlCenterPoster(id) ?? "桌面尚未就绪。", ledger);
                 if (portable is not null) pendingWindow.ConfigurePortable(portable, ledger, log);
+                if (transferStore is not null) pendingWindow.ConfigureTransfers(transferStore, () => state.Refresh());
                 if (_selection.BuildView(_sessions, _environmentPending, _globallyHidden) is { } initialView)
                 {
                     pendingWindow.ApplyView(initialView, _commandError);
