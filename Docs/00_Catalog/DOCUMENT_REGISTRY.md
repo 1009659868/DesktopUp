@@ -1,13 +1,17 @@
 # DesktopUp V2 V3 文档登记表
 
-最后增量检查：2026-10-10（补登记05-03/07纯合同、05-08/12账本实施与参考；未逐篇重审下方旧阶段证据，当前任务只以工作流/HANDOFF为准）
+最后增量检查：2026-10-12（D2-04人工1～4项USER PASS并收口；D3-01接收基础隔离通过，3236合同/4个同包内容进程，生产全区域/实际落点/逐项跨卷未开放。D1 Medium/生产与真实满盘继续携带。）
 
 本表只登记文档职责与资料类型，不独立裁决任务状态：当前任务查[细化工作流](../A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md)，运行交接查[HANDOFF](../A_Project/40_Implementation/V3-04/HANDOFF.md)，产品决定查[统一索引](../A_Project/10_Requirements/REQUIREMENTS_RISKS_AND_OPEN_QUESTIONS.md)。HISTORICAL表示对应版本证据，不是新待办；PLANNED不表示已有实现。
 
 | 文档 | 职责 | 状态 |
 | --- | --- | --- |
 | [GIT_STRATEGY](../Rules/GIT_STRATEGY.md) | V3开发／impl/main精简发布源码边界、里程碑合并与返回分支流程 | 当前；不反向合入发布精简、不重写历史 |
-| [DIRECT_TRANSFER_DELIVERY](../A_Project/40_Implementation/V3-05/DIRECT_TRANSFER_DELIVERY.md) | DEC-041自动收尾、基础拖入／拖回桌面、支持矩阵、同包证据与人工入口 | 当前；2942自动门通过，普通权限真实鼠标人工待验 |
+| [DROP_SURFACE_AND_STORAGE_PROPOSAL](../A_Project/20_Architecture/DROP_SURFACE_AND_STORAGE_PROPOSAL.md) | DEC-042全区域接收、真实落点、默认根/迁移及D0～D5门 | D2-04收口，D3实施中；生产新路径尚未开放 |
+| [D1_NATIVE_DRAG_PROBE](../A_Project/40_Implementation/V3-05/D1_NATIVE_DRAG_PROBE.md) | 同一候选的全区域／穿透／图像联合验证、Shell责任边界及安全人工入口 | LOCAL_PROBE_USER_PASS / CARRY_TO_PRODUCTION；A第1～8项通过，B接收未过；非生产及Medium通过 |
+| [D2_STORAGE_LOCATION_AND_MIGRATION](../A_Project/40_Implementation/V3-05/D2_STORAGE_LOCATION_AND_MIGRATION.md) | 默认/旧活跃位置、整库迁移合同/实现、支持矩阵及人工清单 | D2-04 CLOSED；3197合同、7＋4同包进程、人工1～4项通过 |
+| [D3_NATIVE_INGRESS_AND_PLACEMENT](../A_Project/40_Implementation/V3-05/D3_NATIVE_INGRESS_AND_PLACEMENT.md) | 全区域接收、坐标/落点事务、逐项跨卷与生产准入 | D3-01隔离实现；D3-02落点事务下一步，整体未关闭 |
+| [DIRECT_TRANSFER_DELIVERY](../A_Project/40_Implementation/V3-05/DIRECT_TRANSFER_DELIVERY.md) | 基础拖放证据与默认空内容增量；旧人工清单的适用边界 | §7保留D0证据，当前实施转D1／D2专门记录 |
 | [MANAGED_TRANSFER_JOURNAL_AND_RECOVERY](../A_Project/40_Implementation/V3-05/MANAGED_TRANSFER_JOURNAL_AND_RECOVERY.md) | schema16账本、17结束、18旧登记目录认领的底层合同与历史证据 | 后端保留；§7～10任务UI／四项人工已退役，不补PASS；满盘延期 |
 | [MANAGED_STORAGE_AND_DROP_CONTRACT](../A_Project/40_Implementation/V3-05/MANAGED_STORAGE_AND_DROP_CONTRACT.md) | 第一批受管归属、意图、共享影响、恢复与连续手势合同 | 第一批纯门已过，后续实施归账本记录 |
 | [DESKBOX_COLLECTION_REFERENCE_V1](../A_Project/20_Architecture/DESKBOX_COLLECTION_REFERENCE_V1.md) | DeskBox分类/执行/手势证据与本项目适配取舍 | REFERENCE，不继承参考项目验收 |

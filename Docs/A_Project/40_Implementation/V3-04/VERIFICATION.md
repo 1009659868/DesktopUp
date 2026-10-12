@@ -1,5 +1,93 @@
 # V3-04 验证记录
 
+## 2026-10-12 Git 同步核对
+
+源码检查点`10b2afc`。复核上一轮最终3248项TRX、同包入库/重启结果及四个核心DLL一致性；本次仅同步并补交接，不重跑已过全量、不新增原生或人工PASS。暂存范围、排除项及下一动作见[交接](HANDOFF.md#2026-10-12-git-同步检查点)，D3原生连续操作仍待解锁。
+
+## 2026-10-12 D3组件化整改验证
+
+最终3248合同、同包首次/重启与资源归零通过，核心DLL一致；原生受控首轮并存通过，最后连续两轮复验因交互桌面不可用停止，未补人工PASS。机制对照、RCW/终态时序修复、夹具清理一次失败与复验、证据目录和待解锁动作集中归[D3§7.2](../V3-05/D3_NATIVE_INGRESS_AND_PLACEMENT.md#72-证据与当前验证范围)。候选已隔离准备未启动，BUG-022/D3不关闭，原人工2～5项不撤销，不Git同步。
+
+## 2026-10-12 D3部分人工通过与点击穿透失败
+
+用户：第1项留白接收PASS、普通点击穿透FAIL；第2～5项PASS。BUG-022重开，D3不关闭。新增独立进程底板探针仅构建/创建/注册/关闭自检通过，未验证真实点击/OLE；详情及下一动作见[D3§6](../V3-05/D3_NATIVE_INGRESS_AND_PLACEMENT.md#6-普通点击穿透回归与窄范围机制验证)。生产代码未改，不将旧3246自动PASS扩大为本次修复。
+
+## 2026-10-12 D3完整接线自动通过待人工
+
+完整3246项通过、零失败/跳过；combined-app03构建零警告错误，核心DLL与测试相同。同包first/restart通过、资源归零，独立人工已启动但不补鼠标PASS。定向失败修订、跨卷故障范围、候选与人工操作只在[D3§4.2/§5](../V3-05/D3_NATIVE_INGRESS_AND_PLACEMENT.md#42-d3完整接线与集中验证)维护；旧证据保留，不重复历史全进程矩阵。未Git同步，未操作用户文件。
+
+## 2026-10-12 D2-04 USER PASS与D3-01隔离门
+
+用户确认D2-04第1～4项均通过、符合预期，D2-04 CLOSED；[四项范围](../V3-05/D2_STORAGE_LOCATION_AND_MIGRATION.md#103-同包人工验收)不扩张到D3原生拖入、Medium或延期项。
+
+D3新增39项；`out/drop-d3/ingress-full01/contracts.trx`完整3236通过、0失败/跳过。App/SessionFixture Release x64零警告/错误，同包empty/three首次及重启4进程通过（33884/22544/34132/24356），检查39/35/287/43，退出0/资源0。proof-ingress01绑定671输入、130产物、最终TRX/测试程序集/4进程结果，四核心DLL与测试一致。
+
+真实原生证据限GDI区域与隐藏HWND的STA注册/撤销/重注册及Shell helper格式生命周期；内容门是生产命令/Canvas调用。无物理鼠标/像素/跨进程穿透认证，生产全区域开关未启用、跨卷逐项未开放。缺源图像仍拒绝，兜底待实现。targeted02/native03缺少源格式断言失败、targeted04夹具过早释放源helper失败均保留，native05修订及最终完整门通过，详见[D3§4](../V3-05/D3_NATIVE_INGRESS_AND_PLACEMENT.md#4-实现与验证记录)。未操作用户文件、未Git同步，原D2包/配置/proof不改绑。
+
+## 2026-10-12 D2-04设置及同包自动门
+
+新增ManagedStorageServiceTests 22项；settings-full01/contracts.trx完整**3197通过，0失败/跳过**。覆盖惰性创建、配置身份/日常隔离、旧根不搬/不回退、多个根显式选择、创建意图/目录/回执/登记中断、目标预览后抢占、负载数量、真实迁移/取消、非受管引用保留、重启收尾及安装清单静态约束。targeted01的7失败是新夹具未初始化配置（6项）与预检查抛异常的断言错误（1项）；保留原记录，targeted02=17通过后补5项。
+
+最终settings-candidate02构建0警告/错误；settings-gates03同包7进程（verify/cancel/close/early-close/exit/zero/restart）通过。candidate02下picker-gates-384e53833cf241bf9d1768215b8878a4的cancel-folder/center-folder/exit-folder/zero-folder四项真实原生选择器通过；退出约1000ms，测试DB字节不变。全部退出资源0。均由程序调用，不替代真实鼠标；当前Computer Use执行器不可调用，未做视觉截图验收。
+
+proof-settings01绑定665源码/配置/脚本/测试输入、128个App及夹具产物、3197 TRX、7流程/4选择器/seed三份结果，核心四DLL与全量测试依赖相同。seed进程50392创建独立三海报/1份自建文件，退出0/资源0；严格入口已打开人工配置，初始PID34748。人工待验，不关闭D2-04；清单、目录、脚本与支持矩阵见[D2§10](../V3-05/D2_STORAGE_LOCATION_AND_MIGRATION.md#10-d2-04默认位置与设置接线)。未搬用户现有文件、未实装卸载、未Git操作，真实满盘延期。
+
+## 2026-10-12 D2-03真实文件准备与故障隔离门
+
+最终out/drop-d2/files-full02/contracts.trx **3175通过，0失败/跳过**，本轮新增46项。真实文件/目录/空目录/多根/共享迁移采用保留源复制与内容租约；验证逐项复制取消、占用/缺失/变更、索引和收据写入失败、提交后取消/清理中断、损坏/断裂证据保留、重放不再清除保留路径。10个独立进程退出点包括清单、创建、复制进度、准备、目标记录、索引、收据、提交及两端清理；冷开无半套索引、不续搬。
+
+G盘自建夹具和C盘LocalAppData唯一测试目录确认原生卷身份不同，跨卷成功/取消/索引失败三例通过；测试目标只含自建内容，有哨兵且校验范围后清理。Windows真实.lnk只迁移本体，字节与目标路径不变，未运行目标。不是使用测试替身或盘符差异推定复制成功。
+
+App Release x64独立out/drop-d2/files-app01构建0警告/错误，未启动GUI。proof-files01.json绑定657输入、88产物、最终TRX和测试/中断助手程序集；Domain/Application/Infrastructure/Windows四个DLL与测试一致。保持schema19，保留旧包/配置/proof；未搬用户文件、未改生产默认根、未Git操作。
+
+中间files-targeted01两失败来自将“提交后变更”放在仍持有租约的提交回调，实际写入被正确拒绝；调整为Commit返回后。targeted02发现夹具路由不可达及损坏记录异常分类遗漏，修复后targeted03=36通过、targeted04=90通过（含48旧持久层）。full01=3172通过，补不同卷失败/有效快捷方式后最终以full02的3175为准，失败证据保留。
+
+这是限定文件后端隔离PASS，不是生产设置、原生跨卷拖入或人工PASS。支持普通固定本地卷负载；256 MiB/文件、1 GiB/4096条目预算保留，ACL继承目标。真实满盘仍延期，断电/普通权限组合未认证。完整范围和下一步D2-04见[D2§9](../V3-05/D2_STORAGE_LOCATION_AND_MIGRATION.md#9-d2-03保留源复制与故障验证)。
+
+## 2026-10-12 D2-02持久化与原生归属隔离验证
+
+最终out/drop-d2/persistence-targeted04/targeted.trx新增48项通过；persistence-full03/contracts.trx完整**3129通过、0失败/跳过**。实际SQLite和自建目录覆盖schema18→19校验和/关系保真、升级失败回滚、物理配置拷贝拒绝、完整CAS、相关打开/编辑/传输互斥、旧创建入口前置保护、旧认领兼容、多根/空集合、共享卡片/图标保真、单revision及幂等。子进程在IntentWritten、TargetsRecorded、IndexWritten、ReceiptWritten、Committed五处退出，重开验证提交前回滚、提交后可信收据保留新索引。
+
+文件内容证明为内部测试替身，独立进程夹具只接受自建空内容库；**没有证明真实复制、跨卷目录完整性或提交后清理成功**。这些留D2-03，不开放生产默认直收。普通失败仍不新增恢复任务UI；真实满盘继续未验。
+
+App Release x64独立persistence-app01构建0警告/错误，未运行GUI。proof-persistence01.json绑定650输入、88产物、两个最终TRX及测试/中断助手程序集；Domain/Application/Infrastructure/Windows DLL与全量合同依赖一致。未改绑旧D1/D2-01 proof或人工包、未移动用户文件、未写生产配置、未Git操作。
+
+中间targeted01的可见性编译错误及full01的25项旧schema夹具/预期失败均保留。修正后targeted02=28、targeted03=44、full02=3125通过；最后补旧入口/兼容4项，最终以48/3129为准。详见[D2§8](../V3-05/D2_STORAGE_LOCATION_AND_MIGRATION.md#8-d2-02持久化与归属保护)。
+
+## 2026-10-12 D1人工余项通过与D2-01纯合同
+
+用户明确“4～8项均验证通过，符合预期”：模式A的单/多图标与Explorer来源持续跟手、拒绝保留图像、Esc取消后重拖、收起接收范围及前台遮挡均记USER PASS。连同此前穿透和两种来源首次留白接收，D1本机联合探针验收收清；B两种接收仍USER FAIL。按probe06此前High匹配环境记录，不补Medium、生产接线、实际文件移动、跨DPI/锁屏或主动关闭源/目标通过。详细边界归[D1](../V3-05/D1_NATIVE_DRAG_PROBE.md)，不新增并不存在的自动鼠标证据。
+
+D2-01：out/drop-d2/contract-full01/contracts.trx，完整**3081通过、0失败/跳过**，较2995新增86纯合同。默认位置隔离/旧根保持、异常不回退；迁移全集合/共享影响、冻结/确认/完整读集、复制保源/部分验证拒绝切换、取消及持久提交后清理分类通过。contract-targeted01的80项为补完6项之前的中间证据，最终以full01为准。
+
+Application Release x64独立contract-build01构建0警告/错误，Domain/Application与完整合同加载的DLL哈希相同；out/drop-d2/proof-contract01.json绑定631输入、6构建产物、最终TRX和测试程序集。证明范围为Application纯提案，不是实际CAS/单revision事务、跨卷目录迁移或原生人工。schema18/生产调用不变，无用户文件动作或新GUI候选；不覆盖D1原proof。下一步[D2-02持久化与归属守卫](../V3-05/D2_STORAGE_LOCATION_AND_MIGRATION.md)。
+
+## 2026-10-12 D1穿透与留白接收人工反馈
+
+用户明确反馈A三项YES：普通点击穿透、独立源图标留白接收、Explorer文件留白接收；B穿透YES，两种来源接收NO。后续使用A。仅此三项记USER PASS，第4～8项、Medium兼容、实际文件移动和生产接线仍未验，不关闭D1。
+
+当前活动probe06／PID32120关联review-b24846006a82436b9baececc0b5f218e，High匹配。只读日志可见A的hdrop及A/B底层点击；独立源完整日志链本次未关联，源接收按用户反馈记录。自动证据仍是此前2995合同，未因文档更新复跑或改写；未关闭探针、无代码／配置／Git变更。详细边界归[D1记录](../V3-05/D1_NATIVE_DRAG_PROBE.md)。
+
+## 2026-10-12 D1权限兼容复验
+
+permission-full02完整2995通过，0失败／跳过；新增22项核对用户、会话、双向权限不匹配、查询失败、Shell变化、High环境分类及Win32自身令牌读取。probe06 Release x64构建0警告／错误，proof-permission01绑定186输入／16产物，与旧probe03/proof分离保存。
+
+permission-inspect03实测探针PID37060与实际Explorer PID15060同SID／会话1／High RID12288／UIAccess关闭，允许本机隔离探针；不作为Medium普通权限证据。permission-smoke02 PID37408正常退出0，四窗口注册／撤销通过；WindowFromPoint未形成有效命中证据，无鼠标／视觉PASS。Windows PowerShell 5.1的CheckOnly通过，review-3803d82e40814ee684ad72a57f9eb5bf记录环境；PrepareOnly通过。
+
+首次permission-inspect01／02在TokenElevation空缓冲大小探测返回ERROR_BAD_LENGTH后安全拒绝；改固定DWORD分配、补原生读取测试并复跑完整门。早期probe04／05、permission-full01及smoke01拒绝证据保留，不转授PASS。未改UAC、令牌、产品拖放或用户文件，未留交互探针、未Git操作。下一步仍[D1联合人工](../V3-05/D1_NATIVE_DRAG_PROBE.md#4-运行环境核对与联合验证)。下方是此前证据。
+
+## 2026-10-12 D1探针自动门
+
+完整2973合同通过，0失败／跳过（新增26）；out/drop-d1/full01/contracts.trx。包含Shell图像辅助真实COM初始化与HGLOBAL／IStream私有格式、重复松手、载荷变化、拒绝仍转发视觉、Esc／退出以及接口异常清理。targeted01／02的DV_E_TYMED失败揭示原生私有流依赖，已修正，证据不删除；targeted03为26项通过，随后清除测试编译警告并全量复验。
+
+独立probe03构建0警告／错误；proof绑定184输入／16产物。smoke01进程50640正常退出0，四种目标窗口注册／撤销完成；窗口查找返回非探针窗口，故命中采样无效，不记PASS。启动器PrepareOnly通过，没有持续运行进程。D1普通权限真实OLE命中、点击穿透和图像连续仍待联合人工，通用Shell文件移动没有执行或准入。范围与步骤归[D1实施](../V3-05/D1_NATIVE_DRAG_PROBE.md)，不能用自动门替代视觉／桌面壳层／跨DPI。未修改产品接线、用户库或执行Git操作。
+
+## 2026-10-12 默认空内容增量
+
+完整2947合同通过，0失败／跳过；out/drop-plan-empty/final02/contracts.trx。新增5项覆盖空内容读取／新建／冷重启／布局设置／显式数据保留，真实引用与传输既有门复跑。first首轮16项旧测试隐式依赖六卡，改显式种子；final次轮默认辅助线测试种子修正；失败证据保留，不删除测试或跳过反例。
+
+scripts/build.ps1 -Configuration Release -OutputDirectory out/drop-plan-empty/app/：0警告／错误。未启动GUI，无原生／视觉人工结论，无文件迁移、用户库写入或Git操作。DEC-042全区域命中、默认根及迁移仍为方案；本轮门不能替代未来D1～D5原生和文件安全验收。
+
 ## 2026-10-10 精简发布源码验证
 
 发布提交d6ca237，树8b51c2bbbb0425f1f3ae62590848ef2f207b692b，311跟踪文件／6产品工程／532文件移除。out/git-release-sync/fresh01直接由待提交树归档展开，不含Docs、tests或旧bin／obj，完整解决方案Release构建0警告／错误。release-app03独立App构建同样通过。所有专用ForProbe／ForSmoke、测试启动参数、测试数据根入口和测试依赖引用扫描无残留；保留实际文件来源探查LocalContentReferenceProbe与生产安全校验，不能按Probe字样盲删。

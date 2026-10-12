@@ -1,5 +1,11 @@
 # DesktopUp V2 当前执行入口
 
+Git同步检查点（2026-10-12）：用户授权同步当前开发状态，源码`10b2afc`及相邻文档提交，目标仅`origin/impl/poster-redesign-V3`。不合入发布线；D3阶段和未验项保持，继续下述入口，细节见[交接](../A_Project/40_Implementation/V3-04/HANDOFF.md)。
+
+实施方式（2026-10-12起）：遵循[精简实施与验证流程](../Rules/IMPLEMENTATION_AND_VALIDATION.md)。日常定向验证，完整功能集中验收；D3-02～04是连续内部步骤，不再逐子批停下交付。历史全门/指纹记录不构成每次任务的默认必跑要求，安全合同及未验项仍有效。
+
+当前（2026-10-12）：D2-04限定收口；**D3输入与拖放组件化已接生产，最终原生复验待桌面解锁，人工尚未开始**。普通输入恢复稀疏区域，增量OLE接收独立；原业务不重做。计划、证据与集中验收归[D3§7](../A_Project/40_Implementation/V3-05/D3_NATIVE_INGRESS_AND_PLACEMENT.md#7-输入与拖放组件化整改)。BUG-022待复验，不进入D4；原留白接收及2～5项USER PASS保留。读取[方案](../A_Project/20_Architecture/DROP_SURFACE_AND_STORAGE_PROPOSAL.md)→[工作流§6.5](../A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md#65-桌面与海报的剪切式拖放主路径)→[交接](../A_Project/40_Implementation/V3-04/HANDOFF.md)。D1 Medium及真实满盘等携带项不消除。
+
 Git同步后入口（2026-10-10）：开发38187bb及后续交接／打包修正，精简发布impl/main@d6ca237；已返回impl/poster-redesign-V3。按[Git规则](../Rules/GIT_STRATEGY.md)在里程碑完成后合入发布线，不反向合入精简删除。旧candidate03因原始字节指纹变化不能直接启动；下一步新建绑定候选再基础拖放人工，详见[交接](../A_Project/40_Implementation/V3-04/HANDOFF.md)。不补人工PASS。
 
 DEC-039排期已确认：03受管／08账本／07双向拖放核心闭环前置于V2图标UI和V3构造卡片。旧引用拖出也移动原对象且须确认源路径；先做合同与隔离验证，安全门通过前不执行真实用户文件移动。

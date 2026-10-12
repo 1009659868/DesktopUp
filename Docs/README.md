@@ -1,5 +1,9 @@
 # DesktopUp V2 文档入口
 
+Git同步检查点（2026-10-12）：本次用户授权保存当前D1～D3累计工作，源码`10b2afc`及相邻文档提交，目标仅`origin/impl/poster-redesign-V3`；不合入`impl/main`，不上传候选/配置/日志。验证与携带项见[当前交接](A_Project/40_Implementation/V3-04/HANDOFF.md)，D3最终原生复验及人工仍待完成；下方“不Git同步”是此前实施边界。
+
+2026-10-12当前：D2-04 CLOSED；D3首版留白拖入及2～5项获用户通过，普通点击穿透失败。按用户批准的[D3组件化整改§7](A_Project/40_Implementation/V3-05/D3_NATIVE_INGRESS_AND_PLACEMENT.md#7-输入与拖放组件化整改)已将普通输入与OLE接收拆开，保留入库/账本/落点业务；最终原生连续操作复验待桌面解锁，随后一轮集中人工。BUG-022未关闭，D4/D5未开始；真实满盘、Medium等未验项保持。候选与下一动作见[交接](A_Project/40_Implementation/V3-04/HANDOFF.md)，不Git同步。
+
 2026-10-10 Git 分支决定：开发继续在 `impl/poster-redesign-V3`，每个完成的里程碑再整合到精简发布源码线 `impl/main`；规则见 [开发与发布分支](Rules/GIT_STRATEGY.md)。发布精简不反向合入开发，不改变未验项结论。
 
 DEC-039已确认：先把基础收纳交互做稳定，再做图标更换UI／构造卡片。桌面↔海报默认剪切式移动；旧引用拖出也移动原对象，且事前明确确认源路径。

@@ -1,5 +1,90 @@
 # V3-04 代码锚点
 
+## 2026-10-12 输入与拖放组件化
+
+- [PosterInputIslandManager.cs](../../../../src/DesktopUp.Windows/PosterInputIslandManager.cs)：普通输入始终稀疏；InstallDropReceiver注册与几何/暂停/重挂载/释放接线，不再暴露全矩形区域切换。
+- [PosterDropReception.cs](../../../../src/DesktopUp.Windows/PosterDropReception.cs)、[NativeOleDragMonitor.cs](../../../../src/DesktopUp.Windows/NativeOleDragMonitor.cs)：默认空区域的独立接收面、经核验的OLE捕获、捕获/协议结束分离及新会话复位。Windows实现细节兼容边界见[D3§7.1](../V3-05/D3_NATIVE_INGRESS_AND_PLACEMENT.md#71-已实施的组件边界)。
+- [NativeFileDropTarget.cs](../../../../src/DesktopUp.Windows/NativeFileDropTarget.cs)、[ShellDropImages.cs](../../../../src/DesktopUp.Windows/ShellDropImages.cs)：协议终态通知与独立COM包装；App只持有IPosterDropRegistration，原ticket/文件通道不变。
+- [PosterDropComponentTests.cs](../../../../tests/DesktopUp.Contracts.Tests/PosterDropComponentTests.cs)验证可选组件不改基础区域；[RoutingMechanismProbe.cs](../../../../tests/DesktopUp.NativeDragProbe/RoutingMechanismProbe.cs)用独立底板/OLE源验证实际跨进程命中、取消、暂停、连续会话与资源释放。自建诊断路径，无文件执行器。
+- [修订候选入口](../../../../scripts/start-incoming-review.ps1)：`-ComponentRevision`使用新manifest/profile，旧默认入口保留。当前只完成PrepareOnly，最终原生待解锁，见[D3§7.2](../V3-05/D3_NATIVE_INGRESS_AND_PLACEMENT.md#72-证据与当前验证范围)。
+
+## 2026-10-12 D3点击穿透回归调查
+
+[CrossProcessClickProbe.cs](../../../../tests/DesktopUp.NativeDragProbe/CrossProcessClickProbe.cs)新增独立进程底板及A/E原生对照，TargetSurface的颜色键候选仅用于探针；Program接三个独立探针模式。[启动器](../../../../scripts/start-incoming-click-probe.ps1)每次创建新诊断目录，不启动产品、不移动文件。生产PosterInputIslandManager的全矩形/HTTRANSPARENT仍为待整改实现，见[D3§6](../V3-05/D3_NATIVE_INGRESS_AND_PLACEMENT.md#6-普通点击穿透回归与窄范围机制验证)。
+
+## 2026-10-12 D3全区域实际入库
+
+- [IncomingContentPlacement.cs](../../../../src/DesktopUp.Application/IncomingContentPlacement.cs)：原插入顺位/局部让位复用、贴边限制、成功后推进批量位置；SqliteTransferJournal.IndexPlan与关系单revision提交。
+- [IncomingTransferCopies.cs](../../../../src/DesktopUp.Infrastructure/IncomingTransferCopies.cs)：既有receipt内的跨卷创建身份、保留源复制与受限收尾；LocalTransferExecutor及AutomaticTransferCompletion复用重启/取消流程，schema19不变。
+- [PosterSpatialRuntime.Incoming.cs](../../../../src/DesktopUp.App/PosterSpatialRuntime.Incoming.cs)、[PosterVisualWindow.Transfers.cs](../../../../src/DesktopUp.App/PosterVisualWindow.Transfers.cs)：生产全区域启用、最终ticket、逐项执行、近旁反馈、目标占用与退出取消。
+- [MissingSourceDragImage.cs](../../../../src/DesktopUp.Windows/MissingSourceDragImage.cs)：仅缺源图像格式时采用系统文档图标，结束释放；有图沿Shell helper。
+- [IncomingTransferIntegrationTests.cs](../../../../tests/DesktopUp.Contracts.Tests/IncomingTransferIntegrationTests.cs)、App.IncomingProbe.cs、scripts/smoke-incoming.ps1：本批事务/跨卷故障与同包门；[人工启动器](../../../../scripts/start-incoming-review.ps1)。当前证据及待验归[D3§4.2/§5](../V3-05/D3_NATIVE_INGRESS_AND_PLACEMENT.md#42-d3完整接线与集中验证)，以下D3-01为历史。
+
+## 2026-10-12 D3-01接收基础与默认关闭的原生能力
+
+- [IncomingDropSession.cs](../../../../src/DesktopUp.Application/IncomingDropSession.cs)：冻结路径、坐标/代次依据，最后物理点，单次消费；标题无伪网格，循环归一化。未产生布局或文件提交。
+- [ContentScreenCoordinates.cs](../../../../src/DesktopUp.Domain/ContentScreenCoordinates.cs)：共享屏幕换算；PosterVisualWindow.ContentEditing.cs仅将原内拖换算迁入此函数。
+- [PosterDropSurfacePolicy.cs](../../../../src/DesktopUp.Application/PosterDropSurfacePolicy.cs)/PosterInputIslandManager.cs：OLE矩形与稀疏普通命中分离；TrySetFullAreaDropReception默认关闭且无产品调用。
+- [NativeIncomingDropSession.cs](../../../../src/DesktopUp.Windows/NativeIncomingDropSession.cs)/[ShellDropImages.cs](../../../../src/DesktopUp.Windows/ShellDropImages.cs)/NativeFileDropTarget.cs：新ticket构造入口、Shell图像四回调、失败/重入/退出清理；旧路径构造入口保持兼容。缺源图像的兜底仍待做。
+- [IncomingDropSessionTests.cs](../../../../tests/DesktopUp.Contracts.Tests/IncomingDropSessionTests.cs)/[IncomingDropNativeTests.cs](../../../../tests/DesktopUp.Contracts.Tests/IncomingDropNativeTests.cs)：39项新增；完整3236合同，4个生产命令/Canvas回归，证据范围见[D3§4](../V3-05/D3_NATIVE_INGRESS_AND_PLACEMENT.md#4-实现与验证记录)。
+
+下一步D3-02落点进入原关系/布局单事务，再D3-03逐项跨卷和D3-04产品准入；D2-04人工已收口。
+
+## 2026-10-12 D2-04默认根与位置设置
+
+- [ManagedStorageService.cs](../../../../src/DesktopUp.Infrastructure/ManagedStorageService.cs)：产品门面；只读位置、按需创建/物理身份回执、旧根选择、负载数量预览、真实迁移和启动收尾；UI不提供文件证明。SqliteStateStore仅增加内部配置路径，不改schema19。
+- App.Transfers.cs/App.xaml.cs：通道/隔离基目录与启动收尾，共用同一服务；PosterSpatialRuntime.Transfers.cs不再按集合数猜测选址。ControlCenterService.cs传递服务；[ControlCenterWindow.Transfers.cs](../../../../src/DesktopUp.App/ControlCenterWindow.Transfers.cs)/xaml接全局位置窗口、打开、确认、进度取消、结果。读取中退出检查防止迟到弹窗；取消并等待沿原生命周期通道。
+- [ManagedStorageServiceTests.cs](../../../../tests/DesktopUp.Contracts.Tests/ManagedStorageServiceTests.cs)：22项；[App.StorageSettingsProbe.cs](../../../../src/DesktopUp.App/App.StorageSettingsProbe.cs)只接受out/drop-d2带哨兵自建配置，程序驱动同包7流程及seed，不执行用户文件。原生鼠标不冒称覆盖。
+- [smoke-storage-location.ps1](../../../../scripts/smoke-storage-location.ps1)、smoke-native-picker.ps1、[start-storage-location-review.ps1](../../../../scripts/start-storage-location-review.ps1)：7设置＋4目录选择器流程、源码/产物/TRX指纹绑定和人工入口；Start-DesktopUpFixtureProcess.ps1为测试显式注入同级存储根。
+
+当前证据和人工清单见[D2§10](../V3-05/D2_STORAGE_LOCATION_AND_MIGRATION.md#10-d2-04默认位置与设置接线)。D3全区域/跨卷逐项入库仍未接；下方“尚无App调用”为历史范围。
+
+## 2026-10-12 D2-03真实保留源文件通道
+
+- [StorageRelocationFiles.cs](../../../../src/DesktopUp.Infrastructure/StorageRelocationFiles.cs)：内部真实Prepare/Verify/Execute，源清单先行、归属准备、只读源复制、完整路径/内容/身份/文件元数据证明；源/目标句柄跨SQLite提交持有。没有App生产调用。
+- [StorageRelocationFiles.Recovery.cs](../../../../src/DesktopUp.Infrastructure/StorageRelocationFiles.Recovery.cs)：可信收据决定提交前后分支；精确前缀证明清理半成品，提交后仅清已核实旧负载，外来/替换/损坏证据保留，取消停止后续删除，不递归清空选定根。
+- [StorageCopyLedger.cs](../../../../src/DesktopUp.Infrastructure/StorageCopyLedger.cs)：state/storage-relocations下只写一次且刷盘的库存、创建/目标/结束证据；绑定物理配置/提案/DB意图，验证版本、相对路径、数量和连续回执；不是可移植配置或用户任务表。
+- [LocalTransferFiles.Storage.cs](../../../../src/DesktopUp.Infrastructure/LocalTransferFiles.Storage.cs)：CreateNew复制、原生身份/句柄锁、SHA256、时间/常见属性、逐个按句柄删除、拒绝ADS/硬链接/不支持文件属性；旧Move逻辑未替换。
+- StorageBundleOwnership.cs新增准备对象创建回执；SqliteStorageRelocationJournal.cs公开内部现有源租约/当前计划复核；SqliteStateStore.cs仅加sidecar位置，schema19不变。首次默认根/设置/启动收尾仍归D2-04。
+- [StorageRelocationFilesTests.cs](../../../../tests/DesktopUp.Contracts.Tests/StorageRelocationFilesTests.cs)及[.Recovery.cs](../../../../tests/DesktopUp.Contracts.Tests/StorageRelocationFilesTests.Recovery.cs)：新增46项；[StorageCopyCrashFixture.cs](../../../../tests/DesktopUp.TransferFixture/StorageCopyCrashFixture.cs)在带哨兵的自建数据执行10个独立进程退出点；Program.cs入口先路由该夹具。真实不同卷与Windows快捷方式均不操作用户内容。
+
+最终完整3175通过，App独立构建0警告/错误；证据与支持矩阵归[D2§9](../V3-05/D2_STORAGE_LOCATION_AND_MIGRATION.md#9-d2-03保留源复制与故障验证)。下方“没有文件执行器/待实现”为D2-02历史快照。
+
+## 2026-10-12 D2-02持久化与归属
+
+- src/DesktopUp.Infrastructure/SqliteStorageRelocationJournal.cs：schema19、活跃根/根集合版本、物理配置身份、只读库存及目录/声明句柄；内部文件证明租约端口尚待D2-03实现。
+- src/DesktopUp.Infrastructure/SqliteStorageRelocationJournal.Transactions.cs：持久意图、目标证明、完整CAS、共享来源定位重写、单revision和独立收据；重放/取消/占用保护。提交仍只由隔离测试驱动，未接生产UI。
+- src/DesktopUp.Infrastructure/StorageBundleOwnership.cs：独立v2多集合根/子声明；意图先行、只建空目标声明，可信提交加当前登记才激活；没有文件复制执行器。
+- SqliteStateStore.cs追加19不改旧SQL；SqliteStateCommandRepository.cs、SqliteContentOpenJournal.cs、SqliteTransferJournal.cs接写入/打开/重叠传输保护；ManagedStorageProvisioner.cs、ManagedStorageAdoption.cs保留旧归属格式，写声明前检查迁移占用，并拒绝相互覆盖。
+- tests/DesktopUp.Contracts.Tests/StorageRelocationPersistenceTests.cs及.Reliability.cs：48项；StorageSchemaFixture.cs只负责旧库测试构造；tests/DesktopUp.TransferFixture/StorageRelocationCrashFixture.cs是带哨兵、空库的独立进程中断夹具，不属于产品文件执行器。完整3129通过，范围见[D2§8](../V3-05/D2_STORAGE_LOCATION_AND_MIGRATION.md#8-d2-02持久化与归属保护)。
+
+## 2026-10-12 D2-01默认位置与整库迁移纯提案
+
+- src/DesktopUp.Application/ManagedStorageLocationPolicy.cs：显式活跃/单旧根/多旧根/默认候选决策；日常、Preview与强制独立测试路径提案。无IO或创建权限，最终原生核实另做。
+- src/DesktopUp.Application/ManagedStorageRelocationPolicy.cs：全部受管集合、归属、别名/共享影响、冻结输入和完整确认指纹；持久意图前禁止复制，全部目标核实后单事务提案，提交前取消保旧、可信提交后不回滚，清理需再次证明。
+- tests/DesktopUp.Contracts.Tests/ManagedStorageLocationPolicyTests.cs与ManagedStorageRelocationPolicyTests.cs：新增86项，全量3081通过；反例包括异常活跃根、多根/空集合、漏库存、旧确认、版本变化和崩溃前后阶段/收据不一致。
+- 尚无生产调用、持久化或真实文件搬迁；实施及下一批归[D2记录](../V3-05/D2_STORAGE_LOCATION_AND_MIGRATION.md)。D1本机A的1～8项用户通过，不代表生产输入岛已替换。
+
+## 2026-10-12 D1环境核对修订
+
+- tests/Shared/DragProbe/ProbeEnvironment.cs：GetShellWindow定位实际Explorer，只用进程／令牌查询权限；共享纯判定检查SID／会话／完整性，失败拒绝，Medium与High分开标记。
+- tests/DesktopUp.NativeDragProbe/Program.cs：--check-environment输出报告；目标／独立源／smoke启动都重新检查，不保留管理员一律拒绝或smoke绕过。
+- scripts/start-native-drag-probe.ps1：新proof-permission01绑定候选；PrepareOnly准备、CheckOnly无界面环境预检、正常启动带环境说明；不修改安全设置。
+- tests/DesktopUp.Contracts.Tests/NativeDragProbeEnvironmentTests.cs：22项，包含真实自身令牌的固定／变长字段读取及失败拒绝模型。当前完整2995项及probe06证据见[D1实施](../V3-05/D1_NATIVE_DRAG_PROBE.md)。下方probe03为此前范围。
+
+## 2026-10-12 D1隔离探针
+
+- tests/DesktopUp.NativeDragProbe：TargetForm四种命中策略、底层点击／原生OLE计数、收起与前台覆盖对照；SourceForm独立进程单／多图标原生DoDragDrop，不提供文件路径。
+- tests/Shared/DragProbe：ProbeProtocol生命周期和NONE安全反馈；ProbeDataObject按格式保存HGLOBAL与IStream；ShellProbeImages包装系统图像辅助；ProbeSource记录目标HWND及结束结果，不清理文件。
+- tests/DesktopUp.Contracts.Tests/NativeDragProbeTests：26项新增及真实COM初始化；测试与探针链接同一份实现，不把直接回调断言当成真实鼠标证据。
+- scripts/start-native-drag-probe.ps1：指纹绑定、普通权限与独立review入口；详细范围归[D1实施](../V3-05/D1_NATIVE_DRAG_PROBE.md)。产品输入岛、拖出执行器、默认根未改。
+
+## 2026-10-12 默认空内容与拖放缺口
+
+Domain/ContentLayout.cs的ContentLayoutPolicy.TryRead(null)：默认零成员，读取不写库；显式样片仍由ContentLayoutSamples提供。AuthoritativeState注释同步空内容语义。App/PosterVisualWindow.Content.cs：空态／零成员计数去DEMO文案。Contracts.Tests/ContentLayoutPersistenceTests.EmptyDefault.cs新增5项，旧布局编辑／历史夹具显式创建样片。
+
+当前缺口锚点：Windows/NativeFileDropTarget.cs注册输入岛且accept仅传路径，Drop屏幕坐标未进入布局；PosterInputIslandManager.BuildWindowRegion按CapturesPointer建稀疏区域；App/PosterVisualWindow.Transfers.cs沿原捕获处理桌面拖出；PosterSpatialRuntime.Transfers.cs首选址／必要确认仍委托中心；ControlCenterWindow.Transfers.cs尚无默认根或实际迁移。新机制只在[方案](../../20_Architecture/DROP_SURFACE_AND_STORAGE_PROPOSAL.md)中，不把文档当代码完成。
+
 ## 2026-10-10 发布源码分支
 
 开发线38187bb保存基础拖放及此前未同步工作；impl/main的d6ca237单独退役测试工程、专用探针、启动分发和测试依赖，六个产品工程保持。scripts/package-preview.ps1显式传播SelfContained到ContentWorker并绑定Modules／Directory.Build.targets等发布输入，此打包修正单独回移开发线。发布线scripts/run.ps1先构建当前源码，避免分支切换后误用旧产物；该入口差异不等于开发线统一启动路径问题已全面解决。分支边界与下一次里程碑合并见[Git规则](../../../Rules/GIT_STRATEGY.md)。
