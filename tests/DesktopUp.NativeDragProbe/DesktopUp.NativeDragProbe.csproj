@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <UseWindowsForms>true</UseWindowsForms>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/DesktopUp.Windows/DesktopUp.Windows.csproj" />
+    <Compile Include="../Shared/DragProbe/*.cs" Link="Protocol/%(Filename)%(Extension)" />
+  </ItemGroup>
+</Project>

@@ -9,7 +9,7 @@ public sealed partial class ContentLayoutPersistenceTests
     [Fact]
     public void New_poster_guides_are_off_without_a_read_time_database_write()
     {
-        using var f = new Fixture();
+        using var f = new Fixture(Seed());
         var before = f.Repository.Read();
         var poster = before.Catalog.Posters[0].Poster;
         Assert.Null(poster.ContentLayoutJson);

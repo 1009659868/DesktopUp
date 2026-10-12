@@ -56,7 +56,8 @@ public sealed class ContentLayoutHistoryTransactionTests
         private readonly SqliteStateStore _store;private readonly SqliteStateCommandRepository _repository;
         public UserDataPaths Paths{get;}public StateProjectionCoordinator Coordinator{get;}
         public Fixture(){Paths=new(_root);_store=new(Paths);Assert.True(_store.Initialize().Succeeded);_repository=new(_store);Coordinator=new(_repository);
-            Coordinator.EnsureInitialized(PosterConfigurationFactory.NewBasicBox("A","DISPLAY1") with{PosterId="A",ThemeInstanceId="theme-A"});}
+            Coordinator.EnsureInitialized(PosterConfigurationFactory.NewBasicBox("A","DISPLAY1") with{PosterId="A",ThemeInstanceId="theme-A",
+                ContentLayoutJson=ContentLayoutPolicy.Serialize(ContentLayoutSamples.Equal("A"))});}
         public ContentLayoutDocument Read(){Assert.True(ContentLayoutPolicy.TryRead(_repository.Read().Catalog.Posters[0].Poster.ContentLayoutJson,"A",out var d,out var error),error);return d!;}
         public StateCommandResult Commit(ContentLayoutDocument before,ContentLayoutDocument desired)
         {

@@ -11,7 +11,7 @@ public sealed class SqliteStateStore : IStateStore
     private const int ApplicationId = 0x44555033; // "DUP3"
     private const int BusyTimeoutMilliseconds = 5_000;
     // 14 adds durable opening receipts/facts. Earlier migration text/checksums stay frozen.
-    private const int CurrentSchemaVersion = 18;
+    private const int CurrentSchemaVersion = 19;
     private const string DatabaseFileName = "desktopup.sqlite3";
     private static readonly Migration[] Migrations =
     [
@@ -232,7 +232,8 @@ public sealed class SqliteStateStore : IStateStore
         new(15, "card-icon-assets", SqliteContentIconStore.MigrationSql),
         new(16, "managed-transfer-journal", SqliteTransferJournal.MigrationSql),
         new(17, "preserved-transfer-closures", SqliteTransferJournal.ClosureMigrationSql),
-        new(18, "explicit-legacy-storage-adoption", ManagedStorageAdoption.MigrationSql)
+        new(18, "explicit-legacy-storage-adoption", ManagedStorageAdoption.MigrationSql),
+        new(19, "storage-location-relocation", SqliteStorageRelocationJournal.MigrationSql)
     ];
 
     private readonly object _gate = new();
@@ -251,7 +252,10 @@ public sealed class SqliteStateStore : IStateStore
     public int LatestSchemaVersion => CurrentSchemaVersion;
     internal string TransferLockPath => Path.Combine(_paths.State, "transfer-executor.lock");
     internal string TransferProfileIdentity => LocalTransferFiles.Identity(_paths.State);
+    internal long StorageRuntimeGeneration { get; } = Random.Shared.NextInt64(1, long.MaxValue);
     internal string StorageProvisionDirectory => Path.Combine(_paths.State,"storage-provisions");
+    internal string StorageRelocationDirectory => Path.Combine(_paths.State,"storage-relocations");
+    internal string StorageProfileRoot => _paths.Root;
     internal void PreserveTransferGuard()
     {
         string path=Path.Combine(_paths.State,SqliteTransferJournal.GuardFileName);
@@ -647,6 +651,7 @@ public sealed class SqliteStateStore : IStateStore
             if (migration.Version >= 16) SqliteTransferJournal.Verify(connection, transaction);
             if (migration.Version >= 17) SqliteTransferJournal.VerifyClosures(connection, transaction);
             if (migration.Version >= 18) ManagedStorageAdoption.Verify(connection, transaction);
+            if (migration.Version >= 19) SqliteStorageRelocationJournal.Verify(connection, transaction);
 
             string appliedUtc = DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture);
             using (SqliteCommand ledger = connection.CreateCommand())
@@ -766,6 +771,7 @@ public sealed class SqliteStateStore : IStateStore
         if (expectedVersion >= 16) SqliteTransferJournal.Verify(connection, null);
         if (expectedVersion >= 17) SqliteTransferJournal.VerifyClosures(connection, null);
         if (expectedVersion >= 18) ManagedStorageAdoption.Verify(connection, null);
+        if (expectedVersion >= 19) SqliteStorageRelocationJournal.Verify(connection, null);
         if (head.SchemaVersion != version)
         {
             throw new InvalidDataException(

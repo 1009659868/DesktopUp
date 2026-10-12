@@ -88,7 +88,7 @@ public sealed partial class SpatialContinuityIntegrationTests
     {
         using var f = new Fixture(false); LegacyStateDatabase.Create(f.Path, 5);
         using var store = new SqliteStateStore(f.Paths); var result = store.Initialize();
-        Assert.True(result.Succeeded, result.Error); Assert.Equal(5, result.PreviousSchemaVersion); Assert.Equal(18, result.Head!.SchemaVersion);
+        Assert.True(result.Succeeded, result.Error); Assert.Equal(5, result.PreviousSchemaVersion); Assert.Equal(19, result.Head!.SchemaVersion);
         Assert.Equal(5, store.ValidateBackup(System.IO.Path.Combine(f.Paths.Backups, result.PreMigrationBackupFileName!)).SchemaVersion);
         Assert.Empty(new SqliteStateCommandRepository(store).Read().SpatialContinuities);
     }

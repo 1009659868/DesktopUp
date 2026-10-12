@@ -171,11 +171,14 @@ internal sealed partial class PosterVisualWindow
         if(_disposed || _contentPresentationSuspended || _monitor is null || _bounds!=gesture.Frame || _posterEntityVersion!=gesture.EntityVersion ||
             _monitor.ScaleX!=gesture.ScaleX || _monitor.ScaleY!=gesture.ScaleY || _transitionLayout is not null)
         {CancelContentGesture("motion-basis-expired");return;}
+        double pointerX, pointerY;
+        try { (pointerX,pointerY)=ContentScreenCoordinates.ToViewport(motion.LatestPoint.X,motion.LatestPoint.Y,
+            _bounds.X,_bounds.Y,gesture.ScaleX,gesture.ScaleY,ContentLeftDip,ContentTopDip); }
+        catch (ArgumentException) { CancelContentGesture("pointer-budget"); return; }
         bool scrolled=false;
         if(edgeScroll)
         {
-            double x=(motion.LatestPoint.X-_bounds.X)/gesture.ScaleX-ContentLeftDip;
-            double y=(motion.LatestPoint.Y-_bounds.Y)/gesture.ScaleY-ContentTopDip;
+            double x=pointerX, y=pointerY;
             double Edge(double point,double extent)=>point < -64 || point > extent+64 ? 0 :
                 point<24 ? -8 : point>extent-24 ? 8 : 0;
             bool vertical=gesture.Snapshot.FlowAxis==ContentFlowAxis.Vertical;
@@ -198,8 +201,6 @@ internal sealed partial class PosterVisualWindow
         catch (ArgumentException) { CancelContentGesture("pointer-budget"); return; }
         gesture.PointerDeltaX=dx; gesture.PointerDeltaY=dy;
         gesture.GhostX=ghost.X; gesture.GhostY=ghost.Y;
-        double pointerX=(motion.LatestPoint.X-_bounds.X)/gesture.ScaleX-ContentLeftDip;
-        double pointerY=(motion.LatestPoint.Y-_bounds.Y)/gesture.ScaleY-ContentTopDip;
         var mapped=ContentDragPolicy.Map(gesture.Document,gesture.Snapshot,gesture.Viewport,gesture.Tile,
             gesture.Target==PosterInputTargetKind.ContentSpanHandle?ContentDragKind.Resize:ContentDragKind.Move,
             dx,dy,gesture.Navigation.ScrollDeltaXDip,gesture.Navigation.ScrollDeltaYDip);

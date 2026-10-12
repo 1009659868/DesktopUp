@@ -661,6 +661,7 @@ internal sealed partial class PosterVisualWindow(
     internal void CancelTitleCapture() => _inputIsland?.CancelPointerGesture();
     private void OnTitleInput(object? sender, TitleNativeInputEventArgs args)
     {
+        if(spatial.IsFileTransferActive(PosterId!)){args.Handled=true;return;}
         if (_disposed || !ReferenceEquals(sender, _inputIsland) || args.Capture.Press.Session != inputSession) return;
         if (args.Kind == TitleNativeInputKind.Press)
         {
@@ -673,6 +674,7 @@ internal sealed partial class PosterVisualWindow(
 
     private void OnInput(object? sender, PosterInputEventArgs args)
     {
+        if(spatial.IsFileTransferActive(PosterId!)){args.Handled=true;return;}
         if (_disposed || args.Session != inputSession || !ReferenceEquals(sender, _inputIsland)) return;
         if (HandleContentInput(args)) return;
         if (args.EventKind == PosterInputEventKind.GestureCancelled)

@@ -2,6 +2,11 @@ using DesktopUp.Infrastructure;
 using DesktopUp.Application;
 using DesktopUp.Domain;
 
+if(args.Length==3&&args[0]=="--storage-copy-crash")return StorageCopyCrashFixture.Run(args[1],args[2]);
+
+if(args is ["--storage-relocation-crash",var storageFixtureRoot,var storagePoint])
+    return StorageRelocationCrashFixture.Run(storageFixtureRoot,storagePoint);
+
 if(args is ["--prepare-adoption-review",var newReviewRoot])
 {
     string repo=AppContext.BaseDirectory;

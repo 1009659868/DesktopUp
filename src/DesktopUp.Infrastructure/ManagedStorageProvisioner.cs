@@ -59,6 +59,7 @@ public sealed partial class ManagedStorageProvisioner(SqliteStateStore store)
         if(preview.Fingerprint!=confirmedFingerprint)throw new IOException("目录预览尚未确认。");
         var journal=new SqliteTransferJournal(store);
         using var executor=journal.AcquireExecutor();
+        store.ExecuteRead((c,t)=>{SqliteStorageRelocationJournal.RequireNoPending(c,t);return 0;});
         var intent=preview.Intent;
         EnsureNotStopped(intent);
         using var rootLease=LocalTransferFiles.LockDirectory(intent.Root.Locator);
@@ -102,6 +103,8 @@ public sealed partial class ManagedStorageProvisioner(SqliteStateStore store)
     }
     internal static void ValidateRegistration(SqliteStateStore store,ManagedStorageRoot root,Collection collection)
     {
+        if(LocalTransferFiles.Exists(Path.Combine(root.Locator,StorageBundleOwnership.RootMarker)))
+        { StorageBundleOwnership.ValidateActive(store,root,collection);return; }
         if(!LocalTransferFiles.Exists(Path.Combine(root.Locator,RootMarker)))
         {ManagedStorageAdoption.ValidateActive(store,root,collection);return;}
         RejectAdoptedRoot(root.Locator);
@@ -115,6 +118,8 @@ public sealed partial class ManagedStorageProvisioner(SqliteStateStore store)
     }
     private static void RejectAdoptedRoot(string root)
     {
+        if(LocalTransferFiles.Exists(Path.Combine(root,StorageBundleOwnership.RootMarker)))
+            throw new IOException("This directory already has a multi-collection relocation owner; preserve its declaration.");
         if(LocalTransferFiles.Exists(Path.Combine(root,ManagedStorageAdoption.RootMarker)))
             throw new IOException("此目录已有显式认领记录；不能再作为新目录创建另一套所有权声明。");
     }

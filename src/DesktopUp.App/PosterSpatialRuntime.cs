@@ -39,6 +39,7 @@ internal sealed partial class PosterSpatialRuntime(IStateProjectionCoordinator s
     {
         CancelControlCenterVisuals();
         _suspended = true;
+        _incomingCancellation?.Cancel();
         foreach (var pending in _pendingPostures.Values.ToArray()) pending.Completed(Failure(pending.Command, "环境已失效。"));
         _pendingPostures.Clear();
         CancelTitle("environment-invalidated");

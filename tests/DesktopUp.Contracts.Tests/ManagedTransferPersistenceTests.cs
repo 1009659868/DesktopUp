@@ -124,7 +124,7 @@ public sealed class ManagedTransferPersistenceTests
         using var f=new Fixture();var state=f.State;
         f.Journal.Register(f.Root,f.Collection,new(new Dictionary<string,long>(),ContentVersion:state.ContentVersion));
         Assert.Single(f.State.ContentCatalog.Collections);Assert.Empty(f.State.ContentCatalog.Bindings);
-        Assert.Equal(state.Revision,f.State.Revision);Assert.Equal(18L,f.Sql("PRAGMA user_version"));
+        Assert.Equal(state.Revision,f.State.Revision);Assert.Equal(19L,f.Sql("PRAGMA user_version"));
     }
     [Fact] public void StaleStateBeforeExecutionRequiresNewPreview()
     {
@@ -143,7 +143,7 @@ public sealed class ManagedTransferPersistenceTests
     [Fact] public void NewMigrationFailureLeavesV15AndCreatesBackup()
     {
         using var f=new Fixture();
-        f.Sql("DROP TABLE managed_storage_adoptions; DROP TABLE content_transfer_closures; DROP TABLE storage_provision_closures; DROP TABLE content_transfer_items; DROP TABLE content_transfers; DROP TABLE managed_storage_collections; DROP TABLE managed_storage_roots; DELETE FROM schema_migrations WHERE version>=16; UPDATE state_head SET schema_version=15; PRAGMA user_version=15; CREATE TABLE content_transfers(collision TEXT);");
+        f.Sql(StorageSchemaFixture.Drop19+"DROP TABLE managed_storage_adoptions; DROP TABLE content_transfer_closures; DROP TABLE storage_provision_closures; DROP TABLE content_transfer_items; DROP TABLE content_transfers; DROP TABLE managed_storage_collections; DROP TABLE managed_storage_roots; DELETE FROM schema_migrations WHERE version>=16; UPDATE state_head SET schema_version=15; PRAGMA user_version=15; CREATE TABLE content_transfers(collision TEXT);");
         Assert.False(f.Store.Initialize().Succeeded);Assert.Equal(15L,f.Sql("PRAGMA user_version"));
         Assert.Equal(0L,f.Sql("SELECT count(*) FROM schema_migrations WHERE version=16"));
         Assert.NotEmpty(Directory.GetFiles(f.Paths.Backups,"*.sqlite3"));
@@ -261,7 +261,7 @@ public sealed class ManagedTransferPersistenceTests
     {
         using var f=new Fixture();f.AddReference(LocalContentReferenceProbe.Inspect(f.File("migration.txt")).Item!);
         string before=ContentCatalogCodec.Write(f.State.ContentCatalog);
-        f.Sql("DROP TABLE managed_storage_adoptions; DROP TABLE content_transfer_closures; DROP TABLE storage_provision_closures; DROP TABLE content_transfer_items; DROP TABLE content_transfers; DROP TABLE managed_storage_collections; DROP TABLE managed_storage_roots; DELETE FROM schema_migrations WHERE version>=16; UPDATE state_head SET schema_version=15; PRAGMA user_version=15;");
+        f.Sql(StorageSchemaFixture.Drop19+"DROP TABLE managed_storage_adoptions; DROP TABLE content_transfer_closures; DROP TABLE storage_provision_closures; DROP TABLE content_transfer_items; DROP TABLE content_transfers; DROP TABLE managed_storage_collections; DROP TABLE managed_storage_roots; DELETE FROM schema_migrations WHERE version>=16; UPDATE state_head SET schema_version=15; PRAGMA user_version=15;");
         var old=f.Sql("SELECT group_concat(checksum_sha256) FROM schema_migrations WHERE version<=15 ORDER BY version");
         var init=f.Store.Initialize();Assert.True(init.Succeeded,init.Error);Assert.Equal(15,init.PreviousSchemaVersion);
         Assert.Equal(old,f.Sql("SELECT group_concat(checksum_sha256) FROM schema_migrations WHERE version<=15 ORDER BY version"));
@@ -321,8 +321,8 @@ public sealed class ManagedTransferPersistenceTests
     }
     [Fact] public void MalformedOrFutureStateCannotAuthorizeAFileAction()
     {
-        using var f=new Fixture();f.Sql("UPDATE state_head SET schema_version=19; PRAGMA user_version=19;");
-        var init=f.Store.Initialize();Assert.False(init.Succeeded);Assert.Equal(19L,f.Sql("PRAGMA user_version"));
+        using var f=new Fixture();f.Sql("UPDATE state_head SET schema_version=20; PRAGMA user_version=20;");
+        var init=f.Store.Initialize();Assert.False(init.Succeeded);Assert.Equal(20L,f.Sql("PRAGMA user_version"));
     }
     [Fact] public void StorageRootCannotLiveInsideTemporaryOrApplicationStateData()
     {

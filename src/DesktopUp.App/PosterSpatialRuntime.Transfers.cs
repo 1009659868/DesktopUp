@@ -44,8 +44,7 @@ internal sealed partial class PosterSpatialRuntime
             RegisteredManagedStorage? storage=null;
             if(paths is not null)
             {
-                var locations=await Task.Run(journal.StorageLocations);
-                storage=locations.Count==1?locations[0]:await _chooseTransferStorage!();
+                storage=await _chooseTransferStorage!();
                 if(storage is null)return;
             }
             if(!Current())return;

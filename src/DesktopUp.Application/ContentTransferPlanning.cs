@@ -18,9 +18,15 @@ public sealed record ContentTransferEntry(ContentItem Item, TransferSourceFact S
     TransferDestinationFact Destination, Guid? OriginPosterItemId = null);
 public sealed record ContentTransferRequest(Guid OperationId, long RuntimeGeneration,
     string PosterId, ContentDropRoute Route, ContentDropModifiers Modifiers,
-    ManagedStorageRoot? Root, IReadOnlyList<ContentTransferEntry> Entries, int FormatVersion = 1);
+    ManagedStorageRoot? Root, IReadOnlyList<ContentTransferEntry> Entries, int FormatVersion = 1)
+{
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public IncomingContentPlacement? Placement { get; init; }
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public bool KeepSourceUntilCommit { get; init; }
+}
 public sealed record ContentTransferSnapshot(ContentCatalogSnapshot Catalog, long ContentVersion,
-    IReadOnlyDictionary<string, long> PosterVersions, bool PosterAcceptsTransfer);
+    IReadOnlyDictionary<string, long> PosterVersions, bool PosterAcceptsTransfer, bool TargetContainsDemo = true);
 public enum TransferPlanStatus { Ready, Invalid, Unsupported, Conflict, Collision, Unsafe, Unavailable }
 public sealed record TransferPlanResult(TransferPlanStatus Status, ContentTransferPlan? Plan = null, string? Reason = null);
 public sealed record PlannedContentTransfer(ContentTransferEntry Entry, bool SameLocation,
@@ -133,7 +139,7 @@ public static class ContentTransferPlanning
             bool legacyReference = entry.OriginPosterItemId is not null && !alreadyManaged;
             // Shared aliases/descendants must be visible even if they are in the same poster.
             bool shared = affected.Length > 1 || catalog.PosterItems.Count(p => memberIds.Contains(p.MembershipId)) > 1;
-            planned.Add(new(entry, same, Array.AsReadOnly(affected), Array.AsReadOnly(affectedPosters), legacyReference || shared || binding is null));
+            planned.Add(new(entry, same, Array.AsReadOnly(affected), Array.AsReadOnly(affectedPosters), legacyReference || shared || binding is null && state.TargetContainsDemo));
         }
         if (requiredPosters.Any(id => !state.PosterVersions.TryGetValue(id, out long version) || version < 1))
             return Reject(TransferPlanStatus.Conflict, "Missing affected poster version.");
@@ -189,6 +195,8 @@ public static class ContentTransferPlanning
         var text = new StringBuilder();
         void Add(object? value) { string s = Convert.ToString(value, CultureInfo.InvariantCulture) ?? ""; text.Append(s.Length).Append(':').Append(s); }
         Add(request.FormatVersion); Add(request.OperationId); Add(request.RuntimeGeneration); Add(request.PosterId); Add(request.Route); Add(request.Modifiers);
+        if (request.KeepSourceUntilCommit || request.Placement is not null)
+        { Add("incoming-placement-v1"); Add(request.KeepSourceUntilCommit); Add(StateRequestFingerprint.Compute(request.Placement)); }
         Add(request.Root is not null);
         if (request.Root is { } root)
         { Add(root.Id); Add(root.Locator); Add(root.ObjectIdentity); Add(root.Version); Add(root.FormatVersion); Add(root.Location); Add(root.Available); Add(root.Writable); }

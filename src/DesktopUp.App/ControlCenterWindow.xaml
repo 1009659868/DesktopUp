@@ -158,7 +158,7 @@
        <MenuFlyoutItem Text="创建本机备份" Click="PortableBackup_Click" AutomationProperties.AutomationId="PortableBackup"/>
        <MenuFlyoutItem Text="从本机备份恢复…" Click="PortableRecovery_Click" AutomationProperties.AutomationId="PortableRecovery"/>
        <MenuFlyoutSeparator/>
-       <MenuFlyoutItem Text="收纳存储目录…" Click="ManagedStorage_Click" AutomationProperties.AutomationId="ManagedStorage"/>
+       <MenuFlyoutItem Text="收纳位置…" Click="ManagedStorage_Click" AutomationProperties.AutomationId="ManagedStorage"/>
        <MenuFlyoutItem x:Name="TransferRecoveryMenu" Text="异常文件位置…" Visibility="Collapsed" Click="TransferRecovery_Click" AutomationProperties.AutomationId="TransferRecovery"/>
       </MenuFlyoutSubItem>
      </MenuFlyout></DropDownButton.Flyout></DropDownButton>
@@ -181,6 +181,10 @@
     <DropDownButton.Flyout><Flyout><StackPanel x:Name="UiCGlobalPanel" Spacing="12" Width="260">
      <TextBlock Text="全局 · 全部海报" FontWeight="SemiBold"/><TextBlock x:Name="SettingsDetailText" TextWrapping="Wrap"/>
      <Button x:Name="PauseButton" Click="PauseButton_Click" Content="暂停提示动效" Style="{StaticResource UiCAction}"/>
+     <Grid ColumnSpacing="8"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+      <TextBlock Text="收纳位置" VerticalAlignment="Center"/>
+      <Button Grid.Column="1" Content="查看 / 更改…" Click="ManagedStorage_Click" Style="{StaticResource UiCAction}"/>
+     </Grid>
     </StackPanel></Flyout></DropDownButton.Flyout>
    </DropDownButton>
    </StackPanel>

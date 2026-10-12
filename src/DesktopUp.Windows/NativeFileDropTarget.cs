@@ -17,54 +17,70 @@ public interface IPhysicalFileDropTarget
     [PreserveSig] int Drop([MarshalAs(UnmanagedType.Interface)] IDataObject data,uint keys,FileDropPoint point,ref uint effect);
 }
 
-// Registered on the existing shaped input HWND, never on a full-screen overlay.
+// One registration on a host-owned bounded HWND, never a full-screen overlay.
 // CF_HDROP strings are snapshotted; no COM object/temporary virtual stream outlives Drop.
 [ComVisible(true),ClassInterface(ClassInterfaceType.None)]
 public sealed class NativeFileDropTarget : IPhysicalFileDropTarget,IDisposable
 {
     private readonly nint window;
-    private readonly Func<bool> available;
-    private readonly Action<string[]> accept;
-    private readonly IStructuredLog log;
+    private readonly NativeIncomingDropSession session;
     private IDisposable? lease;
-    private string[]? paths;
     private bool disposed;
-    public bool IsHovering=>paths is not null&&!disposed;
-    public NativeFileDropTarget(nint window,Func<bool> available,Action<string[]> accept,IResourceLedger ledger,IStructuredLog log)
+    public bool IsHovering => session.IsHovering;
+    internal Action? DropFinished { get; set; }
+
+    // Compatibility path retains append semantics until D3 landing transactions are connected.
+    public NativeFileDropTarget(nint window, Func<bool> available, Action<string[]> accept, IResourceLedger ledger, IStructuredLog log)
+        : this(window, LegacySurface(window, available), ticket => accept(ticket.Paths.ToArray()), ledger, log, null, false) { }
+
+    public NativeFileDropTarget(nint window, Func<IncomingDropSurface?> surface, Action<IncomingDropTicket> accept,
+        IResourceLedger ledger, IStructuredLog log, Action<IncomingDropPreview?>? changed = null)
+        : this(window, surface, accept, ledger, log, changed, true) { }
+
+    private NativeFileDropTarget(nint window, Func<IncomingDropSurface?> surface, Action<IncomingDropTicket> accept,
+        IResourceLedger ledger, IStructuredLog log, Action<IncomingDropPreview?>? changed, bool useShellImages)
     {
-        this.window=window;this.available=available;this.accept=accept;this.log=log;
-        int initialized=OleInitialize(0);
-        if(initialized<0)Marshal.ThrowExceptionForHR(initialized);
-        try { Marshal.ThrowExceptionForHR(RegisterDragDrop(window,this));lease=ledger.Acquire("ole.file-drop-target","poster-input"); }
-        catch { OleUninitialize();throw; }
-    }
-    private bool Allowed(uint keys,uint effects) => !disposed && paths is {Length:>0} && (effects&2)!=0 &&
-        // Control/Alt/right-button intentions must never silently become Move.
-        (keys&(8u|32u|2u))==0 && available();
-    public int DragEnter(IDataObject data,uint keys,FileDropPoint point,ref uint effect)
-    {
-        try { paths=ReadPaths(data);effect=Allowed(keys,effect)?2u:0; }
-        catch(Exception e){paths=null;effect=0;log.Write("warning","transfer.payload_refused",new {e.Message});}
-        return 0;
-    }
-    public int DragOver(uint keys,FileDropPoint point,ref uint effect)
-    {try{effect=Allowed(keys,effect)?2u:0;}catch{effect=0;}return 0;}
-    public int DragLeave(){paths=null;return 0;}
-    public int Drop(IDataObject data,uint keys,FileDropPoint point,ref uint effect)
-    {
-        uint offered=effect;effect=0;
+        this.window = window;
+        int initialized = OleInitialize(0);
+        if (initialized < 0) Marshal.ThrowExceptionForHR(initialized);
+        bool registered = false;
+        NativeIncomingDropSession? created = null;
         try
         {
-            if(!Allowed(keys,offered))return 0;
-            var snapshot=ReadPaths(data);
-            if(snapshot is null || paths is null || !snapshot.SequenceEqual(paths,StringComparer.OrdinalIgnoreCase))return 0;
-            paths=null;accept(snapshot);
-            // We queued OUR journaled move. NONE deliberately authorizes no source deletion.
-            // Completion is published by the application, never inferred from Shell's effect.
+            created = new(window, surface, accept, useShellImages ? new ShellDropImages() : new LegacyImages(), log, changed);
+            session = created;
+            Marshal.ThrowExceptionForHR(RegisterDragDrop(window, this));
+            registered = true;
+            lease = ledger.Acquire("ole.file-drop-target", "poster-input");
         }
-        catch(Exception e){log.Write("warning","transfer.drop_refused",new {e.Message});}
-        finally{paths=null;}
-        return 0;
+        catch
+        {
+            if (registered) _ = RevokeDragDrop(window);
+            created?.Dispose(); OleUninitialize(); throw;
+        }
+    }
+    private static Func<IncomingDropSurface?> LegacySurface(nint window, Func<bool> available)
+    {
+        Guid run = Guid.NewGuid();
+        return () => available() && GetWindowRect(window, out var r)
+            ? new(run, "legacy-append", 0, 1, 0, new(r.Left, r.Top, r.Right - r.Left, r.Bottom - r.Top),
+                1, 1, new(0, 0, 0, 0), DesktopUp.Domain.ContentFlowAxis.Vertical) : null;
+    }
+    private sealed class LegacyImages : INativeDropImages
+    {
+        public void Enter(nint window, IDataObject data, FileDropPoint point, uint effect) { }
+        public void Over(FileDropPoint point, uint effect) { }
+        public void Leave() { }
+        public void Drop(IDataObject data, FileDropPoint point, uint effect) { }
+        public void Dispose() { }
+    }
+    public int DragEnter(IDataObject data, uint keys, FileDropPoint point, ref uint effect) => session.DragEnter(data, keys, point, ref effect);
+    public int DragOver(uint keys, FileDropPoint point, ref uint effect) => session.DragOver(keys, point, ref effect);
+    public int DragLeave() => session.DragLeave();
+    public int Drop(IDataObject data, uint keys, FileDropPoint point, ref uint effect)
+    {
+        try{return session.Drop(data, keys, point, ref effect);}
+        finally{try{DropFinished?.Invoke();}catch{ /* never cross the COM boundary */ }}
     }
     public static string[]? ReadPaths(IDataObject data)
     {
@@ -91,9 +107,14 @@ public sealed class NativeFileDropTarget : IPhysicalFileDropTarget,IDisposable
     }
     public void Dispose()
     {
-        if(disposed)return;disposed=true;paths=null;
-        _=RevokeDragDrop(window);lease?.Dispose();lease=null;OleUninitialize();
+        if (disposed) return;
+        disposed = true;
+        try { _ = RevokeDragDrop(window); session.Dispose(); }
+        finally { lease?.Dispose(); lease = null; OleUninitialize(); }
     }
+    [StructLayout(LayoutKind.Sequential)] private struct NativeRect { public int Left, Top, Right, Bottom; }
+    [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetWindowRect(nint window, out NativeRect rect);
     [DllImport("ole32.dll")] private static extern int OleInitialize(nint reserved);
     [DllImport("ole32.dll")] private static extern void OleUninitialize();
     [DllImport("ole32.dll")] private static extern int RegisterDragDrop(nint window,[MarshalAs(UnmanagedType.Interface)] IPhysicalFileDropTarget target);

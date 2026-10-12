@@ -65,6 +65,8 @@ public sealed class SqliteStateCommandRepository(SqliteStateStore store) : IStat
 
         StateMutationPlan plan = prepare(before);
         if (plan.Rejection is { } rejected) return Result(rejected, plan.Error);
+        if (!SqliteStorageRelocationJournal.AllowsMutation(connection, transaction, plan))
+            return Result(StateCommandStatus.Conflict, "Storage relocation owns the affected content; retry after it finishes.");
         if (plan.TransferReceiptId != authorizedTransferId)
             return Result(StateCommandStatus.ValidationFailed, "Only the verified transfer transaction may mutate storage membership.");
         if (!SqliteTransferJournal.ValidStorageRemoval(connection, transaction, plan))
@@ -191,7 +193,7 @@ public sealed class SqliteStateCommandRepository(SqliteStateStore store) : IStat
         return null;
     }
 
-    private static void AdvanceHead(SqliteConnection connection, SqliteTransaction transaction, long previous, string operationId)
+    internal static void AdvanceHead(SqliteConnection connection, SqliteTransaction transaction, long previous, string operationId)
     {
         using SqliteCommand command = connection.CreateCommand();
         command.Transaction = transaction;

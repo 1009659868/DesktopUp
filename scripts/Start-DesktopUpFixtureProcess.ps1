@@ -18,6 +18,8 @@ function Start-DesktopUpFixtureProcess {
     $taskStart.Arguments = $Arguments
     $taskStart.WindowStyle = [System.Diagnostics.ProcessWindowStyle]$WindowStyle
     $taskStart.EnvironmentVariables['DESKTOPUP_V3_TEST_DATA_ROOT'] = $DataRoot
+    # Storage is explicitly isolated OUTSIDE the profile/cache tree; never the daily default.
+    $taskStart.EnvironmentVariables['DESKTOPUP_V3_TEST_STORAGE_BASE'] = $DataRoot + '.storage'
     $taskStart.EnvironmentVariables['DESKTOPUP_V3_MENU_DIAGNOSTICS'] = $(if ($MenuDiagnostics) { '1' } else { '0' })
     # Test-only poster footer/callout. Explicitly clear inherited opt-in for human review.
     $taskStart.EnvironmentVariables['DESKTOPUP_TEST_CONTENT_FEEDBACK'] = $(if ($ContentFeedbackDiagnostics) { '1' } else { '0' })

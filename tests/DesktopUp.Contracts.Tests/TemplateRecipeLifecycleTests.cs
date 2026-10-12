@@ -196,11 +196,11 @@ public sealed class TemplateRecipeLifecycleTests
         using (var connection = new SqliteConnection($"Data Source={System.IO.Path.Combine(f.Path, "state", "desktopup.sqlite3")};Pooling=False"))
         {
             connection.Open(); using var command = connection.CreateCommand();
-            command.CommandText = "DROP TABLE managed_storage_adoptions; DROP TABLE content_transfer_closures; DROP TABLE storage_provision_closures; DROP TABLE content_transfer_items; DROP TABLE content_transfers; DROP TABLE managed_storage_collections; DROP TABLE managed_storage_roots; DROP TABLE content_icon_assets; DROP TABLE content_open_facts; DROP TABLE content_open_requests; DROP TABLE content_demo_archive; DROP TABLE content_poster_items; DROP TABLE content_poster_bindings; DROP TABLE content_memberships; DROP TABLE content_collections; DROP TABLE content_items; DROP TABLE content_head; ALTER TABLE app_settings DROP COLUMN center_theme; ALTER TABLE app_settings DROP COLUMN template_catalog_json; DELETE FROM schema_migrations WHERE version>=12; UPDATE state_head SET schema_version=11; PRAGMA user_version=11;";
+            command.CommandText = StorageSchemaFixture.Drop19+"DROP TABLE managed_storage_adoptions; DROP TABLE content_transfer_closures; DROP TABLE storage_provision_closures; DROP TABLE content_transfer_items; DROP TABLE content_transfers; DROP TABLE managed_storage_collections; DROP TABLE managed_storage_roots; DROP TABLE content_icon_assets; DROP TABLE content_open_facts; DROP TABLE content_open_requests; DROP TABLE content_demo_archive; DROP TABLE content_poster_items; DROP TABLE content_poster_bindings; DROP TABLE content_memberships; DROP TABLE content_collections; DROP TABLE content_items; DROP TABLE content_head; ALTER TABLE app_settings DROP COLUMN center_theme; ALTER TABLE app_settings DROP COLUMN template_catalog_json; DELETE FROM schema_migrations WHERE version>=12; UPDATE state_head SET schema_version=11; PRAGMA user_version=11;";
             command.ExecuteNonQuery();
         }
         using var upgraded = new SqliteStateStore(new UserDataPaths(f.Path)); var result = upgraded.Initialize();
-        Assert.True(result.Succeeded, result.Error); Assert.Equal(11, result.PreviousSchemaVersion); Assert.Equal(18, result.Head!.SchemaVersion);
+        Assert.True(result.Succeeded, result.Error); Assert.Equal(11, result.PreviousSchemaVersion); Assert.Equal(19, result.Head!.SchemaVersion);
         Assert.Equal(before.Revision, result.Head.Revision);
         var snapshot = new SqliteStateCommandRepository(upgraded).Read();
         Assert.Equal(before.PostersById["A"].Poster, snapshot.Catalog.Posters.Single().Poster);

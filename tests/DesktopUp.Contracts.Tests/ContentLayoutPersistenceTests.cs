@@ -43,12 +43,13 @@ public sealed partial class ContentLayoutPersistenceTests
     [Fact]
     public void Legacy_null_reads_are_virtual_stable_and_do_not_write_or_change_old_fingerprint()
     {
-        using var f = new Fixture();
+        using var f = new Fixture(Seed());
         var before = f.Repository.Read();
         Assert.Null(before.Catalog.Posters[0].Poster.ContentLayoutJson);
         Assert.DoesNotContain("ContentLayoutJson", JsonSerializer.Serialize(before.Catalog.Posters[0].Poster));
         Assert.True(ContentLayoutPolicy.TryRead(null, "A", out var first, out _));
         Assert.True(ContentLayoutPolicy.TryRead(null, "A", out var second, out _));
+        Assert.Empty(first!.Placements);
         Assert.Equal(ContentLayoutPolicy.Serialize(first!), ContentLayoutPolicy.Serialize(second!));
         Assert.Equal(before.Revision, f.Repository.Read().Revision);
         Assert.Null(f.Repository.Read().Catalog.Posters[0].Poster.ContentLayoutJson);
@@ -96,19 +97,21 @@ public sealed partial class ContentLayoutPersistenceTests
             _ => command with { DesiredDocument = ContentLayoutSamples.Equal("B") with { DocumentVersion = 2 } }
         };
         long before = f.Repository.Read().Revision;
+        string? original = f.Repository.Read().Catalog.Posters[0].Poster.ContentLayoutJson;
         Assert.False(f.Coordinator.Execute(command).Succeeded);
         Assert.Equal(before, f.Repository.Read().Revision);
-        Assert.Null(f.Repository.Read().Catalog.Posters[0].Poster.ContentLayoutJson);
+        Assert.Equal(original, f.Repository.Read().Catalog.Posters[0].Poster.ContentLayoutJson);
     }
 
     [Fact]
     public void Same_poster_noncontent_intervention_conflicts_without_overwriting_it()
     {
         using var f = new Fixture(); var command = f.Edit();
+        string? original = f.Repository.Read().Catalog.Posters[0].Poster.ContentLayoutJson;
         Assert.True(f.Rename("intervened").Succeeded);
         Assert.Equal(StateCommandStatus.Conflict, f.Coordinator.Execute(command).Status);
         Assert.Equal("intervened", f.Repository.Read().Catalog.Posters[0].Poster.Title);
-        Assert.Null(f.Repository.Read().Catalog.Posters[0].Poster.ContentLayoutJson);
+        Assert.Equal(original, f.Repository.Read().Catalog.Posters[0].Poster.ContentLayoutJson);
     }
 
     [Fact]
@@ -184,12 +187,12 @@ public sealed partial class ContentLayoutPersistenceTests
     [Fact]
     public void V9_migration_keeps_legacy_parameters_null_layout_revision_and_source_backup()
     {
-        using var f = new Fixture(); var before = f.Repository.Read();
+        using var f = new Fixture(Seed()); var before = f.Repository.Read();
         // Rolling back to v9 must clear every migration ledger row at or above the dropped version,
         // otherwise re-applying a later migration collides with the retained ledger entry.
-        f.Sql("DROP TABLE managed_storage_adoptions; DROP TABLE content_transfer_closures; DROP TABLE storage_provision_closures; DROP TABLE content_transfer_items; DROP TABLE content_transfers; DROP TABLE managed_storage_collections; DROP TABLE managed_storage_roots; DROP TABLE content_icon_assets; DROP TABLE content_open_facts; DROP TABLE content_open_requests; DROP TABLE content_demo_archive; DROP TABLE content_poster_items; DROP TABLE content_poster_bindings; DROP TABLE content_memberships; DROP TABLE content_collections; DROP TABLE content_items; DROP TABLE content_head; ALTER TABLE posters DROP COLUMN content_layout_json; ALTER TABLE app_settings DROP COLUMN center_theme; ALTER TABLE app_settings DROP COLUMN template_catalog_json; DELETE FROM schema_migrations WHERE version>=10; UPDATE state_head SET schema_version=9; PRAGMA user_version=9;");
+        f.Sql(StorageSchemaFixture.Drop19+"DROP TABLE managed_storage_adoptions; DROP TABLE content_transfer_closures; DROP TABLE storage_provision_closures; DROP TABLE content_transfer_items; DROP TABLE content_transfers; DROP TABLE managed_storage_collections; DROP TABLE managed_storage_roots; DROP TABLE content_icon_assets; DROP TABLE content_open_facts; DROP TABLE content_open_requests; DROP TABLE content_demo_archive; DROP TABLE content_poster_items; DROP TABLE content_poster_bindings; DROP TABLE content_memberships; DROP TABLE content_collections; DROP TABLE content_items; DROP TABLE content_head; ALTER TABLE posters DROP COLUMN content_layout_json; ALTER TABLE app_settings DROP COLUMN center_theme; ALTER TABLE app_settings DROP COLUMN template_catalog_json; DELETE FROM schema_migrations WHERE version>=10; UPDATE state_head SET schema_version=9; PRAGMA user_version=9;");
         using var migrated = new SqliteStateStore(f.Paths); var result = migrated.Initialize();
-        Assert.True(result.Succeeded, result.Error); Assert.Equal(9, result.PreviousSchemaVersion); Assert.Equal(18, result.Head!.SchemaVersion);
+        Assert.True(result.Succeeded, result.Error); Assert.Equal(9, result.PreviousSchemaVersion); Assert.Equal(19, result.Head!.SchemaVersion);
         Assert.Equal(before.Revision, result.Head.Revision);
         var row = new SqlitePosterRepository(migrated).Read("A")!;
         Assert.Equal(before.Catalog.Posters[0].Poster, row.Poster); Assert.Null(row.Poster.ContentLayoutJson);
@@ -206,7 +209,9 @@ public sealed partial class ContentLayoutPersistenceTests
         public Fixture(PosterDefinition? seed = null)
         {
             Paths = new(_root); Store = new(Paths); Assert.True(Store.Initialize().Succeeded);
-            Repository = new(Store); Coordinator = new(Repository); Coordinator.EnsureInitialized(seed ?? Seed());
+            // Editing tests explicitly request sample content; production defaults are empty.
+            Repository = new(Store); Coordinator = new(Repository); Coordinator.EnsureInitialized(seed ?? Seed() with
+                { ContentLayoutJson = ContentLayoutPolicy.Serialize(ContentLayoutSamples.Equal("A")) });
         }
         public UserDataPaths Paths { get; }
         public SqliteStateStore Store { get; }

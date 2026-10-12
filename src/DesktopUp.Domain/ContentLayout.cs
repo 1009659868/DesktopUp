@@ -239,7 +239,9 @@ public static class ContentLayoutPolicy
     public static bool TryRead(string? text, string posterId, out ContentLayoutDocument? document, out string? error)
     {
         document = null; error = null;
-        if (text is null) { document = ContentLayoutSamples.Equal(posterId); return true; }
+        // A new/legacy poster without authored content is empty. Demo fixtures must opt in
+        // by persisting an explicit sample; a read must never invent six fake members.
+        if (text is null) { document = new ContentLayoutDocument(posterId, []); return true; }
         try
         {
             if (System.Text.Encoding.UTF8.GetByteCount(text) > MaximumJsonBytes) throw new ArgumentException("Layout JSON exceeds capacity.");

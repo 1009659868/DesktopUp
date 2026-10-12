@@ -47,6 +47,7 @@ public sealed class SqliteContentOpenJournal(SqliteStateStore store) : IContentO
         old.CommandText = "SELECT request_json FROM content_open_requests WHERE activation_id=$id;";
         old.Parameters.AddWithValue("$id", request.ActivationId.ToString());
         if (old.ExecuteScalar() is string known) return known == body ? ContentOpenRequestAdmission.Duplicate : ContentOpenRequestAdmission.Conflict;
+        if (!SqliteStorageRelocationJournal.AllowsOpen(c,t,request)) return ContentOpenRequestAdmission.Busy;
         var state = ContentOpenContract.Start(ContentOpenContract.Begin(request), SqliteContentRepository.Read(c,t));
         if (state.State.Phase != ContentOpenPhase.Running) return ContentOpenRequestAdmission.Conflict;
         string hash = StateRequestFingerprint.Compute(new { request.Source.ProviderId, request.Target });

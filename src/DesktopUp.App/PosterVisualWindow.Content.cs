@@ -154,8 +154,9 @@ internal sealed partial class PosterVisualWindow
         _contentCanvas.Clip = new RectangleGeometry { Rect = new global::Windows.Foundation.Rect(0, 0, viewport.WidthDip, viewport.HeightDip) };
         _itemColumnCount = snapshot.Columns;
         var doc = ContentDocument;
-        if (_footer?.Children.OfType<TextBlock>().FirstOrDefault() is { } count) count.Text=$"{doc.Placements.Count} {(IsRealContent ? "ITEMS" : "DEMO ITEMS")}";
-        if (_metaPanel?.Children.OfType<TextBlock>().LastOrDefault() is { } metaCount) metaCount.Text=$"{doc.Placements.Count:00} {(IsRealContent ? "ITEMS" : "DEMO ITEMS")}";
+        string itemKind = IsRealContent || doc.Placements.Count == 0 ? "ITEMS" : "DEMO ITEMS";
+        if (_footer?.Children.OfType<TextBlock>().FirstOrDefault() is { } count) count.Text=$"{doc.Placements.Count} {itemKind}";
+        if (_metaPanel?.Children.OfType<TextBlock>().LastOrDefault() is { } metaCount) metaCount.Text=$"{doc.Placements.Count:00} {itemKind}";
         // Lamp paint and host title ink never invalidate card identity or solver geometry.
         var cardPresentation = _presentation with { Parameters = _presentation.Parameters with { Lamp = null, TitleColors = null, ShowTitle = null } };
         string paintKey = $"{doc.DocumentVersion}/{_contentSourceVersion}/{_mode}/{_selectedContentItem}/{cardPresentation}/{doc.ShowBaselineGrid}/{doc.ShowSpanLabels}";
@@ -205,7 +206,7 @@ internal sealed partial class PosterVisualWindow
         // No scrollbar chrome on either edge. Content stays reachable through the wheel, the drag-edge
         // auto-scroll and the clamped extent; hiding a bar is never used to make content unreachable.
         if (_contentParseReadOnly || _contentProjectionFault || doc.Placements.Count == 0)
-            _contentCanvas.Children.Add(new TextBlock { Text=_contentProjectionFault ? "当前布局无法安全呈现 · 原配置保留" : _contentReadOnly ? "布局版本暂不支持 · 原配置只读保留" : IsRealContent ? "暂无内容 · 可添加引用" : "暂无内容 · DEMO 布局", FontSize=12, TextWrapping=TextWrapping.Wrap, Width=viewport.WidthDip, Foreground=ColorBrush(_presentation.Parameters.Theme.Foreground,170) });
+            _contentCanvas.Children.Add(new TextBlock { Text=_contentProjectionFault ? "当前布局无法安全呈现 · 原配置保留" : _contentReadOnly ? "布局版本暂不支持 · 原配置只读保留" : "暂无内容", FontSize=12, TextWrapping=TextWrapping.Wrap, Width=viewport.WidthDip, Foreground=ColorBrush(_presentation.Parameters.Theme.Foreground,170) });
     }
 
     private FrameworkElement CreateContentCard(ContentItemView item, ContentPlacement placement, ContentResolvedPlacement slot)

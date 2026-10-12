@@ -68,6 +68,7 @@ public sealed class PosterInputIslandManager : IInputRegionHost
     private DesktopShellHostSnapshot? _contextDesktopHost;
     private PosterInputCapture? _capture;
     private bool _routingSuspended;
+    private PosterDropReception? _dropReception;
     private PosterInputLayoutSnapshot? _layout;
     private PosterInputRegion? _pressedRegion;
     private DesktopPixelRect _frame;
@@ -104,6 +105,19 @@ public sealed class PosterInputIslandManager : IInputRegionHost
     public nint WindowHandle { get; private set; }
 
     public long AppliedLayoutRevision => _layout?.Revision ?? 0;
+    public IPosterDropRegistration InstallDropReceiver(Func<IncomingDropSurface?> surface,
+        Action<IncomingDropTicket> accept,Action<IncomingDropPreview?>? changed=null)
+    {
+        ObjectDisposedException.ThrowIf(_disposed,this);
+        if(_routingSuspended||WindowHandle==0||_contextDesktopHost is null||_dropReception?.IsReady==true)
+            throw new InvalidOperationException("Input host is not ready for drop registration.");
+        _dropReception?.Dispose();
+        _dropReception=new PosterDropReception(_attachment,_contextDesktopHost,_frame,
+            ()=>!_routingSuspended&&_router.Capture is null&&!DesktopMenuInteraction.IsActive?surface():null,
+            accept,_ledger,_log,changed,_reassertClusterBottom);
+        if(!_reassertClusterBottom()){_dropReception.Dispose();throw new IOException("Drop component layer unavailable.");}
+        return _dropReception;
+    }
     public bool IsNativeInputTransparent => new NativeDesktopMenuPlatform().IsInputTransparent(WindowHandle);
 
     public event EventHandler<PosterInputEventArgs>? Input;
@@ -143,6 +157,7 @@ public sealed class PosterInputIslandManager : IInputRegionHost
 
     private void DisableRoutingNative()
     {
+        _dropReception?.Suspend();
         _contextPress = null; _contextPressPoint = null;
         _router.Invalidate(_session);
         _routingSuspended = true;
@@ -326,6 +341,7 @@ public sealed class PosterInputIslandManager : IInputRegionHost
             _router.Publish(_session, frame, layout))
         {
             _routingSuspended = false;
+            _dropReception?.ApplyFrame(frame);
             return true;
         }
         DisableRoutingNative();
@@ -354,15 +370,20 @@ public sealed class PosterInputIslandManager : IInputRegionHost
         {
             _desktopGeneration = desktopHost.Generation;
             _contextDesktopHost = desktopHost;
+            _dropReception?.Reattach(desktopHost);
+            if(!_routingSuspended)_dropReception?.ApplyFrame(_frame);
         }
         return result.Succeeded;
     }
 
-    public bool ReassertDesktopBottom(DesktopShellHostSnapshot desktopHost) =>
-        !_disposed &&
+    public bool ReassertDesktopBottom(DesktopShellHostSnapshot desktopHost)
+    {
+        _dropReception?.Reassert(desktopHost);
+        return !_disposed &&
         WindowHandle != 0 &&
         _desktopGeneration == desktopHost.Generation &&
         _attachment.ReassertDesktopBottom(WindowHandle, desktopHost);
+    }
 
     public bool IsAttached(DesktopShellHostSnapshot desktopHost) =>
         !_disposed &&
@@ -1017,6 +1038,7 @@ public sealed class PosterInputIslandManager : IInputRegionHost
         }
         DesktopMenuInteraction.CancelForSurface(WindowHandle);
         StopContentCaptureTimer();
+        _dropReception?.Dispose();_dropReception=null;
         _contentClaimed = false;
         _disposed = true;
         _contextPress = null; _contextPressPoint = null;

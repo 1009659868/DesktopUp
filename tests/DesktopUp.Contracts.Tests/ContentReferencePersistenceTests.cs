@@ -10,7 +10,7 @@ public sealed class ContentReferencePersistenceTests
     [Fact] public void FreshSchemaIsEmptyAndDoesNotConvertDemo()
     {
         using var f = new Fixture();
-        Assert.Equal(18L, f.Sql("PRAGMA user_version"));
+        Assert.Equal(19L, f.Sql("PRAGMA user_version"));
         Assert.Empty(f.Current.ContentCatalog.Items); Assert.Equal(0, f.Current.ContentVersion);
         Assert.Null(f.Current.PostersById[f.Main].Poster.ContentLayoutJson);
         Assert.Equal(0L, f.Sql("SELECT count(*) FROM content_demo_archive"));
@@ -140,7 +140,7 @@ public sealed class ContentReferencePersistenceTests
         var history = f.Sql("SELECT group_concat(checksum_sha256) FROM schema_migrations WHERE version<=12");
         f.DowngradeToTwelve();
         Assert.True(f.Store.Initialize().Succeeded);
-        Assert.Equal(18L, f.Sql("PRAGMA user_version")); Assert.Equal(history, f.Sql("SELECT group_concat(checksum_sha256) FROM schema_migrations WHERE version<=12"));
+        Assert.Equal(19L, f.Sql("PRAGMA user_version")); Assert.Equal(history, f.Sql("SELECT group_concat(checksum_sha256) FROM schema_migrations WHERE version<=12"));
         Assert.Equal(raw, new SqliteStateCommandRepository(f.Store).Read().Catalog.Posters.Single().Poster.ContentLayoutJson);
         Assert.Empty(f.Current.ContentCatalog.Items);
         if (unknown) Assert.False(f.Coordinator.Execute(f.AddCommand(f.Main, Entry())).Succeeded);
@@ -194,7 +194,7 @@ public sealed class ContentReferencePersistenceTests
             using var q = c.CreateCommand(); q.CommandText = "UPDATE posters SET content_layout_json=$raw"; q.Parameters.AddWithValue("$raw", raw); q.ExecuteNonQuery();
             Coordinator.Refresh();
         }
-        public void DowngradeToTwelve() => Sql("DROP TABLE managed_storage_adoptions; DROP TABLE content_transfer_closures; DROP TABLE storage_provision_closures; DROP TABLE content_transfer_items; DROP TABLE content_transfers; DROP TABLE managed_storage_collections; DROP TABLE managed_storage_roots; DROP TABLE content_icon_assets; DROP TABLE content_open_facts; DROP TABLE content_open_requests; DROP TABLE content_demo_archive; DROP TABLE content_poster_items; DROP TABLE content_poster_bindings; DROP TABLE content_memberships; DROP TABLE content_collections; DROP TABLE content_items; DROP TABLE content_head; DELETE FROM schema_migrations WHERE version>=13; UPDATE state_head SET schema_version=12; PRAGMA user_version=12;");
+        public void DowngradeToTwelve() => Sql(StorageSchemaFixture.Drop19+"DROP TABLE managed_storage_adoptions; DROP TABLE content_transfer_closures; DROP TABLE storage_provision_closures; DROP TABLE content_transfer_items; DROP TABLE content_transfers; DROP TABLE managed_storage_collections; DROP TABLE managed_storage_roots; DROP TABLE content_icon_assets; DROP TABLE content_open_facts; DROP TABLE content_open_requests; DROP TABLE content_demo_archive; DROP TABLE content_poster_items; DROP TABLE content_poster_bindings; DROP TABLE content_memberships; DROP TABLE content_collections; DROP TABLE content_items; DROP TABLE content_head; DELETE FROM schema_migrations WHERE version>=13; UPDATE state_head SET schema_version=12; PRAGMA user_version=12;");
         public void Dispose() { Store.Dispose(); SqliteConnection.ClearAllPools(); Directory.Delete(root, true); }
     }
 }

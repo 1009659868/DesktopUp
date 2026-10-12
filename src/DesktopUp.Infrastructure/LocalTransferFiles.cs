@@ -11,9 +11,15 @@ namespace DesktopUp.Infrastructure;
 public sealed record LocalTransferObject(string RelativePath, string Identity, long Length, string Sha256, bool Directory);
 public sealed record LocalTransferFilePlan(string Source, string Destination, string ParentIdentity,
     IReadOnlyList<LocalTransferObject> Objects, bool SameVolume);
-public sealed record LocalTransferFileReceipt(string DestinationIdentity, string TreeHash);
+public sealed record LocalTransferFileReceipt(string DestinationIdentity, string TreeHash)
+{
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<LocalTransferObject>? OwnedCopies { get; init; }
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public bool CleanupFinished { get; init; }
+}
 public enum LocalTransferCheckpoint { BeforeMove, AfterCopy, CopyRecorded, AfterMove, CopyProgress }
-public static class LocalTransferFiles
+public static partial class LocalTransferFiles
 {
     public const int MaximumTreeEntries = 4096;
     public const long MaximumFileBytes = 256L * 1024 * 1024;
@@ -60,7 +66,8 @@ public static class LocalTransferFiles
         }
         catch { leases.Dispose();throw; }
     }
-    public static LocalTransferFilePlan Inspect(string source, string destination, CancellationToken cancellation = default)
+    public static LocalTransferFilePlan Inspect(string source, string destination, CancellationToken cancellation = default,
+        bool allowCrossVolumeTree = false)
     {
         source = Normalize(source); destination = Normalize(destination);
         using var sourceParents = LockParents(source);
@@ -72,8 +79,9 @@ public static class LocalTransferFiles
             throw new IOException("Destination already exists; overwrite is forbidden.");
         var objects = Capture(source, cancellation);
         bool same = Volume(sourceHandle) == Volume(parentHandle);
-        if (!same && objects[0].Directory) throw new NotSupportedException("Cross-volume folders require the later tree-copy safety gate.");
-        if (!same) RejectExtraStreams(source);
+        if (!same && objects[0].Directory && !allowCrossVolumeTree) throw new NotSupportedException("Cross-volume folders require the tree-copy executor.");
+        if (!same)
+            foreach(var obj in objects) RequireCopyable(Path.Combine(source,obj.RelativePath));
         return new(source, destination, Id(parentHandle), objects, same);
     }
 

@@ -107,14 +107,14 @@ public sealed class ContentIconPersistenceTests
         Assert.Equal(Icon().Pixels,(await new SqliteContentIconStore(reopened).ReadAsync(Icon().Id,CancellationToken.None))!.Pixels);
         Assert.Equal(original,File.ReadAllBytes(Path.Combine(f.Paths.Backups,backup.FileName!)));
     }
-    private static void Downgrade(Fixture f) => f.Sql("ALTER TABLE content_poster_items DROP COLUMN icon_asset_id; DROP TABLE managed_storage_adoptions; DROP TABLE content_transfer_closures; DROP TABLE storage_provision_closures; DROP TABLE content_transfer_items; DROP TABLE content_transfers; DROP TABLE managed_storage_collections; DROP TABLE managed_storage_roots; DROP TABLE content_icon_assets; DELETE FROM schema_migrations WHERE version>=15; UPDATE state_head SET schema_version=14; PRAGMA user_version=14;");
+    private static void Downgrade(Fixture f) => f.Sql(StorageSchemaFixture.Drop19+"ALTER TABLE content_poster_items DROP COLUMN icon_asset_id; DROP TABLE managed_storage_adoptions; DROP TABLE content_transfer_closures; DROP TABLE storage_provision_closures; DROP TABLE content_transfer_items; DROP TABLE content_transfers; DROP TABLE managed_storage_collections; DROP TABLE managed_storage_roots; DROP TABLE content_icon_assets; DELETE FROM schema_migrations WHERE version>=15; UPDATE state_head SET schema_version=14; PRAGMA user_version=14;");
     [Fact] public void MigrationPreservesV14JsonAndChecksumsAndCreatesBackup()
     {
         using var f=new Fixture();f.Commit(f.AddCommand(f.Main,Entry()));Downgrade(f);
         var raw=f.Sql("SELECT body_json FROM content_poster_items"); var checks=f.Sql("SELECT group_concat(checksum_sha256) FROM schema_migrations ORDER BY version");
         var result=f.Store.Initialize(); Assert.True(result.Succeeded,result.Error);Assert.Equal(14,result.PreviousSchemaVersion);Assert.NotNull(result.PreMigrationBackupFileName);
         Assert.Equal(raw,f.Sql("SELECT body_json FROM content_poster_items"));Assert.Equal(checks,f.Sql("SELECT group_concat(checksum_sha256) FROM schema_migrations WHERE version<=14 ORDER BY version"));
-        Assert.Equal(18L,f.Sql("PRAGMA user_version")); Assert.Equal(0L,f.Sql("SELECT count(*) FROM content_icon_assets"));
+        Assert.Equal(19L,f.Sql("PRAGMA user_version")); Assert.Equal(0L,f.Sql("SELECT count(*) FROM content_icon_assets"));
     }
     [Fact] public void FailedMigrationKeepsVersionAndOriginalRelations()
     {

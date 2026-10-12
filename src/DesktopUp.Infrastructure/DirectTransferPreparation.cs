@@ -5,7 +5,8 @@ namespace DesktopUp.Infrastructure;
 
 public static class DirectTransferPreparation
 {
-    public static LocalTransferPreview Incoming(DesktopStateSnapshot state,string posterId,IReadOnlyList<string> paths,RegisteredManagedStorage storage)
+    public static LocalTransferPreview Incoming(DesktopStateSnapshot state,string posterId,IReadOnlyList<string> paths,RegisteredManagedStorage storage,
+        IncomingContentPlacement? placement=null)
     {
         if(paths.Count is <1 or >ContentTransferPlanning.MaximumBatch)throw new IOException("一次最多拖入100项。");
         var inputs=paths.Select(path=>
@@ -18,7 +19,8 @@ public static class DirectTransferPreparation
                 state.ContentCatalog.Memberships.Any(m=>m.ContentItemId==x.Id));
             return (known??item,Path.Combine(storage.Collection.StorageLocator!,Path.GetFileName(item.Target.Locator)),(Guid?)null);
         }).ToArray();
-        return RequireSupported(LocalTransferPreview.Prepare(state,posterId,ContentDropRoute.IntoManagedStorage,inputs,storage.Root));
+        return LocalTransferPreview.Prepare(state,posterId,ContentDropRoute.IntoManagedStorage,inputs,storage.Root,
+            placement:placement,keepSourceUntilCommit:true);
     }
 
     public static LocalTransferPreview Outgoing(DesktopStateSnapshot state,string posterId,IReadOnlyList<string> layoutIds)

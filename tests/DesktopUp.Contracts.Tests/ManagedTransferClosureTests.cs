@@ -130,16 +130,16 @@ public sealed class ManagedTransferClosureTests
     [Fact] public void Schema16UpgradePreservesOldChecksumsAndPendingEvidence()
     {
         using var f=new F();var p=f.Stage(f.File("migration.txt"));var old=Assert.Single(f.Journal.Read());
-        f.Sql("DROP TABLE managed_storage_adoptions; DROP TABLE content_transfer_closures; DROP TABLE storage_provision_closures; DELETE FROM schema_migrations WHERE version>=17; UPDATE state_head SET schema_version=16; PRAGMA user_version=16;");
+        f.Sql(StorageSchemaFixture.Drop19+"DROP TABLE managed_storage_adoptions; DROP TABLE content_transfer_closures; DROP TABLE storage_provision_closures; DELETE FROM schema_migrations WHERE version>=17; UPDATE state_head SET schema_version=16; PRAGMA user_version=16;");
         var checksums=f.Sql("SELECT group_concat(checksum_sha256) FROM schema_migrations ORDER BY version");
-        var result=f.Store.Initialize();Assert.True(result.Succeeded,result.Error);Assert.Equal(16,result.PreviousSchemaVersion);Assert.Equal(18,result.Head!.SchemaVersion);
+        var result=f.Store.Initialize();Assert.True(result.Succeeded,result.Error);Assert.Equal(16,result.PreviousSchemaVersion);Assert.Equal(19,result.Head!.SchemaVersion);
         Assert.Equal(checksums,f.Sql("SELECT group_concat(checksum_sha256) FROM schema_migrations WHERE version<=16 ORDER BY version"));Assert.Equal(StateRequestFingerprint.Compute(old),StateRequestFingerprint.Compute(Assert.Single(f.Journal.Read())));
         Assert.True(File.Exists(p.Files[0].Source));Assert.NotEmpty(Directory.GetFiles(f.Paths.Backups,"*.sqlite3"));
     }
     [Fact] public void ClosureMigrationFailureLeavesSchema16AndFilesIntact()
     {
         using var f=new F();var p=f.Stage(f.File("migration-fail.txt"));
-        f.Sql("DROP TABLE managed_storage_adoptions; DROP TABLE content_transfer_closures; DROP TABLE storage_provision_closures; DELETE FROM schema_migrations WHERE version>=17; UPDATE state_head SET schema_version=16; PRAGMA user_version=16; CREATE TABLE storage_provision_closures(conflict TEXT);");
+        f.Sql(StorageSchemaFixture.Drop19+"DROP TABLE managed_storage_adoptions; DROP TABLE content_transfer_closures; DROP TABLE storage_provision_closures; DELETE FROM schema_migrations WHERE version>=17; UPDATE state_head SET schema_version=16; PRAGMA user_version=16; CREATE TABLE storage_provision_closures(conflict TEXT);");
         Assert.False(f.Store.Initialize().Succeeded);Assert.Equal(16L,f.Sql("PRAGMA user_version"));
         Assert.Equal(0L,f.Sql("SELECT count(*) FROM sqlite_master WHERE name='content_transfer_closures'"));Assert.True(File.Exists(p.Files[0].Source));
     }

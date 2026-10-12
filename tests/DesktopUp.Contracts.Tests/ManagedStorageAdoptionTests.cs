@@ -168,16 +168,16 @@ public sealed class ManagedStorageAdoptionTests
     [Fact] public void Schema17UpgradePreservesChecksumsAndDoesNotCreateOwnership()
     {
         using var f=new F();Legacy(f);
-        f.Sql("DROP TABLE managed_storage_adoptions;DELETE FROM schema_migrations WHERE version=18;UPDATE state_head SET schema_version=17;PRAGMA user_version=17;");
+        f.Sql(StorageSchemaFixture.Drop19+"DROP TABLE managed_storage_adoptions;DELETE FROM schema_migrations WHERE version>=18;UPDATE state_head SET schema_version=17;PRAGMA user_version=17;");
         var sums=f.Sql("SELECT group_concat(checksum_sha256) FROM schema_migrations ORDER BY version");
-        var result=f.Store.Initialize();Assert.True(result.Succeeded,result.Error);Assert.Equal(18,result.Head!.SchemaVersion);
+        var result=f.Store.Initialize();Assert.True(result.Succeeded,result.Error);Assert.Equal(19,result.Head!.SchemaVersion);
         Assert.Equal(sums,f.Sql("SELECT group_concat(checksum_sha256) FROM schema_migrations WHERE version<=17 ORDER BY version"));
         Assert.False(File.Exists(RootClaim(f)));Assert.Equal(0L,f.Sql("SELECT count(*) FROM managed_storage_adoptions"));
     }
     [Fact] public void FailedSchema18RollsBackWithoutClaims()
     {
         using var f=new F();Legacy(f);
-        f.Sql("DROP TABLE managed_storage_adoptions;DELETE FROM schema_migrations WHERE version=18;UPDATE state_head SET schema_version=17;PRAGMA user_version=17;CREATE TABLE managed_storage_adoptions(conflict TEXT);");
+        f.Sql(StorageSchemaFixture.Drop19+"DROP TABLE managed_storage_adoptions;DELETE FROM schema_migrations WHERE version>=18;UPDATE state_head SET schema_version=17;PRAGMA user_version=17;CREATE TABLE managed_storage_adoptions(conflict TEXT);");
         Assert.False(f.Store.Initialize().Succeeded);Assert.Equal(17L,f.Sql("PRAGMA user_version"));Assert.False(File.Exists(RootClaim(f)));
     }
 }

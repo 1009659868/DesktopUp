@@ -18,6 +18,8 @@ public sealed class AutomaticTransferCompletion(SqliteTransferJournal journal)
 
     public IReadOnlyList<TransferFinish> Settle(Guid? operationId = null)
     {
+        // Includes committed copies whose source cleanup was interrupted; never repeats a move.
+        new LocalTransferExecutor(journal).Recover(operationId);
         var result = new List<TransferFinish>();
         foreach (var initial in journal.Read().Where(x => operationId is null || x.OperationId == operationId))
         {
@@ -42,7 +44,7 @@ public sealed class AutomaticTransferCompletion(SqliteTransferJournal journal)
                 if (!row.IsFinished) journal.FinishAttempt(row.OperationId,row.Index);
             }
             var final = Current(initial);
-            result.Add(new(final, final.Phase is DurableTransferPhase.IndexCommitted or DurableTransferPhase.NoOp
+            result.Add(new(final, final.Receipt is {OwnedCopies:not null,CleanupFinished:false} ? TransferFinishKind.Preserved : final.Phase is DurableTransferPhase.IndexCommitted or DurableTransferPhase.NoOp
                 ? TransferFinishKind.Completed : final.Phase == DurableTransferPhase.Cancelled ||
                     final.Error?.StartsWith(SqliteTransferJournal.UnmovedFinishPrefix,StringComparison.Ordinal) == true
                     ? TransferFinishKind.NotMoved : TransferFinishKind.Preserved));

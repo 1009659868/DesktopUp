@@ -137,7 +137,7 @@ public partial class App : Microsoft.UI.Xaml.Application
             () => ToggleDynamicEffectsPaused(StateCommandSource.ControlCenter),
             _stateCoordinator, _stateCommands, _inputRouter,
             target => _spatialRuntime?.GetEffectiveLayout(target), () => _spatialRuntime, _portableController,
-            _services.GetRequiredService<SqliteStateStore>());
+            _services.GetRequiredService<SqliteStateStore>(),_storageLocation);
         _tray = new TrayService(_ledger, _log);
         _tray.Create(QueueTrayAction);
         _log.Write("info", "application.started", new
@@ -162,7 +162,14 @@ public partial class App : Microsoft.UI.Xaml.Application
         _spatialRuntime.ConfigureRealContent(_realContentWorker, openJournal, new SqliteContentIconStore(_services.GetRequiredService<SqliteStateStore>()));
         _spatialRuntime.ConfigureSceneMotionLedger(_ledger);
         _spatialRuntime.ConfigureTransfers(_services.GetRequiredService<SqliteStateStore>(),_transferDiscovery,
-            async()=>{_controlCenter.Show();await Task.Yield();return _controlCenter.WindowForPortableProbe is {} center?await center.EnsureTransferStorageAsync():null;},
+            async()=>
+            {
+                if(_storageLocation is null)return null;
+                var location=await Task.Run(_storageLocation.Read);
+                if(!location.NeedsSelection)return await Task.Run(()=>_storageLocation.EnsureReady());
+                _controlCenter.Show();await Task.Yield();
+                return _controlCenter.WindowForPortableProbe is {} center?await center.EnsureTransferStorageAsync():null;
+            },
             async message=>{_controlCenter.Show();await Task.Yield();return _controlCenter.WindowForPortableProbe is {} center&&await center.ConfirmDirectTransferAsync(message);},
             ()=>_controlCenter.IsSettingsInteractionActive||_controlCenter.IsRemovalInteractionActive,
             message=>{_controlCenter.Show();_controlCenter.WindowForPortableProbe?.ShowTransferFailure(message);});
@@ -185,6 +192,13 @@ public partial class App : Microsoft.UI.Xaml.Application
         }
 
         ScheduleSmokeExitIfRequested(_startupIntent.Arguments);
+        if(_startupIntent.Arguments.Contains("--incoming-probe",StringComparer.Ordinal))
+        { RunIncomingProbe(_services.GetRequiredService<IUserDataPaths>().Root);return; }
+        if(_startupIntent.Arguments.Contains("--storage-settings-probe",StringComparer.Ordinal))
+        {
+            RunStorageSettingsProbe(_services.GetRequiredService<IUserDataPaths>().Root);
+            return;
+        }
         string[] smokeFlags = ["--content-reference-probe", "--posture-groups-probe", "--rain-resource-probe", "--rain-scene-probe", "--rain-scene-restart", "--scene-module-probe", "--content-source-probe", "--content-browse-probe", "--backdrop-probe", "--lamp-pointer-probe", "--template-recipe-probe", "--template-recipe-restart", "--content-composition-probe", "--content-fields-probe", "--content-rejected-heat-probe", "--content-protocol-probe", "--content-native-probe", "--content-native-mouse-probe", "--content-interaction-restart", "--lamp-parameter-probe", "--ui-c-sample-probe", "--content-layout-smoke", "--content-layout-restart", "--picker-smoke", "--portable-smoke", "--tray-smoke", "--control-center-smoke", "--title-surface-smoke", "--auto-measurement", "--auto-lifetime-smoke", "--auto-settings-smoke", "--auto-posture-smoke", "--continuity-smoke", "--continuity-arrange", "--menu-smoke", "--presentation-smoke", "--spatial-smoke", "--input-confirmation-smoke", "--multi-instance-smoke", "--multi-instance-restart"];
         if (_startupIntent.Arguments.Count(a => smokeFlags.Contains(a, StringComparer.OrdinalIgnoreCase)) > 1)
         {
