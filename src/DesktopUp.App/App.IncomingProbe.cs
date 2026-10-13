@@ -24,15 +24,42 @@ public partial class App
             while(!_spatialRuntime!.IncomingProbeReady)
             {if(watch.Elapsed.TotalSeconds>20)throw new IOException("Incoming surface not ready.");await Task.Delay(100);}
             var repository=new SqliteStateCommandRepository(_services!.GetRequiredService<SqliteStateStore>());
+            bool syncProbe = _startupIntent.Arguments.Contains("--managed-sync");
+            bool combinedProbe = _startupIntent.Arguments.Contains("--d5-combined");
+            bool entryProbe = _startupIntent.Arguments.Contains("--content-entry-probe");
+            bool appearanceProbe = _startupIntent.Arguments.Contains("--appearance-cleanup-probe");
+            if (entryProbe || appearanceProbe) _controlCenter!.Show();
+            if (appearanceProbe)
+            {
+                await _controlCenter!.WindowForPortableProbe!.VerifyAppearanceCleanupForProbe(
+                    _startupIntent.Arguments.Contains("--incoming-restart"), root);
+                var posterWindow = _spatialRuntime.BackdropWindowForProbe(repository.Read().Catalog.Posters.Single().Poster.PosterId);
+                posterWindow.VerifyCleanAppearanceForProbe();
+                if (!_startupIntent.Arguments.Contains("--incoming-restart"))
+                    await posterWindow.CapturePosterXamlForProbeAsync(Path.Combine(root, "empty-poster.png"));
+                _log!.Write("info", "contract.appearance_cleanup_passed", new { restart = _startupIntent.Arguments.Contains("--incoming-restart"), nativeMouse = false });
+            }
+            if(combinedProbe && !syncProbe)throw new IOException("D5 requires the managed sync group.");
             if(_startupIntent.Arguments.Contains("--incoming-restart"))
             {
                 var current=repository.Read();
-                if(current.ContentCatalog.PosterItems.Count!=4 || current.ContentCatalog.Items.Any(x=>!LocalTransferFiles.Exists(x.Target.Locator)))
+                var live = current.ContentCatalog.PosterItems.Select(p=>ContentRelationPolicy.Resolve(current.ContentCatalog,p.PosterId,p.LayoutItemId)!.Item);
+                if(current.ContentCatalog.PosterItems.Count!=(combinedProbe?1:syncProbe?3:4) || live.Any(x=>!LocalTransferFiles.Exists(x.Target.Locator)))
                     throw new IOException("Incoming references did not survive restart.");
+                if(syncProbe && File.ReadAllText(Path.Combine(root,"sources","externally-returned.txt"))!="D3 self-created test file.")
+                    throw new IOException("Externally moved file changed across restart.");
+                if(combinedProbe)
+                {
+                    string returned=File.ReadAllText(Path.Combine(root,"d5-returned-root.txt"));
+                    if(File.ReadAllText(Path.Combine(returned,"third.txt"))!="D3 self-created test file." ||
+                        File.ReadAllText(Path.Combine(returned,"folder","child.txt"))!="owned cross-volume fixture")
+                        throw new IOException("Outgoing files did not survive restart.");
+                }
             }
             else
             {
                 if(repository.Read().ContentCatalog.PosterItems.Count!=0)throw new IOException("Fresh empty fixture required.");
+                if(entryProbe) await _controlCenter!.WindowForPortableProbe!.VerifyContentEntryForProbe(true, root);
                 string source=Path.Combine(root,"sources");Directory.CreateDirectory(source);
                 string Make(string name){string p=Path.Combine(source,name);using var f=new StreamWriter(new FileStream(p,FileMode.CreateNew));f.Write("D3 self-created test file.");return p;}
                 var center=_controlCenter!.WindowForPortableProbe;
@@ -52,9 +79,51 @@ public partial class App
                 if(repository.Read().ContentCatalog.PosterItems.Count!=4||Directory.Exists(folder))throw new IOException("Cross-volume manual ingress failed.");
                 if(!ReferenceEquals(center,_controlCenter.WindowForPortableProbe))throw new IOException("Ordinary incoming files opened control center.");
                 await _spatialRuntime.IncomingCollapsedProbe();
+                if(syncProbe)
+                {
+                    var before=repository.Read();
+                    var item=before.ContentCatalog.Items.Single(i=>Path.GetFileName(i.Target.Locator)=="first.txt");
+                    var card=before.ContentCatalog.PosterItems.Single(p=>ContentRelationPolicy.Resolve(before.ContentCatalog,p.PosterId,p.LayoutItemId)!.Item.Id==item.Id);
+                    async Task Until(Func<bool> check)
+                    { var timeout=System.Diagnostics.Stopwatch.StartNew();while(!check()){if(timeout.Elapsed.TotalSeconds>20)throw new IOException("Managed sync UI did not converge.");await Task.Delay(100);} }
+                    string renamed=Path.Combine(storage.Collection.StorageLocator!,"renamed.txt");File.Move(item.Target.Locator,renamed);
+                    await Until(()=>_spatialRuntime.ReferenceNamesForProbe(card.PosterId,"renamed.txt","second.txt","third.txt","folder"));
+                    var afterRename=repository.Read();
+                    if(afterRename.ContentCatalog.PosterItems.Single(p=>p.Id==card.Id)!=card ||
+                        afterRename.Catalog.Posters.Single().Poster.ContentLayoutJson!=before.Catalog.Posters.Single().Poster.ContentLayoutJson)
+                        throw new IOException("Rename changed card identity/layout.");
+                    _spatialRuntime.SelectManagedItemForProbe(card.PosterId,card.LayoutItemId);
+                    File.Move(renamed,Path.Combine(source,"externally-returned.txt"));
+                    await Until(()=>_spatialRuntime.ManagedItemAbsentForProbe(card.PosterId,card.LayoutItemId) &&
+                        _spatialRuntime.ReferenceNamesForProbe(card.PosterId,"second.txt","third.txt","folder"));
+                    if(repository.Read().ContentCatalog.PosterItems.Count!=3 || !ReferenceEquals(center,_controlCenter.WindowForPortableProbe))
+                        throw new IOException("External sync did not refresh without opening center.");
+                }
                 // The unique empty temp parent remains as a trace; no user files or broad deletion.
+                if(combinedProbe)
+                {
+                    await _spatialRuntime.CombinedSelectionProbe(root);
+                    var returned=Directory.CreateTempSubdirectory("DesktopUp-D5-returned-");
+                    File.WriteAllText(Path.Combine(root,"d5-returned-root.txt"),returned.FullName);
+                    File.WriteAllText(Path.Combine(returned.FullName,"second.txt"),"untouched collision");
+                    await _spatialRuntime.CombinedOutgoingProbe(returned.FullName);
+                    if(repository.Read().ContentCatalog.PosterItems.Count!=1 ||
+                        File.ReadAllText(Path.Combine(returned.FullName,"second.txt"))!="untouched collision" ||
+                        File.ReadAllText(Path.Combine(returned.FullName,"third.txt"))!="D3 self-created test file." ||
+                        File.ReadAllText(Path.Combine(returned.FullName,"folder","child.txt"))!="owned cross-volume fixture" ||
+                        !ReferenceEquals(center,_controlCenter.WindowForPortableProbe))throw new IOException("Combined outgoing partial batch failed.");
+                }
             }
-            _log!.Write("info","contract.incoming_passed",new{restart=_startupIntent.Arguments.Contains("--incoming-restart"),items=4,nativeMouse=false});
+            if(entryProbe)
+            {
+                var before = repository.Read();
+                string evidence = Path.Combine(root, _startupIntent.Arguments.Contains("--incoming-restart") ? "entry-restart" : "entry-first");
+                Directory.CreateDirectory(evidence);
+                await _controlCenter!.WindowForPortableProbe!.VerifyContentEntryForProbe(false, evidence);
+                if (repository.Read().Revision != before.Revision) throw new IOException("Cancelling repair changed committed state.");
+                _log!.Write("info", "contract.content_entry_passed", new { emptyChecked = !_startupIntent.Arguments.Contains("--incoming-restart"), nativeMouse = false });
+            }
+            _log!.Write("info","contract.incoming_passed",new{restart=_startupIntent.Arguments.Contains("--incoming-restart"),items=combinedProbe?1:syncProbe?3:4,managedSync=syncProbe,combinedProbe,nativeMouse=false});
         }
         catch(Exception e){Environment.ExitCode=1;_log?.Write("error","contract.incoming_failed",new{e.Message,e.StackTrace});}
         finally{lease?.Dispose();ExitApplication();}
@@ -63,6 +132,21 @@ public partial class App
 
 internal sealed partial class PosterSpatialRuntime
 {
+    internal Task CombinedSelectionProbe(string root)=>_windows.Values.Single().CombinedSelectionProbe(root);
+    internal async Task CombinedOutgoingProbe(string ownedDestination)
+    {
+        _outgoingProbeDestination=ownedDestination;
+        try
+        {
+            var window=_windows.Values.Single();
+            var catalog=new SqliteStateCommandRepository(_transferStore!).Read().ContentCatalog;
+            TransferFiles(window,null,catalog.PosterItems.Where(c=>c.PosterId==window.PosterId).Select(c=>c.LayoutItemId).ToArray());
+            await _fileTransferTask;
+        }
+        finally{_outgoingProbeDestination=null;}
+    }
+    internal void SelectManagedItemForProbe(string posterId,string itemId)=>_windows[posterId].SelectManagedItemForProbe(itemId);
+    internal bool ManagedItemAbsentForProbe(string posterId,string itemId)=>_windows[posterId].ManagedItemAbsentForProbe(itemId);
     internal bool IncomingProbeReady=>TransfersAvailable&&_windows.Values.Any(x=>x.IncomingProbeReady);
     internal async Task IncomingProbe(string[] paths,bool frame=false,bool manual=false)
     {
@@ -91,6 +175,9 @@ internal sealed partial class PosterSpatialRuntime
 
 internal sealed partial class PosterVisualWindow
 {
+    internal void SelectManagedItemForProbe(string itemId){SetContentSelection(itemId,control:true);RefreshContentSurface();}
+    internal bool ManagedItemAbsentForProbe(string itemId)=>!ContentDocument.Placements.Any(p=>p.ItemId==itemId) &&
+        !_contentCards.ContainsKey(itemId) && !SelectedContentIds().Contains(itemId) && _selectedContentItem!=itemId;
     internal bool IncomingProbeReady=>CanTransferFiles&&_fileDrop?.IsReady==true;
     internal IncomingDropTicket IncomingProbeTicket(string[] paths,bool frame)
     {

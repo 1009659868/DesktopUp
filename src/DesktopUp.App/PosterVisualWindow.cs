@@ -1640,7 +1640,7 @@ internal sealed partial class PosterVisualWindow(
         title.Opacity = _presentation.Parameters.IsTitleVisible ? 1 : 0;
         title.MaxLines = 1; title.TextTrimming = TextTrimming.CharacterEllipsis;
         meta.Children.Add(subtitle); meta.Children.Add(title);
-        meta.Children.Add(Text($"{ContentDocument.Placements.Count:00} DEMO ITEMS", 10, 400, 170, 198, 198, 198));
+        meta.Children.Add(Text($"{ContentDocument.Placements.Count:00} ITEMS", 10, 400, 170, 198, 198, 198));
         return meta;
     }
 

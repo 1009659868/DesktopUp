@@ -10,7 +10,7 @@ public sealed class ContentReferencePersistenceTests
     [Fact] public void FreshSchemaIsEmptyAndDoesNotConvertDemo()
     {
         using var f = new Fixture();
-        Assert.Equal(19L, f.Sql("PRAGMA user_version"));
+        Assert.Equal(21L, f.Sql("PRAGMA user_version"));
         Assert.Empty(f.Current.ContentCatalog.Items); Assert.Equal(0, f.Current.ContentVersion);
         Assert.Null(f.Current.PostersById[f.Main].Poster.ContentLayoutJson);
         Assert.Equal(0L, f.Sql("SELECT count(*) FROM content_demo_archive"));
@@ -50,39 +50,34 @@ public sealed class ContentReferencePersistenceTests
         Assert.Equal(revision, f.Current.Revision); Assert.Empty(f.Current.ContentCatalog.Bindings);
     }
 
-    [Fact] public void ExplicitReuseSharesEntityButNotPosterPlacement()
+    [Fact] public void DuplicateReferenceIsRejectedAndSamePosterDropIsIdempotent()
     {
-        using var f = new Fixture(); var entry = Entry();
-        f.Commit(f.AddCommand(f.Main, entry)); string b = f.NewPoster();
-        f.Commit(f.AddCommand(b, entry with { Choice = ContentReferenceChoice.Reuse, ReuseItemId = entry.Item.Id }));
-        Assert.Single(f.Current.ContentCatalog.Items); Assert.Equal(2, f.Current.ContentCatalog.PosterItems.Count);
-        Assert.Equal(2, f.Current.ContentCatalog.Memberships.Count);
-        long rev = f.Current.Revision;
-        f.Commit(f.AddCommand(b, entry with { Choice = ContentReferenceChoice.Reuse, ReuseItemId = entry.Item.Id }));
-        Assert.Equal(rev, f.Current.Revision); Assert.Equal(2, f.Current.ContentCatalog.PosterItems.Count);
+        using var f=new Fixture(); var entry=Entry(); f.Commit(f.AddCommand(f.Main,entry)); string b=f.NewPoster();
+        Assert.False(f.Coordinator.Execute(f.AddCommand(b,entry with {Choice=ContentReferenceChoice.Reuse,ReuseItemId=entry.Item.Id})).Succeeded);
+        long revision=f.Current.Revision;
+        f.Commit(f.AddCommand(f.Main,Entry()));
+        Assert.Equal(revision,f.Current.Revision); Assert.Single(f.Current.ContentCatalog.PosterItems);
     }
 
-    [Fact] public void IndependentDuplicateDoesNotAutoMerge()
+    [Fact] public void RepeatedPathInOneBatchProducesOneOwner()
     {
-        using var f = new Fixture(); f.Commit(f.AddCommand(f.Main, Entry(), Entry()));
-        Assert.Equal(2, f.Current.ContentCatalog.Items.Count);
+        using var f=new Fixture(); f.Commit(f.AddCommand(f.Main,Entry(),Entry()));
+        Assert.Single(f.Current.ContentCatalog.Items); Assert.Single(f.Current.ContentCatalog.PosterItems);
     }
 
-    [Fact] public void SharedRepairChecksAllPostersAndKeepsLayoutIdentity()
+    [Fact] public void RepairKeepsCardLayoutAndCannotTakeAnotherOwnedSource()
     {
-        using var f = new Fixture(); var entry = Entry(); f.Commit(f.AddCommand(f.Main, entry));
-        string b = f.NewPoster(); f.Commit(f.AddCommand(b, entry with { Choice = ContentReferenceChoice.Reuse, ReuseItemId = entry.Item.Id }));
-        string? layout = f.Current.PostersById[f.Main].Poster.ContentLayoutJson;
-        var incomplete = f.AddCommand(f.Main, Entry("new.txt")) with { RepairContentId = entry.Item.Id };
-        Assert.Equal(StateCommandStatus.ValidationFailed, f.Coordinator.Execute(incomplete).Status);
-        var repair = incomplete with { RequestId = Guid.NewGuid().ToString(), ReadSet = incomplete.ReadSet with
-            { Posters = f.Current.Posters.ToDictionary(p => p.Poster.PosterId, p => p.EntityVersion) } };
-        long rev = f.Current.Revision; var before = f.Current;
-        f.Commit(repair);
-        Assert.Equal(rev + 1, f.Current.Revision); Assert.Equal(layout, f.Current.PostersById[f.Main].Poster.ContentLayoutJson);
-        Assert.Equal(2, f.Current.ContentCatalog.Items.Single().Version);
-        Assert.Equal(entry.Item.Id, f.Current.ContentCatalog.Items.Single().Id);
-        Assert.Equal(before.PostersById[b].EntityVersion + 1, f.Current.PostersById[b].EntityVersion);
+        using var f=new Fixture(); var entry=Entry(); f.Commit(f.AddCommand(f.Main,entry));
+        string b=f.NewPoster(); f.Commit(f.AddCommand(b,Entry("other.txt")));
+        string? layout=f.Current.PostersById[f.Main].Poster.ContentLayoutJson;
+        var rejected=f.AddCommand(f.Main,Entry("other.txt")) with {RepairContentId=entry.Item.Id};
+        Assert.False(f.Coordinator.Execute(rejected).Succeeded);
+        var repair=f.AddCommand(f.Main,Entry("new.txt")) with {RepairContentId=entry.Item.Id};
+        var before=f.Current; f.Commit(repair);
+        Assert.Equal(layout,f.Current.PostersById[f.Main].Poster.ContentLayoutJson);
+        Assert.Equal(before.PostersById[b].Poster,f.Current.PostersById[b].Poster);
+        Assert.Equal(before.PostersById[b].EntityVersion,f.Current.PostersById[b].EntityVersion);
+        Assert.Equal(2,f.Current.ContentCatalog.Items.Single(i=>i.Id==entry.Item.Id).Version);
     }
 
     [Fact] public void StaleContentOrAffectedPosterNeverPartiallyApplies()
@@ -140,7 +135,7 @@ public sealed class ContentReferencePersistenceTests
         var history = f.Sql("SELECT group_concat(checksum_sha256) FROM schema_migrations WHERE version<=12");
         f.DowngradeToTwelve();
         Assert.True(f.Store.Initialize().Succeeded);
-        Assert.Equal(19L, f.Sql("PRAGMA user_version")); Assert.Equal(history, f.Sql("SELECT group_concat(checksum_sha256) FROM schema_migrations WHERE version<=12"));
+        Assert.Equal(21L, f.Sql("PRAGMA user_version")); Assert.Equal(history, f.Sql("SELECT group_concat(checksum_sha256) FROM schema_migrations WHERE version<=12"));
         Assert.Equal(raw, new SqliteStateCommandRepository(f.Store).Read().Catalog.Posters.Single().Poster.ContentLayoutJson);
         Assert.Empty(f.Current.ContentCatalog.Items);
         if (unknown) Assert.False(f.Coordinator.Execute(f.AddCommand(f.Main, Entry())).Succeeded);

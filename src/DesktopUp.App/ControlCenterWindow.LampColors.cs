@@ -78,7 +78,7 @@ public sealed partial class ControlCenterWindow
     private void CompleteLampColorPicker(bool apply)
     {
         if (_lampColorFlyout is null) return;
-        if (apply && _lampColorTarget == _view?.SelectedPosterId && _settings.Preview?.Setting is (PosterSetting.Lamp or PosterSetting.TemplateParameters or PosterSetting.TitleColors))
+        if (apply && _lampColorTarget == _view?.SelectedPosterId && _settings.Preview?.Setting is (PosterSetting.Lamp or PosterSetting.TemplateParameters or PosterSetting.TitleColors or PosterSetting.Surface))
         {
             // Invalid text in another field remains protected; choosing a color cannot save it.
             if (!_settings.IsPreviewValid) { RenderSettings(); return; }
@@ -99,7 +99,10 @@ public sealed partial class ControlCenterWindow
     {
         if (!LampInputAvailable() || OtherContentOwner || IsContentFieldDraftActive)
         { if (_lampParameterNotice is not null) _lampParameterNotice.Text = "请先应用或取消当前修改。"; return; }
-        ChangeLampSetting(TemplateParameterBindingAdapter.Reset(_templateParameterSchema,
-            _view?.SelectedPoster?.Presentation.TemplateValues ?? new TemplateParameterValues([])), true);
+        var current = _view?.SelectedPoster?.Presentation.TemplateValues ?? new TemplateParameterValues([]);
+        var reset = TemplateParameterBindingAdapter.Reset(_templateParameterSchema, current);
+        // Background belongs to the common surface controls, not the private-effects reset.
+        foreach (var p in _templateParameterSchema.Properties.Except(PrivateTemplateProperties)) reset = reset.Set(p.Binding, current.Get(p.Binding));
+        ChangeLampSetting(reset, true);
     }
 }

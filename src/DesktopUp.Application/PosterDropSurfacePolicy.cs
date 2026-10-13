@@ -8,13 +8,8 @@ public static class PosterDropSurfacePolicy
         point.X >= frame.X && point.Y >= frame.Y &&
         (long)point.X < (long)frame.X + frame.Width && (long)point.Y < (long)frame.Y + frame.Height;
 
-    // Ordinary pointer input remains sparse. This does not prove cross-process click-through;
-    // the production native host must pass its own desktop/environment gate.
-    public static bool ReceivesPointer(DesktopPixelRect frame, PosterInputLayoutSnapshot layout, PointerScreenPoint point)
-    {
-        if (frame.Width != layout.FrameWidth || frame.Height != layout.FrameHeight || !ReceivesOle(frame, point)) return false;
-        int x = point.X - frame.X, y = point.Y - frame.Y;
-        return PosterInputGeometry.InsideRoundedFrame(x, y, layout) && layout.Regions.Any(r =>
-            PosterInputGeometry.CapturesPointer(r) && x >= r.Bounds.X && y >= r.Bounds.Y && x < r.Bounds.Right && y < r.Bounds.Bottom);
-    }
+    // Ordinary input and OLE both own the current bounded frame, regardless of
+    // material alpha. The command router separately checks title/buttons/items.
+    public static bool ReceivesPointer(DesktopPixelRect frame, PosterInputLayoutSnapshot layout, PointerScreenPoint point) =>
+        frame.Width == layout.FrameWidth && frame.Height == layout.FrameHeight && ReceivesOle(frame, point);
 }

@@ -27,10 +27,13 @@ internal sealed partial class PosterSpatialRuntime
 
     internal void TransferFiles(PosterVisualWindow window,string[]? paths,string[]? layoutIds)
     {
+        // Old deterministic executor is now restricted to the owned-data regression probe.
+        // Production mouse egress must enter NativeShellDragSource, never this code path.
+        if(paths is null && _outgoingProbeDestination is null)return;
         if(!TransfersAvailable || !window.CanTransferFiles)return;
         _fileTransferBusy=true;
         _fileTransferPoster=window.PosterId;ActivityChanged?.Invoke();
-        _fileTransferTask=RunTransfer(window,paths,layoutIds);
+        _fileTransferTask=paths is null?RunOutgoing(window,layoutIds??[]):RunTransfer(window,paths,layoutIds);
     }
     private async Task RunTransfer(PosterVisualWindow window,string[]? paths,string[]? layoutIds)
     {

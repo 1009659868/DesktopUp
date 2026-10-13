@@ -5,6 +5,21 @@ namespace DesktopUp.Infrastructure;
 
 public static class DirectTransferPreparation
 {
+    public sealed record OutgoingSource(string LayoutId,Guid CardId,Guid ContentId,long ContentVersion,string Locator);
+    public static IReadOnlyList<OutgoingSource> OutgoingSources(DesktopStateSnapshot state,string posterId,IReadOnlyList<string> layoutIds)
+    {
+        if(layoutIds.Count is <1 or >ContentTransferPlanning.MaximumBatch || layoutIds.Distinct().Count()!=layoutIds.Count)
+            throw new IOException("请选择1～100项不重复的卡片。");
+        var sources=layoutIds.Select(id=>
+        {
+            var relation=ContentRelationPolicy.Resolve(state.ContentCatalog,posterId,id)??throw new IOException("卡片已变化。");
+            return new OutgoingSource(id,relation.PosterItem.Id,relation.Item.Id,relation.Item.Version,LocalTransferFiles.Normalize(relation.Item.Target.Locator));
+        }).ToArray();
+        if(sources.Any(s=>sources.Any(other=>s!=other &&
+            (string.Equals(s.Locator,other.Locator,StringComparison.OrdinalIgnoreCase)||LocalTransferFiles.Contains(s.Locator,other.Locator)))))
+            throw new IOException("请不要同时取出同一来源的重复卡片或文件夹及其内部项目。");
+        return sources;
+    }
     public static LocalTransferPreview Incoming(DesktopStateSnapshot state,string posterId,IReadOnlyList<string> paths,RegisteredManagedStorage storage,
         IncomingContentPlacement? placement=null)
     {
@@ -36,7 +51,7 @@ public static class DirectTransferPreparation
             var item=state.ContentCatalog.Items.Single(x=>x.Id==member.ContentItemId);
             return (item,Path.Combine(desktop,Path.GetFileName(item.Target.Locator)),(Guid?)card.Id);
         }).ToArray();
-        return RequireSupported(LocalTransferPreview.Prepare(state,posterId,ContentDropRoute.ToDesktop,inputs));
+        return LocalTransferPreview.Prepare(state,posterId,ContentDropRoute.ToDesktop,inputs,keepSourceUntilCommit:true);
     }
     public static LocalTransferPreview RequireSupported(LocalTransferPreview preview)
     {

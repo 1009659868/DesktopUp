@@ -119,8 +119,6 @@ internal sealed class TargetSurface : Form
     private bool oleInitialized;
     private NativeOleDragMonitor? monitor;
     private bool oleActive;
-    private PosterDropReception? component;
-    private readonly RoutingProbeLedger componentLedger=new();
     public TargetSurface(int mode, bool helper, Func<bool> enabled, Action<string, object?> record)
     {
         this.mode = mode; this.helper = helper; this.enabled = enabled; this.record = record;
@@ -147,15 +145,7 @@ internal sealed class TargetSurface : Form
         {
             if(mode>=7)
             {
-                var attachment=new RoutingProbeAttachment(Handle);
-                var host=new DesktopUp.Application.DesktopShellHostSnapshot(new(Handle,Handle,(uint)Environment.ProcessId),1,DateTimeOffset.UtcNow);
-                var frame=new DesktopUp.Application.DesktopPixelRect(Left,Top,Width,Height);
-                var view=new DesktopUp.Application.IncomingDropSurface(Guid.NewGuid(),"isolated",1,1,1,frame,1,1,new(0,0,Width,Height),DesktopUp.Domain.ContentFlowAxis.Vertical);
-                component=new PosterDropReception(attachment,host,frame,()=>view,
-                    ticket=>record("drop",new{ticket.Paths.Count,filesMoved=0}),componentLedger,new RoutingProbeLog(record),
-                    preview=>{if(preview is not null){record("enter",new{preview.Count});if(mode==9)BeginInvoke(()=>component?.Suspend());}},
-                    ()=>component is null||attachment.ReassertDesktopBottom(component.WindowHandle,host));
-                ApplyShape();return;
+                throw new NotSupportedException("DEC-043 retired the dynamic click-through component. Use the product full-frame review.");
             }
             target = new ProbeDropTarget(Handle, helper ? new ShellProbeImages() : new NullProbeImages(), record, enabled);
             Marshal.ThrowExceptionForHR(RegisterDragDrop(Handle, target)); registered = true; ApplyShape();
@@ -182,8 +172,6 @@ internal sealed class TargetSurface : Form
     [DllImport("user32.dll")]private static extern bool SetLayeredWindowAttributes(nint window,uint key,byte alpha,uint flags);
     protected override void OnHandleDestroyed(EventArgs e)
     {
-        component?.Dispose();component=null;
-        if(mode>=7)record("component-resources",new{active=componentLedger.ActiveResources.Count});
         monitor?.Dispose();monitor=null;
         if (registered) { RevokeDragDrop(Handle); registered = false; }
         target?.Dispose(); target = null;

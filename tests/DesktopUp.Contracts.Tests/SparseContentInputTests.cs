@@ -18,12 +18,17 @@ public sealed class SparseContentInputTests
         }.Concat(editing ? new[] { new PosterInputRegion(PosterInputTargetKind.EditSurface, -1, Frame) } : []).ToArray(), 8);
 
     [Fact]
-    public void EmptyViewportFallsThroughToLowerPosterOrDesktopAndCannotCapture()
+    public void EmptyViewportOwnsMarqueeWhileItemsAndUpperPosterKeepPriority()
     {
         var router = new PosterInputRouter(); router.Register(Front); router.Register(Back);
         Assert.True(router.Publish(Front, Frame, Layout()));
         Assert.True(router.Publish(Back, Frame, new(1, 300, 400, [Item(new(180, 220, 100, 100))])));
         Assert.Equal(Front, router.Resolve(50, 100, [Front, Back])!.Session);
+        var blank=router.Resolve(200, 240, [Front, Back])!;
+        Assert.Equal(PosterInputTargetKind.ContentViewport,blank.Region.Kind);
+        var capture=router.Begin(blank);Assert.NotNull(capture);router.End(capture);
+        Assert.Equal(Back, router.Resolve(200, 240, [Back, Front])!.Session);
+        router.Invalidate(Front);
         Assert.Equal(Back, router.Resolve(200, 240, [Front, Back])!.Session);
         Assert.Null(router.Resolve(150, 320, [Front, Back]));
         var viewport = Layout().Regions.Single(r => r.Kind == PosterInputTargetKind.ContentViewport);
@@ -34,7 +39,7 @@ public sealed class SparseContentInputTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void ActualGdiRegionContainsOnlyInteractiveRegionsExceptExplicitEditing(bool editing)
+    public void ActualGdiRegionOwnsWholeFrameIndependentlyOfEditingAndMaterial(bool editing)
     {
         nint region = PosterInputIslandManager.BuildWindowRegion(Layout(editing));
         Assert.NotEqual(0, region);
@@ -42,10 +47,12 @@ public sealed class SparseContentInputTests
         {
             Assert.True(PtInRegion(region, 50, 20));
             Assert.True(PtInRegion(region, 50, 100));
-            Assert.Equal(editing, PtInRegion(region, 150, 100)); // between cards
-            Assert.Equal(editing, PtInRegion(region, 250, 320)); // empty content body
-            Assert.Equal(editing, PtInRegion(region, 150, 50)); // decorative heading gap
-            Assert.False(PtInRegion(region, 0, 0)); // rounded outer corner remains clipped
+            Assert.True(PtInRegion(region, 150, 100)); // between cards
+            Assert.True(PtInRegion(region, 250, 320)); // empty content body
+            Assert.True(PtInRegion(region, 150, 50)); // decorative heading gap
+            Assert.True(PtInRegion(region, 0, 0)); // visual corners do not alter input ownership
+            Assert.False(PtInRegion(region, 300, 200));
+            Assert.False(PtInRegion(region, 150, 400));
         }
         finally { Assert.True(DeleteObject(region)); }
     }

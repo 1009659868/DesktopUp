@@ -1,9 +1,80 @@
 # V3-04 代码锚点
 
+## 2026-10-13 发布同步
+
+- `scripts/run.ps1`：每次构建当前源码；`scripts/package-preview.ps1`：产品源指纹及收纳路径元数据，不依赖测试目录。
+- `packaging/preview/installer.nsi`：目录页、首启中心、精确清单卸载及Windows卸载登记；`PREVIEW-README.txt`随包说明。
+- `App/App.xaml.cs`：只对Created的新配置打开首次中心，不植入DEMO；`Application/ManagedStorageLocationPolicy.cs`现有用户数据默认路径保持。
+- 构建/安装/分支证据见[发布记录](PREVIEW_INSTALLER_DELIVERY.md#2026-10-13-发布同步)。
+
+## 2026-10-13 05-14界面减法与通用背景
+
+- `Domain/PosterPresentationParameters.cs`：surface及schema8保留合同；`CanShowContentHeading`按模板装配声明判定。
+- `Application/ScenePresentationAdapter.cs`、`ControlCenterSettingsSession.cs`：通用背景投影、现有预览/提交链；不改变内容或文件业务。
+- `App/ControlCenterWindow.Surface.cs`、`ContentHeading.cs`、`TemplateParameters.cs`：公共颜色/不透明度、动态折叠介绍组件、私有参数去重；`ControlCenterWindow.xaml`/`UiCWorkspace.cs`撤重复菜单。
+- `App/PosterVisualWindow.Content.cs`/`ContentFeedback.cs`：无普通空提示/底部测试框；故障和内部通知保留。
+- `PosterSurfaceAppearanceTests.cs`/`ContentHeadingTests.cs`、`ControlCenterWindow.AppearanceProbe.cs`与`--appearance-cleanup-probe`：具体覆盖及未验边界见[§13](../V3-05/DIRECT_TRANSFER_DELIVERY.md#13-05-14界面减法与通用背景2026-10-13)。源码路径相对src，合同测试相对tests/DesktopUp.Contracts.Tests。
+
+## 2026-10-13 05-14入口收口
+
+- `App/ControlCenterWindow.xaml`：撤下添加/修复常驻按钮；所选项旁`ContentManageButton`。
+- `App/ControlCenterWindow.UiCWorkspace.cs`：按钮与右键/Shift+F10共用原菜单；`ForSameItem`版本保护、单选真实项修复资格。`ContentLayout.cs`同步空海报/草稿/交互禁用。
+- `App/ControlCenterWindow.References.cs`：保留引用/修复编辑能力及原文件不动守卫，撤日常添加处理器及共享文案；底层引用命令不改。
+- `App/ControlCenterWindow.SettingsSmoke.cs`、`App.IncomingProbe.cs`：独立配置`--content-entry-probe`验证空/单/多选入口及修复取消；`scripts/smoke-incoming.ps1 -ContentEntry`复用首启/重启。
+
+## 2026-10-13 D4-N 原生拖出与单一归属
+
+- `Windows/NativeShellDragSource.cs`、`NativeDragDataObject.cs`：真实Shell/CF_HDROP、私有图像格式、OLE源生命周期、原海报往返与取消；不执行磁盘动作。
+- `Windows/PosterInputIslandManager.cs` 的 `HandOffContentCapture`、`NativeFileDropTarget.cs`：同次按住交接；可信本进程原海报目标先走布局，外部文件仍走原入站会话。
+- `Windows/NativeContentDragImage.cs`、`ShellDropImages.cs`：自定义图标→独立Shell位图，正确透明度与位图所有权。
+- `App/PosterVisualWindow.Transfers.cs`、`PosterSpatialRuntime.NativeExit.cs`、`PosterVisualWindow.TransferConfirmation.cs`：真实源准备/跟手/返回布局/退出观察；只在释放后对起点已失效项确认。
+- `Infrastructure/NativeShellExitJournal.cs`（schema21）、`ManagedContentSynchronizer.cs`：持久化释放凭据＋逐项源核实，共用 `Application/ContentRelationRemoval.cs`，没有二次移动/删除。
+- `Application/ContentSingleOwnerPolicy.cs`、`ContentReferenceIntegrity.cs`、`ContentReferenceCommand.cs`；`Infrastructure/SingleOwnerMigration.cs`、`SqliteTransferJournal.IndexPlan`：唯一归属、旧库保全、跨归属收纳及图标延续。
+- 测试 `NativeShellExitTests`、`NativeShellPayloadTests`；入口 `scripts/start-incoming-review.ps1 -NativeShellExit`。以上路径均相对 `src/`，测试相对 `tests/DesktopUp.Contracts.Tests/`。
+
+## 2026-10-13 原生落点缺口定位（未修）
+
+- `PosterVisualWindow.Transfers.HandleDesktopTransfer`：外框外松手仅识别桌面，再传选择ID，未向Explorer交接Drop坐标或文件数据。
+- `DirectTransferPreparation.Outgoing`：DesktopDirectory＋源文件名；`PosterSpatialRuntime.Outgoing.RunOutgoing`：本应用逐项执行文件取出。`NativeContentDragImage`仅视觉层，不能视为原生源。
+- `NativeFileDropTarget`／`NativeIncomingDropSession`与`PosterVisualWindow.AttachFileDrop`：入拖已走IDropTarget、真实点/ticket和Shell图像，应复用，不为出拖缺口重建。
+- DeskBox参考路径、差异及拟议责任在[直接拖放§10](../V3-05/DIRECT_TRANSFER_DELIVERY.md#10-d4-n原生shell拖出整改2026-10-13)；新Shell源/完成适配尚无实现锚点，不用计划类名冒充代码。
+
+## 2026-10-13 框选与D4
+
+- ContentSelection.Marquee、PosterInputRouter/Contracts：按下时选择集合、相交去重、内容viewport优先级末位；Windows PosterInputIslandManager复用原捕获/阈值/Esc，不新增输入HWND。
+- [PosterVisualWindow.ContentMarquee.cs](../../../../src/DesktopUp.App/PosterVisualWindow.ContentMarquee.cs)：当前视口框选、取消还原；ContentEditing.HasContentGesture统一保护；Content.DrawContentSnapshot绘制透明框。
+- [NativeContentDragImage.cs](../../../../src/DesktopUp.Windows/NativeContentDragImage.cs)、ContentDragPixels、PosterVisualWindow.ContentDragImage：缓存BGRA/数量、不可命中图像层、内部/外部单一所有者和终态释放；不是通用OLE源。
+- [PosterSpatialRuntime.Outgoing.cs](../../../../src/DesktopUp.App/PosterSpatialRuntime.Outgoing.cs)、DirectTransferPreparation.OutgoingSources/Outgoing：冻结来源、逐项取出，跨卷复用既有保留源执行器；PosterVisualWindow.TransferConfirmation提供近旁确认。
+- OutgoingTransferIntegrationTests/ContentSelectionTests及App.IncomingProbe `--d5-combined`、CombinedSelectionProbe；入口`scripts/start-incoming-review.ps1 -CombinedD5`。证据见[§9](../V3-05/DIRECT_TRANSFER_DELIVERY.md#9-空白框选d4与d5合包2026-10-13)。
+
+## 2026-10-13 05-11-A公共移除与外部同步
+
+- [ContentRelationRemoval.cs](../../../../src/DesktopUp.Application/ContentRelationRemoval.cs)：按精确关系ID一次裁剪各海报成员/布局/图钉；ContentDetachPolicy和外部同步复用，原拖出经ContentDetachPolicy保持用户确认/锁定语义。
+- [ManagedContentSynchronizer.cs](../../../../src/DesktopUp.Infrastructure/ManagedContentSynchronizer.cs)：归属与完整扫描、身份改名、稳定观察、共享范围、CAS提交；只改索引。SqliteStateCommandRepository限制内部观察授权，不能由UI伪造。
+- [ManagedContentObservationStore.cs](../../../../src/DesktopUp.Infrastructure/ManagedContentObservationStore.cs)：schema20本地身份基线；SqliteTransferJournal及IndexRecovery、SqliteStorageRelocationJournal.Transactions在提交时保存身份，旧凭证只作迁移引导。
+- [ManagedContentMonitor.cs](../../../../src/DesktopUp.Infrastructure/ManagedContentMonitor.cs) / [App.Transfers.cs](../../../../src/DesktopUp.App/App.Transfers.cs)：每配置共享监测、2秒合并/30秒补查、启动/恢复/退出生命周期、正式投影刷新。SqliteTransferJournal观察专用短租约不占用扫描等待阶段。
+- PosterVisualWindow.Content裁剪真实选择集合；ManagedContentSyncTests新增隔离边界验证，App.IncomingProbe与smoke-incoming.ps1的`-ManagedSync`复用实际进程链。候选入口增加`-ManagedSyncRevision`，详情见[实施§8](../V3-05/DIRECT_TRANSFER_DELIVERY.md#8-05-11-a最小外部同步与公共移除2026-10-13)。
+
+## 2026-10-13 DEC-043 全框输入
+
+- PosterInputIslandManager.BuildWindowRegion与PosterDropSurfacePolicy：原生命中覆盖当前可见矩形，隐藏/暂停仍清空；逻辑命中不自动变成留白操作。
+- PosterInputRouter.Resolve：上层框内无命令则停止，不路由到下层Item；标题/按钮/卡片及捕获语义保持。
+- PosterDropReception：同一输入HWND的可选OLE注册、会话暂停和释放，无额外窗口/捕获识别/宽限计时器；NativeFileDropTarget、Shell图像和原业务通道保留。
+- 原NativeOleDragMonitor迁至tests/DesktopUp.NativeDragProbe，仅保留历史实验源码；Program拒绝已退役--routing-*及--cross-*入口。
+- PosterDropComponentTests、SparseContentInputTests、PosterInputRouterTests、PosterContentContextRouterTests、IncomingDropNativeTests更新新边界。独立候选入口scripts/start-incoming-review.ps1 -FullFrameRevision，当前证据归[D3§8](../V3-05/D3_NATIVE_INGRESS_AND_PLACEMENT.md#8-取消普通点击穿透并收敛接收组件)。
+
+下方稀疏输入/独立接收窗描述为此前实现，已由本节替代。
+
+## 2026-10-13 原生重复拖动诊断入口
+
+[NativeDragProbeTests.cs](../../../../tests/DesktopUp.Contracts.Tests/NativeDragProbeTests.cs)新增原生COM vtable枚举检查，覆盖Next的FORMATETC/fetched写回与终态；仅定向1项通过，不涉及鼠标或文件。
+
+[RoutingMechanismProbe.cs](../../../../tests/DesktopUp.NativeDragProbe/RoutingMechanismProbe.cs)与[Program.cs](../../../../tests/DesktopUp.NativeDragProbe/Program.cs)新增`--routing-repeat`，只运行生产组件的连续提交/取消/暂停三组；保留`--routing-auto`静态对照。底板自身维护测试层级，输入前核对实际鼠标和进程，限定采样时间并对无返回的自建测试源以失败码退出。生产代码未改，最新夹具构建及尚未通过的暂停边界见[D3§7.2.1](../V3-05/D3_NATIVE_INGRESS_AND_PLACEMENT.md#721-解锁后复验与夹具整改)。
+
 ## 2026-10-12 输入与拖放组件化
 
 - [PosterInputIslandManager.cs](../../../../src/DesktopUp.Windows/PosterInputIslandManager.cs)：普通输入始终稀疏；InstallDropReceiver注册与几何/暂停/重挂载/释放接线，不再暴露全矩形区域切换。
-- [PosterDropReception.cs](../../../../src/DesktopUp.Windows/PosterDropReception.cs)、[NativeOleDragMonitor.cs](../../../../src/DesktopUp.Windows/NativeOleDragMonitor.cs)：默认空区域的独立接收面、经核验的OLE捕获、捕获/协议结束分离及新会话复位。Windows实现细节兼容边界见[D3§7.1](../V3-05/D3_NATIVE_INGRESS_AND_PLACEMENT.md#71-已实施的组件边界)。
+- [PosterDropReception.cs](../../../../src/DesktopUp.Windows/PosterDropReception.cs)、[NativeOleDragMonitor.cs](../../../../tests/DesktopUp.NativeDragProbe/NativeOleDragMonitor.cs)：默认空区域的独立接收面、经核验的OLE捕获、捕获/协议结束分离及新会话复位。Windows实现细节兼容边界见[D3§7.1](../V3-05/D3_NATIVE_INGRESS_AND_PLACEMENT.md#71-已实施的组件边界)。（该监测器现仅保留于测试目录，本条描述为历史。）
 - [NativeFileDropTarget.cs](../../../../src/DesktopUp.Windows/NativeFileDropTarget.cs)、[ShellDropImages.cs](../../../../src/DesktopUp.Windows/ShellDropImages.cs)：协议终态通知与独立COM包装；App只持有IPosterDropRegistration，原ticket/文件通道不变。
 - [PosterDropComponentTests.cs](../../../../tests/DesktopUp.Contracts.Tests/PosterDropComponentTests.cs)验证可选组件不改基础区域；[RoutingMechanismProbe.cs](../../../../tests/DesktopUp.NativeDragProbe/RoutingMechanismProbe.cs)用独立底板/OLE源验证实际跨进程命中、取消、暂停、连续会话与资源释放。自建诊断路径，无文件执行器。
 - [修订候选入口](../../../../scripts/start-incoming-review.ps1)：`-ComponentRevision`使用新manifest/profile，旧默认入口保留。当前只完成PrepareOnly，最终原生待解锁，见[D3§7.2](../V3-05/D3_NATIVE_INGRESS_AND_PLACEMENT.md#72-证据与当前验证范围)。

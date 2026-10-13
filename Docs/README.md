@@ -1,8 +1,18 @@
 # DesktopUp V2 文档入口
 
+2026-10-13最新增量：按DEC-048完成[05-14六项界面收敛§13](A_Project/40_Implementation/V3-05/DIRECT_TRANSFER_DELIVERY.md#13-05-14界面减法与通用背景2026-10-13)：空海报/底部提示减法、模板按装配显示参数、通用背景颜色/不透明度与菜单去重。先交付本轮查看版，再衔接05-05-V2；独立三组件装配器未制作，D4-N既有结论保持。
+
+2026-10-13当前：D4-N四组USER PASS，D4-N/BUG-037已收口；[05-14入口收口§12](A_Project/40_Implementation/V3-05/DIRECT_TRANSFER_DELIVERY.md#12-05-14入口收口)CODE/AUTO完成：撤阶段性添加入口、修复并入所选项目管理菜单，保留底层引用和拖放安全。下一步05-05-V2图标替换/恢复默认，未实施；下方待D4-N人工为历史，未验环境继续携带，无Git同步。
+
+当前（2026-10-13，DEC-047）：D4-N已接真实Shell拖出；取消有效拖放的额外确认和共享引用，失效卡片仅松手后确认移除。下一步是同包集中人工验收，不重新验D5既有结论。实施、证据与入口见[直接拖放§11](A_Project/40_Implementation/V3-05/DIRECT_TRANSFER_DELIVERY.md#11-dec-047单一引用与直接原生拖放)。下方“新接线尚未实施”是本轮前的历史状态；无本轮Git同步。
+
+当前（2026-10-13，D5反馈）：[四组人工全部通过](A_Project/40_Implementation/V3-05/DIRECT_TRANSFER_DELIVERY.md#95-d5人工结果)，BUG-036关闭；用户同时要求桌面落点走真正Windows原生拖放。下一步[D4-N原生Shell拖出整改](A_Project/40_Implementation/V3-05/DIRECT_TRANSFER_DELIVERY.md#10-d4-n原生shell拖出整改2026-10-13)，已对照DeskBox核清当前捕获松手搬文件的缺口，新接线尚未实施。整改集中验收后再05-14入口收口→图标UI/构造，暂保留备用添加入口。旧包/配置/未验环境保留，无本轮Git同步；下方待D5为历史。
+
+当前（2026-10-13，05-11-A）：公共关系移除与最小外部同步已实施，最终3268合同、同包首启/重启通过；BUG-036人工剪切复验保留至D5，D3既有人工结论不变。详情见[直接拖放§8](A_Project/40_Implementation/V3-05/DIRECT_TRANSFER_DELIVERY.md#8-05-11-a最小外部同步与公共移除2026-10-13)。下一步空白框选规则收敛/实施 → D4 → D5，再图标UI/构造；右键/模板架构暂定。无Git同步，旧配置不动；下方为历史阶段。
+
 Git同步检查点（2026-10-12）：本次用户授权保存当前D1～D3累计工作，源码`10b2afc`及相邻文档提交，目标仅`origin/impl/poster-redesign-V3`；不合入`impl/main`，不上传候选/配置/日志。验证与携带项见[当前交接](A_Project/40_Implementation/V3-04/HANDOFF.md)，D3最终原生复验及人工仍待完成；下方“不Git同步”是此前实施边界。
 
-2026-10-12当前：D2-04 CLOSED；D3首版留白拖入及2～5项获用户通过，普通点击穿透失败。按用户批准的[D3组件化整改§7](A_Project/40_Implementation/V3-05/D3_NATIVE_INGRESS_AND_PLACEMENT.md#7-输入与拖放组件化整改)已将普通输入与OLE接收拆开，保留入库/账本/落点业务；最终原生连续操作复验待桌面解锁，随后一轮集中人工。BUG-022未关闭，D4/D5未开始；真实满盘、Medium等未验项保持。候选与下一动作见[交接](A_Project/40_Implementation/V3-04/HANDOFF.md)，不Git同步。
+当前（2026-10-13，DEC-043）：用户取消普通点击穿透。D3改为可见全框输入＋同HWND OLE注册，移除生产专用捕获监测/额外接收窗；文件业务和原2～5项人工结论保留。BUG-022以需求取消退役，不补PASS，不再推进旧穿透探针。当前验证及集中人工归[D3§8](A_Project/40_Implementation/V3-05/D3_NATIVE_INGRESS_AND_PLACEMENT.md#8-取消普通点击穿透并收敛接收组件)；D4/D5未开始，普通权限/满盘等携带不变，未Git同步。
 
 2026-10-10 Git 分支决定：开发继续在 `impl/poster-redesign-V3`，每个完成的里程碑再整合到精简发布源码线 `impl/main`；规则见 [开发与发布分支](Rules/GIT_STRATEGY.md)。发布精简不反向合入开发，不改变未验项结论。
 

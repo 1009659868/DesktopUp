@@ -132,7 +132,7 @@ public sealed class ManagedTransferClosureTests
         using var f=new F();var p=f.Stage(f.File("migration.txt"));var old=Assert.Single(f.Journal.Read());
         f.Sql(StorageSchemaFixture.Drop19+"DROP TABLE managed_storage_adoptions; DROP TABLE content_transfer_closures; DROP TABLE storage_provision_closures; DELETE FROM schema_migrations WHERE version>=17; UPDATE state_head SET schema_version=16; PRAGMA user_version=16;");
         var checksums=f.Sql("SELECT group_concat(checksum_sha256) FROM schema_migrations ORDER BY version");
-        var result=f.Store.Initialize();Assert.True(result.Succeeded,result.Error);Assert.Equal(16,result.PreviousSchemaVersion);Assert.Equal(19,result.Head!.SchemaVersion);
+        var result=f.Store.Initialize();Assert.True(result.Succeeded,result.Error);Assert.Equal(16,result.PreviousSchemaVersion);Assert.Equal(21,result.Head!.SchemaVersion);
         Assert.Equal(checksums,f.Sql("SELECT group_concat(checksum_sha256) FROM schema_migrations WHERE version<=16 ORDER BY version"));Assert.Equal(StateRequestFingerprint.Compute(old),StateRequestFingerprint.Compute(Assert.Single(f.Journal.Read())));
         Assert.True(File.Exists(p.Files[0].Source));Assert.NotEmpty(Directory.GetFiles(f.Paths.Backups,"*.sqlite3"));
     }

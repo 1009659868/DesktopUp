@@ -7,7 +7,7 @@ namespace DesktopUp.Contracts.Tests;
 public sealed class PosterDropComponentTests
 {
     [Theory][InlineData(false)][InlineData(true)]
-    public void InstallingOrFailingOptionalDropDoesNotChangeCoreInput(bool failDropAttachment)=>Sta(()=>
+    public void OptionalDropUsesCoreWindowWithoutChangingInputOwnership(bool occupiedRegistration)=>Sta(()=>
     {
         var native=new Attachment();var ledger=new Ledger();var router=new PosterInputRouter();
         var host=new DesktopShellHostSnapshot(new(1,2,3),1,DateTimeOffset.UtcNow);
@@ -15,28 +15,43 @@ public sealed class PosterDropComponentTests
         var layout=new PosterInputLayoutSnapshot(1,300,240,[new(PosterInputTargetKind.TitleBar,-1,new(10,5,280,30))],8);
         using var island=new PosterInputIslandManager(native,ledger,new Log(),()=>true,router,new("test",1),0);
         Assert.True(island.Create(host,frame,layout));
-        AssertSparse(island.WindowHandle);int coreCount=ledger.ActiveResources.Count;
-        native.Fail=failDropAttachment;
-        if(failDropAttachment)
+        AssertFrame(island.WindowHandle);int coreCount=ledger.ActiveResources.Count;
+        if(occupiedRegistration)
         {
-            Assert.Throws<IOException>(()=>island.InstallDropReceiver(()=>null,_=>{}));
-            Assert.Equal(coreCount,ledger.ActiveResources.Count);AssertSparse(island.WindowHandle);
+            using(var occupied=new NativeFileDropTarget(island.WindowHandle,()=>false,_=>{},ledger,new Log()))
+            {
+                Assert.Throws<COMException>(()=>island.InstallDropReceiver(()=>null,_=>{}));
+                Assert.Equal(coreCount+1,ledger.ActiveResources.Count);
+                AssertFrame(island.WindowHandle);
+            }
+            Assert.Equal(coreCount,ledger.ActiveResources.Count);
         }
-        else
+        using(var drop=island.InstallDropReceiver(()=>null,_=>{}))
         {
-            using var drop=island.InstallDropReceiver(()=>null,_=>{});
-            Assert.True(drop.IsReady);Assert.False(drop.IsHovering);AssertSparse(island.WindowHandle);
-            island.SuspendRouting();Assert.True(island.ApplyLayout(frame,layout with{Revision=2}));
-            AssertSparse(island.WindowHandle);drop.Dispose();drop.Dispose();
-            Assert.Equal(coreCount,ledger.ActiveResources.Count);AssertSparse(island.WindowHandle);
-            using var again=island.InstallDropReceiver(()=>null,_=>{});Assert.True(again.IsReady);
+            Assert.True(drop.IsReady);Assert.False(drop.IsHovering);
+            Assert.Equal(coreCount+1,ledger.ActiveResources.Count); // only OLE registration, no extra HWND/hook/timer
+            AssertFrame(island.WindowHandle);
+            Assert.Throws<COMException>(()=>new NativeFileDropTarget(island.WindowHandle,()=>false,_=>{},ledger,new Log()));
+            island.SuspendRouting();AssertFrame(island.WindowHandle,suspended:true);
+            Assert.True(island.ApplyLayout(frame,layout with{Revision=2}));
+            AssertFrame(island.WindowHandle);drop.Dispose();drop.Dispose();
+            Assert.False(drop.IsReady);
         }
+        Assert.Equal(coreCount,ledger.ActiveResources.Count);AssertFrame(island.WindowHandle);
+        using(var again=island.InstallDropReceiver(()=>null,_=>{}))Assert.True(again.IsReady);
         island.Dispose();Assert.Empty(ledger.ActiveResources);Assert.Equal(0,router.Count);
     });
-    private static void AssertSparse(nint h)
+    private static void AssertFrame(nint h,bool suspended=false)
     {
         nint r=CreateRectRgn(0,0,0,0);
-        try{Assert.NotEqual(0,GetWindowRgn(h,r));Assert.True(PtInRegion(r,100,20));Assert.False(PtInRegion(r,150,180));}
+        try
+        {
+            Assert.NotEqual(0,GetWindowRgn(h,r));
+            Assert.Equal(!suspended,PtInRegion(r,100,20));
+            Assert.Equal(!suspended,PtInRegion(r,150,180));
+            Assert.Equal(!suspended,PtInRegion(r,0,0));
+            Assert.False(PtInRegion(r,300,180));Assert.False(PtInRegion(r,100,240));
+        }
         finally{DeleteObject(r);}
     }
     private static void Sta(Action run)
@@ -47,8 +62,7 @@ public sealed class PosterDropComponentTests
     }
     private sealed class Attachment:IDesktopLayerAttachment
     {
-        public bool Fail;
-        public DesktopLayerAttachResult Attach(nint h,DesktopShellHostSnapshot s,bool showWindow=false,bool inputTransparent=false)=>new(!Fail,h,0,0,s.Generation,0,Fail?"injected":null);
+        public DesktopLayerAttachResult Attach(nint h,DesktopShellHostSnapshot s,bool showWindow=false,bool inputTransparent=false)=>new(true,h,0,0,s.Generation,0,null);
         public bool ReassertDesktopBottom(nint h,DesktopShellHostSnapshot s)=>true;
         public bool ApplyRoundedRegion(nint h,int w,int height,int r)=>true;
         public bool ApplyPreparedBounds(nint h,DesktopPixelRect b)=>true;

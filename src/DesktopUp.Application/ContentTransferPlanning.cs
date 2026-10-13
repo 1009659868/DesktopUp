@@ -139,7 +139,7 @@ public static class ContentTransferPlanning
             bool legacyReference = entry.OriginPosterItemId is not null && !alreadyManaged;
             // Shared aliases/descendants must be visible even if they are in the same poster.
             bool shared = affected.Length > 1 || catalog.PosterItems.Count(p => memberIds.Contains(p.MembershipId)) > 1;
-            planned.Add(new(entry, same, Array.AsReadOnly(affected), Array.AsReadOnly(affectedPosters), legacyReference || shared || binding is null && state.TargetContainsDemo));
+            planned.Add(new(entry, same, Array.AsReadOnly(affected), Array.AsReadOnly(affectedPosters), false)); // DEC-047: drop expresses intent.
         }
         if (requiredPosters.Any(id => !state.PosterVersions.TryGetValue(id, out long version) || version < 1))
             return Reject(TransferPlanStatus.Conflict, "Missing affected poster version.");

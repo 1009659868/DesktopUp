@@ -186,6 +186,11 @@ public partial class App : Microsoft.UI.Xaml.Application
             "startup", invalidateShell: false);
 
         DispatchIntent(_startupIntent);
+        // A new empty profile needs a visible entry point, not only an unfamiliar tray icon.
+        // Do not seed demonstration content or reset an existing user's workspace.
+        if (stateInitialization.Status == StateStoreInitializationStatus.Created &&
+            _startupIntent.Kind == StartupIntentKind.StartBackground)
+            ShowControlCenter();
         while (_pendingIntents.TryDequeue(out StartupIntent? pending))
         {
             DispatchIntent(pending);
@@ -1049,6 +1054,9 @@ public partial class App : Microsoft.UI.Xaml.Application
         if (_controlCenter is not null) await _controlCenter.CancelPortableAndWaitAsync();
         if (_spatialRuntime is not null) await _spatialRuntime.StopTransfersAsync();
         await _transferDiscovery;
+        if (_managedContentMonitor is not null) await _managedContentMonitor.DisposeAsync();
+        _managedContentMonitor = null;
+        _managedContentMonitorLease?.Dispose(); _managedContentMonitorLease = null;
         _inputRouter.Suspend();
         _controlCenter?.CancelRemoval("application-exit");
         DebugSettings.XamlResourceReferenceFailed -= OnXamlResourceReferenceFailed;

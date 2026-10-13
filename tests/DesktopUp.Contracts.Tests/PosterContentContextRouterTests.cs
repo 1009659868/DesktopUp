@@ -153,12 +153,14 @@ public sealed class PosterContentContextRouterTests
     }
 
     [Fact]
-    public void TransparentPeerHoleStillAllowsCurrentLowerItem()
+    public void PeerBlankBlocksLowerItemUntilPeerIsHidden()
     {
         var router = Router();
         var press = Hit(router);
         router.Register(B);
         Assert.True(router.Publish(B, Frame, Layout(1, Item(bounds: new(200, 120, 40, 40)))));
+        Assert.Null(router.ResolveContext(press, Point, new[] { B, A }));
+        router.Invalidate(B);
         Assert.NotNull(router.ResolveContext(press, Point, new[] { B, A }));
     }
 

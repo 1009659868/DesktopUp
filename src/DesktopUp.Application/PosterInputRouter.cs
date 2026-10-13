@@ -16,7 +16,7 @@ public sealed class PosterInputRouter
     public int ReadyCount => _suspended ? 0 : _surfaces.Values.Count(s => s.Layout is not null);
 
     // A wake-up hint only. Observers must re-read native ownership and current geometry;
-    // routed events neither assert hover nor extend the input region into transparent holes.
+    // routed events do not assert hover or create an interactive command for blank areas.
     public event Action? PointerActivity;
     public bool HasPointerObservers => PointerActivity is not null;
     public Exception? NotifyPointerActivity(PosterInputSessionKey key, long revision)
@@ -58,7 +58,8 @@ public sealed class PosterInputRouter
         _surfaces.TryGetValue(key.PosterId, out var s) && s.Key == key && s.Layout?.Revision == revision;
 
     // Caller supplies actual visual HWND order; database stack order is not physical evidence.
-    // Only an input region is eligible. A transparent hole can fall through to a lower cluster/desktop.
+    // The first containing poster owns the whole frame. Blank space blocks lower posters
+    // with the content viewport as the last, explicit marquee target.
     public PosterInputHit? Resolve(int screenX, int screenY, IEnumerable<PosterInputSessionKey> frontToBack)
     {
         if (_suspended || Capture is not null) return null;
@@ -66,9 +67,11 @@ public sealed class PosterInputRouter
         {
             if (!_surfaces.TryGetValue(key.PosterId, out var s) || s.Key != key || s.Layout is not { } layout) continue;
             int x = screenX - s.Frame.X, y = screenY - s.Frame.Y;
-            if (!PosterInputGeometry.InsideRoundedFrame(x, y, layout)) continue;
-            foreach (var r in layout.Regions)
-                if (PosterInputGeometry.CapturesPointer(r) && Contains(r.Bounds, x, y)) return new(key, layout.Revision, s.Frame, r);
+            if (!PosterDropSurfacePolicy.ReceivesOle(s.Frame, new(screenX, screenY))) continue;
+            if (PosterInputGeometry.InsideRoundedFrame(x, y, layout))
+                foreach (var r in layout.Regions)
+                    if (PosterInputGeometry.CapturesPointer(r) && Contains(r.Bounds, x, y)) return new(key, layout.Revision, s.Frame, r);
+            return null;
         }
         return null;
     }
@@ -124,9 +127,8 @@ public sealed record PosterInputSurfaceSnapshot(PosterInputSessionKey Session, D
 // Shared by active routing and passive observation. No second set of title/edge constants.
 public static class PosterInputGeometry
 {
-    // A viewport describes scrolling/observation geometry, not a mouse-receiving surface.
-    // The native HRGN and button router must apply the same sparse region policy.
-    public static bool CapturesPointer(PosterInputRegion region) => region.Kind != PosterInputTargetKind.ContentViewport;
+    // Regions are priority ordered: controls/items precede the blank-content viewport.
+    public static bool CapturesPointer(PosterInputRegion region) => true;
 
     public static bool Contains(PosterInputSurfaceSnapshot surface, PointerScreenPoint point) =>
         InsideRoundedFrame(point.X - surface.Frame.X, point.Y - surface.Frame.Y, surface.Layout);

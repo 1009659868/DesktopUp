@@ -61,6 +61,13 @@ public static class ContentReferencePolicy
         var placements = layout!.Placements.ToList();
         foreach (var entry in selected)
         {
+            var occupied = relations.FirstOrDefault(r => ContentSingleOwnerPolicy.Key(items.Single(i => i.Id == members.Single(m => m.Id == r.MembershipId).ContentItemId)) ==
+                ContentSingleOwnerPolicy.Key(entry.Item));
+            if (occupied is not null)
+            {
+                if (occupied.PosterId == target.PosterId) continue;
+                return Invalid("此对象已在其他海报中；请移动已有卡片，不能重复引用。");
+            }
             ContentItem item;
             if (entry.Choice == ContentReferenceChoice.Reuse)
             {

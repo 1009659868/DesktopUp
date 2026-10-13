@@ -10,7 +10,7 @@ using Windows.Storage;
 
 namespace DesktopUp;
 
-// Only called by --auto-settings-smoke with the isolated-profile guard in App.
+// Called only by the isolated-profile guarded UI probes in App.
 public sealed partial class ControlCenterWindow
 {
     internal bool SettingsControlsEnabledForProbe => AutoPostureSwitch.IsEnabled && AutoPostureDelay.IsEnabled;
@@ -65,5 +65,83 @@ public sealed partial class ControlCenterWindow
         encoder.SetPixelData(BitmapPixelFormat.Bgra8, BitmapAlphaMode.Premultiplied,
             (uint)bitmap.PixelWidth, (uint)bitmap.PixelHeight, 96, 96, pixels.ToArray());
         await encoder.FlushAsync();
+    }
+
+    internal async Task VerifyContentEntryForProbe(bool empty, string evidenceRoot)
+    {
+        ShowWorkspacePage(false);
+        RenderContentLayout();
+        if (empty)
+        {
+            if (ContentManageButton.IsEnabled || ContentKeyboardPad.IsEnabled)
+                throw new InvalidOperationException("Empty poster still offers an active item command.");
+            return;
+        }
+        var view = _contentRuntime!.Invoke()!.ReadContentEditor(_view!.SelectedPosterId)!;
+        string item = view.Document.Placements.First().ItemId;
+        ContentAction((runtime, id) => runtime.SelectContentEditor(id, item));
+        await Task.Delay(80);
+        RenderContentLayout();
+        MenuFlyoutItem Repair() => ((MenuFlyout)ContentKeyboardPad.ContextFlyout).Items
+            .OfType<MenuFlyoutItem>().Single(x => x.Text == "修复所选引用…");
+        if (((MenuFlyout)ContentKeyboardPad.ContextFlyout).Items.OfType<MenuFlyoutItem>().Any(x =>
+            x.Text.Contains("全选引用") || x.Text.Contains("从此海报移除")))
+            throw new InvalidOperationException("Retired selection/removal actions still appear in the menu.");
+        if (!ContentManageButton.IsEnabled || !Repair().IsEnabled)
+            throw new InvalidOperationException("A single real item has no repair entry.");
+        if (view.Document.Placements.Count > 1)
+        {
+            ContentAction((runtime, id) => runtime.SelectAllRealContent(id));
+            await Task.Delay(80);
+            RenderContentLayout();
+            if (Repair().IsEnabled) throw new InvalidOperationException("Batch selection offered a single-item repair.");
+            ContentAction((runtime, id) => runtime.SelectContentEditor(id, item));
+            await Task.Delay(80);
+            RenderContentLayout();
+        }
+        // Other appearance checks may leave tall folders expanded; a native flyout needs a
+        // visible anchor, just as a user would scroll to the selected-item row first.
+        UiCTemplateFolder.IsExpanded = LayoutFolder.IsExpanded = false;
+        Activate();
+        UiCRoot.UpdateLayout();
+        ContentManageButton.StartBringIntoView(new BringIntoViewOptions { AnimationDesired = false });
+        await Task.Delay(180);
+        ContentManageButton.Focus(FocusState.Programmatic);
+        var openedMenu = ContentKeyboardPad.ContextFlyout;
+        bool menuOpened = false, menuClosed = false;
+        openedMenu.Opened += (_, _) => menuOpened = true;
+        openedMenu.Closed += (_, _) => menuClosed = true;
+        ContentManage_Click(ContentManageButton, new RoutedEventArgs());
+        var openedAt = DateTime.UtcNow;
+        while (!menuOpened || !Repair().IsLoaded)
+        {
+            if (DateTime.UtcNow - openedAt > TimeSpan.FromSeconds(3)) throw new IOException("Repair flyout did not become ready.");
+            await Task.Delay(50);
+        }
+        await Task.Delay(120);
+        var repair = Repair();
+        repair.Focus(FocusState.Programmatic);
+        var peer = FrameworkElementAutomationPeer.CreatePeerForElement(repair) ?? new MenuFlyoutItemAutomationPeer(repair);
+        ((IInvokeProvider)peer.GetPattern(PatternInterface.Invoke)).Invoke();
+        var started = DateTime.UtcNow;
+        while (_portableDialog is null)
+        {
+            if (DateTime.UtcNow - started > TimeSpan.FromSeconds(3))
+                throw new InvalidOperationException($"The scoped repair menu did not open its dialog: opened={menuOpened}, closed={menuClosed}, same={ReferenceEquals(openedMenu, ContentKeyboardPad.ContextFlyout)}, enabled={repair.IsEnabled}, busy={_portableBusy}, draft={_settings.Preview?.Setting}, notice={ContentLayoutNotice.Text}, settings={CommonSettingsNotice.Text}.");
+            await Task.Delay(50);
+        }
+        if (_portableDialog.Title as string != "修复所选卡片来源")
+            throw new InvalidOperationException("Unexpected repair dialog.");
+        await CaptureSettingsForProbeAsync(Path.Combine(evidenceRoot, "repair-entry.png"));
+        _portableDialog.Hide();
+        started = DateTime.UtcNow;
+        while (_portableBusy)
+        {
+            if (DateTime.UtcNow - started > TimeSpan.FromSeconds(3))
+                throw new InvalidOperationException("Cancelling repair did not release the UI owner.");
+            await Task.Delay(50);
+        }
+        RenderContentLayout();
+        await CaptureSettingsForProbeAsync(Path.Combine(evidenceRoot, "content-entry.png"));
     }
 }

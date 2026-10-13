@@ -124,8 +124,7 @@ public sealed partial class ControlCenterWindow
             string target = _view!.SelectedPosterId!; long revision = _view.Projection.Revision;
             var currentPaint = _view.SelectedPoster!.Presentation.TemplateValues;
             selected = selected with { Base = selected.Base with { Background = currentPaint.Color("surface.background", selected.Base.Background), Card = currentPaint.Color("item.color", selected.Base.Card) } };
-            if (_view.SelectedPoster.Presentation.CanShowContentHeading)
-                selected = selected with { Base = selected.Base with { Heading = _view.SelectedPoster.Presentation.IsContentHeadingVisible } };
+            // Heading declares component assembly, not the current instance's visibility.
             var values = TemplateParameterBindingAdapter.Read(selected.Schema, _view.SelectedPoster!.Presentation.TemplateValues)
                 .ToDictionary(p => p.Key, p => p.Value, StringComparer.Ordinal);
             var body = new StackPanel { Spacing = 16 }; body.Children.Add(CreateTemplateSampleArt(selected));

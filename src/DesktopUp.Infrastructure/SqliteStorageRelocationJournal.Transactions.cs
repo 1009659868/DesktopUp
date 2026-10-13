@@ -85,6 +85,8 @@ internal sealed partial class SqliteStorageRelocationJournal
             foreach(string poster in row.Plan.AffectedPosterIds)
                 SqlitePosterRepository.UpdatePoster(c,t,before.Catalog.Posters.Single(x=>x.Poster.PosterId==poster).Poster,revision,"storage-relocate-"+id.ToString("N"),false);
             SqliteContentRepository.Apply(c,t,before,new(){ContentCatalog=next},revision);
+            ManagedContentObservationStore.Capture(c,t,next,row.Plan.Request.Inventories.SelectMany(i=>
+                next.Memberships.Where(m=>m.CollectionId==i.CollectionId).Select(m=>m.ContentItemId)),proof.ObjectIdentity);
             using(var select=Command(c,t,"UPDATE storage_location_state SET active_root_id=$root,version=version+1 WHERE singleton_id=1",("$root",row.Plan.Request.Destination.Id.ToString())))select.ExecuteNonQuery();
             foreach(var oldRoot in row.Plan.Roots)
             {using var q=Command(c,t,"DELETE FROM managed_storage_roots WHERE root_id=$id",("$id",oldRoot.Root.Id.ToString()));q.ExecuteNonQuery();}

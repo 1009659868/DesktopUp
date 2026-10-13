@@ -50,7 +50,7 @@ public sealed partial class StorageRelocationPersistenceTests
         byte[] marker=File.ReadAllBytes(Path.Combine(f.Root.Locator,".desktopup-storage-owner.json"));
         var sums=f.Sql("SELECT group_concat(checksum_sha256) FROM schema_migrations WHERE version<=18 ORDER BY version");
         f.Sql(StorageSchemaFixture.Drop19+"DELETE FROM schema_migrations WHERE version=19;UPDATE state_head SET schema_version=18;PRAGMA user_version=18;");
-        var result=f.Store.Initialize();Assert.True(result.Succeeded,result.Error);Assert.Equal(18,result.PreviousSchemaVersion);Assert.Equal(19,result.Head!.SchemaVersion);Assert.NotNull(result.PreMigrationBackupFileName);
+        var result=f.Store.Initialize();Assert.True(result.Succeeded,result.Error);Assert.Equal(18,result.PreviousSchemaVersion);Assert.Equal(21,result.Head!.SchemaVersion);Assert.NotNull(result.PreMigrationBackupFileName);
         Assert.Equal(sums,f.Sql("SELECT group_concat(checksum_sha256) FROM schema_migrations WHERE version<=18 ORDER BY version"));
         Assert.Equal(catalog,ContentCatalogCodec.Write(f.State.ContentCatalog));Assert.Equal(revision,f.State.Revision);
         Assert.Equal(marker,File.ReadAllBytes(Path.Combine(f.Root.Locator,".desktopup-storage-owner.json")));
@@ -110,14 +110,18 @@ public sealed partial class StorageRelocationPersistenceTests
             Journal(f).Cancel(plan.Request.OperationId);Assert.Equal(ContentOpenRequestAdmission.Ready,opens.TryStart(request));
         }
     }
-    [Fact] public void MultiPosterSharedItemAndCustomIconSurviveOneRevisionSwitch()
+    [Fact] public void MultiPosterUniqueItemsAndCustomIconSurviveOneRevisionSwitch()
     {
         using var f=new F();AddOwned(f);var state=f.State;var item=Assert.Single(state.ContentCatalog.Items);
         var other=PosterConfigurationFactory.NewBasicBox("shared","DISPLAY1") with {PosterId=Guid.NewGuid().ToString(),ThemeInstanceId=Guid.NewGuid().ToString()};
         f.Repository.Execute(new("share-create","create",state.Revision,StateReadSet.ForCatalog(state.Catalog.CatalogVersion)),_=>new(){Creates=[other]});state=f.State;
         var reads=StateReadSet.ForPoster(other.PosterId,state.Catalog.Posters.Single(x=>x.Poster.PosterId==other.PosterId).EntityVersion) with {ContentVersion=state.ContentVersion};
-        var add=new ContentReferenceCommand("share-add",StateCommandSource.ControlCenter,state.Revision,reads,other.PosterId,[new(item,ContentReferenceChoice.Reuse,item.Id)],true);
+        var secondSource=f.File("second-owned.txt");
+        var add=new ContentReferenceCommand("share-add",StateCommandSource.ControlCenter,state.Revision,reads,other.PosterId,
+            [new(LocalContentReferenceProbe.Inspect(secondSource).Item!,ContentReferenceChoice.CreateIndependent)],true);
         Assert.Equal(StateCommandStatus.Committed,f.Repository.Execute(new(add.RequestId,"share",state.Revision,reads),s=>ContentReferencePolicy.Prepare(add,s)).Status);state=f.State;
+        var ingress=DirectTransferPreparation.Incoming(state,other.PosterId,[secondSource],new(f.Root,f.Collection));
+        f.Journal.Begin(ingress.Plan,ingress.Files,ingress.Plan.Fingerprint,f.Collection.Id);f.Executor.Execute(ingress.Plan.Request.OperationId);state=f.State;
         var card=state.ContentCatalog.PosterItems.Single(x=>x.PosterId==other.PosterId);
         reads=StateReadSet.ForPoster(other.PosterId,state.Catalog.Posters.Single(x=>x.Poster.PosterId==other.PosterId).EntityVersion) with {ContentVersion=state.ContentVersion};
         var icon=new ContentIconCommand("icon-shared",StateCommandSource.ControlCenter,state.Revision,reads,ContentRelationPolicy.Resolve(state.ContentCatalog,other.PosterId,card.LayoutItemId)!.Witness,ContentIconPersistenceTests.Icon(),true);

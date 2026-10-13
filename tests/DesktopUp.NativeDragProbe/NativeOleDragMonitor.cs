@@ -1,7 +1,9 @@
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace DesktopUp.Windows;
+namespace DesktopUp.NativeDragProbe;
+
+// Historical click-through experiment only; never compiled into the product.
 
 /// <summary>
 /// UI-thread shared adapter for the Windows OLE capture window. Capture notifications only

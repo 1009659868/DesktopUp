@@ -1,5 +1,15 @@
 # DesktopUp V2 V3 模块分类与端口目录 V1
 
+2026-10-13 DEC-048：通用`PosterSurfaceAppearance`（presentation v8）独立于模板私有bindings，`ScenePresentationAdapter`在背景层统一应用；无覆盖时保留原模板基线。`Base.Heading`控制介绍组件装配，实例显隐不能凭空挂载组件；控制中心按已装配组件生成折叠设置。副标题/大标题/数量三组件及自由装配器尚属后续，不冒称已实现。代码/证据见[§13](../40_Implementation/V3-05/DIRECT_TRANSFER_DELIVERY.md#13-05-14界面减法与通用背景2026-10-13)。
+
+2026-10-13 DEC-047已实施：`NativeShellDragSource`负责唯一OLE源与原生目标交接，`NativeDragDataObject`组合Shell载荷/私有图像格式，输入宿主仅交接捕获；`NativeShellExitJournal`（schema21）只记意图/观察结果，`ContentRelationRemoval`统一移除，`ContentSingleOwnerPolicy/SingleOwnerMigration`限制新增共享并备份迁移旧关系。既有Incoming账本保持，旧Outgoing仅限隔离旧执行器探针，不接生产鼠标。证据与人工门见[§11](../40_Implementation/V3-05/DIRECT_TRANSFER_DELIVERY.md#11-dec-047单一引用与直接原生拖放)。下段“待实现/共享关系”已被覆盖。
+
+2026-10-13 DEC-046模块增量（待实现）：D5既有四组通过；D4-N将增加真实Shell数据/原生源会话，与现有OLE接收、图像、内容排布分责。入海报由本应用文件执行器处理，出到Explorer由Shell执行；结果适配层只核实并提交共享关系/公共移除，外部同步与会话互斥，不复用旧Outgoing二次搬文件。具体参考和未定边界见[整改§10](../40_Implementation/V3-05/DIRECT_TRANSFER_DELIVERY.md#10-d4-n原生shell拖出整改2026-10-13)。下段仍是当前源码事实，不能把拟议组件当作已落地。
+
+2026-10-13 D4/框选映射：ContentSelection与ContentMarquee复用现有viewport/捕获，只有瞬时选择权限；NativeContentDragImage只拥有视觉窗口，没有OLE文件数据或搬移权限；Outgoing运行编排仍经DirectTransferPreparation与原持久执行器/公共移除。跨卷复制与清源未另造第二套，通用Explorer源仍未开放。合包验证和未验边界归[§9](../40_Implementation/V3-05/DIRECT_TRANSFER_DELIVERY.md#9-空白框选d4与d5合包2026-10-13)。
+
+2026-10-13当前映射：F13最小受管子集已落为ManagedContentMonitor/Synchronizer；ContentRelationRemoval作为公共纯移除端口，拖出与外部观察复用，文件执行仍归原转移通道。schema20只增本地身份观察，网络/云/完整目录映射未完成。实现和证据见[直接拖放§8](../40_Implementation/V3-05/DIRECT_TRANSFER_DELIVERY.md#8-05-11-a最小外部同步与公共移除2026-10-13)。下方2026-10-10映射保留为历史。
+
 2026-10-10当前实现映射：DEC-041退役恢复任务UI，AutomaticTransferCompletion负责失败自动收尾；DirectTransferPreparation／NativeFileDropTarget／原捕获桌面取回接同一账本与关系通道。schema18不变，2942自动门通过，普通权限人工待验，见[直接拖放实施](../40_Implementation/V3-05/DIRECT_TRANSFER_DELIVERY.md)。原schema16～18及复制取消证据保留；满盘延期、原生跨卷关闭、V2/V3后置不变。
 
 历史设计起点（2026-09-23）：布局V2评审已由后续R1～R8推进；保留旧审查材料，不用当时“待批准/未实现”覆盖现在的源码/证据。
@@ -106,6 +116,8 @@ DeskBox 对应经验：单实例、启动到托盘、桌面图标宿主稳定后
 | B12 | `DesktopRecoveryCoordinator` | Explorer 重建、Win+D、桌面刷新、会话/电源恢复 | `IDesktopRecovery` | V3-02/03 |
 
 关键规则：B 类只管理窗口和输入，不读取 Item 排名、不解释主题包、不执行文件移动。
+
+2026-10-13 / DEC-043：B06的原生输入区域改为海报当前可见全矩形，逻辑命中仍只允许明确标题/按钮/Item命令，留白不向下层路由。可选PosterDropReception仅在这个宿主HWND上注册OLE及管理会话，不另建窗口、全局捕获识别或动态接收区域；安装/释放不能改变基础输入所有权。B04/B08仍负责几何、隐藏/暂停、重挂载与销毁。视觉透明和临时菜单输入让位不等于恢复日常点击穿透；文件业务不进入B类。
 
 2026-09-11 [M08边界](../30_Plans/V3_04_M08_AUTO_POSTURE_PLAN.md)：自动行为纯模型及调度属于Application，Windows仅提供被动指针/保护信号，App组合共享服务并复用空间运行器；配置沿用Domain/Repository/Command/Projection，现有中心只补最小开关/秒数入口。当前已实现AutoPostureModel，以及Domain秒数/schema7/SetAutoPosture/草稿/投影，见[设置合同](../40_Implementation/V3-04/M08_AUTO_POSTURE_SETTINGS.md)；[M08-03](../40_Implementation/V3-04/M08_POINTER_OBSERVATION.md)已实现PosterPointerTracker、PassivePosterPointerObserver及App当前会话采集端口，[M08-04](../40_Implementation/V3-04/M08_SHARED_SCHEDULER.md)已接AutoPostureScheduler/AutoPostureEvidence、App共享计时及IAutomaticPostureCommitter，[M08-05](../40_Implementation/V3-04/M08_CONTROL_CENTER_SETTINGS.md)已接ControlCenterAutoPostureEditor与真实控件，latest/basis分离并复用CAS；[M08-06](../40_Implementation/V3-04/M08_LIFECYCLE_REGRESSION.md)已接SystemLifecycleGate、共享WTS/电源分类与原恢复版本门；完整体验及输入桌面环境复测待补，不宣称整个M08已完成。
 

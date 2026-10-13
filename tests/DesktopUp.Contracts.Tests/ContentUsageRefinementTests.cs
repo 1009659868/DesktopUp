@@ -23,10 +23,9 @@ public sealed class ContentUsageRefinementTests
         var member=f.Current.ContentCatalog.Memberships.Single(m=>m.Id==f.Current.ContentCatalog.PosterItems.Single().MembershipId);
         Assert.Equal(incoming.Item.Id,member.ContentItemId);Assert.NotEqual(original.Item.Id,member.ContentItemId);
     }
-    [Fact] public void StillUsedByAnotherPosterRemainsExplicitReuseWithOwner()
+    [Fact] public void StillOwnedByAnotherPosterDefaultsToSkip()
     {
-        using var f=new Fixture();var original=Entry();f.Commit(f.AddCommand(f.Main,original));string b=f.NewPoster();
-        f.Commit(f.AddCommand(b,original with {Choice=ContentReferenceChoice.Reuse,ReuseItemId=original.Item.Id}));Detach(f,f.Main);
+        using var f=new Fixture();var original=Entry();string b=f.NewPoster();f.Commit(f.AddCommand(b,original));
         var preview=ContentReferencePreviewPolicy.ForItem(f.Current.ContentCatalog,Entry().Item,[]);
         Assert.Equal(original.Item.Id,Assert.Single(preview.Reusable).Item.Id);Assert.Equal(new[]{b},preview.Reusable[0].PosterIds);
         Assert.Equal(ContentReferenceChoice.Skip,preview.DefaultChoice);

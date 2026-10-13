@@ -19,13 +19,13 @@ public sealed class PosterInputRouterTests
         var r = Router();
         Assert.Equal(B, r.Resolve(10, 10, new[] { B, A })!.Session);
         Assert.Equal(A, r.Resolve(10, 10, new[] { A, B })!.Session);
-        Assert.Null(r.Resolve(10, 100, new[] { A, B })); // Desktop hole.
+        Assert.Null(r.Resolve(10, 100, new[] { A, B })); // Blank area has no command.
     }
-    [Fact] public void UpperHoleCanRouteToLowerInputAndRoundedCornerRemainsTransparent()
+    [Fact] public void UpperBlankAndVisualCornerBlockLowerInputWithoutInvokingCommands()
     {
         var r = Router();
         r.Publish(B, new(0, 0, 300, 300), Layout(2) with { Regions = new[] { new PosterInputRegion(PosterInputTargetKind.Item, 2, new(30, 80, 60, 80)) } });
-        Assert.Equal(A, r.Resolve(10, 10, new[] { B, A })!.Session);
+        Assert.Null(r.Resolve(10, 10, new[] { B, A }));
         Assert.Equal(B, r.Resolve(40, 90, new[] { B, A })!.Session);
         r.Publish(A, new(0, 0, 300, 300), Layout(2) with { OuterCornerRadius = 20 });
         Assert.Null(r.Resolve(0, 0, new[] { A }));

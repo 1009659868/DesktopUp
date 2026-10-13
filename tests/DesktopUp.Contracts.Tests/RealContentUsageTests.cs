@@ -20,12 +20,12 @@ public sealed class RealContentUsageTests
     [Fact] public void DetachOnlyRemovesPosterRelationOneRevisionAndReplay()
     {
         using var f=new Fixture();var entry=Entry();f.Commit(f.AddCommand(f.Main,entry));string b=f.NewPoster();
-        f.Commit(f.AddCommand(b,entry with {Choice=ContentReferenceChoice.Reuse,ReuseItemId=entry.Item.Id}));
+        f.Commit(f.AddCommand(b,Entry("other.txt")));
         string id=f.Current.ContentCatalog.PosterItems.Single(p=>p.PosterId==f.Main).LayoutItemId;
         string? other=f.Current.PostersById[b].Poster.ContentLayoutJson;long rev=f.Current.Revision;
         var command=Detach(f,id);var result=f.Coordinator.Execute(command);
         Assert.True(result.Succeeded,result.Error);Assert.Equal(rev+1,f.Current.Revision);
-        Assert.Single(f.Current.ContentCatalog.Items);Assert.Equal(2,f.Current.ContentCatalog.Memberships.Count);
+        Assert.Equal(2,f.Current.ContentCatalog.Items.Count);Assert.Equal(2,f.Current.ContentCatalog.Memberships.Count);
         Assert.Single(f.Current.ContentCatalog.PosterItems);Assert.Equal(b,f.Current.ContentCatalog.PosterItems.Single().PosterId);
         Assert.Equal(other,f.Current.PostersById[b].Poster.ContentLayoutJson);
         Assert.Equal(StateCommandStatus.Replayed,f.Coordinator.Execute(command).Status);

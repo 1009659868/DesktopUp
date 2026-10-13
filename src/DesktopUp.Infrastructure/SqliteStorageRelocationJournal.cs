@@ -24,6 +24,9 @@ internal interface IStorageRelocationVerifier
 internal abstract class StorageRelocationProofLease : IDisposable
 {
     public abstract StorageRelocationTargets Targets { get; }
+    // Read while the verifier still holds its target leases. Persistence-only fixtures supply
+    // their own identity adapter; the production verifier always uses native file identity.
+    public virtual string ObjectIdentity(string path) => LocalTransferFiles.Identity(path);
     public abstract void Dispose();
 }
 internal sealed record StorageRelocationTargets(string PlanFingerprint, string ContentWitness, StorageBundleClaim Claim);

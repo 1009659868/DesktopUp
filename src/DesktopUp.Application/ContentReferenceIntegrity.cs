@@ -15,6 +15,9 @@ public static class ContentReferenceIntegrity
             if (reads?.ContentVersion != before.ContentVersion) return "Content mutations require the confirmed catalog version.";
             try { catalog = ContentCatalogPolicy.Freeze(catalog); _ = ContentCatalogCodec.Write(catalog); }
             catch (ArgumentException e) { return e.Message; }
+            // Old shared profiles may still be read/backed up, but no mutation can publish
+            // another shared catalog. Startup migration uses the common removal operation.
+            if (ContentSingleOwnerPolicy.Validate(catalog) is { } ownershipError) return ownershipError;
             var detached = before.ContentCatalog.PosterItems.Where(p => catalog.PosterItems.All(n => n.Id != p.Id)).ToArray();
             if (!detached.Select(p => p.Id).ToHashSet().SetEquals(plan.ExplicitDetachedRelations) ||
                 detached.Any(p => !reads.Posters.ContainsKey(p.PosterId) || plan.Updates.All(u => u.PosterId != p.PosterId)))
@@ -22,17 +25,20 @@ public static class ContentReferenceIntegrity
             // Explicit detach removes only the poster view; shared content/collection/source remain.
             var removedStorage = before.ContentCatalog.Memberships.Where(m => !catalog.Memberships.Contains(m)).ToArray();
             if (!removedStorage.Select(m => m.Id).ToHashSet().SetEquals(plan.RemovedStorageMemberships) ||
-                removedStorage.Any(m => plan.TransferReceiptId is null || m.Origin != ContentMembershipOrigin.Source ||
+                removedStorage.Any(m => (plan.TransferReceiptId is null && plan.ExternalSyncReceiptId is null) || m.Origin != ContentMembershipOrigin.Source ||
                     before.ContentCatalog.Collections.Single(c => c.Id == m.CollectionId).Kind != ContentCollectionKind.Managed ||
                     catalog.PosterItems.Any(p => p.MembershipId == m.Id)))
-                return "Storage membership removal requires a verified transfer receipt, never a view detach.";
+                return "Storage membership removal requires verified transfer or external observation, never a view detach.";
             if (before.ContentCatalog.Items.Any(i => catalog.Items.All(n => n.Id != i.Id)) ||
                 before.ContentCatalog.Collections.Any(c => !catalog.Collections.Contains(c)) ||
                 before.ContentCatalog.Bindings.Any(b => !catalog.Bindings.Contains(b)) ||
                 before.ContentCatalog.PosterItems.Except(detached).Any(p => !catalog.PosterItems.Contains(p) && plan.IconEdit?.PosterItemId != p.Id))
                 return "Reference commands may not silently detach existing relations.";
             if (catalog.PosterItems.Any(p => p.IconAssetId is not null &&
-                before.ContentCatalog.PosterItems.All(old => old.Id != p.Id) ))
+                before.ContentCatalog.PosterItems.All(old => old.Id != p.Id) &&
+                !(plan.TransferReceiptId is not null && detached.Any(old=>old.IconAssetId==p.IconAssetId &&
+                    before.ContentCatalog.Memberships.Single(m=>m.Id==old.MembershipId).ContentItemId==
+                    catalog.Memberships.Single(m=>m.Id==p.MembershipId).ContentItemId))))
                 return "New card icon import requires an explicit atomic construction contract.";
             foreach (var item in before.ContentCatalog.Items)
             {

@@ -11,7 +11,7 @@ public sealed class SqliteStateStore : IStateStore
     private const int ApplicationId = 0x44555033; // "DUP3"
     private const int BusyTimeoutMilliseconds = 5_000;
     // 14 adds durable opening receipts/facts. Earlier migration text/checksums stay frozen.
-    private const int CurrentSchemaVersion = 19;
+    private const int CurrentSchemaVersion = 21;
     private const string DatabaseFileName = "desktopup.sqlite3";
     private static readonly Migration[] Migrations =
     [
@@ -233,10 +233,13 @@ public sealed class SqliteStateStore : IStateStore
         new(16, "managed-transfer-journal", SqliteTransferJournal.MigrationSql),
         new(17, "preserved-transfer-closures", SqliteTransferJournal.ClosureMigrationSql),
         new(18, "explicit-legacy-storage-adoption", ManagedStorageAdoption.MigrationSql),
-        new(19, "storage-location-relocation", SqliteStorageRelocationJournal.MigrationSql)
+        new(19, "storage-location-relocation", SqliteStorageRelocationJournal.MigrationSql),
+        new(20, "managed-content-observations", ManagedContentObservationStore.MigrationSql),
+        new(21, "native-shell-exit-observation", NativeShellExitJournal.MigrationSql)
     ];
 
     private readonly object _gate = new();
+    internal object TransferObservationGate { get; } = new();
     private readonly IUserDataPaths _paths;
     private readonly IStructuredLog? _log;
     private readonly string _databasePath;
@@ -652,6 +655,8 @@ public sealed class SqliteStateStore : IStateStore
             if (migration.Version >= 17) SqliteTransferJournal.VerifyClosures(connection, transaction);
             if (migration.Version >= 18) ManagedStorageAdoption.Verify(connection, transaction);
             if (migration.Version >= 19) SqliteStorageRelocationJournal.Verify(connection, transaction);
+            if (migration.Version >= 20) ManagedContentObservationStore.Verify(connection, transaction);
+            if (migration.Version >= 21) NativeShellExitJournal.Verify(connection, transaction);
 
             string appliedUtc = DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture);
             using (SqliteCommand ledger = connection.CreateCommand())
@@ -772,6 +777,8 @@ public sealed class SqliteStateStore : IStateStore
         if (expectedVersion >= 17) SqliteTransferJournal.VerifyClosures(connection, null);
         if (expectedVersion >= 18) ManagedStorageAdoption.Verify(connection, null);
         if (expectedVersion >= 19) SqliteStorageRelocationJournal.Verify(connection, null);
+        if (expectedVersion >= 20) ManagedContentObservationStore.Verify(connection, null);
+        if (expectedVersion >= 21) NativeShellExitJournal.Verify(connection, null);
         if (head.SchemaVersion != version)
         {
             throw new InvalidDataException(

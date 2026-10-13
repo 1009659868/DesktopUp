@@ -256,7 +256,7 @@ public static class PosterContentInputPolicy
         PosterInputTargetKind.ContentItem or PosterInputTargetKind.ContentSpanHandle or PosterInputTargetKind.ContentViewport;
 
     public static bool CanDrag(PosterInputTargetKind kind) => kind is
-        PosterInputTargetKind.ContentItem or PosterInputTargetKind.ContentSpanHandle;
+        PosterInputTargetKind.ContentItem or PosterInputTargetKind.ContentSpanHandle or PosterInputTargetKind.ContentViewport;
 
     public static bool HasValidIdentity(PosterInputRegion region) => IsTarget(region.Kind) &&
         region.ContentSnapshotGeneration > 0 &&

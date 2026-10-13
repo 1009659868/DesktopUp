@@ -47,6 +47,18 @@ public sealed class ShellDropImages : INativeDropImages
     { if (fallback is not null) { fallback.Dispose(); fallback = null; } else Marshal.ThrowExceptionForHR(target.DragLeave()); }
     public void Drop(IDataObject data, FileDropPoint point, uint effect)
     { if (fallback is not null) { fallback.Dispose(); fallback = null; } else Marshal.ThrowExceptionForHR(target.Drop(data, ref point, effect)); }
+    public void InitializeSource(nint bitmap, int width, int height, int x, int y, IDataObject data)
+    {
+        var image = new DragImage { Width = width, Height = height, X = x, Y = y, Bitmap = bitmap, ColorKey = 0xFFFFFFFF };
+        Marshal.ThrowExceptionForHR(((SourceHelper)instance!).InitializeFromBitmap(ref image, data));
+    }
+    [StructLayout(LayoutKind.Sequential)] private struct DragImage { public int Width, Height, X, Y; public nint Bitmap; public uint ColorKey; }
+    [ComImport, Guid("DE5BF786-477A-11D2-839D-00C04FD918D0"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    private interface SourceHelper
+    {
+        [PreserveSig] int InitializeFromBitmap(ref DragImage image, [MarshalAs(UnmanagedType.Interface)] IDataObject data);
+        [PreserveSig] int InitializeFromWindow(nint window, ref FileDropPoint point, [MarshalAs(UnmanagedType.Interface)] IDataObject data);
+    }
     public void Dispose()
     {
         if (instance is null) return;

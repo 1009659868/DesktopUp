@@ -50,10 +50,19 @@ internal sealed partial class PosterVisualWindow
 
     private string ContentModeCaption => _contentDocument?.Mode == ContentLayoutMode.Manual ? "手动排布" : "热度自动";
 
+    internal void VerifyCleanAppearanceForProbe()
+    {
+        RenderContentFeedback();
+        if (_footer?.Visibility == Visibility.Visible || _contentFeedbackCallout?.Visibility == Visibility.Visible ||
+            _contentCanvas?.Children.OfType<TextBlock>().Any(t => t.Text == "暂无内容") == true ||
+            MetaHeightDip != 0 || !VerifyWindowBackdrop() || BackdropColor().A != 64)
+            throw new IOException("Ordinary basic poster retained diagnostic UI, intro, or incorrect background.");
+    }
+
     private void RenderContentFeedback()
     {
         RenderContentSpaceNavigation();
-        if (!TestContentFeedbackEnabled && !IsRealContent && !_fileTransferFeedback)
+        if (!TestContentFeedbackEnabled)
         {
             // Preserve the reserved footer geometry so hiding diagnostic text cannot move or
             // enlarge live card hit regions. Center errors and the underlying notice stay intact.
@@ -122,7 +131,6 @@ internal sealed partial class PosterVisualWindow
         // A result timer must never erase that newer explanation or a live drag preview.
         if (_contentNotice == expiring && !HasContentGesture)
         {
-            _fileTransferFeedback=false;
             _contentNotice = null;
             RenderContentFeedback();
             spatial.NotifyContentEditorChanged(PosterId);

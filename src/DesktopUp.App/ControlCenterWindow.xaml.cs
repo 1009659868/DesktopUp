@@ -45,6 +45,7 @@ public sealed partial class ControlCenterWindow : Window
         InitializeUiCSample();
         InitializeTemplateParameters();
         InitializeTitleColors();
+        InitializeSurfaceControls();
         AppWindow.Resize(new global::Windows.Graphics.SizeInt32(980, 640));
         AppWindow.IsShownInSwitchers = true;
         if (AppWindow.Presenter is OverlappedPresenter presenter)

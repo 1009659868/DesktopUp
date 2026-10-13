@@ -158,7 +158,6 @@
        <MenuFlyoutItem Text="创建本机备份" Click="PortableBackup_Click" AutomationProperties.AutomationId="PortableBackup"/>
        <MenuFlyoutItem Text="从本机备份恢复…" Click="PortableRecovery_Click" AutomationProperties.AutomationId="PortableRecovery"/>
        <MenuFlyoutSeparator/>
-       <MenuFlyoutItem Text="收纳位置…" Click="ManagedStorage_Click" AutomationProperties.AutomationId="ManagedStorage"/>
        <MenuFlyoutItem x:Name="TransferRecoveryMenu" Text="异常文件位置…" Visibility="Collapsed" Click="TransferRecovery_Click" AutomationProperties.AutomationId="TransferRecovery"/>
       </MenuFlyoutSubItem>
      </MenuFlyout></DropDownButton.Flyout></DropDownButton>
@@ -211,13 +210,7 @@
            <StackPanel Orientation="Horizontal" Spacing="12"><Button x:Name="TemplatePrevious" Content="←" Click="TemplatePrevious_Click" Style="{StaticResource UiCAction}" Background="Transparent" BorderThickness="0" AutomationProperties.Name="翻看上一组模板"/><TextBlock x:Name="TemplateSampleRange" Text="1–3 / 3" FontFamily="Consolas" FontSize="11" Opacity="0.75" VerticalAlignment="Center"/><Button x:Name="TemplateNext" Content="→" Click="TemplateNext_Click" Style="{StaticResource UiCAction}" Background="Transparent" BorderThickness="0" AutomationProperties.Name="翻看下一组模板"/></StackPanel>
            <StackPanel Grid.Column="1" x:Name="TemplateLibraryActionsHost" Orientation="Horizontal" Spacing="12"/>
           </Grid>
-          <Expander x:Name="ContentHeadingFolder" Header="内容介绍文字" IsExpanded="False" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
-           <StackPanel Spacing="12">
-            <ToggleSwitch x:Name="ContentHeadingSwitch" Header="显示内容介绍" OnContent="显示" OffContent="隐藏" Toggled="ContentHeading_Changed" AutomationProperties.AutomationId="ContentHeadingVisibility" ToolTipService.ToolTip="副标题、大标题与数量组成的介绍区。仅记忆当前海报的当前模板；隐藏会收回占位，不隐藏顶部标题栏或图标名称。"/>
-            <TextBox x:Name="ContentHeadingSubtitle" Header="副标题" MaxLength="512" TextChanging="ContentHeadingSubtitle_Changing" LostFocus="ContentHeadingSubtitle_LostFocus" KeyDown="ContentHeadingSubtitle_KeyDown" AutomationProperties.AutomationId="ContentHeadingSubtitle" ToolTipService.ToolTip="可留空。文字属于当前海报，换模板不丢失；Enter或离开输入框保存，Esc取消当前输入。"/>
-            <Button x:Name="ContentHeadingRename" Content="修改海报名称…" Click="RenamePoster_Click" Style="{StaticResource UiCAction}" ToolTipService.ToolTip="介绍区大标题使用海报名称；项目数量自动更新，不需要手动编辑。"/>
-           </StackPanel>
-          </Expander>
+          <StackPanel x:Name="TemplateComponentsSection" Spacing="8"/>
           <StackPanel x:Name="TemplateSection"/>
          </StackPanel>
         </Expander>
@@ -235,6 +228,15 @@
            <SolidColorBrush x:Key="ExpanderContentBackground" Color="Transparent"/><SolidColorBrush x:Key="ExpanderContentBorderBrush" Color="Transparent"/>
           </Expander.Resources>
           <StackPanel x:Name="LayoutFolderPanel" Spacing="14">
+       <Expander x:Name="SurfaceFolder" Header="海报背景" IsExpanded="False" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+        <StackPanel Spacing="10">
+         <Button x:Name="SurfaceColorButton" Click="SurfaceColor_Click" Style="{StaticResource UiCAction}" AutomationProperties.AutomationId="PosterSurfaceColor" AutomationProperties.Name="海报背景颜色">
+          <StackPanel Orientation="Horizontal" Spacing="10"><Border x:Name="SurfaceColorChip" Width="24" Height="18"/><TextBlock x:Name="SurfaceColorValue"/></StackPanel>
+         </Button>
+         <TextBlock x:Name="SurfaceOpacityLabel" Text="背景不透明度"/>
+         <Slider x:Name="SurfaceOpacitySlider" Minimum="0" Maximum="100" StepFrequency="1" AutomationProperties.AutomationId="PosterSurfaceOpacity" AutomationProperties.Name="背景不透明度" ToolTipService.ToolTip="0% 全透明，100% 不透明。只改变背景，不改变图标、文字和动效。"/>
+        </StackPanel>
+       </Expander>
        <Grid ColumnSpacing="10"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
         <TextBlock Text="显示标题" VerticalAlignment="Center"/>
         <ToggleSwitch x:Name="TitleVisibilitySwitch" Grid.Column="1" OnContent="显示" OffContent="隐藏" Toggled="TitleVisibility_Changed" AutomationProperties.AutomationId="TitleVisibility" AutomationProperties.Name="显示标题" ToolTipService.ToolTip="仅隐藏当前海报上的名称文字；控制中心名称、拖动区域、收展与更多按钮保持不变。"/>
@@ -263,9 +265,10 @@
         </Border>
         <Border VerticalAlignment="Stretch" HorizontalAlignment="Left" Margin="0,0,0,-1" Padding="15,2,15,3" Background="{ThemeResource UiCFolderBrush}" BorderBrush="{ThemeResource UiCBorderBrush}" BorderThickness="1,1,1,0" CornerRadius="7,8,0,0" IsHitTestVisible="False"><TextBlock Text="设置夹" FontSize="10" CharacterSpacing="100" Foreground="{ThemeResource UiCAccentBrush}"/></Border>
        </Grid>
-        <Grid ColumnSpacing="8"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+        <Grid ColumnSpacing="8"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
          <ComboBox x:Name="ContentItemSelector" Header="所选项目" HorizontalAlignment="Stretch" SelectionChanged="ContentItem_Changed" DisplayMemberPath="Name" AutomationProperties.AutomationId="ContentItem"/>
          <Button Grid.Column="1" x:Name="ContentKeyboardPad" Content="打开 ↗" Click="ContentOpen_Click" PreviewKeyDown="ContentKeyboard_KeyDown" KeyUp="ContentKeyboard_KeyUp" LostFocus="ContentKeyboard_LostFocus" VerticalAlignment="Bottom" Style="{StaticResource UiCAction}" AutomationProperties.AutomationId="ContentKeyboardPad" ToolTipService.ToolTip="打开所选项目。此按钮聚焦时：方向键移动，Shift＋方向键改跨度，Shift＋F10管理。"/>
+         <Button Grid.Column="2" x:Name="ContentManageButton" Content="…" Click="ContentManage_Click" VerticalAlignment="Bottom" Style="{StaticResource UiCAction}" AutomationProperties.AutomationId="ContentManage" AutomationProperties.Name="管理所选项目" ToolTipService.ToolTip="定位、刷新或修复所选卡片的来源；不移动原文件。"/>
         </Grid>
         <Grid ColumnSpacing="8"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
          <StackPanel Orientation="Horizontal" Spacing="7"><Button x:Name="ContentFixedButton" Content="固定顺序" Click="ContentFixed_Click" Style="{StaticResource UiCAction}"/><Button x:Name="ContentAutoSizeButton" Content="恢复尺寸" Click="ContentAutoSize_Click" Style="{StaticResource UiCAction}" ToolTipService.ToolTip="只撤销当前项目的尺寸覆盖，保留顺序图钉。"/></StackPanel>
@@ -316,10 +319,6 @@
          <Button Content="取消当前修改" Click="ContentDraftCancel_Click" Style="{StaticResource UiCAction}"/>
         </StackPanel>
         <StackPanel Orientation="Horizontal" Spacing="18"><CheckBox x:Name="ContentGridSwitch" Content="网格辅助" Checked="ContentGuides_Changed" Unchecked="ContentGuides_Changed" FontSize="11"/><CheckBox x:Name="ContentSpanSwitch" Content="跨度提示" Checked="ContentGuides_Changed" Unchecked="ContentGuides_Changed" FontSize="11"/></StackPanel>
-        <StackPanel Orientation="Horizontal" Spacing="10">
-         <Button Content="＋ 添加内容…" Click="AddReferences_Click" Style="{StaticResource UiCAction}" AutomationProperties.AutomationId="AddContentReferences" ToolTipService.ToolTip="仅建立本机文件／文件夹引用，不移动原文件。"/>
-         <Button Content="修复所选引用…" Click="RepairReference_Click" Style="{StaticResource UiCAction}" AutomationProperties.AutomationId="RepairContentReference"/>
-        </StackPanel>
         <TextBlock x:Name="ContentLayoutNotice" FontSize="11" TextWrapping="Wrap"/>
        </StackPanel></ContentControl>
        <TextBlock x:Name="CommonSettingsNotice" TextWrapping="Wrap" FontSize="11" Opacity="0.7"/>

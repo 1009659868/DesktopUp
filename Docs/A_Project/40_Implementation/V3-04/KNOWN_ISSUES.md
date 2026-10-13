@@ -2,9 +2,29 @@
 
 本文件登记现版缺陷与处置，不替代需求合同或历史验证日志。暂停修复不等于问题解决，也不等于发布验收通过。
 
+## V3-BUG-037：拖出到桌面未交接原生落点
+
+2026-10-13收口：**CLOSED / USER PASS**。用户确认D4-N四组全部符合预期，按app05/human01本机原生拖放范围关闭，见[§11.4](../V3-05/DIRECT_TRANSFER_DELIVERY.md#114-d4-n人工通过与收口)。Windows自动排列/对齐仍由系统决定；不扩大为未验环境或跨海报直接OLE。下方USER PENDING/OPEN为历史。
+
+2026-10-13最新：**CODE / TARGETED AUTO COMPLETE，USER PENDING**。DEC-047取消额外确认/共享，真实Shell源、跟手格式、捕获交接与源核实收尾已接线。原生鼠标落点/冲突/往返集中人工未通过前不关闭，见[直接拖放§11](../V3-05/DIRECT_TRANSFER_DELIVERY.md#11-dec-047单一引用与直接原生拖放)。下方“未修/未改代码”为本轮前背景。
+
+2026-10-13 / **OPEN，机制核清、未修**。用户确认D5四组通过，但指出拖出不能决定桌面落点。源码事实：HandleDesktopTransfer仅用坐标判断桌面，完成后调用自有Outgoing将文件搬到DesktopDirectory；Explorer没有收到这一文件的真实拖放事务/落点。NativeContentDragImage只是视觉，不是OLE源。已有D5通过保留限定范围，此项不算通过。
+
+按DEC-046／D4-N前置整改：参考DeskBox的真实Shell载荷，Explorer接收Drop并执行外部文件动作；本应用核实逐项结果并更新共享关系，禁止旧执行器二次移动/清源。尊重系统自动排列/网格，不以强设Explorer图标坐标补丁替代原生接线。实现顺序、确认/目标证据风险与集中验收见[直接拖放§10](../V3-05/DIRECT_TRANSFER_DELIVERY.md#10-d4-n原生shell拖出整改2026-10-13)。本轮未改代码或新增测试。
+
+## V3-BUG-036：受管对象被外部剪切移出后海报卡片残留
+
+2026-10-13最新：**CLOSED / USER PASS**。D5第4组外部改名/剪切、重启不复活与退出获用户通过；结合原同包自动证据，按最小受管同步范围关闭，见[人工结果§9.5](../V3-05/DIRECT_TRANSFER_DELIVERY.md#95-d5人工结果)。不扩展为任意外部目标定位或完整watcher通过；下方OPEN/USER PENDING是此前阶段。
+
+2026-10-13修订：**CODE/AUTO COMPLETE / USER PENDING**。最小外部同步及与拖出共用的关系移除已接线；正式状态/真实应用界面/冷重启自动通过，证据归[直接拖放§8](../V3-05/DIRECT_TRANSFER_DELIVERY.md#8-05-11-a最小外部同步与公共移除2026-10-13)。外部Explorer剪切人工留至D5合包；未关闭BUG或冒充D3旧人工覆盖。下方为最初登记背景。
+
+2026-10-13 / OPEN，用户报告。用户在实际收纳目录中将对象剪切到桌面，海报未移除对应图标；同次D3第1～3组人工通过，不因此撤销D3已有结论。源码核对：ReferenceContentRuntime基于持久成员输出卡片，Refresh/Observe仅刷新名称/图标/可用性，明确不更改成员或布局；尚无受管目录外部变化到成员事务的接线。此为已知能力缺口，本轮未复现原生操作或修改代码。
+
+按DEC-045前置05-11-A最小同步：可信核对外部移出后同步受管成员、卡片和布局；离线/权限失败不清空，重命名/自身转移不误删，共享关系准确更新，重启不复活。不得再移动/删除桌面对象、猜测全盘新路径或按失效统一清空普通引用。范围/验证归[主计划§6.5.1](../../30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md#651-d3收口后的基础交互推进2026-10-13)。未实现/未验，关闭须有同包自动证据及用户外部剪切复验。
+
 ## Bug清单
 
-2026-10-12：**V3-BUG-022在D3全区域接收后回归，REOPENED**。用户确认留白拖入及其余第2～5项通过，但普通点击不能穿过到桌面。当前HTTRANSPARENT仅保证同线程下层路由，D1底板同线程的证据不足。保留旧稀疏输入修复历史；现在按[D3§6](../V3-05/D3_NATIVE_INGRESS_AND_PLACEMENT.md#6-普通点击穿透回归与窄范围机制验证)做独立进程点击/OLE组合验证，尚无生产修复，不新建重复Bug、不进入D4。
+2026-10-13 / DEC-043：**V3-BUG-022 RETIRED / REQUIREMENT WITHDRAWN**。用户取消普通点击穿透，留白归海报接收输入。原穿透失败及探针未通过事实保留，不标修复或人工PASS，不再阻塞D3。隐藏释放输入、框外不拦截和前台遮挡仍是有效约束；新实现与组合验收见[D3§8](../V3-05/D3_NATIVE_INGRESS_AND_PLACEMENT.md#8-取消普通点击穿透并收敛接收组件)。
 
 2026-10-09出口审查：R7-D已询问D1/D2/D4均USER PASS，review09三进程正常停止/error0/退出资源0；最新退出picker=false，不新增选择器打开退出的日志认证。R7完整验收仍OPEN，D3及未单列原生/跨机范围归[§12携带表](LR_MILESTONE_EXECUTION.md#123-携带清单未验不改pass不创建重复bug)，R8假源交接完成不关闭001/004/006/026/031/035，也不证明另一测试机动效问题的根因。下面保留各Bug原始证据；仅定点校正011/016落后的“尚未接线”状态。
 
@@ -44,7 +64,7 @@
 
 | Bug ID | 问题 | 当前状态 | 依据与边界 |
 | --- | --- | --- | --- |
-| V3-BUG-022 | 内容Viewport整幅HRGN截获日常空白下的桌面操作 | CODE REVISED / FINAL NATIVE + USER PENDING（2026-10-12） | 普通输入恢复稀疏区域，独立OLE接收组件不再覆盖基础输入；受控跨进程旧一轮已并存通过，最终重复拖动待解锁，真实Explorer/桌面人工未补PASS。旧候选18及R7结论保留原范围。见[D3§7](../V3-05/D3_NATIVE_INGRESS_AND_PLACEMENT.md#7-输入与拖放组件化整改) |
+| V3-BUG-022 | 内容Viewport整幅HRGN截获日常空白下的桌面操作 | RETIRED / REQUIREMENT WITHDRAWN（DEC-043，2026-10-13） | 普通点击穿透需求取消，不补修复PASS；全框接收成为预期行为。隐藏/退出后残留输入仍属缺陷，不包含在退役范围。见[D3§8](../V3-05/D3_NATIVE_INGRESS_AND_PLACEMENT.md#8-取消普通点击穿透并收敛接收组件) |
 | V3-BUG-023 | 真实鼠标进入Item后仍不能驱动Lamp跟随 | FIXED / CODE + REAL POINTER（候选20，2026-09-27） | v19真实移动复现：NVIDIA Overlay整体alpha=0仍被当成遮挡；v20按成功原生读取排除全透明窗口，两个点实际跟随、离开轻摆通过，2102合同及NativeMouse通过。未知/非零alpha仍阻挡；产品视觉待人工，不扩大为全环境认证 |
 | V3-BUG-024 | 控制中心默认按钮深色、悬停才恢复主题 | FIXED / CODE + CONTROL STATES（候选21，2026-09-27） | system浅色模式写到框架共享画刷，真实红测复现Normal深灰/PointerOver浅色；本地资源隔离、完整状态与弹窗样式修复。四主题及保存system重启共378状态读回通过；不是OS hover或高对比认证，见输入报告§6 |
 | V3-BUG-025 | 半透明Lamp展开过程及终态标题下浅灰 | FIXED / NATIVE PHASE PIXELS + USER ACCEPTED UI/ANIMATION（候选24） | 候选23仅修终态，候选24在每次HRGN扩大后清新区域，四组三阶段24点差值0。用户随后明确“目前的UI，动画等都做得挺不错了”，登记当前体验认可；不扩为原速全部GPU帧/HDR/混合DPI认证，见[报告§8](LR_R5_POINTER_AND_MODULE_REVIEW.md#8-候选24展开过程灰底与ab不透明度对照) |

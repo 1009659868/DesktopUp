@@ -72,7 +72,7 @@ public sealed class IncomingDropNativeTests
         Assert.Equal(new[] { "enter", "leave", "enter", "drop" }, images.Events);
     }
     [Theory] [InlineData(40)] [InlineData(400)]
-    public void OrdinaryNativeRegionRemainsSparseWhileOlePolicyCoversCurrentFrame(int height)
+    public void OrdinaryNativeRegionAndOlePolicyBothOwnOnlyCurrentFrame(int height)
     {
         var frame = new DesktopPixelRect(-1000, -300, 300, height);
         var layout = new PosterInputLayoutSnapshot(1, 300, height,
@@ -81,13 +81,14 @@ public sealed class IncomingDropNativeTests
         try
         {
             Assert.NotEqual(0, region);
-            Assert.False(PtInRegion(region, 0, 0)); Assert.False(PtInRegion(region, 150, height - 1));
+            Assert.True(PtInRegion(region, 0, 0)); Assert.True(PtInRegion(region, 150, height - 1));
             Assert.True(PtInRegion(region, 100,20));
             Assert.False(PtInRegion(region, 150, height));
             Assert.True(PosterDropSurfacePolicy.ReceivesOle(frame, new(-1000, -300)));
-            Assert.False(PosterDropSurfacePolicy.ReceivesPointer(frame, layout, new(-1000, -300)));
+            Assert.True(PosterDropSurfacePolicy.ReceivesPointer(frame, layout, new(-1000, -300)));
             Assert.True(PosterDropSurfacePolicy.ReceivesPointer(frame, layout, new(-900, -280)));
-            Assert.False(PosterDropSurfacePolicy.ReceivesPointer(frame, layout, new(-900, -300 + height - 1)));
+            Assert.True(PosterDropSurfacePolicy.ReceivesPointer(frame, layout, new(-900, -300 + height - 1)));
+            Assert.False(PosterDropSurfacePolicy.ReceivesPointer(frame, layout, new(-900, -300 + height)));
             Assert.False(PosterDropSurfacePolicy.ReceivesOle(frame, new(-900, -300 + height)));
         }
         finally { Assert.True(DeleteObject(region)); }

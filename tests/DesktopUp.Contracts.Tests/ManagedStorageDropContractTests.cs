@@ -117,13 +117,13 @@ public sealed class ManagedStorageDropContractTests
     }
 
     [Fact]
-    public void SharedMoveRequiresExactPreviewConfirmationAndPreservesOtherCards()
+    public void LegacyAliasReadSetIsStillCompleteButDropRequiresNoExtraConfirmation()
     {
         var state = Snapshot(); var request = Request(); var plan = Plan(request, state);
         Assert.Equal(new[] { "A", "B" }, plan.Entries[0].AffectedPosterIds);
         Assert.Equal(new[] { "A", "B" }, plan.ReadSet.Posters.Keys);
-        Assert.True(plan.RequiresConfirmation);
-        Assert.Equal(TransferAdmission.ConfirmationRequired, ContentTransferPlanning.Revalidate(plan, request, state, null));
+        Assert.False(plan.RequiresConfirmation);
+        Assert.Equal(TransferAdmission.ReadyForJournal, ContentTransferPlanning.Revalidate(plan, request, state, null));
         Assert.Equal(TransferAdmission.ReadyForJournal, ContentTransferPlanning.Revalidate(plan, request, state, plan.Fingerprint));
         var delta = ContentTransferPlanning.DescribeVerifiedMove(plan, 0, state.Catalog);
         Assert.Equal(new[] { ItemId }, delta.RelocateContentIds);
@@ -239,11 +239,11 @@ public sealed class ManagedStorageDropContractTests
 
 
     [Fact]
-    public void SingleLegacyReferenceStillRequiresSourceConfirmation()
+    public void ValidLegacyReferenceNeedsNoExtraSourceConfirmation()
     {
         var state = Snapshot();
         state = state with { Catalog = ContentCatalogPolicy.Freeze(state.Catalog with { PosterItems = [state.Catalog.PosterItems[0]] }) };
-        Assert.True(Plan(s: state).RequiresConfirmation);
+        Assert.False(Plan(s: state).RequiresConfirmation);
     }
 
     [Fact]
@@ -302,12 +302,12 @@ public sealed class ManagedStorageDropContractTests
     }
 
     [Fact]
-    public void UnboundPosterRequiresFirstUseConfirmationAndImportDoesNotDetach()
+    public void UnboundPosterUsesDefaultStorageWithoutExtraConfirmation()
     {
         var state = Snapshot() with { Catalog = ContentCatalogSnapshot.Empty };
         var request = Request(ContentDropRoute.IntoManagedStorage);
         var plan = Plan(request, state);
-        Assert.True(plan.RequiresConfirmation);
+        Assert.False(plan.RequiresConfirmation);
         Assert.Empty(ContentTransferPlanning.DescribeVerifiedMove(plan, 0, state.Catalog).DetachPosterItemIds);
         Assert.Empty(state.Catalog.Bindings);
     }

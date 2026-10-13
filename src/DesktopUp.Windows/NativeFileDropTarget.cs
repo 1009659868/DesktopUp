@@ -27,7 +27,6 @@ public sealed class NativeFileDropTarget : IPhysicalFileDropTarget,IDisposable
     private IDisposable? lease;
     private bool disposed;
     public bool IsHovering => session.IsHovering;
-    internal Action? DropFinished { get; set; }
 
     // Compatibility path retains append semantics until D3 landing transactions are connected.
     public NativeFileDropTarget(nint window, Func<bool> available, Action<string[]> accept, IResourceLedger ledger, IStructuredLog log)
@@ -74,13 +73,25 @@ public sealed class NativeFileDropTarget : IPhysicalFileDropTarget,IDisposable
         public void Drop(IDataObject data, FileDropPoint point, uint effect) { }
         public void Dispose() { }
     }
-    public int DragEnter(IDataObject data, uint keys, FileDropPoint point, ref uint effect) => session.DragEnter(data, keys, point, ref effect);
-    public int DragOver(uint keys, FileDropPoint point, ref uint effect) => session.DragOver(keys, point, ref effect);
-    public int DragLeave() => session.DragLeave();
+    public int DragEnter(IDataObject data, uint keys, FileDropPoint point, ref uint effect)
+    {
+        try { return NativeShellDragSource.EnterOrigin(window, data, point, ref effect) ? 0 : session.DragEnter(data, keys, point, ref effect); }
+        catch { effect = 0; return 0; }
+    }
+    public int DragOver(uint keys, FileDropPoint point, ref uint effect)
+    {
+        try { return NativeShellDragSource.OverOrigin(window, point, ref effect) ? 0 : session.DragOver(keys, point, ref effect); }
+        catch { effect = 0; return 0; }
+    }
+    public int DragLeave()
+    {
+        try { return NativeShellDragSource.LeaveOrigin(window) ? 0 : session.DragLeave(); }
+        catch { return 0; }
+    }
     public int Drop(IDataObject data, uint keys, FileDropPoint point, ref uint effect)
     {
-        try{return session.Drop(data, keys, point, ref effect);}
-        finally{try{DropFinished?.Invoke();}catch{ /* never cross the COM boundary */ }}
+        try { return NativeShellDragSource.DropOrigin(window, data, point, ref effect) ? 0 : session.Drop(data, keys, point, ref effect); }
+        catch { effect = 0; return 0; }
     }
     public static string[]? ReadPaths(IDataObject data)
     {

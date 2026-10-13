@@ -146,6 +146,7 @@ public partial class App
             MotionEnabled: true, FollowPointer: true, IdleSway: 60, MotionSpeed: 22);
         var bValue = new LampTemplateParameters("#98CCFF", 75, 88, "#15263B", "#334E68", 67,
             MotionEnabled: true, FollowPointer: false, IdleSway: 80, MotionSpeed: 75);
+        var resetValue = LampTemplatePolicy.Defaults with { Background = aValue.Background, BackgroundOpacity = aValue.BackgroundOpacity };
         var zeroValue = aValue with { Softness = 0, Intensity = 0, BackgroundOpacity = 0 };
         string a = "", b = "";
         string? aContent = null, bContent = null;
@@ -273,8 +274,8 @@ public partial class App
                         baseline = Bound(a, LampTemplatePolicy.Defaults); revision = current.Revision;
                         Require(current.PostersById[b].Poster == initialB, "Selecting A's lamp changed B.");
                         var controls = window!.ReadLampParameterControlsForProbe();
-                        Require(controls.Visible && controls.Enabled && controls.ControlCount == 10 && controls.PosterId == a &&
-                            controls.VisualColorCount == 3 && controls.HasTemplateReset, "Ten real lamp controls, swatches or reset are unavailable.");
+                        Require(controls.Visible && controls.Enabled && controls.ControlCount == 8 && controls.PosterId == a &&
+                            controls.VisualColorCount == 2 && controls.HasTemplateReset, "Eight private lamp controls, swatches or reset are unavailable.");
                         var motionBindings = TemplateParameterSchemas.ForTemplate("lamp")!.Properties.Select(p => p.Binding).ToHashSet();
                         Require(new[] { "scene.motion", "lamp.follow", "lamp.sway", "lamp.speed" }.All(motionBindings.Contains),
                             "The four declared motion bindings are missing.");
@@ -404,18 +405,18 @@ public partial class App
                             current.PostersById[b].Poster.ContentLayoutJson == bContent &&
                             current.PostersById[b].Presentation.Parameters.Lamp == bValue,
                             "Current template reset touched content, another poster or more than one revision.");
-                        Observe("current-template-reset-only", window!, Bound(a, LampTemplatePolicy.Defaults), current);
+                        Observe("current-template-reset-only", window!, Bound(a, resetValue), current);
                         motionFrames = _spatialRuntime.ReadLampNativeForProbe(a).Scene.MotionFrames;
                         revision = current.Revision; window!.RevealTitleColorsForProbe(); Next(260, 650); break;
                     case 260:
-                        baseline = Bound(a, LampTemplatePolicy.Defaults);
+                        baseline = Bound(a, resetValue);
                         Require(_spatialRuntime.BackdropWindowForProbe(a).VerifyTitleChromeForProbe(), "Default title slots are not transparent/aligned.");
                         window!.OpenTitleColorForProbe(false); window.SetTitleColorForProbe("#85B9ED"); Next(261); break;
                     case 261:
                         Require(current.Revision == revision && window!.CommonSettingsForProbe.Preview?.TitleColors?.Text == "#85B9ED",
                             "Title preview did not retain its original target without writing.");
                         Require(_spatialRuntime.BackdropWindowForProbe(a).VerifyTitleChromeForProbe(), "Title preview did not paint bare glyphs.");
-                        SameGeometry(baseline!, Bound(a, LampTemplatePolicy.Defaults), true);
+                        SameGeometry(baseline!, Bound(a, resetValue), true);
                         window!.FinishLampColorForProbe(false); Next(262); break;
                     case 262:
                         Require(current.Revision == revision && current.PostersById[a].Presentation.Parameters.TitleColors is null,
@@ -426,7 +427,7 @@ public partial class App
                         Require(current.Revision == revision + 1 && current.PostersById[a].Presentation.Parameters.TitleColors == new PosterTitleColors("#85B9ED"),
                             "Title text color did not save once.");
                         Require(_spatialRuntime.BackdropWindowForProbe(a).VerifyTitleChromeForProbe(), "Saved title color mismatch.");
-                        SameGeometry(baseline!, Bound(a, LampTemplatePolicy.Defaults), true);
+                        SameGeometry(baseline!, Bound(a, resetValue), true);
                         window!.OpenTitleColorForProbe(true); window.SetTitleColorForProbe("#E4BF7A");
                         window.FinishLampColorForProbe(true); Next(264); break;
                     case 264:
@@ -435,14 +436,14 @@ public partial class App
                             current.PostersById[b].Presentation.Parameters.TitleColors is null,
                             "Action color lost the title color or leaked to peer.");
                         Require(_spatialRuntime.BackdropWindowForProbe(a).VerifyTitleChromeForProbe(), "Saved action ink mismatch.");
-                        SameGeometry(baseline!, Bound(a, LampTemplatePolicy.Defaults), true);
-                        Observe("transparent-title-colors-preview-cancel-single-commit-peer-isolation", window!, Bound(a, LampTemplatePolicy.Defaults), current);
+                        SameGeometry(baseline!, Bound(a, resetValue), true);
+                        Observe("transparent-title-colors-preview-cancel-single-commit-peer-isolation", window!, Bound(a, resetValue), current);
                         revision = current.Revision;
                         capture = Capture(window!, a, "title-ink"); Next(265, 0); break;
                     case 265:
                         if (capture?.IsCompleted != true) break;
                         capture.GetAwaiter().GetResult();
-                        baseline = Bound(a, LampTemplatePolicy.Defaults);
+                        baseline = Bound(a, resetValue);
                         window!.SetTitleVisibilityForProbe(false); Next(266); break;
                     case 266:
                         Require(current.Revision == revision + 1 && current.PostersById[a].Presentation.Parameters.ShowTitle == false &&
@@ -450,8 +451,8 @@ public partial class App
                             window!.VerifyTitleVisibilityControlForProbe(false) &&
                             _spatialRuntime.BackdropWindowForProbe(a).VerifyTitleVisibilityForProbe(false),
                             "Title toggle did not hide both name copies/save once, or changed peer/action visibility.");
-                        SameGeometry(baseline!, Bound(a, LampTemplatePolicy.Defaults), true);
-                        Observe("title-visibility-immediate-single-commit-keeps-name-geometry-and-peer", window!, Bound(a, LampTemplatePolicy.Defaults), current);
+                        SameGeometry(baseline!, Bound(a, resetValue), true);
+                        Observe("title-visibility-immediate-single-commit-keeps-name-geometry-and-peer", window!, Bound(a, resetValue), current);
                         capture = Capture(window!, a, "title-hidden"); Next(267, 0); break;
                     case 267:
                         if (capture?.IsCompleted != true) break;
@@ -461,13 +462,13 @@ public partial class App
                         Require(current.Revision == revision + 2 && window!.VerifyTitleVisibilityControlForProbe(true) &&
                             _spatialRuntime.BackdropWindowForProbe(a).VerifyTitleVisibilityForProbe(true),
                             "Showing title again did not retain name/controls or save once.");
-                        SameGeometry(baseline!, Bound(a, LampTemplatePolicy.Defaults), true);
+                        SameGeometry(baseline!, Bound(a, resetValue), true);
                         revision = current.Revision;
                         window!.RevealLampParametersForProbe();
                         motionFrames = _spatialRuntime.ReadLampNativeForProbe(a).Scene.MotionFrames;
                         Next(27, 650); break;
                     case 27:
-                        var moving = Bound(a, LampTemplatePolicy.Defaults);
+                        var moving = Bound(a, resetValue);
                         observations.Add(new { name = "motion-gate-readback", previousFrames = motionFrames, moving.Scene,
                             timers = MotionTimers(), runtimeTimerPresent = _spatialRuntime.SceneMotionRunning,
                             motionResources = _ledger!.ActiveResources.Where(resource => resource.Contains("scene-motion", StringComparison.Ordinal)).ToArray() });
@@ -507,9 +508,9 @@ public partial class App
                         observations.Add(new { name = "editing-stops-shared-motion", timers = MotionTimers(), current.Revision });
                         Require(_spatialRuntime.SetContentEditing(a, false) is null && _spatialRuntime.SetContentEditing(b, false) is null,
                             "Could not leave production editing modes.");
-                        window!.PreviewLampControlsForProbe(LampTemplatePolicy.Defaults with { MotionEnabled = false }); Next(29); break;
+                        window!.PreviewLampControlsForProbe(resetValue with { MotionEnabled = false }); Next(29); break;
                     case 29:
-                        var disabled = Bound(a, LampTemplatePolicy.Defaults with { MotionEnabled = false });
+                        var disabled = Bound(a, resetValue with { MotionEnabled = false });
                         Require(disabled.Scene.StaticOnly && !disabled.Scene.FollowingPointer && current.Revision == revision,
                             "Motion toggle did not stop only the preview target.");
                         Bound(b, bValue);

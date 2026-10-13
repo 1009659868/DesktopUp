@@ -14,7 +14,7 @@ internal sealed partial class PosterVisualWindow
     private IDisposable? _contentMotionLease;
     private PosterInputEventArgs? _contentLatestMotion;
     private bool _contentMotionPending;
-    public bool HasContentGesture => _contentGesture is not null;
+    public bool HasContentGesture => _contentGesture is not null || _contentMarquee is not null;
     internal ContentLayoutEditorView ReadContentEditor() => new(ContentDocument, _posterEntityVersion, _selectedContentItem,
         IsEditing, !_contentReadOnly && !_geometry.IsLocked && !_disposed && !_contentPresentationSuspended, _contentNotice)
         { SelectedIds = SelectedContentIds(), SelectedSlot = _contentSnapshot?.Items.FirstOrDefault(p => p.ItemId == _selectedContentItem),
@@ -24,6 +24,8 @@ internal sealed partial class PosterVisualWindow
     private bool HandleContentInput(PosterInputEventArgs args)
     {
         if (args.TargetKind is not (PosterInputTargetKind.ContentItem or PosterInputTargetKind.ContentSpanHandle or PosterInputTargetKind.ContentViewport)) return false;
+        if (args.TargetKind == PosterInputTargetKind.ContentViewport && args.EventKind != PosterInputEventKind.Scrolled)
+            return HandleContentMarquee(args);
         if (args.EventKind == PosterInputEventKind.Scrolled) { _contentActivation.Reset(); ScrollItems(args.WheelDelta, DesktopUp.Windows.NativeInputKeys.ShiftDown); return true; }
         if (args.EventKind == PosterInputEventKind.Pressed)
         {
@@ -77,6 +79,9 @@ internal sealed partial class PosterVisualWindow
         if (_posterEntityVersion != gesture.EntityVersion || _bounds != gesture.Frame || _monitor is null ||
             _monitor.ScaleX != gesture.ScaleX || _monitor.ScaleY != gesture.ScaleY || _disposed || _contentPresentationSuspended || _transitionLayout is not null)
         { CancelContentGesture("basis-expired"); return true; }
+        if(args.EventKind is PosterInputEventKind.GesturePreview or PosterInputEventKind.GestureCompleted)
+            if(!UpdateContentDragImage(gesture,args))return true;
+        if(args.EventKind is PosterInputEventKind.Invoked or PosterInputEventKind.GestureCompleted)ReleaseContentDragImage();
         if(HandleDesktopTransfer(gesture,args))return true;
         if (args.EventKind is PosterInputEventKind.GesturePreview or PosterInputEventKind.GestureCompleted)
         {
@@ -127,8 +132,11 @@ internal sealed partial class PosterVisualWindow
         }
         return true;
     }
-    private void CancelContentGesture(string reason)
+    private void CancelContentGesture(string reason, bool quiet = false)
     {
+        _nativeShellSource?.Cancel();
+        CancelContentMarquee();
+        ReleaseContentDragImage();
         _contentActivation.Reset();
         StopContentMotion();
         if (_contentGesture is not { } gesture) { _contentDraft=_contentDraftProjection=null; return; }
@@ -137,7 +145,7 @@ internal sealed partial class PosterVisualWindow
         // Release the existing native owner after clearing RAM; its synchronous cancel cannot recurse.
         _inputIsland?.CancelPointerGesture();
         log.Write("info","content.gesture_cancelled",new { PosterId, reason, itemId=gesture.Slot.ItemId });
-        PublishContentFeedback("已取消本次调整，原布局未改。", transient: true);
+        if (!quiet) PublishContentFeedback("已取消本次调整，原布局未改。", transient: true);
         if (!_disposed && _itemsGrid is not null && _bounds.IsUsable) RefreshContentSurface();
         QueueContentProposalDrain();
         spatial.NotifyContentEditorChanged(PosterId);

@@ -4,16 +4,15 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
-$exe = Join-Path $root 'src\DesktopUp.App\bin\x64\Release\net10.0-windows10.0.22621.0\win-x64\DesktopUp.exe'
-if (-not (Test-Path -LiteralPath $exe)) {
-    & (Join-Path $PSScriptRoot 'build.ps1') -Configuration Release
-}
+$output = Join-Path $root 'out\run\app'
+& (Join-Path $PSScriptRoot 'build.ps1') -Configuration Release -OutputDirectory $output
+$exe = Join-Path $output 'DesktopUp.exe'
 $arguments = @()
 if ($ShowControlCenter) {
     $arguments += '--show-control-center'
 }
 if ($arguments.Count -gt 0) {
-    Start-Process -FilePath $exe -ArgumentList $arguments
+    Start-Process -FilePath $exe -ArgumentList $arguments -WindowStyle Hidden
 } else {
-    Start-Process -FilePath $exe
+    Start-Process -FilePath $exe -WindowStyle Hidden
 }

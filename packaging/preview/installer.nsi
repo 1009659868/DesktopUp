@@ -28,12 +28,13 @@ Var GuardCursor
 Var GuardParent
 Var GuardAttributes
 
-!define MUI_WELCOMEPAGE_TEXT "Windows 11 x64 独立预览版。$\r$\n$\r$\n自带运行库，使用独立配置，不读取或迁移日常版配置，不设置开机启动。内容仍为 DEMO。$\r$\n$\r$\n下一步可自选安装目录。请选有写入权限的新目录或空目录。卸载保留预览配置。"
+!define MUI_WELCOMEPAGE_TEXT "Windows 11 x64 独立预览版。$\r$\n$\r$\n自带运行库，使用独立配置，不读取或迁移日常版配置，不设置开机启动。首次为空白工作区，无演示卡片；拖入收纳会移动真实文件，请先用无价值文件体验。$\r$\n$\r$\n下一步可自选安装目录。卸载保留配置和已收纳文件。"
 !insertmacro MUI_PAGE_WELCOME
-!define MUI_DIRECTORYPAGE_TEXT_TOP "选择一个专用的新目录或空目录，可位于其他本地磁盘。不会覆盖已有文件；程序配置始终保存在当前用户的 DesktopUp\Preview 中，不随安装位置变化。"
+!define MUI_DIRECTORYPAGE_TEXT_TOP "选择当前用户可写的专用新目录或空目录，可位于其他本地磁盘。配置在 %LOCALAPPDATA%\DesktopUp\Preview，默认收纳在 %LOCALAPPDATA%\DesktopUp\Storage 下；均独立于安装目录，可在控制中心修改收纳位置。"
 !insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_INSTFILES
 !define MUI_FINISHPAGE_RUN "$INSTDIR\DesktopUp.exe"
+!define MUI_FINISHPAGE_RUN_PARAMETERS "--show-control-center"
 !define MUI_FINISHPAGE_RUN_NOTCHECKED
 !define MUI_FINISHPAGE_RUN_TEXT "启动 DesktopUp Preview"
 !insertmacro MUI_PAGE_FINISH
@@ -190,7 +191,7 @@ Section "DesktopUp Preview"
   WriteINIStr "$INSTDIR\preview-install.ini" "Install" "Path" "$INSTDIR"
   IfErrors installation_failed
   CreateDirectory "$SMPROGRAMS\${PRODUCT}"
-  CreateShortCut "$SMPROGRAMS\${PRODUCT}\DesktopUp Preview.lnk" "$INSTDIR\DesktopUp.exe"
+  CreateShortCut "$SMPROGRAMS\${PRODUCT}\DesktopUp Preview.lnk" "$INSTDIR\DesktopUp.exe" "--show-control-center"
   CreateShortCut "$SMPROGRAMS\${PRODUCT}\预览说明.lnk" "$INSTDIR\PREVIEW-README.txt"
   WriteRegStr HKCU "${UNINSTALL_KEY}" "DisplayName" "${PRODUCT} (x64)"
   WriteRegStr HKCU "${UNINSTALL_KEY}" "DisplayVersion" "${RELEASE_ID}"

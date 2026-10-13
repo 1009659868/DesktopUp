@@ -39,6 +39,7 @@ internal sealed partial class PosterVisualWindow
                 // Unknown raw bytes remain authoritative. Empty read-only fallback never overwrites them.
                 _contentDocument ??= ContentLayoutSamples.Equal(owner, 0);
                 ResetContentProposals(previous,_contentDocument);
+                _contentSelection = _contentSelection.Prune(_contentDocument.Placements.Select(p => p.ItemId).ToArray());
                 _contentDraft = _contentDraftProjection = null; _solvedDocument = null;
                 if (_contentReadOnly) log.Write("warning", "content.layout_read_only", new { PosterId, error });
                 if (_selectedContentItem is { } selected && !_contentDocument.Placements.Any(p => p.ItemId == selected)) _selectedContentItem = null;
@@ -154,7 +155,7 @@ internal sealed partial class PosterVisualWindow
         _contentCanvas.Clip = new RectangleGeometry { Rect = new global::Windows.Foundation.Rect(0, 0, viewport.WidthDip, viewport.HeightDip) };
         _itemColumnCount = snapshot.Columns;
         var doc = ContentDocument;
-        string itemKind = IsRealContent || doc.Placements.Count == 0 ? "ITEMS" : "DEMO ITEMS";
+        string itemKind = !TestContentFeedbackEnabled || IsRealContent || doc.Placements.Count == 0 ? "ITEMS" : "DEMO ITEMS";
         if (_footer?.Children.OfType<TextBlock>().FirstOrDefault() is { } count) count.Text=$"{doc.Placements.Count} {itemKind}";
         if (_metaPanel?.Children.OfType<TextBlock>().LastOrDefault() is { } metaCount) metaCount.Text=$"{doc.Placements.Count:00} {itemKind}";
         // Lamp paint and host title ink never invalidate card identity or solver geometry.
@@ -192,7 +193,7 @@ internal sealed partial class PosterVisualWindow
             _contentCanvas.Children.Add(card);
         }
         foreach (string id in _contentCards.Keys.Where(id => !retained.Contains(id)).ToArray()) _contentCards.Remove(id);
-        if (_contentGesture is { IsDragging: true, CanEdit: true, Target: PosterInputTargetKind.ContentItem } gesture &&
+        if (!IsRealContent && _contentGesture is { IsDragging: true, CanEdit: true, Target: PosterInputTargetKind.ContentItem } gesture &&
             source.TryGetValue(gesture.Slot.ItemId, out var dragged))
         {
             // One non-interactive transient copy follows the actual grabbed tile. The snapped
@@ -203,10 +204,11 @@ internal sealed partial class PosterVisualWindow
             _contentCanvas.Children.Add(shadow);
         }
         RenderContentFeedback();
+        DrawContentMarquee();
         // No scrollbar chrome on either edge. Content stays reachable through the wheel, the drag-edge
         // auto-scroll and the clamped extent; hiding a bar is never used to make content unreachable.
-        if (_contentParseReadOnly || _contentProjectionFault || doc.Placements.Count == 0)
-            _contentCanvas.Children.Add(new TextBlock { Text=_contentProjectionFault ? "当前布局无法安全呈现 · 原配置保留" : _contentReadOnly ? "布局版本暂不支持 · 原配置只读保留" : "暂无内容", FontSize=12, TextWrapping=TextWrapping.Wrap, Width=viewport.WidthDip, Foreground=ColorBrush(_presentation.Parameters.Theme.Foreground,170) });
+        if (_contentParseReadOnly || _contentProjectionFault)
+            _contentCanvas.Children.Add(new TextBlock { Text=_contentProjectionFault ? "当前布局无法安全呈现 · 原配置保留" : "布局版本暂不支持 · 原配置只读保留", FontSize=12, TextWrapping=TextWrapping.Wrap, Width=viewport.WidthDip, Foreground=ColorBrush(_presentation.Parameters.Theme.Foreground,170) });
     }
 
     private FrameworkElement CreateContentCard(ContentItemView item, ContentPlacement placement, ContentResolvedPlacement slot)

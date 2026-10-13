@@ -130,24 +130,24 @@ public sealed class ManagedTransferIndexRecoveryTests
         Assert.Equal(DurableTransferPhase.Intent,f.Journal.Read()[1].Phase);Assert.True(File.Exists(p.Files[1].Source));
     }
 
-    [Fact] public void RecoveryRetainsExistingSharedCardsAndTheirLayouts()
+    [Fact] public void RecoveryRetainsUnrelatedCardsAndTheirLayouts()
     {
         using var f=new F();string source=f.File("shared.txt");f.AddReference(LocalContentReferenceProbe.Inspect(source).Item!);
         string other=AddPoster(f);var s=f.State;var item=Assert.Single(s.ContentCatalog.Items);
         var cmd=new ContentReferenceCommand("share",StateCommandSource.ControlCenter,s.Revision,
             StateReadSet.ForPoster(other,s.Catalog.Posters.Single(x=>x.Poster.PosterId==other).EntityVersion) with {ContentVersion=s.ContentVersion},
-            other,[new(item,ContentReferenceChoice.Reuse,item.Id)],true);
+            other,[new(LocalContentReferenceProbe.Inspect(f.File("other.txt")).Item!,ContentReferenceChoice.CreateIndependent)],true);
         Assert.Equal(StateCommandStatus.Committed,f.Repository.Execute(new("share","share",s.Revision,cmd.ReadSet),before=>ContentReferencePolicy.Prepare(cmd,before)).Status);
         var cards=f.State.ContentCatalog.PosterItems.ToArray();var layouts=f.State.Catalog.Posters.ToDictionary(x=>x.Poster.PosterId,x=>x.Poster.ContentLayoutJson);
         var p=f.Stage(source);
         Assert.Throws<TransferInterruptionException>(()=>f.Executor.Execute(p.Plan.Request.OperationId,checkpoint:(at,_)=>
         {if(at==TransferExecutionCheckpoint.AfterMove)throw new TransferInterruptionException("fault");}));
         f.Journal.Mark(p.Plan.Request.OperationId,0,DurableTransferPhase.Review);
-        var ticket=f.Journal.PreviewIndexRecovery(p.Plan.Request.OperationId,0);Assert.Equal(2,ticket.AffectedPosterIds.Count);
+        var ticket=f.Journal.PreviewIndexRecovery(p.Plan.Request.OperationId,0);Assert.Single(ticket.AffectedPosterIds);
         f.Journal.ConfirmIndexRecovery(ticket,ticket.Fingerprint);
         Assert.Equal(cards,f.State.ContentCatalog.PosterItems);
         foreach(var poster in f.State.Catalog.Posters)Assert.Equal(layouts[poster.Poster.PosterId],poster.Poster.ContentLayoutJson);
-        Assert.Equal(p.Files[0].Destination,Assert.Single(f.State.ContentCatalog.Items).Target.Locator);
+        Assert.Equal(p.Files[0].Destination,f.State.ContentCatalog.Items.Single(i=>i.Id==item.Id).Target.Locator);
     }
 
     [Fact] public void DeletingOutgoingPosterDoesNotPreventLocationRepairOrRecreatePoster()

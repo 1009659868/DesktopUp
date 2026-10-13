@@ -124,7 +124,7 @@ public sealed class ManagedTransferPersistenceTests
         using var f=new Fixture();var state=f.State;
         f.Journal.Register(f.Root,f.Collection,new(new Dictionary<string,long>(),ContentVersion:state.ContentVersion));
         Assert.Single(f.State.ContentCatalog.Collections);Assert.Empty(f.State.ContentCatalog.Bindings);
-        Assert.Equal(state.Revision,f.State.Revision);Assert.Equal(19L,f.Sql("PRAGMA user_version"));
+        Assert.Equal(state.Revision,f.State.Revision);Assert.Equal(21L,f.Sql("PRAGMA user_version"));
     }
     [Fact] public void StaleStateBeforeExecutionRequiresNewPreview()
     {
@@ -295,34 +295,31 @@ public sealed class ManagedTransferPersistenceTests
         }
         finally {if(System.IO.File.Exists(source))System.IO.File.SetAttributes(source,FileAttributes.Normal);dir.Delete(true);}
     }
-    [Fact] public void SharedMovePreservesOtherCardIconLayoutAndStableEntity()
+    [Fact] public void CollectingExistingReferenceIntoAnotherPosterTransfersSoleOwnership()
     {
-        using var f=new Fixture();string source=f.File("shared.txt");var item=LocalContentReferenceProbe.Inspect(source).Item!;f.AddReference(item);
-        var s=f.State;var poster=PosterConfigurationFactory.NewBasicBox("other","DISPLAY1") with {PosterId=Guid.NewGuid().ToString(),ThemeInstanceId=Guid.NewGuid().ToString()};
-        var created=f.Repository.Execute(new("create-b","create-b",s.Revision,StateReadSet.ForCatalog(s.Catalog.CatalogVersion)),_=>new(){Creates=[poster]});
-        Assert.Equal(StateCommandStatus.Committed,created.Status);s=f.State;
-        var reads=StateReadSet.ForPoster(poster.PosterId,s.Catalog.Posters.Single(p=>p.Poster.PosterId==poster.PosterId).EntityVersion) with {ContentVersion=s.ContentVersion};
-        var add=new ContentReferenceCommand("share-b",StateCommandSource.ControlCenter,s.Revision,reads,poster.PosterId,[new(item,ContentReferenceChoice.Reuse,item.Id)],true);
-        Assert.Equal(StateCommandStatus.Committed,f.Repository.Execute(new(add.RequestId,add.RequestId,s.Revision,reads),before=>ContentReferencePolicy.Prepare(add,before)).Status);
-        s=f.State;var b=s.ContentCatalog.PosterItems.Single(p=>p.PosterId==poster.PosterId);
-        reads=reads with {ContentVersion=s.ContentVersion,Posters=new Dictionary<string,long>{{poster.PosterId,s.Catalog.Posters.Single(p=>p.Poster.PosterId==poster.PosterId).EntityVersion}}};
-        var icon=new ContentIconCommand("icon-b",StateCommandSource.ControlCenter,s.Revision,reads,ContentRelationPolicy.Resolve(s.ContentCatalog,poster.PosterId,b.LayoutItemId)!.Witness,ContentIconPersistenceTests.Icon(),true);
-        Assert.Equal(StateCommandStatus.Committed,f.Repository.Execute(new(icon.RequestId,icon.RequestId,s.Revision,reads),before=>ContentIconPolicy.Prepare(icon,before)).Status);
-        s=f.State;b=s.ContentCatalog.PosterItems.Single(p=>p.PosterId==poster.PosterId);var bLayout=s.Catalog.Posters.Single(p=>p.Poster.PosterId==poster.PosterId).Poster.ContentLayoutJson;
-        var p=f.Stage(source);Assert.Equal(2,p.Plan.Entries[0].AffectedPosterIds.Count);
-        f.Executor.Execute(p.Plan.Request.OperationId);s=f.State;
-        Assert.Equal(DurableTransferPhase.IndexCommitted,Assert.Single(f.Journal.Read()).Phase);Assert.Contains(b,s.ContentCatalog.PosterItems);
-        Assert.Equal(bLayout,s.Catalog.Posters.Single(p=>p.Poster.PosterId==poster.PosterId).Poster.ContentLayoutJson);Assert.Equal(1L,f.Sql("SELECT count(*) FROM content_icon_assets"));
-        var a=s.ContentCatalog.PosterItems.Single(p=>p.PosterId==f.Main);item=Assert.Single(s.ContentCatalog.Items);
-        var outgoing=LocalTransferPreview.Prepare(s,f.Main,ContentDropRoute.ToDesktop,[(item,Path.Combine(f.Source,"back.txt"),a.Id)],isolatedDestination:true);
-        f.Journal.Begin(outgoing.Plan,outgoing.Files,outgoing.Plan.Fingerprint);f.Executor.Execute(outgoing.Plan.Request.OperationId);
-        Assert.Equal(b,Assert.Single(f.State.ContentCatalog.PosterItems));Assert.Equal(1L,f.Sql("SELECT count(*) FROM content_icon_assets"));
-        Assert.Equal(bLayout,f.State.Catalog.Posters.Single(p=>p.Poster.PosterId==poster.PosterId).Poster.ContentLayoutJson);
+        using var f=new Fixture(); string source=f.File("owned.txt"); var item=LocalContentReferenceProbe.Inspect(source).Item!; f.AddReference(item);
+        var first=f.State;var firstCard=Assert.Single(first.ContentCatalog.PosterItems);
+        var iconReads=StateReadSet.ForPoster(f.Main,first.Catalog.Posters.Single().EntityVersion) with {ContentVersion=first.ContentVersion};
+        var icon=new ContentIconCommand("moving-icon",StateCommandSource.ControlCenter,first.Revision,iconReads,
+            ContentRelationPolicy.Resolve(first.ContentCatalog,f.Main,firstCard.LayoutItemId)!.Witness,ContentIconPersistenceTests.Icon(),true);
+        Assert.Equal(StateCommandStatus.Committed,f.Repository.Execute(new(icon.RequestId,icon.RequestId,first.Revision,iconReads),before=>ContentIconPolicy.Prepare(icon,before)).Status);
+        var s=f.State; var poster=PosterConfigurationFactory.NewBasicBox("other","DISPLAY1") with {PosterId=Guid.NewGuid().ToString(),ThemeInstanceId=Guid.NewGuid().ToString()};
+        Assert.Equal(StateCommandStatus.Committed,f.Repository.Execute(new("new-poster","new-poster",s.Revision,StateReadSet.ForCatalog(s.Catalog.CatalogVersion)),_=>new(){Creates=[poster]}).Status);
+        var preview=DirectTransferPreparation.Incoming(f.State,poster.PosterId,[source],new(f.Root,f.Collection));
+        Assert.False(preview.Plan.RequiresConfirmation);
+        f.Journal.Begin(preview.Plan,preview.Files,preview.Plan.Fingerprint,f.Collection.Id);
+        var row=Assert.Single(f.Executor.Execute(preview.Plan.Request.OperationId)); Assert.Equal(DurableTransferPhase.IndexCommitted,row.Phase);
+        Assert.Equal(poster.PosterId,Assert.Single(f.State.ContentCatalog.PosterItems).PosterId);
+        Assert.Equal(ContentIconPersistenceTests.Icon().Id,Assert.Single(f.State.ContentCatalog.PosterItems).IconAssetId);
+        Assert.Equal(1L,f.Sql("SELECT count(*) FROM content_icon_assets"));
+        Assert.Equal(item.Id,Assert.Single(f.State.ContentCatalog.Items).Id);
+        Assert.True(ContentLayoutPolicy.TryRead(f.State.Catalog.Posters.Single(p=>p.Poster.PosterId==f.Main).Poster.ContentLayoutJson,f.Main,out var layout,out _));
+        Assert.Empty(layout!.Placements); Assert.Equal("owned-content",System.IO.File.ReadAllText(preview.Files[0].Destination));
     }
     [Fact] public void MalformedOrFutureStateCannotAuthorizeAFileAction()
     {
-        using var f=new Fixture();f.Sql("UPDATE state_head SET schema_version=20; PRAGMA user_version=20;");
-        var init=f.Store.Initialize();Assert.False(init.Succeeded);Assert.Equal(20L,f.Sql("PRAGMA user_version"));
+        using var f=new Fixture();f.Sql("UPDATE state_head SET schema_version=22; PRAGMA user_version=22;");
+        var init=f.Store.Initialize();Assert.False(init.Succeeded);Assert.Equal(22L,f.Sql("PRAGMA user_version"));
     }
     [Fact] public void StorageRootCannotLiveInsideTemporaryOrApplicationStateData()
     {

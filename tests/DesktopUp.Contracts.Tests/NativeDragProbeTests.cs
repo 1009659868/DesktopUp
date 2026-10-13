@@ -115,6 +115,33 @@ public sealed class NativeDragProbeTests
         Assert.Throws<ArgumentOutOfRangeException>(() => data.Put(1, new byte[ProbeDataObject.MaximumBytes + 1]));
     }
     [Fact]
+    public void NativeFormatEnumerationWritesFetchedAcrossComAbi()
+    {
+        using var data = new ProbeDataObject([1]);
+        data.Put(15, [2]);
+        var enumerator = data.EnumFormatEtc(DATADIR.DATADIR_GET);
+        nint pointer = Marshal.GetComInterfaceForObject(enumerator, typeof(IEnumFORMATETC));
+        nint buffer = Marshal.AllocCoTaskMem(Marshal.SizeOf<FORMATETC>() * 3);
+        nint fetched = Marshal.AllocCoTaskMem(sizeof(int));
+        try
+        {
+            var next = Marshal.GetDelegateForFunctionPointer<NativeNext>(Marshal.ReadIntPtr(Marshal.ReadIntPtr(pointer), 3 * nint.Size));
+            Marshal.WriteInt32(fetched, -99);
+            Assert.Equal(0, next(pointer, 1, buffer, fetched));
+            Assert.Equal(1, Marshal.ReadInt32(fetched));
+            Assert.Equal(ProbeDataObject.PayloadFormat, Marshal.PtrToStructure<FORMATETC>(buffer).cfFormat);
+            Marshal.WriteInt32(fetched, -99);
+            Assert.Equal(1, next(pointer, 3, buffer, fetched));
+            Assert.Equal(1, Marshal.ReadInt32(fetched));
+            Marshal.WriteInt32(fetched, -99);
+            Assert.Equal(1, next(pointer, 1, buffer, fetched));
+            Assert.Equal(0, Marshal.ReadInt32(fetched));
+        }
+        finally { Marshal.FreeCoTaskMem(fetched); Marshal.FreeCoTaskMem(buffer); Marshal.Release(pointer); }
+    }
+    [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+    private delegate int NativeNext(nint self, int count, nint formats, nint fetched);
+    [Fact]
     public void NativeShellHelperAcceptsPrivateFormatsWithoutFilePayload()
     {
         Exception? error = null;

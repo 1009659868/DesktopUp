@@ -16,7 +16,9 @@ public sealed partial class StorageRelocationPersistenceTests
         public StorageRelocationProofLease Acquire(StorageRelocationPlan plan)
         {if(Fail)throw new IOException("injected missing file proof");return new Lease(new(fingerprint,Witness,claim));}
         private sealed class Lease(StorageRelocationTargets targets):StorageRelocationProofLease
-        {public override StorageRelocationTargets Targets=>targets;public override void Dispose(){} }
+        {public override StorageRelocationTargets Targets=>targets;
+         public override string ObjectIdentity(string path)=>"persistence-stub-"+path;
+         public override void Dispose(){} }
     }
     private static SqliteStorageRelocationJournal Journal(F f)=>new(f.Store);
     private static StorageRelocationPlan Preview(F f)

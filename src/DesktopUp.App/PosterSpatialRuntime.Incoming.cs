@@ -39,13 +39,7 @@ internal sealed partial class PosterSpatialRuntime
                     var snapshot=await Task.Run(()=>new SqliteStateCommandRepository(_transferStore!).Read());
                     var preview=await Task.Run(()=>DirectTransferPreparation.Incoming(snapshot,id,[path],storage,landing));
                     if(!Current()){lastError="落点已变化，剩余项未移动。";break;}
-                    // Legacy DEMO/shared-reference impact still needs explicit consent; ordinary new files do not.
-                    if(preview.Plan.RequiresConfirmation)
-                    {
-                        string detail=$"移动来源：{path}\n收纳到：{preview.Files[0].Destination}\n影响海报："+
-                            string.Join("、",preview.Plan.Entries.SelectMany(x=>x.AffectedPosterIds).Append(id).Distinct());
-                        if(!await _confirmTransfer!(detail) || !Current()){lastError="已取消，剩余项未移动。";break;}
-                    }
+                    // DEC-047: the drop itself expresses move intent; no application confirmation.
                     var result=await Task.Run(()=>
                     {
                         lifetime.Token.ThrowIfCancellationRequested();

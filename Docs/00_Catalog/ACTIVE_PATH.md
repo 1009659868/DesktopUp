@@ -1,10 +1,20 @@
 # DesktopUp V2 当前执行入口
 
+2026-10-13最新：A DEC-048 → B模块目录中的公共背景/组件声明边界 → C[05-14六项UI增量§13](../A_Project/40_Implementation/V3-05/DIRECT_TRANSFER_DELIVERY.md#13-05-14界面减法与通用背景2026-10-13)。本轮先做界面减法与背景控制，05-05-V2未开工；D4-N不重开，三组件自由装配留后续。
+
+2026-10-13当前：D4-N四组人工通过，BUG-037关闭。A DEC-047 → B拖放责任（均保持）→ C[05-14入口收口§12](../A_Project/40_Implementation/V3-05/DIRECT_TRANSFER_DELIVERY.md#12-05-14入口收口)CODE/AUTO完成：撤日常添加向导、收敛所选项目管理。下一步05-05-V2/V3；不重复D4-N四组，不恢复共享/穿透，未验项携带。
+
+当前（2026-10-13，DEC-047）：A[决定登记](../A_Project/10_Requirements/REQUIREMENTS_RISKS_AND_OPEN_QUESTIONS.md) → B[拖放责任](../A_Project/20_Architecture/DROP_SURFACE_AND_STORAGE_PROPOSAL.md) → C[原生拖出§11](../A_Project/40_Implementation/V3-05/DIRECT_TRANSFER_DELIVERY.md#11-dec-047单一引用与直接原生拖放)。有效对象无额外确认、单一归属、Shell负责外部落点；实现及定点回归完成，集中人工待验。BUG-037待人工收口，右键/模板平台/未验环境不扩项；下方DEC-046未实施为历史。
+
+当前（2026-10-13，D5反馈）：四组USER PASS，BUG-036关闭；新增DEC-046要求真正原生拖出和桌面落点，BUG-037 OPEN。A需求DEC-046→B[拖放责任§7](../A_Project/20_Architecture/DROP_SURFACE_AND_STORAGE_PROPOSAL.md#7-拖出到shell的执行责任)→C[D4-N整改§10](../A_Project/40_Implementation/V3-05/DIRECT_TRANSFER_DELIVERY.md#10-d4-n原生shell拖出整改2026-10-13)。当前仅计划/源码对照，新原生接线未实施；下一步N1→N2→N3集中人工，再05-14和图标UI，不重新跑已过历史人工。未验环境、右键/平台暂定保持，下方待D5为历史。
+
+当前（2026-10-13）：05-11-A公共移除/最小外部同步CODE/AUTO完成，3268合同及同包两次进程通过，见[直接拖放§8](../A_Project/40_Implementation/V3-05/DIRECT_TRANSFER_DELIVERY.md#8-05-11-a最小外部同步与公共移除2026-10-13)。下一步[主计划§6.5.1](../A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md#651-d3收口后的基础交互推进2026-10-13)空白框选 → D4 → D5集中人工，BUG-036不单独设置内部人工门。D3本机范围CLOSED；右键/模板架构、未验环境保持，下方为历史。
+
 Git同步检查点（2026-10-12）：用户授权同步当前开发状态，源码`10b2afc`及相邻文档提交，目标仅`origin/impl/poster-redesign-V3`。不合入发布线；D3阶段和未验项保持，继续下述入口，细节见[交接](../A_Project/40_Implementation/V3-04/HANDOFF.md)。
 
 实施方式（2026-10-12起）：遵循[精简实施与验证流程](../Rules/IMPLEMENTATION_AND_VALIDATION.md)。日常定向验证，完整功能集中验收；D3-02～04是连续内部步骤，不再逐子批停下交付。历史全门/指纹记录不构成每次任务的默认必跑要求，安全合同及未验项仍有效。
 
-当前（2026-10-12）：D2-04限定收口；**D3输入与拖放组件化已接生产，最终原生复验待桌面解锁，人工尚未开始**。普通输入恢复稀疏区域，增量OLE接收独立；原业务不重做。计划、证据与集中验收归[D3§7](../A_Project/40_Implementation/V3-05/D3_NATIVE_INGRESS_AND_PLACEMENT.md#7-输入与拖放组件化整改)。BUG-022待复验，不进入D4；原留白接收及2～5项USER PASS保留。读取[方案](../A_Project/20_Architecture/DROP_SURFACE_AND_STORAGE_PROPOSAL.md)→[工作流§6.5](../A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md#65-桌面与海报的剪切式拖放主路径)→[交接](../A_Project/40_Implementation/V3-04/HANDOFF.md)。D1 Medium及真实满盘等携带项不消除。
+当前（2026-10-13，DEC-043）：用户取消普通点击穿透。D3改为可见全框输入＋同HWND OLE注册，移除生产专用捕获监测/额外接收窗；文件业务和原2～5项人工结论保留。BUG-022以需求取消退役，不补PASS，不再推进旧穿透探针。当前验证及集中人工归[D3§8](../A_Project/40_Implementation/V3-05/D3_NATIVE_INGRESS_AND_PLACEMENT.md#8-取消普通点击穿透并收敛接收组件)；D4/D5未开始，普通权限/满盘等携带不变，未Git同步。
 
 Git同步后入口（2026-10-10）：开发38187bb及后续交接／打包修正，精简发布impl/main@d6ca237；已返回impl/poster-redesign-V3。按[Git规则](../Rules/GIT_STRATEGY.md)在里程碑完成后合入发布线，不反向合入精简删除。旧candidate03因原始字节指纹变化不能直接启动；下一步新建绑定候选再基础拖放人工，详见[交接](../A_Project/40_Implementation/V3-04/HANDOFF.md)。不补人工PASS。
 

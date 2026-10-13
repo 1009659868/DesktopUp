@@ -31,9 +31,10 @@ public sealed partial class ControlCenterWindow
         _lampColors["lightColor"].Text = value.LightColor;
         _lampNumbers["softness"].Value = value.Softness;
         _lampNumbers["intensity"].Value = value.Intensity;
-        _lampColors["background"].Text = value.Background;
+        // Compatibility payload seeding only: material controls moved to the common surface UI.
+        ChangeLampSetting(ReadLampControls().Set("surface.background", TemplateParameterValue.FromColor(value.Background))
+            .Set("surface.opacity", TemplateParameterValue.FromNumber(value.BackgroundOpacity)), false);
         _lampColors["card"].Text = value.Card;
-        _lampNumbers["backgroundOpacity"].Value = value.BackgroundOpacity;
         _lampBooleans["motionEnabled"].IsOn = value.MotionEnabled;
         _lampBooleans["followPointer"].IsOn = value.FollowPointer;
         _lampNumbers["idleSway"].Value = value.IdleSway;

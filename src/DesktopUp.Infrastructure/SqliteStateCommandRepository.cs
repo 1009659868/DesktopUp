@@ -27,7 +27,8 @@ public sealed class SqliteStateCommandRepository(SqliteStateStore store) : IStat
             ExecuteInTransaction(connection, transaction, request, prepare));
 
     internal static StateTransactionResult ExecuteInTransaction(SqliteConnection connection, SqliteTransaction transaction,
-        StateTransactionRequest request, Func<DesktopStateSnapshot, StateMutationPlan> prepare, Guid? authorizedTransferId = null)
+        StateTransactionRequest request, Func<DesktopStateSnapshot, StateMutationPlan> prepare, Guid? authorizedTransferId = null,
+        Guid? authorizedExternalSyncId = null)
     {
         DesktopStateSnapshot before = ReadSnapshot(connection, transaction);
         StateTransactionResult Result(StateCommandStatus status, string? error = null,
@@ -67,9 +68,10 @@ public sealed class SqliteStateCommandRepository(SqliteStateStore store) : IStat
         if (plan.Rejection is { } rejected) return Result(rejected, plan.Error);
         if (!SqliteStorageRelocationJournal.AllowsMutation(connection, transaction, plan))
             return Result(StateCommandStatus.Conflict, "Storage relocation owns the affected content; retry after it finishes.");
-        if (plan.TransferReceiptId != authorizedTransferId)
+        if (plan.TransferReceiptId != authorizedTransferId || plan.ExternalSyncReceiptId != authorizedExternalSyncId ||
+            (authorizedTransferId is not null && authorizedExternalSyncId is not null))
             return Result(StateCommandStatus.ValidationFailed, "Only the verified transfer transaction may mutate storage membership.");
-        if (!SqliteTransferJournal.ValidStorageRemoval(connection, transaction, plan))
+        if (authorizedExternalSyncId is null && !SqliteTransferJournal.ValidStorageRemoval(connection, transaction, plan))
             return Result(StateCommandStatus.ValidationFailed, "Missing or mismatched durable file result.");
         if (!SqliteTransferJournal.AllowsConcurrentMutation(connection, transaction, plan))
             return Result(StateCommandStatus.Conflict, "A file transfer owns the affected state; finish recovery before editing it.");

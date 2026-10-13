@@ -21,7 +21,7 @@ public static class TemplatePresentationRefreshPolicy
         var oldRecipes = before.RecipeInstances;
         var newRecipes = after.RecipeInstances;
         if ((oldRecipes?.Count ?? 0) != (newRecipes?.Count ?? 0)) return false;
-        if (oldRecipes is null || oldRecipes.Count == 0) return builtIn || before.TitleColors != after.TitleColors || before.ShowTitle != after.ShowTitle;
+        if (oldRecipes is null || oldRecipes.Count == 0) return builtIn || before.TitleColors != after.TitleColors || before.ShowTitle != after.ShowTitle || before.Surface != after.Surface;
         if (newRecipes is null || !oldRecipes.Keys.Order(StringComparer.Ordinal).SequenceEqual(
             newRecipes.Keys.Order(StringComparer.Ordinal), StringComparer.Ordinal)) return false;
         if (!builtIn && (!oldRecipes.TryGetValue(selected, out var selectedRecipe) ||

@@ -9,7 +9,7 @@ namespace DesktopUp.Contracts.Tests;
 public sealed class ContentHeadingTests
 {
     [Theory]
-    [InlineData("night-ops", true)] [InlineData("lamp", true)] [InlineData("basic-box", false)]
+    [InlineData("night-ops", true)] [InlineData("lamp", true)]
     public void Heading_is_template_scoped_and_releases_metrics_without_changing_content(string template, bool baseline)
     {
         var poster = Poster() with { TemplateKey = template, LayoutParametersJson = PosterPresentationPolicy.Serialize(PosterPresentationPolicy.Defaults(template)) };
@@ -30,6 +30,20 @@ public sealed class ContentHeadingTests
             roundtrip with { HeadingVisibility = roundtrip.HeadingVisibility!.Set(template, true) }, json) });
         Assert.True(shown.IsContentHeadingVisible); Assert.True(shown.MetaHeightDip > 0);
         if (template != "night-ops") Assert.True(PosterPresentationPolicy.Resolve(poster with { TemplateKey = "night-ops", LayoutParametersJson = json }).IsContentHeadingVisible);
+    }
+
+    [Fact]
+    public void Basic_storage_does_not_mount_heading_even_with_an_old_true_override()
+    {
+        var settings = PosterPresentationPolicy.Defaults("basic-box") with {
+            HeadingVisibility = new TemplateHeadingVisibility([]).Set("basic-box", true) };
+        var poster = Poster() with { TemplateKey = "basic-box", LayoutParametersJson = PosterPresentationPolicy.Serialize(settings) };
+        var resolved = PosterPresentationPolicy.Resolve(poster);
+        Assert.True(resolved.CanEdit); Assert.False(resolved.CanShowContentHeading);
+        Assert.False(resolved.IsContentHeadingVisible); Assert.Equal(0, resolved.MetaHeightDip);
+        Assert.True(resolved.Parameters.HeadingVisibility!.Values["basic-box"]);
+        Assert.Throws<ArgumentException>(() => new PosterSettingEdit(new(1, 1, poster, true, true, true),
+            PosterSetting.ContentHeadingVisibility, 1).Command("unsupported"));
     }
 
     [Fact]
@@ -101,7 +115,9 @@ public sealed partial class ControlCenterEditTransactionTests
     [Fact]
     public void Content_heading_cancel_commit_template_switch_and_cold_reopen_keep_scoped_intent()
     {
-        using var f = new Fixture(); var b = f.Add(); var before = f.Current;
+        using var f = new Fixture(); var b = f.Add();
+        Assert.True(f.Coordinator.Execute(new PosterSettingEdit(f.Current.PostersById["A"], PosterSetting.Template, Text: "night-ops").Command("mount-heading")).Succeeded);
+        var before = f.Current;
         var session = new ControlCenterSettingsSession();
         Assert.True(session.Update(new(before.PostersById["A"], PosterSetting.ContentHeadingVisibility, 0)));
         session.CancelPreview(); Assert.Null(session.TakeNext()); Assert.Equal(before.Revision, f.Current.Revision);
@@ -127,6 +143,7 @@ public sealed partial class ControlCenterEditTransactionTests
     public void Content_heading_conflict_or_sql_failure_retains_original(bool sqlFailure)
     {
         using var f = new Fixture();
+        Assert.True(f.Coordinator.Execute(new PosterSettingEdit(f.Current.PostersById["A"], PosterSetting.Template, Text: "night-ops").Command("mount-heading")).Succeeded);
         var command = new PosterSettingEdit(f.Current.PostersById["A"], PosterSetting.ContentHeadingVisibility, 0).Command("heading-failure");
         if (sqlFailure) f.Sql("CREATE TRIGGER fail_heading BEFORE UPDATE ON posters BEGIN SELECT RAISE(ABORT,'injected'); END;");
         else f.Rename("A", "external");

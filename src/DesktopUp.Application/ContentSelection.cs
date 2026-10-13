@@ -29,4 +29,14 @@ public sealed record ContentSelection(IReadOnlyList<string> Ids, string? Anchor,
         return new(kept, Anchor is not null && order.Contains(Anchor) ? Anchor : kept.FirstOrDefault(),
             Focus is not null && kept.Contains(Focus) ? Focus : kept.LastOrDefault()) { ShowHighlight = kept.Length > 0 && ShowHighlight };
     }
+
+    // Re-evaluate against the press-time selection, never toggle repeatedly on mouse moves.
+    public ContentSelection Marquee(IReadOnlyList<string> order, IEnumerable<string> hits, bool control, bool shift)
+    {
+        var chosen = (control || shift ? Prune(order).Ids : []).ToHashSet(StringComparer.Ordinal);
+        foreach (var id in hits.Distinct(StringComparer.Ordinal).Where(order.Contains))
+            if (!control || !chosen.Remove(id)) chosen.Add(id);
+        var ids = order.Where(chosen.Contains).Distinct().ToArray();
+        return new(ids, ids.FirstOrDefault(), ids.LastOrDefault()) { ShowHighlight = ids.Length > 0 };
+    }
 }

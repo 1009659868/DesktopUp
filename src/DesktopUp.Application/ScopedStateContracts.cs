@@ -72,6 +72,7 @@ public sealed record StateMutationPlan
     public IReadOnlyList<Guid> ExplicitDetachedRelations { get; init; } = [];
     public IReadOnlyList<Guid> RemovedStorageMemberships { get; init; } = [];
     public Guid? TransferReceiptId { get; init; }
+    public Guid? ExternalSyncReceiptId { get; init; }
     public int TransferReceiptIndex { get; init; }
     public IReadOnlyList<PosterDefinition> Updates { get; init; } = Array.Empty<PosterDefinition>();
     public IReadOnlyList<PosterDefinition> Creates { get; init; } = Array.Empty<PosterDefinition>();

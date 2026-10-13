@@ -9,7 +9,13 @@ internal static class Program
     [STAThread]
     private static int Main(string[] args)
     {
-        if (args.Length != 2 || args[0] is not ("--target" or "--source" or "--smoke" or "--check-environment" or "--cross-click" or "--cross-smoke" or "--cross-underlay" or "--routing-auto" or "--routing-bottom" or "--routing-source")) return 2;
+        if (args.Length > 0 && (args[0].StartsWith("--routing-", StringComparison.Ordinal) ||
+            args[0].StartsWith("--cross-", StringComparison.Ordinal)))
+        {
+            Console.Error.WriteLine("DEC-043: click-through experiments retired; use start-incoming-review.ps1 -FullFrameRevision.");
+            return 2;
+        }
+        if (args.Length != 2 || args[0] is not ("--target" or "--source" or "--smoke" or "--check-environment" or "--cross-click" or "--cross-smoke" or "--cross-underlay" or "--routing-auto" or "--routing-repeat" or "--routing-bottom" or "--routing-source")) return 2;
         var root = Path.GetFullPath(args[1]);
         if (!Directory.Exists(root) || !File.Exists(Path.Combine(root, "d1-probe-owned.marker"))) return 3;
         using var log = new ProbeLog(root, args[0][2..]);
@@ -42,6 +48,7 @@ internal static class Program
                 "--cross-smoke" => new CrossProcessClickProbe(log, root, smoke:true),
                 "--cross-underlay" => new CrossProcessUnderlay(log, root),
                 "--routing-auto" => new RoutingMechanismProbe(log, root),
+                "--routing-repeat" => new RoutingMechanismProbe(log, root, repeatOnly:true),
                 "--routing-bottom" => new RoutingMechanismWorker(log, root, true),
                 "--routing-source" => new RoutingMechanismWorker(log, root, false),
                 _ => new TargetForm(log, root, args[0] == "--smoke")

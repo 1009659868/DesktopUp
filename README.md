@@ -2,7 +2,9 @@
 
 当前工作分支：`impl/poster-redesign-V3`（接手时重新核对Git）
 
-当前（2026-10-10）：真实内容引用、图标资产、受管账本及基础同卷拖入／拖回桌面已接线，普通权限原生拖放人工待验。开发状态38187bb已同步远端，精简发布源码分支`impl/main@d6ca237`已创建并推送；后续每个完成里程碑再合入，规则见[Git策略](Docs/Rules/GIT_STRATEGY.md)。最新任务与候选边界见[交接](Docs/A_Project/40_Implementation/V3-04/HANDOFF.md)，不从发布分支反向合入测试／文档删除。
+当前（2026-10-13）：全区域原生拖入、同/跨卷收纳、空白框选、外部移出同步、单一归属与原生 Shell 拖出已接线，D4-N 四组人工通过；05-14入口及六项界面减法已实现。普通点击穿透已按用户决定撤销，不再作为功能承诺。当前发布同步及验证见[交接](Docs/A_Project/40_Implementation/V3-04/HANDOFF.md)。`impl/main`仅保留发布源码；完整开发资料/测试留在本分支，不反向合入发布精简删除，规则见[Git策略](Docs/Rules/GIT_STRATEGY.md)。
+
+新配置首次启动打开控制中心，零海报、无测试卡片；新增默认“基础收纳”。运行脚本每次先构建当前源码。预览包通过`Package-Preview.cmd`制作，支持自选安装目录、`Uninstall.exe`及Windows已安装应用卸载。配置与真实收纳文件独立于安装目录，默认收纳位于`%LOCALAPPDATA%\DesktopUp\Storage\<通道>\<配置身份>`，可在控制中心“全局 → 收纳位置”修改并迁移；卸载不删除用户数据。详见[打包入口](packaging/preview/README.md)。当前仍是未签名预览，不等于已完成跨机、多DPI、满盘和长时验证。
 
 ## 以下为历史阶段说明
 

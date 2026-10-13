@@ -179,6 +179,10 @@ public sealed partial class ControlCenterWindow
             finally { runtime.ReleaseContentActivationKey(id); }
         });
     }
+    private void ContentManage_Click(object sender, RoutedEventArgs e)
+    {
+        if (ContentManageButton.IsEnabled) ContentKeyboardPad.ContextFlyout?.ShowAt(ContentManageButton);
+    }
     private void RefreshCenterItemMenu(ContentLayoutEditorView? view)
     {
         var menu = new MenuFlyout(); var item = view?.SelectedItemId;
@@ -213,8 +217,8 @@ public sealed partial class ControlCenterWindow
         {
             Add("在资源管理器中定位", () => ForSameItem(() => ContentAction((runtime, id) => runtime.RevealContentEditor(id))), !OtherContentOwner);
             Add("刷新来源状态与图标", () => ForSameItem(() => ContentAction((runtime, id) => runtime.RefreshRealContentEditor(id))), !OtherContentOwner);
-            Add($"从此海报移除 {view?.SelectedIds.Count ?? 0} 项引用…", () => ForSameItem(() => _ = RemoveSelectedReference()), writable);
-            Add("全选引用 · Ctrl+A", () => ForSameItem(() => ContentAction((runtime, id) => runtime.SelectAllRealContent(id))), !OtherContentOwner);
+            Add("修复所选引用…", () => ForSameItem(() => _ = EditReferences(true)),
+                writable && item is not null && view?.SelectedIds.Count == 1 && _applyReferences is not null);
         }
         if (placement is not null)
         {

@@ -141,7 +141,12 @@ public sealed class ManagedStorageServiceTests
         string installer=File.ReadAllText(Path.Combine(repo,"packaging/preview/installer.nsi"));
         Assert.DoesNotContain("RMDir /r",installer,StringComparison.OrdinalIgnoreCase);
         Assert.Contains("${UNINSTALL_FILES}",installer);
-        Assert.DoesNotContain("DesktopUp\\Storage",installer,StringComparison.OrdinalIgnoreCase);
+        // The directory page may explain where user data lives; only executable cleanup
+        // statements are forbidden from targeting it.
+        var cleanup = string.Join("\n", installer.Split('\n').Where(line =>
+            System.Text.RegularExpressions.Regex.IsMatch(line, @"^\s*(Delete|RMDir)\s", System.Text.RegularExpressions.RegexOptions.IgnoreCase)));
+        Assert.DoesNotContain("DesktopUp\\Storage",cleanup,StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("$LOCALAPPDATA",cleanup,StringComparison.OrdinalIgnoreCase);
         Assert.Throws<IOException>(()=>Service(f).PreviewChange(f.Paths.Temp));
         Assert.True(Directory.Exists(f.Collection.StorageLocator));
     }

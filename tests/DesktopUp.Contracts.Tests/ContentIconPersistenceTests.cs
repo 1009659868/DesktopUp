@@ -29,10 +29,10 @@ public sealed class ContentIconPersistenceTests
     public void InvalidRasterDimensionsFail(int w,int h,int length) => Assert.Throws<ArgumentException>(()=>ContentIconAsset.Create(w,h,new byte[length]));
     [Fact] public void UnpremultipliedPixelIsRejected() => Assert.Throws<ArgumentException>(()=>ContentIconAsset.Create(1,1,[200,0,0,10]));
 
-    [Fact] public async Task OneCardChangesOnceWithoutChangingSharedTargetOtherPosterOrLayoutAndRestarts()
+    [Fact] public async Task OneCardChangesOnceWithoutChangingTargetOtherPosterOrLayoutAndRestarts()
     {
         using var f = new Fixture(); var entry = Entry(); f.Commit(f.AddCommand(f.Main,entry)); var b=f.NewPoster();
-        f.Commit(f.AddCommand(b,entry with { Choice=ContentReferenceChoice.Reuse, ReuseItemId=entry.Item.Id }));
+        f.Commit(f.AddCommand(b,Entry("other.txt")));
         var before=f.Current; var command=Command(f,f.Main,Icon()); Commit(f,command);
         Assert.Equal(before.Revision+1,f.Current.Revision); Assert.Equal(before.ContentVersion+1,f.Current.ContentVersion);
         Assert.Equal(before.ContentCatalog.Items,f.Current.ContentCatalog.Items);
@@ -50,7 +50,7 @@ public sealed class ContentIconPersistenceTests
     }
     [Fact] public void DeduplicatesAssetsAndCollectsOnlyAfterLastReferenceIsRemoved()
     {
-        using var f=new Fixture();f.Commit(f.AddCommand(f.Main,Entry()));var b=f.NewPoster();f.Commit(f.AddCommand(b,Entry()));
+        using var f=new Fixture();f.Commit(f.AddCommand(f.Main,Entry()));var b=f.NewPoster();f.Commit(f.AddCommand(b,Entry("other.txt")));
         Commit(f,Command(f,f.Main,Icon()));Commit(f,Command(f,b,Icon())); Assert.Equal(1L,f.Sql("SELECT count(*) FROM content_icon_assets"));
         Commit(f,Command(f,f.Main,null)); Assert.Equal(1L,f.Sql("SELECT count(*) FROM content_icon_assets"));
         var relation=f.Current.ContentCatalog.PosterItems.Single(p=>p.PosterId==b);
@@ -114,7 +114,7 @@ public sealed class ContentIconPersistenceTests
         var raw=f.Sql("SELECT body_json FROM content_poster_items"); var checks=f.Sql("SELECT group_concat(checksum_sha256) FROM schema_migrations ORDER BY version");
         var result=f.Store.Initialize(); Assert.True(result.Succeeded,result.Error);Assert.Equal(14,result.PreviousSchemaVersion);Assert.NotNull(result.PreMigrationBackupFileName);
         Assert.Equal(raw,f.Sql("SELECT body_json FROM content_poster_items"));Assert.Equal(checks,f.Sql("SELECT group_concat(checksum_sha256) FROM schema_migrations WHERE version<=14 ORDER BY version"));
-        Assert.Equal(19L,f.Sql("PRAGMA user_version")); Assert.Equal(0L,f.Sql("SELECT count(*) FROM content_icon_assets"));
+        Assert.Equal(21L,f.Sql("PRAGMA user_version")); Assert.Equal(0L,f.Sql("SELECT count(*) FROM content_icon_assets"));
     }
     [Fact] public void FailedMigrationKeepsVersionAndOriginalRelations()
     {

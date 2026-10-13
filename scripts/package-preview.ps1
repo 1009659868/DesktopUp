@@ -45,7 +45,7 @@ $pkgResolved = [ordered]@{ ReleaseId=$ReleaseId; Version=$pkgSettings.version; F
 if ($CheckOnly) { [pscustomobject]$pkgResolved; return }
 # Snapshot hashes before publish; fail if sources change while this package is built.
 function Get-SourceBinding {
-    $pkgRoots = @('src','tests','Modules','config','packaging','scripts')
+    $pkgRoots = @('src','Modules','config','packaging','scripts')
     @(foreach ($pkgArea in $pkgRoots) {
         Get-ChildItem -LiteralPath (Join-Path $pkgRepo $pkgArea) -Recurse -File |
             Where-Object { $_.FullName -notmatch '\\(bin|obj)\\' } |
@@ -100,7 +100,7 @@ try {
     Copy-Item -Path (Join-Path $pkgRepo 'packaging/preview/licenses/*') -Destination $pkgLicenses
     $pkgDependencies | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $pkgLicenses 'packages.json') -Encoding utf8
     $pkgWinAppSdk = @($pkgPackages | Where-Object { $_ -match '^microsoft.windowsappsdk/' })[0].Split('/')[1]
-    [ordered]@{ Release=$ReleaseId; Channel='Preview'; Architecture='AMD64'; MinimumOS='Windows 11'; DotNet=$RuntimeVersion; WindowsAppSDK=$pkgWinAppSdk; SourceCommit=$pkgHead; IncludesUncommittedChanges=($pkgStatus.Count -gt 0); DataRoot='%LOCALAPPDATA%\DesktopUp\Preview'; ApplicationId='DesktopUp.V3.Preview'; DefaultTemplate=$DefaultTemplate; BackgroundOpacityPercent=$BackgroundOpacityPercent; CustomInstallDirectory=$true; Content='DEMO only'; Signed=$false } |
+    [ordered]@{ Release=$ReleaseId; Channel='Preview'; Architecture='AMD64'; MinimumOS='Windows 11'; DotNet=$RuntimeVersion; WindowsAppSDK=$pkgWinAppSdk; SourceCommit=$pkgHead; IncludesUncommittedChanges=($pkgStatus.Count -gt 0); DataRoot='%LOCALAPPDATA%\DesktopUp\Preview'; DefaultStorageBase='%LOCALAPPDATA%\DesktopUp\Storage\preview'; ApplicationId='DesktopUp.V3.Preview'; DefaultTemplate=$DefaultTemplate; BackgroundOpacityPercent=$BackgroundOpacityPercent; CustomInstallDirectory=$true; Content='Real content; empty initial profile; no demo cards'; Signed=$false } |
         ConvertTo-Json | Set-Content (Join-Path $pkgPayload 'preview-build.json') -Encoding utf8
     $pkgFiles = @(Get-ChildItem -LiteralPath $pkgPayload -Recurse -File | Sort-Object FullName)
     $pkgManifest = @(foreach ($pkgFile in $pkgFiles) {

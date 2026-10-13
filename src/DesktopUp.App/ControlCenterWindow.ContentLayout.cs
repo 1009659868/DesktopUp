@@ -89,6 +89,7 @@ public sealed partial class ControlCenterWindow
             // Locked/read-only layouts may still select and activate content. Mutation commands
             // retain their own capability checks; disabling the whole host would hide that path.
             ContentKeyboardPad.IsEnabled = view is not null && !OtherContentOwner && !IsContentFieldDraftActive && placement is not null;
+            ContentManageButton.IsEnabled = ContentKeyboardPad.IsEnabled;
             if (view is null)
             {
                 ContentItemSelector.ItemsSource = null;

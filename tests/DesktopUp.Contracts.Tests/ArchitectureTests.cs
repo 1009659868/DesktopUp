@@ -193,6 +193,25 @@ public sealed class ArchitectureTests
                     dispose.IndexOf("_window.Close()", StringComparison.Ordinal));
     }
 
+    [Fact]
+    public void DailyContentEntryUsesDragAndScopedManagementInsteadOfAddWizard()
+    {
+        string root = FindRepositoryRoot();
+        var xaml = System.Xml.Linq.XDocument.Load(Path.Combine(root, "src/DesktopUp.App/ControlCenterWindow.xaml"));
+        var controls = xaml.Descendants().ToArray();
+        Assert.DoesNotContain(controls, e => e.Attributes().Any(a => a.Value == "AddReferences_Click" || a.Value == "AddContentReferences"));
+        Assert.Single(controls.Where(e => e.Attributes().Any(a => a.Value == "ContentManageButton")));
+        Assert.DoesNotContain(controls, e => e.Attributes().Any(a => a.Value == "RepairReference_Click"));
+        string menu = File.ReadAllText(Path.Combine(root, "src/DesktopUp.App/ControlCenterWindow.UiCWorkspace.cs"));
+        Assert.Contains("ContentKeyboardPad.ContextFlyout?.ShowAt(ContentManageButton)", menu);
+        Assert.Contains("ForSameItem(() => _ = EditReferences(true))", menu);
+        Assert.Contains("view?.SelectedIds.Count == 1", menu);
+        Assert.DoesNotContain("全选引用", menu);
+        Assert.DoesNotContain("从此海报移除", menu);
+        Assert.Single(controls.Where(e => e.Attributes().Any(a => a.Value == "ManagedStorage_Click")));
+        Assert.DoesNotContain(controls, e => e.Attributes().Any(a => a.Value == "内容介绍文字"));
+    }
+
     private static string FindRepositoryRoot()
     {
         DirectoryInfo? current = new(AppContext.BaseDirectory);

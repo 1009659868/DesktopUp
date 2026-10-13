@@ -1,6 +1,6 @@
 # D3 全区域拖入与实际落点接线
 
-2026-10-12。**D3组件化已接生产：最终合同/同包门通过，原生连续拖动复验待桌面解锁，人工未开始。** 用户授权按§7连续推进至一轮人工验收；留白接收及第2～5项USER PASS保留，普通点击穿透FAIL未关闭。整改仅涉及原生接收、输入归属与组件生命周期，已通过的文件、账本和落点业务保持，不进入D4。D2-04已限定收口。D3归[工作流§6.5](../../30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md#65-桌面与海报的剪切式拖放主路径)，需求与交互边界归[专项方案§2～4](../../20_Architecture/DROP_SURFACE_AND_STORAGE_PROPOSAL.md#2-用户看到的操作)。原接线与自动证据见§4.2，不替代人工失败。
+2026-10-13 / **D3 CLOSED（本机限定范围）**。DEC-043取消普通点击穿透后，改为可见全框输入＋同HWND的OLE注册，用户确认新候选第1～3组通过，结果见§8.5。§3及§6～7是已替代方案及原始证据，不再作为放行条件；BUG-022因需求取消退役，不补修复PASS。旧入库/账本/落点业务结论保持，D4/D5未开始；新增外部移出同步BUG-036转主计划§6.5.1，不冒记为此次已修复。
 
 ## 1 内部实施顺序与交付出口
 
@@ -8,10 +8,10 @@
 
 | 子批 | 制作内容 | 当前状态与出口 |
 | --- | --- | --- |
-| D3-01 接收会话与坐标 | 有界全矩形OLE能力、普通输入仍稀疏；Shell目标图像四回调；不可变载荷、最终松手点、代次校验；内外拖动共用屏幕换算 | 已接生产。隔离证据见§4.1，生产跨进程穿透待人工 |
+| D3-01 接收会话与坐标 | 当前全矩形原生输入＋同HWND OLE注册；Shell目标图像四回调；载荷、松手点、代次与坐标换算 | 当前按DEC-043/§8；不再要求穿透 |
 | D3-02 实际落点与事务 | 从当前内容投影建立落点；自动顺位图钉、手动网格/局部让位、标题按规则加入；批量稳定顺序，逐项成功才发布关系和布局 | 已实现并通过相关测试；复用既有排序/局部让位，单项单revision，不再追加独立落点事务 |
 | D3-03 逐项跨卷安全执行 | 在既有逐项账本中接保留源的目录/文件准备、身份回执、目标证明、索引切换与安全清源；共享引用一致 | 已实现新入库通道；真实C→G文件/目录、复制中断/索引失败/重启收尾通过。旧拖出范围不扩大 |
-| D3-04 生产接线与同包验收 | 完整接通默认位置、近旁反馈和普通成功不拉起控制中心；来源缺图时的系统文档图标兜底；原生输入/生命周期/部分成功联合门 | 首版用户第2～5项及留白接收通过，普通点击穿透失败；§7组件修订合同/同包门通过，最终原生及人工待验 |
+| D3-04 生产接线与同包验收 | 默认位置、近旁反馈和普通成功不拉起控制中心；取消、生命周期与部分成功 | 原业务人工2～5项保留；新全框输入组合按§8集中验收 |
 
 D3不制作任意Explorer拖出、不撤备用添加入口；D4负责连续拖出，D5完成联合收口。所有自动文件验证只用自建隔离目录。真实满盘按用户决定延期；Medium、跨屏DPI、锁屏等未验项继续携带，不继承D1独立探针或D2设置的人工结论。
 
@@ -150,7 +150,26 @@ NativeFileDropTarget新增接收完整ticket的构造入口，使用NativeIncomi
 
 `component-routing02`对最终build再次核验交互桌面仍不可用，启动即正常结束测试、退出1，无发送输入；停止重复尝试，等待用户解锁。`out/drop-d3/component-candidate.json`已绑定候选/夹具/环境检查器，状态为`AUTO_PASS_NATIVE_REPEAT_PENDING`，不会被启动器误认为最终原生已过。`scripts/start-incoming-review.ps1 -ComponentRevision -PrepareOnly`已建独立`component-human01/profile`及自建sources，未启动产品；旧无参数入口仍绑定旧候选，不覆盖数据。
 
-**恢复工作时**：不改源码、不重跑已过全量。使用`component-native02 --routing-auto <新的out/drop-d3诊断目录>`（目录先创建`d1-probe-owned.marker`），核对10组`pass=true`、进程正常结束及生产分支资源0；最终3组连续两轮预期分别为2/0/0次提交，左右点击各轮恢复，普通捕获不启用接收。若通过，再将该原生结果记入新manifest、状态改为`AUTO_PASS_USER_PENDING`，以`start-incoming-review.ps1 -ComponentRevision`打开下面三组集中人工。若失败只定位该原生路径，不将静态门PASS掩盖失败。
+上段为10月12日交接快照；10月13日续做改为下节的定向复验，不再直接重跑旧夹具十组。
+
+### 7.2.1 解锁后复验与夹具整改
+
+2026-10-13用户确认已解锁。产品源码及`component-app02`未改，复用既有3248合同和同包门，不重复跑全量。本次修改仅限原生诊断夹具及记录。
+
+- `component-routing03`～`05`：底板位置/可见性与命中不一致，安全检查发现测试点落到非测试进程后拒绝点击。`04`另有鼠标位置偏离；这些不是产品PASS或FAIL。原有“成功调用SetWindowPos即说明底板处于预期层级”的夹具假设不成立，改为底板自身UI线程维护TopMost、显式几何及现场诊断，并在每次点击前检查位置和所属进程。测试局部置顶不进入产品。
+- `component-routing06`～`07`：静态颜色键对照mode4的DoDragDrop未返回，调用前有日志、没有QueryContinueDrag/GiveFeedback日志。`06`的自建源PID25812在正常关闭及用户Esc均无效后定点终止；无文件执行器、无用户文件动作。后续增加1.8秒停止鼠标采样和4秒测试源看门狗退出（失败码6），不遗留无界输入。具体OLE停滞根因尚未确认。
+- `component-routing08`、`component-native07 --routing-repeat`：仅跑生产7/8/9，不删除旧静态对照。mode7连续两次提交，mode8连续两次取消且零提交；每组独立底板收到6次左右点击，资源0，普通窗口捕获未启动接收。两组PASS。mode9首轮暂停后零提交且点击恢复，第二轮DoDragDrop未返回，源看门狗退出，父进程40036退出1；**整体未通过**，不能用前两组代替暂停复验。
+- `component-routing09`试用OLE感知但始终返回NONE的底板；前两组实际鼠标离开预期点，被安全检查阻止；暂停后第二轮仍停滞。说明“底板未注册OLE”不足以解释全部问题，未据此修改产品或补PASS。
+
+当前夹具`component-native10`构建0警告/错误，另将底板声明为独立可见顶层窗口，保留逐次输入保护、部分结果落盘、源退出码检测；鼠标主动离开测试点即停止采样。新夹具的Domain/Application/Windows DLL及PDB从封存`component-app02`复制并核对SHA，避免Git提交后的程序集版本元数据变化混用产品证据；旧候选和旧原生包不覆盖。
+
+用户随后明确暂停鼠标配合，`component-native10 --routing-repeat`的结果保存在`component-routing10`。生产7/8两组再次PASS：提交2/0，各6次底板点击，资源0，无鼠标偏离保护触发。mode9首轮暂停后返回DROP/NONE且底板点击恢复，第二次DoDragDrop调用后没有源端QueryContinueDrag/GiveFeedback记录，4秒看门狗令源45420退出6；父32984检测子进程失败后退出1，底板28952退出0，组件释放资源0，无遗留进程。**整体仍未通过；该次不能归因于桌面锁定或用户移动鼠标。**
+
+不移动鼠标的补充检查：`NativeDragProbeTests.NativeFormatEnumerationWritesFetchedAcrossComAbi`直接调用测试数据枚举的原生COM vtable，核验FORMATETC及fetched数量（含枚举结束写0）。`out/drop-d3/probe-enum01/*.trx`定向1项PASS；只排除此项ABI假设，不证明整个IDataObject、OLE循环或跨进程交互正确。[Microsoft IEnumFORMATETC.Next](https://learn.microsoft.com/en-us/dotnet/api/system.runtime.interopservices.comtypes.ienumformatetc.next?view=net-10.0)规定返回数量应写回调用方。产品未改，不重跑全量、不把此1项加成已完成的新全量结果。
+
+**测试语义校正**：mode9的首次预览调用Suspend，之后没有ApplyFrame恢复；第二轮实际是“保持暂停时再次拖入，应拒绝”，不是“恢复接收后重拖，应成功”。此前简称“暂停后重拖”不能外推为恢复链已验证。
+
+下一步改为定点获取DoDragDrop停滞的原生栈或有界COM调用轨迹，区分测试源、底板/窗口链和产品适配器；同时分别覆盖持续暂停拒绝与恢复后重新接收。根因未确认，不继续通过反复解锁/停鼠标重跑来碰运气，也不删掉失败分支或修改计数宣称通过。完整相关组合通过且进程正常结束后，才更新新manifest为`AUTO_PASS_USER_PENDING`并启动`start-incoming-review.ps1 -ComponentRevision`进行§7.3集中人工。当前manifest仍`AUTO_PASS_NATIVE_REPEAT_PENDING`，未启动产品，BUG-022及D3未关闭；未Git提交推送。
 
 ### 7.3 一轮人工验收（替代旧窄探针待办）
 
@@ -161,3 +180,57 @@ NativeFileDropTarget新增接收完整ticket的构造入口，使用NativeIncomi
 3. **范围与装饰组合**：切深夜书桌/雨夜窗边后重复一次留白接收；收起后只接可见标题范围，前台应用遮挡处不抢接收。操作结束及正常退出/重启后，点击穿透仍在。
 
 以上集中验收通过后才关闭BUG-022和D3，随后进入D4。原已通过2～5项继续保留，不额外重做完整文件安全矩阵；本轮不开放新的拖出目标。
+
+## 8 取消普通点击穿透并收敛接收组件
+
+2026-10-13 / DEC-043。用户取消普通点击穿透。当前**CODE / AUTO PASS / LOCAL USER PASS，D3按本机已验范围CLOSED**：用户随后确认§8.3第1～3组均通过，详情见§8.5。不以取消需求宣称历史穿透失败已修复，也不扩大为未验环境或D4拖出认证。
+
+### 8.1 操作与组件边界
+
+- 当前可见海报矩形统一接收普通输入和OLE拖入，透明背景/装饰留白不形成穿透孔洞。视觉透明度保持；普通留白不触发下方桌面/海报，也不自动增加拖动、框选或菜单行为。
+- 标题、按钮、Item与滚动仍走原逻辑区域和手势。上层海报留白不会命中下层卡片；暂停/隐藏后的区域为空，恢复重新发布，收起只占当前可见框。原菜单让位、层级及前台遮挡规则保持。
+- 参考DeskBox的宿主注册与独立协议处理：PosterDropReception在原PosterInputIslandManager HWND上注册NativeFileDropTarget，只负责OLE会话/取消/释放。删除额外接收窗、全局捕获订阅、30ms验证和500ms结束宽限；不再依赖CLIPBRDWNDCLASS。NativeOleDragMonitor移至历史测试项目，不编入产品。
+- 输入窗口的全框归属不依赖拖放组件安装成功；重复注册失败不能破坏原注册或命中，卸载接收组件不删除基础输入窗口。暂停/几何变化结束悬停；恢复不必等待外部全局拖动事件。
+- Shell图像四回调、原ticket、实际落点、默认位置、跨卷准备、账本和逐项提交均保持；未修改schema、文件迁移执行器或用户配置。
+
+旧--routing-*及--cross-*穿透实验入口已明确退役并返回说明，不再操控鼠标或成为放行门。保留源码、旧包与原始失败；旧mode9停滞没有补PASS，本轮没有继续诊断该已替代实验。
+
+### 8.2 验证与产物
+
+- 受影响输入/注册/右键/接收会话定向回归：首次82通过、1条旧“穿透下层”断言失败，按新需求更新；最终fullframe-targeted02共85项通过（含全量首次失败两项的定点复验）。
+- fullframe-final01完整3249项中3247通过、2项存储测试失败：ValidWindowsShortcutMovesItsOwnBytesWithoutChangingOrExecutingItsTarget与RealCopiesRetainSourcesBeforeOneCommitThenCleanOnlyOldPayload。存储源码未改，原TRX保留；两项定点复验通过，具体首次失败成因未确认，不武断归为环境问题。
+- 最终out/drop-d3/fullframe-final02/final.trx：**3249通过，0失败/跳过**。App fullframe-app01 Release x64构建0警告/错误，四个核心DLL与最终测试依赖哈希一致。
+- fullframe-gates01/results.json：相同App入库first与restart通过，PID48876/26724，退出0、资源0；只用自建隔离文件，NativeMouse=false。
+- 保留的诊断工具fullframe-native01构建0警告/错误，只用于环境读取；首次编译发现旧实验仍调用已移除构造，已明确退役旧入口并修正依赖，没有为旧探针重建生产组件。
+- 新清单out/drop-d3/fullframe-candidate.json为AUTO_PASS_USER_PENDING，绑定146个App/夹具/环境检查器文件；旧component-candidate.json及其待验状态不改写。
+- start-incoming-review.ps1 -FullFrameRevision -PrepareOnly通过，已准备独立fullframe-human01/profile、sources及cross-source.txt。本轮未启动人工产品、未操控鼠标、未修改用户文件或提交推送Git。
+
+### 8.3 集中人工与下一步
+
+启动新候选，不使用旧-ComponentRevision入口：
+
+```powershell
+& 'G:\A_\Tools\DesktopUp_V2\scripts\start-incoming-review.ps1' -FullFrameRevision
+```
+
+只使用该入口返回的sources自建文件（会真实收纳移动），日常配置和旧验收数据保持。
+
+1. **全区域接收**：空海报留白直接拖入，图标持续跟手，松手收纳；再次拖入不隔次失效。普通留白左/右点击不再操作后方桌面，这是新预期，不再检查穿透。
+2. **操作与取消**：标题/云拖动、收展/“…”、Item打开与内部拖动正常；另一个文件拖入后Esc，源保留，立即再拖能接收。
+3. **范围与释放**：收起只占当前可见框，深夜书桌/雨夜模板仍接留白；隐藏后原位置能操作桌面，重显恢复接收；前台窗口遮住海报时不抢拖放。正常退出重开仍可操作。
+
+三组通过后收口D3，再进入D4拖出与连续图像/目标协议；不重做原人工2～5项完整业务矩阵，不借本轮扩大拖出支持范围。普通权限、跨屏DPI、锁屏与真实满盘等未验项保持。
+
+### 8.4 本轮人工启动记录
+
+2026-10-13用户明确先回归主线人工。已运行start-incoming-review.ps1 -FullFrameRevision：封存产物哈希检查通过，环境检查HighIntegrityMatched，初始PID30052，配置out/drop-d3/fullframe-human01/profile，样本out/drop-d3/fullframe-human01/sources。当前等待§8.3三组反馈，未登记人工PASS；未重建/改动候选或运行重复鼠标实验，普通权限范围仍未验。
+
+用户追加空白左键按住拖动框选需求，空白右键及模板平台架构暂定，已登记DEC-044和主计划§6.5。框选不在本次封存包中，不能作为本轮已实现项；当前留白只接收输入、不穿透。未来非矩形/离散区域模板的几何与命中合同另评审，不改变当前矩形验收预期。
+
+### 8.5 三组人工通过与D3收口
+
+2026-10-13用户明确反馈“1~3项验收通过”。对应fullframe-app01 / fullframe-human01和§8.3，记录全区域连续接收与跟手、既有操作及Esc取消后重拖、收起/模板/隐藏重显/前台遮挡/正常退出重开三组为USER PASS；不要求重做原2～5项完整文件业务矩阵。当前D3在本机已验范围CLOSED，BUG-022仍为需求取消退役而非修复PASS。HighIntegrityMatched启动记录不扩张为普通权限、跨屏DPI、锁屏或真实满盘通过；旧失败和候选绑定保持原样，不改写旧manifest。
+
+同次用户报告：在实际收纳目录中用资源管理器把对象剪切至桌面后，海报卡片未移除。新增V3-BUG-036 / DEC-045，属于尚未实现的受管成员外部同步，不否定此次D3已验拖入链路，也不记为已修复。下一步按[主计划§6.5.1](../../30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md#651-d3收口后的基础交互推进2026-10-13)：05-11-A最小外部同步 → 空白框选 → D4拖出 → D5集中闭环。右键/模板平台继续暂定。
+
+本轮仅记录用户结果、源码核对与计划，无构建/测试复跑、用户文件操作、进程启停或Git提交推送。

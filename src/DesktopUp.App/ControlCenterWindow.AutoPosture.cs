@@ -158,6 +158,7 @@ public sealed partial class ControlCenterWindow
     }
     private void CancelSettingsPreview()
     {
+        _surfacePointerHeld = false;
         CloseLampColorPicker();
         _scaleMarks?.Cancel(); _spacingMarks?.Cancel();
         _lampHeldSlider = null;
@@ -210,6 +211,7 @@ public sealed partial class ControlCenterWindow
             RenderTemplateSamples();
             RenderTitleColors();
             RenderContentHeading();
+            RenderSurfaceControls();
             UpdateContentDraftPresentation();
         }
         finally { _renderingSettings = false; }
