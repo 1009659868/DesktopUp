@@ -9,15 +9,23 @@ public sealed class SqliteStateCommandRepository(SqliteStateStore store) : IStat
 {
     public DesktopStateSnapshot Read() => store.ExecuteRead(ReadSnapshot);
 
-    public DesktopStateSnapshot EnsureInitialized(PosterDefinition defaultPoster) =>
+    public DesktopStateSnapshot EnsureInitialized(PosterDefinition? defaultPoster = null) =>
         store.ExecuteWrite((connection, transaction) =>
         {
             DesktopStateSnapshot state = ReadSnapshot(connection, transaction);
             if (state.Catalog.ProfileInitialized) return state;
-            string? error = AuthoritativeStateValidationPolicy.Validate(defaultPoster);
-            if (error is not null) throw new ArgumentException(error, nameof(defaultPoster));
             long revision = checked(state.Revision + 1);
-            SqlitePosterRepository.InsertPoster(connection, transaction, defaultPoster, revision);
+            if (defaultPoster is not null)
+            {
+                string? error = AuthoritativeStateValidationPolicy.Validate(defaultPoster);
+                if (error is not null) throw new ArgumentException(error, nameof(defaultPoster));
+                SqlitePosterRepository.InsertPoster(connection, transaction, defaultPoster, revision);
+            }
+            else
+            {
+                // Mark the empty catalog as initialized so later recovery cannot seed a poster.
+                SqlitePosterCatalogRepository.TouchProfile(connection, transaction, revision, false);
+            }
             AdvanceHead(connection, transaction, state.Revision, "initialize-" + Guid.NewGuid().ToString("N"));
             return ReadSnapshot(connection, transaction);
         });

@@ -30,11 +30,10 @@ Var GuardAttributes
 
 !define MUI_WELCOMEPAGE_TEXT "Windows 11 x64 独立预览版。$\r$\n$\r$\n自带运行库，使用独立配置，不读取或迁移日常版配置，不设置开机启动。首次为空白工作区，无演示卡片；拖入收纳会移动真实文件，请先用无价值文件体验。$\r$\n$\r$\n下一步可自选安装目录。卸载保留配置和已收纳文件。"
 !insertmacro MUI_PAGE_WELCOME
-!define MUI_DIRECTORYPAGE_TEXT_TOP "选择当前用户可写的专用新目录或空目录，可位于其他本地磁盘。配置在 %LOCALAPPDATA%\DesktopUp\Preview，默认收纳在 %LOCALAPPDATA%\DesktopUp\Storage 下；均独立于安装目录，可在控制中心修改收纳位置。"
+!define MUI_DIRECTORYPAGE_TEXT_TOP "选择当前用户可写的本地目录，可以已有其他文件；已有内容会保留。若存在同名的程序文件或 app、licenses 目录，请改选目录。配置和收纳内容独立于安装目录，收纳位置可在控制中心修改。"
 !insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_INSTFILES
 !define MUI_FINISHPAGE_RUN "$INSTDIR\DesktopUp.exe"
-!define MUI_FINISHPAGE_RUN_PARAMETERS "--show-control-center"
 !define MUI_FINISHPAGE_RUN_NOTCHECKED
 !define MUI_FINISHPAGE_RUN_TEXT "启动 DesktopUp Preview"
 !insertmacro MUI_PAGE_FINISH
@@ -68,6 +67,13 @@ FunctionEnd
 !macroend
 !insertmacro ReparseGuard ""
 !insertmacro ReparseGuard "un."
+
+!macro CheckOwnedName Name
+  System::Call 'kernel32::GetFileAttributesW(w "$INSTDIR\${Name}") i.r0'
+  ${If} $0 != -1
+    Return
+  ${EndIf}
+!macroend
 
 Function ValidateDestination
   StrCpy $GuardError 12
@@ -126,22 +132,15 @@ Function ValidateDestination
     ${If} $0 == 0
       Return
     ${EndIf}
-    FindFirst $0 $1 "$INSTDIR\*.*"
-    scan:
-      ${If} $1 == ""
-        FindClose $0
-        Goto valid
-      ${EndIf}
-      ${If} $1 != "."
-      ${AndIf} $1 != ".."
-        FindClose $0
-        Return
-      ${EndIf}
-      FindNext $0 $1
-      Goto scan
   ${EndIf}
-  valid:
-    StrCpy $GuardError 0
+  ; Reserve only owned names. Unrelated existing files are never overwritten.
+  StrCpy $GuardError 16
+  !insertmacro CheckOwnedName "DesktopUp.exe"
+  !insertmacro CheckOwnedName "Uninstall.exe"
+  !insertmacro CheckOwnedName "PREVIEW-README.txt"
+  !insertmacro CheckOwnedName "app"
+  !insertmacro CheckOwnedName "licenses"
+  StrCpy $GuardError 0
 FunctionEnd
 
 Function .onInit
@@ -176,7 +175,7 @@ FunctionEnd
 Section "DesktopUp Preview"
   Call ValidateDestination
   ${If} $GuardError != 0
-    MessageBox MB_OK|MB_ICONSTOP "目录不可用。请选择有写入权限的本地专用新目录或空目录；不使用磁盘根、用户配置、Windows目录、联接目录或过长路径。" /SD IDOK
+    MessageBox MB_OK|MB_ICONSTOP "目录不可用。请选择可写的本地目录，且不含同名程序文件或 app、licenses 目录；其他已有文件可以保留。不使用磁盘根、用户配置、Windows目录、联接目录或过长路径。" /SD IDOK
     SetErrorLevel $GuardError
     Quit
   ${EndIf}
@@ -186,12 +185,12 @@ Section "DesktopUp Preview"
   !include "${INSTALL_FILES}"
   SetOutPath "$INSTDIR"
   WriteUninstaller "$INSTDIR\Uninstall.exe"
-  WriteINIStr "$INSTDIR\preview-install.ini" "Install" "Channel" "DesktopUp.Preview"
-  WriteINIStr "$INSTDIR\preview-install.ini" "Install" "Release" "${RELEASE_ID}"
-  WriteINIStr "$INSTDIR\preview-install.ini" "Install" "Path" "$INSTDIR"
+  WriteINIStr "$INSTDIR\app\preview-install.ini" "Install" "Channel" "DesktopUp.Preview"
+  WriteINIStr "$INSTDIR\app\preview-install.ini" "Install" "Release" "${RELEASE_ID}"
+  WriteINIStr "$INSTDIR\app\preview-install.ini" "Install" "Path" "$INSTDIR"
   IfErrors installation_failed
   CreateDirectory "$SMPROGRAMS\${PRODUCT}"
-  CreateShortCut "$SMPROGRAMS\${PRODUCT}\DesktopUp Preview.lnk" "$INSTDIR\DesktopUp.exe" "--show-control-center"
+  CreateShortCut "$SMPROGRAMS\${PRODUCT}\DesktopUp Preview.lnk" "$INSTDIR\DesktopUp.exe"
   CreateShortCut "$SMPROGRAMS\${PRODUCT}\预览说明.lnk" "$INSTDIR\PREVIEW-README.txt"
   WriteRegStr HKCU "${UNINSTALL_KEY}" "DisplayName" "${PRODUCT} (x64)"
   WriteRegStr HKCU "${UNINSTALL_KEY}" "DisplayVersion" "${RELEASE_ID}"
@@ -230,22 +229,22 @@ Function un.onInit
   ${EndIf}
   StrCpy $GuardPath $INSTDIR
   Call un.RequireSafeDirectory
-  ReadINIStr $0 "$INSTDIR\preview-install.ini" "Install" "Path"
+  !include "${UNINSTALL_GUARDS}"
+  ReadINIStr $0 "$INSTDIR\app\preview-install.ini" "Install" "Path"
   ${If} $0 != $INSTDIR
     Goto unsafe_uninstall
   ${EndIf}
-  ReadINIStr $0 "$INSTDIR\preview-install.ini" "Install" "Release"
+  ReadINIStr $0 "$INSTDIR\app\preview-install.ini" "Install" "Release"
   ${If} $0 != "${RELEASE_ID}"
     Goto unsafe_uninstall
   ${EndIf}
-  ReadINIStr $0 "$INSTDIR\preview-install.ini" "Install" "Channel"
+  ReadINIStr $0 "$INSTDIR\app\preview-install.ini" "Install" "Channel"
   ${If} $0 != "DesktopUp.Preview"
     Goto unsafe_uninstall
   ${EndIf}
-  !include "${UNINSTALL_GUARDS}"
   ; A prior partial uninstall may have removed the exe. Marker + registry still bind the target.
-  IfFileExists "$INSTDIR\DesktopUp.exe" 0 safe_uninstall
-  System::Call 'kernel32::CreateFileW(w "$INSTDIR\DesktopUp.exe", i 0x40000000, i 1, p 0, i 3, i 0, p 0) p.r1'
+  IfFileExists "$INSTDIR\app\DesktopUp.exe" 0 safe_uninstall
+  System::Call 'kernel32::CreateFileW(w "$INSTDIR\app\DesktopUp.exe", i 0x40000000, i 1, p 0, i 3, i 0, p 0) p.r1'
   ${If} $1 == -1
     MessageBox MB_OK|MB_ICONSTOP "预览版仍在运行或文件不可写。请从托盘正常退出后再卸载；不会强制结束进程。" /SD IDOK
     SetErrorLevel 21
@@ -265,7 +264,9 @@ Section "Uninstall"
   !include "${UNINSTALL_FILES}"
   ; Empty-directory removals may fail for unknown user files: leave these untouched.
   ClearErrors
-  Delete "$INSTDIR\preview-install.ini"
+  Delete "$INSTDIR\app\preview-install.ini"
+  IfErrors uninstall_failed
+  RMDir "$INSTDIR\app"
   Delete "$INSTDIR\Uninstall.exe"
   RMDir "$INSTDIR"
   Delete "$SMPROGRAMS\${PRODUCT}\DesktopUp Preview.lnk"

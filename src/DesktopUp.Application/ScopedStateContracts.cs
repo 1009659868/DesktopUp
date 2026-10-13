@@ -94,7 +94,7 @@ public sealed record StateTransactionResult(
     string? ResultPosterId, IReadOnlyList<StateReadConflict> Conflicts, string? Error);
 public interface IStateCommandRepository
 {
-    DesktopStateSnapshot EnsureInitialized(PosterDefinition defaultPoster);
+    DesktopStateSnapshot EnsureInitialized(PosterDefinition? defaultPoster = null);
     DesktopStateSnapshot Read();
     StateTransactionResult Execute(StateTransactionRequest request, Func<DesktopStateSnapshot, StateMutationPlan> prepare);
 }

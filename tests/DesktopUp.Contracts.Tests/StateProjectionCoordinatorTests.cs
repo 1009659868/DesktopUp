@@ -8,6 +8,34 @@ namespace DesktopUp.Contracts.Tests;
 public sealed class StateProjectionCoordinatorTests
 {
     [Fact]
+    public void EmptyInitializationPersistsWithoutSeedingOnRestart()
+    {
+        using var fixture = new ProjectionFixture();
+        DesktopUpProjection initial = fixture.Coordinator.EnsureInitialized();
+        Assert.True(initial.ProfileInitialized);
+        Assert.Empty(initial.Posters);
+        Assert.Null(initial.Poster);
+        Assert.Equal(1, initial.Revision);
+
+        var restarted = new StateProjectionCoordinator(new SqliteStateCommandRepository(fixture.Store));
+        DesktopUpProjection restored = restarted.EnsureInitialized(DefaultPoster());
+        Assert.True(restored.ProfileInitialized);
+        Assert.Empty(restored.Posters);
+        Assert.Equal(initial.Revision, restored.Revision);
+    }
+
+    [Fact]
+    public void ParameterlessInitializationPreservesExistingPoster()
+    {
+        using var fixture = new ProjectionFixture();
+        DesktopUpProjection initial = fixture.Coordinator.EnsureInitialized(DefaultPoster());
+        var restarted = new StateProjectionCoordinator(new SqliteStateCommandRepository(fixture.Store));
+        DesktopUpProjection restored = restarted.EnsureInitialized();
+        Assert.Equal(initial.Revision, restored.Revision);
+        Assert.Equal(initial.Poster!.Poster, Assert.Single(restored.Posters).Poster);
+    }
+
+    [Fact]
     public void InitializationBuildsThreeProjectionsFromOneCommittedRevision()
     {
         using var fixture = new ProjectionFixture();

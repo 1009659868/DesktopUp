@@ -13,10 +13,24 @@ public sealed class StartupIntentTests
     }
 
     [Fact]
-    public void SecondPlainLaunchRequestsControlCenter()
+    public void SecondPlainLaunchPreservesIntentForCurrentCatalog()
     {
         StartupIntent intent = new StartupIntentParser().Parse([]).ForExistingInstance();
-        Assert.Equal(StartupIntentKind.ShowControlCenter, intent.Kind);
+        Assert.Equal(StartupIntentKind.StartBackground, intent.Kind);
+    }
+
+    [Theory]
+    [InlineData(StartupIntentKind.StartBackground, false, true)]
+    [InlineData(StartupIntentKind.StartBackground, true, false)]
+    [InlineData(StartupIntentKind.ShowControlCenter, false, true)]
+    [InlineData(StartupIntentKind.ShowControlCenter, true, true)]
+    [InlineData(StartupIntentKind.Exit, false, false)]
+    [InlineData(StartupIntentKind.Exit, true, false)]
+    public void VisibilityUsesIntentAndCurrentPosterCatalog(StartupIntentKind kind, bool hasPosters, bool expected)
+    {
+        var intent = new StartupIntent(kind, [], DateTimeOffset.UtcNow);
+        Assert.Equal(expected, intent.ShouldShowControlCenter(hasPosters));
+        Assert.Equal(expected, intent.ForExistingInstance().ShouldShowControlCenter(hasPosters));
     }
 
     [Fact]

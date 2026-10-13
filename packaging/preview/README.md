@@ -1,6 +1,6 @@
 # 一键预览打包
 
-构建电脑需要项目锁定的.NET SDK、Windows构建依赖、可恢复的NuGet包以及NSIS。接收安装器的Windows 11 x64电脑不需要开发环境。脚本支持Windows PowerShell 5.1 / PowerShell 7，不自动安装工具、不更改执行策略、不提交Git、不自动安装/启动成品。
+构建电脑使用Windows 11 x64与Windows PowerShell 5.1 / PowerShell 7。脚本自动准备项目锁定的.NET SDK 10.0.112、NuGet包与NSIS 3.12；版本和下载校验值见`global.json`及`scripts/toolchain.json`。缓存分别位于`out/toolchains/`、`out/nuget/packages/`，不替换系统SDK、不永久修改PATH或执行策略。接收安装器的电脑不需要开发环境；打包不自动安装/启动成品。
 
 ## 最简单的使用方式
 
@@ -24,11 +24,17 @@
 命令行覆盖不修改设置文件：
 
 ```powershell
+# 首次联网准备；构建与打包入口也会自动调用工具链准备。
+./scripts/setup.ps1 -ForPackaging
+
 # 只检查配置、依赖入口及预计输出，不构建/安装。
 ./scripts/package-preview.ps1 -CheckOnly
 
 # 常规一键构建；无需填写机器专属路径。
 ./scripts/package-preview.ps1
+
+# 工具和依赖已完整缓存后离线打包；缺失项会明确报错。
+./scripts/package-preview.ps1 -Offline
 
 # 本次改用深夜书桌并指定背景不透明度，不改变默认配置文件。
 ./scripts/package-preview.ps1 -DefaultTemplate lamp -BackgroundOpacityPercent 40
@@ -42,13 +48,15 @@
   -OutputRoot ./out/preview-custom
 ```
 
-生成的 `config/preview-defaults.json` 是启动时读取的声明式默认值，不执行脚本。新配置首次打开控制中心，零海报、无演示内容；托盘/控制中心新增海报共用默认入口。复制、导入、已有配置和模板重置不被它改写。仅Preview通道读取它。缺失/非法默认文件会记录警告并退回原新建行为，不阻止启动或覆盖保存数据。
+安装根目录只有`DesktopUp.exe`启动器、`Uninstall.exe`、`PREVIEW-README.txt`、`app/`和`licenses/`。WinUI程序、DLL、本地化资源、模块与配置完整保留在`app/`，不按名称猜测并删除运行依赖。启动器转发参数至`app/DesktopUp.exe`；构建日志临时使用UTF-8输出，结束恢复原编码。
+
+生成的 `app/config/preview-defaults.json` 是启动时读取的声明式默认值，不执行脚本。新配置零海报、无演示内容；每次普通启动（含第二实例转发）均按当前目录判断：无海报显示控制中心，有海报后台启动；`--show-control-center`始终显示中心。托盘/控制中心新增海报共用默认入口。复制、导入、已有配置和模板重置不被它改写。仅Preview通道读取它。缺失/非法默认文件会记录警告并退回原新建行为，不阻止启动或覆盖保存数据。
 
 ## 安装/卸载与验证边界
 
-- 安装路径支持目录页及静默`/D=<完整路径>`（放最后，不加引号）；选择本地、当前用户可写的新目录/空目录。拒绝非空目标、已有同版注册记录、配置/系统根、联接/符号链接及超长路径。
-- 卸载同时核对HKCU安装位置、`preview-install.ini`的版本/路径/通道；检查子目录未被替换为联接，再删除编译时的精确清单。运行中拒绝卸载，不强杀。非空未知文件保留，Preview配置始终保留。
-- 开始菜单及安装完成页打开控制中心；安装目录生成`Uninstall.exe`，Windows“已安装的应用”调用同一卸载器。默认收纳使用`%LOCALAPPDATA%\DesktopUp\Storage\preview\<配置身份>`，不放安装目录，不随卸载删除；普通源码运行使用`daily`通道。既有收纳位置不改写，通过“全局 → 收纳位置”修改/迁移。
+- 安装路径支持目录页及静默`/D=<完整路径>`（放最后，不加引号）；允许本地、当前用户可写且含无关文件的目录。遇到`DesktopUp.exe`、`Uninstall.exe`、`PREVIEW-README.txt`、`app`或`licenses`已有同名文件/目录则拒绝；仍拒绝已有同版注册记录、配置/系统根、联接/符号链接及超长路径。
+- 卸载同时核对HKCU安装位置、`app/preview-install.ini`的版本/路径/通道；检查子目录未被替换为联接，再删除编译时的精确清单。运行中拒绝卸载，不强杀。未知文件保留，Preview配置始终保留。
+- 开始菜单及安装完成页使用普通启动规则；安装目录生成`Uninstall.exe`，Windows“已安装的应用”调用同一卸载器。默认收纳使用`%LOCALAPPDATA%\DesktopUp\Storage\preview\<配置身份>`，不放安装目录，不随卸载删除；普通源码运行使用`daily`通道。既有收纳位置不改写，通过“全局 → 收纳位置”修改/迁移。
 - `evidence/resolved-settings.json`、源码指纹、原始发布/NSIS日志、payload清单和Setup SHA256用于绑定；`Verified:false`只是尚未执行运行验收，编译成功不等于验收通过。
 - 成品默认未签名；不要为了测试关闭系统防护。跨机/普通权限与人工向导须另验。
 

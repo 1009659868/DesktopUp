@@ -4,7 +4,9 @@
 
 当前（2026-10-13）：全区域原生拖入、同/跨卷收纳、空白框选、外部移出同步、单一归属与原生 Shell 拖出已接线，D4-N 四组人工通过；05-14入口及六项界面减法已实现。普通点击穿透已按用户决定撤销，不再作为功能承诺。当前发布同步及验证见[交接](Docs/A_Project/40_Implementation/V3-04/HANDOFF.md)。`impl/main`仅保留发布源码；完整开发资料/测试留在本分支，不反向合入发布精简删除，规则见[Git策略](Docs/Rules/GIT_STRATEGY.md)。
 
-新配置首次启动打开控制中心，零海报、无测试卡片；新增默认“基础收纳”。运行脚本每次先构建当前源码。预览包通过`Package-Preview.cmd`制作，支持自选安装目录、`Uninstall.exe`及Windows已安装应用卸载。配置与真实收纳文件独立于安装目录，默认收纳位于`%LOCALAPPDATA%\DesktopUp\Storage\<通道>\<配置身份>`，可在控制中心“全局 → 收纳位置”修改并迁移；卸载不删除用户数据。详见[打包入口](packaging/preview/README.md)。当前仍是未签名预览，不等于已完成跨机、多DPI、满盘和长时验证。
+2026-10-14构建/安装更新：新配置零海报、无测试卡片；每次普通启动都按当前目录判断：零海报打开控制中心，有海报后台启动，显式`--show-control-center`始终打开中心。新增默认“基础收纳”。运行脚本每次先构建当前源码。预览包通过`Package-Preview.cmd`制作，支持包含无关文件的自选安装目录；遇到应用专属名称冲突会拒绝。根目录保留启动器、卸载器、说明与`app/`、`licenses/`，运行依赖集中于`app/`。
+
+配置与真实收纳文件独立于安装目录，默认收纳位于`%LOCALAPPDATA%\DesktopUp\Storage\<通道>\<配置身份>`，可在控制中心“全局 → 收纳位置”修改并迁移；卸载不删除用户数据。详见[打包入口](packaging/preview/README.md)与[本轮交付记录](Docs/A_Project/40_Implementation/V3-04/PREVIEW_INSTALLER_DELIVERY.md#2026-10-14-便携工具链与安装体验同步)。当前仍是未签名预览，不等于已完成跨机、多DPI、满盘和长时验证。
 
 ## 以下为历史阶段说明
 
@@ -41,12 +43,15 @@
 ## 构建与运行
 
 ```powershell
+& .\scripts\setup.ps1 -ForPackaging
 & .\scripts\build.ps1 -Configuration Release
 & .\scripts\test.ps1 -Configuration Release
 & .\scripts\run.ps1
 ```
 
-在项目根目录执行上述命令，需满足`global.json`的.NET SDK及Windows构建依赖。当前机器的隔离工具链/候选运行方式见交接；`out/`验证包、日志和体验数据库仅保留本机，不随Git分发。
+在Windows 11 x64项目根目录执行，支持Windows PowerShell 5.1 / PowerShell 7。脚本按`global.json`与`scripts/toolchain.json`准备项目本地.NET SDK 10.0.112和NSIS 3.12，校验下载哈希，缓存至`out/toolchains/`；NuGet缓存至`out/nuget/packages/`。不要求替换系统SDK，不永久修改PATH。首次需联网；准备完整后可加`-Offline`。本机Windows原生构建/运行仍是验证基线，不以Docker替代WinUI和Shell验证。脚本设置并恢复原生命令UTF-8输出编码。
+
+2026-10-14按用户要求清除了本机构建历史、工具链/包缓存及旧证据；此后首次构建会重新下载。旧文档中的`out/`路径仅为历史引用，不能认为产物仍可访问。同步阶段未重新生成这些产物。
 
 M03历史：已接目录驱动的0..N真实会话，无配置首次一张、既有目录恢复、已初始化空目录保持零张；一个控制中心、一个托盘。163/163合同和对应Release结果属于该早期版本；新增/删除管理UI、多海报输入和主题参数的后续进度见当前文档。
 
