@@ -64,7 +64,12 @@ Push-Location $pkgRepo
 try {
     $pkgHead = (& git rev-parse HEAD).Trim()
     $pkgStatus = @(& git status --porcelain)
-    & dotnet publish src/DesktopUp.App/DesktopUp.App.csproj -c Release -p:Platform=x64 -p:PublishProfile=Preview-x64 -p:DesktopUpPreview=true -p:SelfContained=true -p:DebugType=none -p:DebugSymbols=false "-p:DesktopUpPreviewRuntimeVersion=$RuntimeVersion" "-p:Version=$($pkgSettings.version)-preview.$ReleaseId" "-p:FileVersion=$($pkgSettings.fileVersion)" "-p:OutputPath=$pkgOutput\build\" "-p:PublishDir=$pkgPayload\" 2>&1 |
+    # WinUI's incremental PRI cache can survive a framework-dependent build. Rebuild
+    # with the exact self-contained publish properties, then publish those same outputs.
+    & dotnet build src/DesktopUp.App/DesktopUp.App.csproj --no-incremental -c Release -p:Platform=x64 -p:PublishProfile=Preview-x64 -p:DesktopUpPreview=true -p:SelfContained=true -p:DebugType=none -p:DebugSymbols=false "-p:DesktopUpPreviewRuntimeVersion=$RuntimeVersion" "-p:Version=$($pkgSettings.version)-preview.$ReleaseId" "-p:FileVersion=$($pkgSettings.fileVersion)" "-p:OutputPath=$pkgOutput\build\" "-p:PublishDir=$pkgPayload\" 2>&1 |
+        Tee-Object -FilePath (Join-Path $pkgEvidence 'rebuild.log') | Out-Host
+    if ($LASTEXITCODE -ne 0) { throw 'Self-contained rebuild failed; partial evidence preserved.' }
+    & dotnet publish src/DesktopUp.App/DesktopUp.App.csproj --no-build -c Release -p:Platform=x64 -p:PublishProfile=Preview-x64 -p:DesktopUpPreview=true -p:SelfContained=true -p:DebugType=none -p:DebugSymbols=false "-p:DesktopUpPreviewRuntimeVersion=$RuntimeVersion" "-p:Version=$($pkgSettings.version)-preview.$ReleaseId" "-p:FileVersion=$($pkgSettings.fileVersion)" "-p:OutputPath=$pkgOutput\build\" "-p:PublishDir=$pkgPayload\" 2>&1 |
         Tee-Object -FilePath (Join-Path $pkgEvidence 'publish.log') | Out-Host
     if ($LASTEXITCODE -ne 0) { throw 'Publish failed; partial evidence preserved.' }
     $pkgRuntime = Get-Content -LiteralPath (Join-Path $pkgPayload 'DesktopUp.runtimeconfig.json') -Raw | ConvertFrom-Json

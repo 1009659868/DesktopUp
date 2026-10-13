@@ -6,8 +6,4 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Data.Sqlite" />
   </ItemGroup>
-  <ItemGroup>
-    <InternalsVisibleTo Include="DesktopUp.Contracts.Tests" />
-    <InternalsVisibleTo Include="DesktopUp.TransferFixture" />
-  </ItemGroup>
 </Project>
