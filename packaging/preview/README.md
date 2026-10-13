@@ -8,6 +8,8 @@
 
 主要交付物是 `DesktopUp-Preview-<编号>-win-x64-Setup.exe` 和 `SHA256SUMS.txt`。其余payload/build/evidence是本机构建/追溯资料，不必发给测试电脑。安装向导中可自选安装目录；安装与配置目录相互独立。
 
+脚本先按自包含发布参数完整重建，再发布同一输出，避免普通构建后复用缺少WinUI主题资源的旧PRI索引。保留`evidence/rebuild.log`，不要为了提速删除这一步。项目及依赖许可证随包位于`licenses`。
+
 ## 按需修改
 
 修改 `package-settings.json`：

@@ -2,7 +2,7 @@
 
 ## 2026-10-13 发布同步
 
-- `scripts/run.ps1`：每次构建当前源码；`scripts/package-preview.ps1`：产品源指纹及收纳路径元数据，不依赖测试目录。
+- `scripts/run.ps1`：每次构建当前源码；`scripts/package-preview.ps1`：产品指纹/路径元数据、自包含完整重建后发布（避免缺WinUI主题的PRI缓存）、项目及依赖许可证，不依赖测试目录。
 - `packaging/preview/installer.nsi`：目录页、首启中心、精确清单卸载及Windows卸载登记；`PREVIEW-README.txt`随包说明。
 - `App/App.xaml.cs`：只对Created的新配置打开首次中心，不植入DEMO；`Application/ManagedStorageLocationPolicy.cs`现有用户数据默认路径保持。
 - 构建/安装/分支证据见[发布记录](PREVIEW_INSTALLER_DELIVERY.md#2026-10-13-发布同步)。

@@ -64,7 +64,12 @@ Push-Location $pkgRepo
 try {
     $pkgHead = (& git rev-parse HEAD).Trim()
     $pkgStatus = @(& git status --porcelain)
-    & dotnet publish src/DesktopUp.App/DesktopUp.App.csproj -c Release -p:Platform=x64 -p:PublishProfile=Preview-x64 -p:DesktopUpPreview=true -p:SelfContained=true -p:DebugType=none -p:DebugSymbols=false "-p:DesktopUpPreviewRuntimeVersion=$RuntimeVersion" "-p:Version=$($pkgSettings.version)-preview.$ReleaseId" "-p:FileVersion=$($pkgSettings.fileVersion)" "-p:OutputPath=$pkgOutput\build\" "-p:PublishDir=$pkgPayload\" 2>&1 |
+    # WinUI's incremental PRI cache can survive a framework-dependent build. Rebuild
+    # with the exact self-contained publish properties, then publish those same outputs.
+    & dotnet build src/DesktopUp.App/DesktopUp.App.csproj --no-incremental -c Release -p:Platform=x64 -p:PublishProfile=Preview-x64 -p:DesktopUpPreview=true -p:SelfContained=true -p:DebugType=none -p:DebugSymbols=false "-p:DesktopUpPreviewRuntimeVersion=$RuntimeVersion" "-p:Version=$($pkgSettings.version)-preview.$ReleaseId" "-p:FileVersion=$($pkgSettings.fileVersion)" "-p:OutputPath=$pkgOutput\build\" "-p:PublishDir=$pkgPayload\" 2>&1 |
+        Tee-Object -FilePath (Join-Path $pkgEvidence 'rebuild.log') | Out-Host
+    if ($LASTEXITCODE -ne 0) { throw 'Self-contained rebuild failed; partial evidence preserved.' }
+    & dotnet publish src/DesktopUp.App/DesktopUp.App.csproj --no-build -c Release -p:Platform=x64 -p:PublishProfile=Preview-x64 -p:DesktopUpPreview=true -p:SelfContained=true -p:DebugType=none -p:DebugSymbols=false "-p:DesktopUpPreviewRuntimeVersion=$RuntimeVersion" "-p:Version=$($pkgSettings.version)-preview.$ReleaseId" "-p:FileVersion=$($pkgSettings.fileVersion)" "-p:OutputPath=$pkgOutput\build\" "-p:PublishDir=$pkgPayload\" 2>&1 |
         Tee-Object -FilePath (Join-Path $pkgEvidence 'publish.log') | Out-Host
     if ($LASTEXITCODE -ne 0) { throw 'Publish failed; partial evidence preserved.' }
     $pkgRuntime = Get-Content -LiteralPath (Join-Path $pkgPayload 'DesktopUp.runtimeconfig.json') -Raw | ConvertFrom-Json
@@ -98,6 +103,8 @@ try {
     }
     Copy-Item -LiteralPath (Join-Path (Split-Path $MakeNsis) 'COPYING') -Destination (Join-Path $pkgLicenses 'NSIS-COPYING.txt')
     Copy-Item -Path (Join-Path $pkgRepo 'packaging/preview/licenses/*') -Destination $pkgLicenses
+    Copy-Item -LiteralPath (Join-Path $pkgRepo 'LICENSE') -Destination (Join-Path $pkgLicenses 'DesktopUp-LICENSE.txt')
+    Copy-Item -LiteralPath (Join-Path $pkgRepo 'THIRD_PARTY_NOTICES.md') -Destination $pkgLicenses
     $pkgDependencies | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $pkgLicenses 'packages.json') -Encoding utf8
     $pkgWinAppSdk = @($pkgPackages | Where-Object { $_ -match '^microsoft.windowsappsdk/' })[0].Split('/')[1]
     [ordered]@{ Release=$ReleaseId; Channel='Preview'; Architecture='AMD64'; MinimumOS='Windows 11'; DotNet=$RuntimeVersion; WindowsAppSDK=$pkgWinAppSdk; SourceCommit=$pkgHead; IncludesUncommittedChanges=($pkgStatus.Count -gt 0); DataRoot='%LOCALAPPDATA%\DesktopUp\Preview'; DefaultStorageBase='%LOCALAPPDATA%\DesktopUp\Storage\preview'; ApplicationId='DesktopUp.V3.Preview'; DefaultTemplate=$DefaultTemplate; BackgroundOpacityPercent=$BackgroundOpacityPercent; CustomInstallDirectory=$true; Content='Real content; empty initial profile; no demo cards'; Signed=$false } |
