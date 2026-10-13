@@ -24,7 +24,10 @@ public partial class App
             RefreshControlCenterRuntime();
         }
         else if (action == SystemLifecycleAction.Recover)
+        {
+            _managedContentMonitor?.Invalidate();
             QueueDesktopRecovery(DesktopEnvironmentChangeKind.DesktopShell | DesktopEnvironmentChangeKind.DisplayTopology,
                 "lifecycle-" + signal, invalidateShell: true);
+        }
     }
 }

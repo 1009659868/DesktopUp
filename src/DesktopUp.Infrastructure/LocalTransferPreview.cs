@@ -9,9 +9,11 @@ public sealed record LocalTransferPreview(ContentTransferPlan Plan, IReadOnlyLis
     // pretending a fabricated directory is the user's real desktop.
     public static LocalTransferPreview Prepare(DesktopStateSnapshot state, string posterId,
         ContentDropRoute route, IReadOnlyList<(ContentItem Item, string Destination, Guid? OriginCard)> inputs,
-        ManagedStorageRoot? root = null, bool isolatedDestination = false)
+        ManagedStorageRoot? root = null, bool isolatedDestination = false,
+        IncomingContentPlacement? placement = null, bool keepSourceUntilCommit = false)
     {
-        var files = inputs.Select(i => LocalTransferFiles.Inspect(i.Item.Target.Locator, i.Destination)).ToArray();
+        var files = inputs.Select(i => LocalTransferFiles.Inspect(i.Item.Target.Locator, i.Destination,
+            allowCrossVolumeTree:keepSourceUntilCommit)).ToArray();
         var entries = inputs.Select((input,index) =>
         {
             var f=files[index];
@@ -26,7 +28,8 @@ public sealed record LocalTransferPreview(ContentTransferPlan Plan, IReadOnlyLis
                 new(f.ParentIdentity,f.ParentIdentity,f.Destination,LocalTransferFiles.Ancestors(f.Destination),
                     string.Equals(f.Source,f.Destination,StringComparison.OrdinalIgnoreCase)?f.Objects[0].Identity:null,desktop,true),input.OriginCard);
         }).ToArray();
-        var request=new ContentTransferRequest(Guid.NewGuid(),1,posterId,route,ContentDropModifiers.None,root,entries);
+        var request=new ContentTransferRequest(Guid.NewGuid(),1,posterId,route,ContentDropModifiers.None,root,entries)
+            { Placement=placement, KeepSourceUntilCommit=keepSourceUntilCommit };
         var result=ContentTransferPlanning.Prepare(request,SqliteTransferJournal.Snapshot(state,posterId));
         return new(result.Plan??throw new IOException(result.Reason),files);
     }

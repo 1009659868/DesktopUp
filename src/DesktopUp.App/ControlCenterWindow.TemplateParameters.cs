@@ -21,6 +21,8 @@ public sealed partial class ControlCenterWindow
     private string? _lampRenderedPosterId;
     private Slider? _lampHeldSlider;
     private Button? _lampReset;
+    private IEnumerable<TemplateParameterDefinition> PrivateTemplateProperties => _templateParameterSchema.Properties
+        .Where(p => p.Binding is not ("surface.background" or "surface.opacity"));
 
     private void InitializeTemplateParameters()
     {
@@ -29,7 +31,7 @@ public sealed partial class ControlCenterWindow
         // The currently supported template describes its own groups, controls and bounds.
         // Only the capability adapter knows how a binding maps to the stored Lamp section.
         var panels = new List<StackPanel>();
-        foreach (var group in _templateParameterSchema.Properties.GroupBy(p => p.Group))
+        foreach (var group in PrivateTemplateProperties.GroupBy(p => p.Group))
         {
             var panel = new StackPanel { Spacing = 9 };
             panel.Children.Add(new TextBlock { Text = group.Key, FontSize = 11, Opacity = .65 });
@@ -66,7 +68,7 @@ public sealed partial class ControlCenterWindow
         inspect.Click += (_, _) => ShowTemplateDefinition(); fields.Children.Add(inspect);
         _lampParameterNotice = new TextBlock { FontSize = 12, Opacity = .75, TextWrapping = TextWrapping.Wrap };
         fields.Children.Add(_lampParameterNotice);
-        _lampParameterFolder = new Expander { Header = $"动效与参数 · {_templateParameterSchema.Properties.Count} 项专属设置", IsExpanded = false, Content = fields,
+        _lampParameterFolder = new Expander { Header = $"动效与参数 · {PrivateTemplateProperties.Count()} 项专属设置", IsExpanded = false, Content = fields,
             HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Stretch };
         AutomationProperties.SetAutomationId(_lampParameterFolder, "LampParameters");
         TemplateSection.Children.Add(_lampParameterFolder);
@@ -170,11 +172,13 @@ public sealed partial class ControlCenterWindow
 
     private TemplateParameterValues ReadLampControls()
     {
-        var values = _templateParameterSchema.Properties.ToDictionary(p => p.Key, p => p.Kind == TemplateParameterKind.Color
+        var current = _settings.Preview?.TemplateValues ?? _view?.SelectedPoster?.Presentation.TemplateValues ?? new TemplateParameterValues([]);
+        var values = PrivateTemplateProperties.ToDictionary(p => p.Key, p => p.Kind == TemplateParameterKind.Color
             ? TemplateParameterValue.FromColor(_lampColors[p.Key].Text) : p.Kind == TemplateParameterKind.Boolean
             ? TemplateParameterValue.FromBoolean(_lampBooleans[p.Key].IsOn) : TemplateParameterValue.FromNumber(_lampNumbers[p.Key].Value), StringComparer.Ordinal);
+        foreach (var p in _templateParameterSchema.Properties.Except(PrivateTemplateProperties)) values[p.Key] = current.Get(p.Binding);
         return TemplateParameterBindingAdapter.ComposeDraft(_templateParameterSchema, values,
-            _settings.Preview?.TemplateValues ?? _view?.SelectedPoster?.Presentation.TemplateValues ?? new TemplateParameterValues([]));
+            current);
     }
 
     private void RenderTemplateParameters(TemplateParameterValues? preview = null)
@@ -202,11 +206,11 @@ public sealed partial class ControlCenterWindow
             bool lamp = target?.Poster.TemplateKey == _templateParameterSchema.TemplateId;
             if (_lampRenderedPosterId != target?.Poster.PosterId) { _lampHeldSlider = null; CloseLampColorPicker(); }
             _lampRenderedPosterId = target?.Poster.PosterId;
-            _lampParameterFolder.Visibility = lamp ? Visibility.Visible : Visibility.Collapsed;
+            _lampParameterFolder.Visibility = lamp && PrivateTemplateProperties.Any() ? Visibility.Visible : Visibility.Collapsed;
             _lampParameterFolder.IsEnabled = lamp && target?.Presentation.CanEdit == true && !_editor.ProtectsInteraction && !IsContentFieldDraftActive;
             var value = preview ?? target?.Presentation.TemplateValues ?? new TemplateParameterValues([]);
             var values = TemplateParameterBindingAdapter.Read(_templateParameterSchema, value);
-            foreach (var property in _templateParameterSchema.Properties)
+            foreach (var property in PrivateTemplateProperties)
             {
                 var field = values[property.Key];
                 if (property.Kind == TemplateParameterKind.Color)

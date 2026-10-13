@@ -98,9 +98,11 @@ try {
     }
     Copy-Item -LiteralPath (Join-Path (Split-Path $MakeNsis) 'COPYING') -Destination (Join-Path $pkgLicenses 'NSIS-COPYING.txt')
     Copy-Item -Path (Join-Path $pkgRepo 'packaging/preview/licenses/*') -Destination $pkgLicenses
+    Copy-Item -LiteralPath (Join-Path $pkgRepo 'LICENSE') -Destination (Join-Path $pkgLicenses 'DesktopUp-LICENSE.txt')
+    Copy-Item -LiteralPath (Join-Path $pkgRepo 'THIRD_PARTY_NOTICES.md') -Destination $pkgLicenses
     $pkgDependencies | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $pkgLicenses 'packages.json') -Encoding utf8
     $pkgWinAppSdk = @($pkgPackages | Where-Object { $_ -match '^microsoft.windowsappsdk/' })[0].Split('/')[1]
-    [ordered]@{ Release=$ReleaseId; Channel='Preview'; Architecture='AMD64'; MinimumOS='Windows 11'; DotNet=$RuntimeVersion; WindowsAppSDK=$pkgWinAppSdk; SourceCommit=$pkgHead; IncludesUncommittedChanges=($pkgStatus.Count -gt 0); DataRoot='%LOCALAPPDATA%\DesktopUp\Preview'; ApplicationId='DesktopUp.V3.Preview'; DefaultTemplate=$DefaultTemplate; BackgroundOpacityPercent=$BackgroundOpacityPercent; CustomInstallDirectory=$true; Content='DEMO only'; Signed=$false } |
+    [ordered]@{ Release=$ReleaseId; Channel='Preview'; Architecture='AMD64'; MinimumOS='Windows 11'; DotNet=$RuntimeVersion; WindowsAppSDK=$pkgWinAppSdk; SourceCommit=$pkgHead; IncludesUncommittedChanges=($pkgStatus.Count -gt 0); DataRoot='%LOCALAPPDATA%\DesktopUp\Preview'; DefaultStorageBase='%LOCALAPPDATA%\DesktopUp\Storage\preview'; ApplicationId='DesktopUp.V3.Preview'; DefaultTemplate=$DefaultTemplate; BackgroundOpacityPercent=$BackgroundOpacityPercent; CustomInstallDirectory=$true; Content='Real content; empty initial profile; no demo cards'; Signed=$false } |
         ConvertTo-Json | Set-Content (Join-Path $pkgPayload 'preview-build.json') -Encoding utf8
     $pkgFiles = @(Get-ChildItem -LiteralPath $pkgPayload -Recurse -File | Sort-Object FullName)
     $pkgManifest = @(foreach ($pkgFile in $pkgFiles) {

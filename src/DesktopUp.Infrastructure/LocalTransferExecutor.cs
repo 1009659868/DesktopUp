@@ -22,6 +22,25 @@ public sealed class LocalTransferExecutor(SqliteTransferJournal journal)
             {
                 journal.Claim(operationId,item.Index);
                 checkpoint?.Invoke(TransferExecutionCheckpoint.Claimed,item.Index);
+                if(!item.File.SameVolume && journal.KeepsSource(operationId))
+                {
+                    checkpoint?.Invoke(TransferExecutionCheckpoint.BeforeMove,item.Index);
+                    var copy=IncomingTransferCopies.Prepare(item.File,r=>journal.RecordCopyProgress(operationId,item.Index,r),
+                        cancellation,point=>checkpoint?.Invoke(point,item.Index));
+                    using(var source=LocalTransferFiles.LockVerifiedDestination(item.File with {Destination=item.File.Source,SameVolume=true},null))
+                    using(var target=LocalTransferFiles.LockVerifiedDestination(item.File,copy))
+                    {
+                        cancellation.ThrowIfCancellationRequested();
+                        journal.Mark(operationId,item.Index,DurableTransferPhase.FileVerified,copy);
+                        checkpoint?.Invoke(TransferExecutionCheckpoint.BeforeIndex,item.Index);
+                        cancellation.ThrowIfCancellationRequested();
+                        var committed=journal.CommitVerified(operationId,item.Index);
+                        if(committed.Status is not (StateCommandStatus.Committed or StateCommandStatus.Replayed))throw new IOException(committed.Error);
+                    }
+                    checkpoint?.Invoke(TransferExecutionCheckpoint.IndexCommitted,item.Index);
+                    journal.SettleCopies(journal.Read().Single(x=>x.OperationId==operationId && x.Index==item.Index));
+                    continue;
+                }
                 var receipt=LocalTransferFiles.Move(item.File,
                     copy=>journal.Mark(operationId,item.Index,DurableTransferPhase.CopyVerified,copy),
                     point=>checkpoint?.Invoke(point switch
@@ -36,11 +55,13 @@ public sealed class LocalTransferExecutor(SqliteTransferJournal journal)
                 checkpoint?.Invoke(TransferExecutionCheckpoint.FileRecorded,item.Index);
                 Reconcile(item with {Phase=DurableTransferPhase.FileVerified,Receipt=receipt},checkpoint);
             }
-            catch(Exception e) when(e is not TransferInterruptionException && e is IOException or UnauthorizedAccessException or OperationCanceledException or Microsoft.Data.Sqlite.SqliteException)
+            catch(Exception e) when(e is not TransferInterruptionException && e is IOException or UnauthorizedAccessException or OperationCanceledException or NotSupportedException or Microsoft.Data.Sqlite.SqliteException)
             {
                 if(!SqliteTransferJournal.Terminal(journal.Read().Single(i=>i.OperationId==operationId&&i.Index==item.Index)))
                     journal.Mark(operationId,item.Index,DurableTransferPhase.Review,error:e.Message);
             }
+            var final=journal.Read().Single(x=>x.OperationId==operationId && x.Index==item.Index);
+            journal.SettleCopies(final);
         }
         return journal.Read().Where(i=>i.OperationId==operationId).ToArray();
     }
@@ -48,6 +69,8 @@ public sealed class LocalTransferExecutor(SqliteTransferJournal journal)
     public IReadOnlyList<DurableTransferItem> Recover(Guid? operationId=null,int? index=null)
     {
         using var lease=journal.AcquireExecutor();
+        foreach(var copy in journal.Read().Where(i=>i.Receipt is {OwnedCopies:not null,CleanupFinished:false} &&
+            (operationId is null||i.OperationId==operationId)&&(index is null||i.Index==index)))journal.SettleCopies(copy);
         foreach(var item in journal.Read().Where(i=>!SqliteTransferJournal.Terminal(i)&&
             (operationId is null||i.OperationId==operationId)&&(index is null||i.Index==index)))
         {
@@ -59,6 +82,8 @@ public sealed class LocalTransferExecutor(SqliteTransferJournal journal)
     }
     private void Reconcile(DurableTransferItem item,Action<TransferExecutionCheckpoint,int>? checkpoint)
     {
+        if(item.Receipt?.OwnedCopies is not null)
+        { journal.Mark(item.OperationId,item.Index,DurableTransferPhase.Review,error:"Uncommitted copy attempt ended; source retained.");return; }
         // Never execute an unstarted intent on restart. Neither a Shell effect nor cancellation
         // is evidence. Existing originals/new same-name objects always require explicit review.
         if(item.Phase==DurableTransferPhase.Intent)

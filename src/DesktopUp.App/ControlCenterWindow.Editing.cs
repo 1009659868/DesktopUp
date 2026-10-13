@@ -39,7 +39,7 @@ public sealed partial class ControlCenterWindow
         geometry.Children.Add(new TextBlock { Text = "收起时只可移动，锁定时不可编辑几何。受限的当前高度不覆盖保存高度；小数按物理像素取整。", TextWrapping = TextWrapping.Wrap });
         geometry.Children.Add(_geometryStatus);
         AddActions(geometry, _geometryApply, _geometryCancel);
-        var style = Section("精细基准参数 · DEMO ITEMS", true);
+        var style = Section("精细基准参数", true);
         foreach (var (key, label) in TemplateRecipeCatalog.BuiltIns.Select(r => (r.Id, r.Name)))
             _template.Items.Add(new ComboBoxItem { Content = label, Tag = key });
         TemplateSection.Children.Add(_template);

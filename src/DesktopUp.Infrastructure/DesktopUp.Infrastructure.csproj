@@ -8,5 +8,6 @@
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="DesktopUp.Contracts.Tests" />
+    <InternalsVisibleTo Include="DesktopUp.TransferFixture" />
   </ItemGroup>
 </Project>

@@ -25,6 +25,8 @@ public static class ScenePresentationAdapter
         string capability = recipe?.Schema.RendererCapability ?? TemplateParameterSchemas.BasicCapability;
         var module = SceneCapabilityRegistry.Find(capability);
         if (module?.TransparentSurface == true) paint = paint with { BackgroundAlpha = 0 };
+        if (presentation.Parameters.Surface is { } surface)
+            paint = paint with { Background = surface.Color, BackgroundAlpha = (byte)Math.Round(surface.OpacityPercent * 255 / 100) };
         if (!SceneCapabilityRegistry.Available(capability)) capability = TemplateParameterSchemas.BasicCapability;
         return new(capability, paint, capability == TemplateParameterSchemas.BasicCapability ? new TemplateParameterValues([]).Bindings : values.Bindings)
         { ReplacesMetaText = module?.ReplacesMetaText == true };

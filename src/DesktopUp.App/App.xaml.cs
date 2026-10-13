@@ -137,7 +137,7 @@ public partial class App : Microsoft.UI.Xaml.Application
             () => ToggleDynamicEffectsPaused(StateCommandSource.ControlCenter),
             _stateCoordinator, _stateCommands, _inputRouter,
             target => _spatialRuntime?.GetEffectiveLayout(target), () => _spatialRuntime, _portableController,
-            _services.GetRequiredService<SqliteStateStore>());
+            _services.GetRequiredService<SqliteStateStore>(),_storageLocation);
         _tray = new TrayService(_ledger, _log);
         _tray.Create(QueueTrayAction);
         _log.Write("info", "application.started", new
@@ -162,7 +162,14 @@ public partial class App : Microsoft.UI.Xaml.Application
         _spatialRuntime.ConfigureRealContent(_realContentWorker, openJournal, new SqliteContentIconStore(_services.GetRequiredService<SqliteStateStore>()));
         _spatialRuntime.ConfigureSceneMotionLedger(_ledger);
         _spatialRuntime.ConfigureTransfers(_services.GetRequiredService<SqliteStateStore>(),_transferDiscovery,
-            async()=>{_controlCenter.Show();await Task.Yield();return _controlCenter.CurrentWindow is {} center?await center.EnsureTransferStorageAsync():null;},
+            async()=>
+            {
+                if(_storageLocation is null)return null;
+                var location=await Task.Run(_storageLocation.Read);
+                if(!location.NeedsSelection)return await Task.Run(()=>_storageLocation.EnsureReady());
+                _controlCenter.Show();await Task.Yield();
+                return _controlCenter.CurrentWindow is {} center?await center.EnsureTransferStorageAsync():null;
+            },
             async message=>{_controlCenter.Show();await Task.Yield();return _controlCenter.CurrentWindow is {} center&&await center.ConfirmDirectTransferAsync(message);},
             ()=>_controlCenter.IsSettingsInteractionActive||_controlCenter.IsRemovalInteractionActive,
             message=>{_controlCenter.Show();_controlCenter.CurrentWindow?.ShowTransferFailure(message);});
@@ -179,6 +186,11 @@ public partial class App : Microsoft.UI.Xaml.Application
             "startup", invalidateShell: false);
 
         DispatchIntent(_startupIntent);
+        // A new empty profile needs a visible entry point, not only an unfamiliar tray icon.
+        // Do not seed demonstration content or reset an existing user's workspace.
+        if (stateInitialization.Status == StateStoreInitializationStatus.Created &&
+            _startupIntent.Kind == StartupIntentKind.StartBackground)
+            ShowControlCenter();
         while (_pendingIntents.TryDequeue(out StartupIntent? pending))
         {
             DispatchIntent(pending);
@@ -866,6 +878,9 @@ public partial class App : Microsoft.UI.Xaml.Application
         if (_controlCenter is not null) await _controlCenter.CancelPortableAndWaitAsync();
         if (_spatialRuntime is not null) await _spatialRuntime.StopTransfersAsync();
         await _transferDiscovery;
+        if (_managedContentMonitor is not null) await _managedContentMonitor.DisposeAsync();
+        _managedContentMonitor = null;
+        _managedContentMonitorLease?.Dispose(); _managedContentMonitorLease = null;
         _inputRouter.Suspend();
         _controlCenter?.CancelRemoval("application-exit");
         DebugSettings.XamlResourceReferenceFailed -= OnXamlResourceReferenceFailed;

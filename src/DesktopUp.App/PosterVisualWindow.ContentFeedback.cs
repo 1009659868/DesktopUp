@@ -8,71 +8,17 @@ namespace DesktopUp;
 
 internal sealed partial class PosterVisualWindow
 {
-    // An isolated data directory is also used for human review. It must not opt the user into
-    // diagnostics. Only a test runner that explicitly sets this child-process flag shows them.
-    private static readonly bool TestContentFeedbackEnabled = string.Equals(
-        Environment.GetEnvironmentVariable("DESKTOPUP_TEST_CONTENT_FEEDBACK"), "1", StringComparison.Ordinal);
-    private Border? _contentFeedbackCallout;
-    private TextBlock? _contentFeedbackText;
     private DispatcherQueueTimer? _contentFeedbackTimer;
     private IDisposable? _contentFeedbackLease;
     private string? _contentTimedFeedback;
     private string? _contentFeedbackFull, _contentFeedbackBrief;
 
-    // Use the existing footer chrome, outside every Item/handle/viewport hit region.
-    // A drawing-only toast over the cards would leave invisible cards clickable beneath it.
-    private void AddContentFeedback(Grid structure)
-    {
-        // The same surface may later be converted from DEMO to real references.
-        // Allocate the inert footer once; Render controls its visibility.
-        _contentFeedbackText = new TextBlock
-        {
-            FontSize = 11, TextWrapping = TextWrapping.Wrap, MaxLines = 2,
-            TextTrimming = TextTrimming.CharacterEllipsis, LineHeight = 16, Height = 34,
-            LineStackingStrategy = LineStackingStrategy.BlockLineHeight,
-            VerticalAlignment = VerticalAlignment.Center,
-            HorizontalAlignment = HorizontalAlignment.Stretch,
-            Foreground = ColorBrush("#F3F1E9"), IsHitTestVisible = false
-        };
-        _contentFeedbackCallout = new Border
-        {
-            Child = _contentFeedbackText, Background = ColorBrush("#252B2B", 246),
-            BorderBrush = ColorBrush("#BFAE85", 220), BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(5), Padding = new Thickness(6, 1, 6, 1),
-            Margin = new Thickness(HorizontalPaddingDip, 1, HorizontalPaddingDip, 1),
-            VerticalAlignment = VerticalAlignment.Stretch, HorizontalAlignment = HorizontalAlignment.Stretch,
-            IsHitTestVisible = false, Visibility = Visibility.Collapsed
-        };
-        Grid.SetRow(_contentFeedbackCallout, 3);
-        structure.Children.Add(_contentFeedbackCallout);
-        RenderContentFeedback();
-    }
-
-    private string ContentModeCaption => _contentDocument?.Mode == ContentLayoutMode.Manual ? "手动排布" : "热度自动";
+    private void AddContentFeedback(Grid structure) => RenderContentFeedback();
 
     private void RenderContentFeedback()
     {
         RenderContentSpaceNavigation();
-        if (!TestContentFeedbackEnabled && !IsRealContent && !_fileTransferFeedback)
-        {
-            // Preserve the reserved footer geometry so hiding diagnostic text cannot move or
-            // enlarge live card hit regions. Center errors and the underlying notice stay intact.
-            if (_footer is not null) _footer.Visibility = Visibility.Collapsed;
-            if (_contentFeedbackCallout is not null) _contentFeedbackCallout.Visibility = Visibility.Collapsed;
-            return;
-        }
-        if (_modeLabel is not null)
-            _modeLabel.Text = ContentModeCaption + (_geometry.IsLocked ? " · 已锁定" :
-                _contentReadOnly ? " · 暂不可编辑" : IsEditing ? " · 外框调整" : " · 右键管理");
-        if (_contentFeedbackCallout is null || _contentFeedbackText is null) return;
-        string? visible = _contentNotice == _contentFeedbackFull && _contentFeedbackBrief is not null
-            ? _contentFeedbackBrief : ContentFeedbackForDisplay(_contentNotice);
-        _contentFeedbackText.Text = visible ?? "";
-        _contentFeedbackCallout.Visibility = !_disposed && !_geometry.IsCollapsed &&
-            !_contentPresentationSuspended && visible is not null ? Visibility.Visible : Visibility.Collapsed;
-        if (_footer is not null)
-            _footer.Visibility = IsRealContent || _geometry.IsCollapsed || _contentFeedbackCallout.Visibility == Visibility.Visible
-                ? Visibility.Collapsed : Visibility.Visible;
+        if (_footer is not null) _footer.Visibility = Visibility.Collapsed;
     }
 
     private void SetContentImpact(ContentInteractionFeedback feedback)
@@ -122,7 +68,6 @@ internal sealed partial class PosterVisualWindow
         // A result timer must never erase that newer explanation or a live drag preview.
         if (_contentNotice == expiring && !HasContentGesture)
         {
-            _fileTransferFeedback=false;
             _contentNotice = null;
             RenderContentFeedback();
             spatial.NotifyContentEditorChanged(PosterId);
@@ -177,6 +122,5 @@ internal sealed partial class PosterVisualWindow
     private void ClearContentFeedbackVisuals()
     {
         StopContentFeedbackTimer();
-        _contentFeedbackCallout = null; _contentFeedbackText = null;
     }
 }

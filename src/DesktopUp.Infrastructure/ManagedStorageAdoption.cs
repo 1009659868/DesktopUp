@@ -50,6 +50,7 @@ public sealed class ManagedStorageAdoption(SqliteStateStore store)
     }
     public IReadOnlyList<RegisteredManagedStorage> Candidates()=>new SqliteTransferJournal(store).StorageLocations()
         .Where(x=>!LocalTransferFiles.Exists(Path.Combine(x.Root.Locator,OldRootMarker)) &&
+            !LocalTransferFiles.Exists(Path.Combine(x.Root.Locator,StorageBundleOwnership.RootMarker)) &&
             !store.ExecuteRead((c,t)=>ReadIntents(c,t,x.Collection.Id).Any(x=>x.Active))).ToArray();
 
     public StorageAdoptionPreview Preview(Guid collectionId)
@@ -62,6 +63,7 @@ public sealed class ManagedStorageAdoption(SqliteStateStore store)
         ArgumentNullException.ThrowIfNull(preview);
         if(confirmation!=preview.Fingerprint)throw new IOException("请先确认旧目录的归属预览。");
         using var executor=new SqliteTransferJournal(store).AcquireExecutor();
+        store.ExecuteRead((c,t)=>{SqliteStorageRelocationJournal.RequireNoPending(c,t);return 0;});
         using var root=LocalTransferFiles.LockDirectory(preview.Binding.Root.Locator);
         using var child=LocalTransferFiles.LockDirectory(preview.Binding.CollectionPath);
         var prior=store.ExecuteRead((c,t)=>ReadIntents(c,t,preview.Binding.CollectionId).SingleOrDefault(x=>x.Active));
@@ -172,6 +174,9 @@ public sealed class ManagedStorageAdoption(SqliteStateStore store)
     }
     private static void CheckMarkers(StorageAdoptionBinding b,bool required)
     {
+        if(LocalTransferFiles.Exists(Path.Combine(b.Root.Locator,StorageBundleOwnership.RootMarker))||
+            LocalTransferFiles.Exists(Path.Combine(b.CollectionPath,StorageBundleOwnership.ChildMarker)))
+            throw new IOException("已有多集合迁移声明，不能重新认领或覆盖。");
         if(LocalTransferFiles.Exists(Path.Combine(b.Root.Locator,OldRootMarker))||LocalTransferFiles.Exists(Path.Combine(b.CollectionPath,OldChildMarker)))
             throw new IOException("已有其他创建声明，不能用旧目录认领覆盖；请走原创建记录或另选目录。");
         foreach(string path in new[]{Path.Combine(b.Root.Locator,RootMarker),Path.Combine(b.CollectionPath,ChildMarker)})

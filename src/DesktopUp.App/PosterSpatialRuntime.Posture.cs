@@ -23,7 +23,7 @@ internal sealed partial class PosterSpatialRuntime
 
     public void SetCollapsed(PosterStateCommand request, Action<StateCommandResult> completed)
     {
-        if (HasCenterDraft(request.PosterId))
+        if (HasCenterDraft(request.PosterId) || IsFileTransferActive(request.PosterId))
         { completed(Failure(request, "控制中心存在未完成修改，请先完成或取消。")); return; }
         if (request.Source != StateCommandSource.System) BeforeManualIntent(request.PosterId, request.DesiredState.IsCollapsed);
         if (_title is not null || _owner is not null || !_windows.TryGetValue(request.PosterId, out var owner))

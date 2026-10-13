@@ -28,7 +28,7 @@ public sealed record PosterDefinition(
     public bool IsVisible { get; init; } = true;
     // Local placement availability is separate from the user's visibility intent.
     public bool PlacementPending { get; init; }
-    // Independent content intent; null is the legacy virtual DEMO layout, not a query-time migration.
+    // Independent content intent; null is an empty, unauthored layout. Reading never seeds demo members or writes a migration.
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? ContentLayoutJson { get; init; }
     public long StackOrder { get; init; }

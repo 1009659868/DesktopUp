@@ -70,6 +70,9 @@ public sealed partial class SqliteTransferJournal
                 new(ticket.RequestId,confirmation,state.Revision,ticket.Batch.Reads),
                 before=>IndexPlan(before,ticket.Batch,current.Index,confirmedRecovery:true),authorizedTransferId:current.OperationId);
             if(result.Status is not (StateCommandStatus.Committed or StateCommandStatus.Replayed))throw new IOException(result.Error??"恢复未提交，文件保持原位。");
+            if(result.Status == StateCommandStatus.Committed && ticket.IsIncoming)
+                ManagedContentObservationStore.Capture(c,t,result.Snapshot.ContentCatalog,
+                    ticket.Batch.Entries[current.Index].AffectedContentIds.Append(ticket.Batch.Entries[current.Index].Entry.Item.Id));
             if(LocalTransferFiles.Exists(current.File.Source))throw new IOException("原位置出现了文件，本次恢复未保存；两处均保留。");
             if(!LocalTransferFiles.VerifyDestination(current.File,receipt))throw new IOException("目标内容已变化，本次恢复未保存；文件保持原位。");
             string note=$"已确认恢复记录；文件未再次移动。目标海报：{(ticket.IsIncoming?ticket.PosterId:"不新增海报或卡片")}；确认：{confirmation}";

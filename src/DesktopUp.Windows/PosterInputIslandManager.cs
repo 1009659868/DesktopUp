@@ -68,6 +68,7 @@ public sealed class PosterInputIslandManager : IInputRegionHost
     private DesktopShellHostSnapshot? _contextDesktopHost;
     private PosterInputCapture? _capture;
     private bool _routingSuspended;
+    private PosterDropReception? _dropReception;
     private PosterInputLayoutSnapshot? _layout;
     private PosterInputRegion? _pressedRegion;
     private DesktopPixelRect _frame;
@@ -104,6 +105,18 @@ public sealed class PosterInputIslandManager : IInputRegionHost
     public nint WindowHandle { get; private set; }
 
     public long AppliedLayoutRevision => _layout?.Revision ?? 0;
+    public IPosterDropRegistration InstallDropReceiver(Func<IncomingDropSurface?> surface,
+        Action<IncomingDropTicket> accept,Action<IncomingDropPreview?>? changed=null)
+    {
+        ObjectDisposedException.ThrowIf(_disposed,this);
+        if(_routingSuspended||WindowHandle==0||_contextDesktopHost is null||_dropReception?.IsReady==true)
+            throw new InvalidOperationException("Input host is not ready for drop registration.");
+        _dropReception?.Dispose();
+        _dropReception=new PosterDropReception(WindowHandle,_frame,
+            ()=>!_routingSuspended&&_router.Capture is null&&!DesktopMenuInteraction.IsActive?surface():null,
+            accept,_ledger,_log,changed);
+        return _dropReception;
+    }
     public bool IsNativeInputTransparent => new NativeDesktopMenuPlatform().IsInputTransparent(WindowHandle);
 
     public event EventHandler<PosterInputEventArgs>? Input;
@@ -143,6 +156,7 @@ public sealed class PosterInputIslandManager : IInputRegionHost
 
     private void DisableRoutingNative()
     {
+        _dropReception?.Suspend();
         _contextPress = null; _contextPressPoint = null;
         _router.Invalidate(_session);
         _routingSuspended = true;
@@ -303,6 +317,7 @@ public sealed class PosterInputIslandManager : IInputRegionHost
             _router.Publish(_session, frame, layout))
         {
             _routingSuspended = false;
+            _dropReception?.ApplyFrame(frame);
             return true;
         }
         DisableRoutingNative();
@@ -331,15 +346,19 @@ public sealed class PosterInputIslandManager : IInputRegionHost
         {
             _desktopGeneration = desktopHost.Generation;
             _contextDesktopHost = desktopHost;
+            _dropReception?.Suspend();
+            if(!_routingSuspended)_dropReception?.ApplyFrame(_frame);
         }
         return result.Succeeded;
     }
 
-    public bool ReassertDesktopBottom(DesktopShellHostSnapshot desktopHost) =>
-        !_disposed &&
+    public bool ReassertDesktopBottom(DesktopShellHostSnapshot desktopHost)
+    {
+        return !_disposed &&
         WindowHandle != 0 &&
         _desktopGeneration == desktopHost.Generation &&
         _attachment.ReassertDesktopBottom(WindowHandle, desktopHost);
+    }
 
     public bool IsAttached(DesktopShellHostSnapshot desktopHost) =>
         !_disposed &&
@@ -679,6 +698,14 @@ public sealed class PosterInputIslandManager : IInputRegionHost
             unchecked((short)((long)wParam >> 16)));
     }
 
+    public bool HandOffContentCapture(PosterInputCapture capture)
+    {
+        if (_disposed || !_contentClaimed || _capture != capture || !_router.Owns(capture) || GetCapture() != WindowHandle) return false;
+        // OLE becomes the sole capture owner. This is neither an internal drop nor a cancel.
+        _contentClaimed = false; _titleClaimed = false; StopContentCaptureTimer();
+        _pressedRegion = null; _router.End(_capture); _capture = null; _gestureMoved = false;
+        _ = ReleaseCapture(); return true;
+    }
     private void EndPointerGesture(bool cancelled, bool releaseCapture = true,
         TitleNativeEndReason cause = TitleNativeEndReason.Programmatic)
     {
@@ -830,6 +857,7 @@ public sealed class PosterInputIslandManager : IInputRegionHost
     }
 
     private static bool IsGestureTarget(PosterInputTargetKind kind) => kind is
+        PosterInputTargetKind.ContentViewport or
         PosterInputTargetKind.ContentItem or
         PosterInputTargetKind.ContentSpanHandle or
         PosterInputTargetKind.TitleBar or
@@ -857,54 +885,10 @@ public sealed class PosterInputIslandManager : IInputRegionHost
             region.Bounds.Right <= layout.FrameWidth &&
             region.Bounds.Bottom <= layout.FrameHeight);
 
-    internal static nint BuildWindowRegion(PosterInputLayoutSnapshot layout)
-    {
-        nint combined = CreateRectRgn(0, 0, 0, 0);
-        if (combined == 0)
-        {
-            return 0;
-        }
-
-        foreach (PosterInputRegion input in layout.Regions)
-        {
-            if (!PosterInputGeometry.CapturesPointer(input)) continue;
-            DesktopPixelRect bounds = input.Bounds;
-            nint part = CreateRectRgn(bounds.X, bounds.Y, bounds.Right, bounds.Bottom);
-            if (part == 0 || CombineRgn(combined, combined, part, RgnOr) == 0)
-            {
-                if (part != 0)
-                {
-                    _ = DeleteObject(part);
-                }
-                _ = DeleteObject(combined);
-                return 0;
-            }
-            _ = DeleteObject(part);
-        }
-
-        if (layout.OuterCornerRadius > 0)
-        {
-            int diameter = checked(layout.OuterCornerRadius * 2);
-            nint outer = CreateRoundRectRgn(
-                0,
-                0,
-                checked(layout.FrameWidth + 1),
-                checked(layout.FrameHeight + 1),
-                diameter,
-                diameter);
-            if (outer == 0 || CombineRgn(combined, combined, outer, RgnAnd) == 0)
-            {
-                if (outer != 0)
-                {
-                    _ = DeleteObject(outer);
-                }
-                _ = DeleteObject(combined);
-                return 0;
-            }
-            _ = DeleteObject(outer);
-        }
-        return combined;
-    }
+    // Material transparency does not imply input transparency. Blank areas belong
+    // to the poster too; logical regions still decide whether a command may run.
+    internal static nint BuildWindowRegion(PosterInputLayoutSnapshot layout) =>
+        CreateRectRgn(0, 0, layout.FrameWidth, layout.FrameHeight);
 
     private static void ConstrainZOrder(nint lParam)
     {
@@ -982,6 +966,7 @@ public sealed class PosterInputIslandManager : IInputRegionHost
         }
         DesktopMenuInteraction.CancelForSurface(WindowHandle);
         StopContentCaptureTimer();
+        _dropReception?.Dispose();_dropReception=null;
         _contentClaimed = false;
         _disposed = true;
         _contextPress = null; _contextPressPoint = null;

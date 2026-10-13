@@ -21,8 +21,22 @@ internal sealed record DurableTransferBatch(int FormatVersion, ContentTransferRe
 public sealed partial class SqliteTransferJournal(SqliteStateStore store)
 {
     internal const string GuardFileName="managed-file-history.guard";
-    internal IDisposable AcquireExecutor() => new FileStream(store.TransferLockPath, FileMode.OpenOrCreate,
-        FileAccess.ReadWrite, FileShare.None);
+    internal IDisposable AcquireExecutor()
+    {
+        // Foreground execution waits only for the observer's short final commit window;
+        // another actual transfer still fails the exclusive file lease as before.
+        lock(store.TransferObservationGate)
+            return new FileStream(store.TransferLockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+    }
+    internal IDisposable AcquireObservationExecutor()
+    {
+        if(!Monitor.TryEnter(store.TransferObservationGate))throw new IOException("Foreground storage operation has priority.");
+        try{return new ObservationLease(store.TransferObservationGate,
+            new FileStream(store.TransferLockPath,FileMode.OpenOrCreate,FileAccess.ReadWrite,FileShare.None));}
+        catch{Monitor.Exit(store.TransferObservationGate);throw;}
+    }
+    private sealed class ObservationLease(object gate,IDisposable file):IDisposable
+    { public void Dispose(){file.Dispose();Monitor.Exit(gate);} }
     internal const string MigrationSql = """
         CREATE TABLE managed_storage_roots(root_id TEXT PRIMARY KEY, body_json TEXT NOT NULL CHECK(json_valid(body_json))) STRICT;
         CREATE TABLE managed_storage_collections(collection_id TEXT PRIMARY KEY REFERENCES content_collections(collection_id),
@@ -64,6 +78,7 @@ public sealed partial class SqliteTransferJournal(SqliteStateStore store)
         store.ExecuteWrite((c,t)=>
         {
             var before=SqliteStateCommandRepository.ReadSnapshot(c,t);
+            SqliteStorageRelocationJournal.RequireNoPending(c,t);
             using(var stopped=Command(c,t,"SELECT count(*) FROM storage_provision_closures WHERE collection_id=$id",("$id",collection.Id.ToString())))
                 if(Convert.ToInt64(stopped.ExecuteScalar())!=0)throw new IOException("Directory creation was explicitly stopped; separate adoption is required.");
             using(var old=Command(c,t,"SELECT body_json FROM managed_storage_roots WHERE root_id=$id",("$id",root.Id.ToString())))
@@ -104,7 +119,8 @@ public sealed partial class SqliteTransferJournal(SqliteStateStore store)
         if(files.Any(f=>store.ProtectedTransferPath(f.Source)||store.ProtectedTransferPath(f.Destination)))
             throw new IOException("Application/system data cannot enter this transfer provider.");
         // Do actual source/target inspection before taking the DB write lock.
-        var inspected=files.Select(f=>LocalTransferFiles.Inspect(f.Source,f.Destination)).ToArray();
+        var inspected=files.Select(f=>LocalTransferFiles.Inspect(f.Source,f.Destination,
+            allowCrossVolumeTree:plan.Request.KeepSourceUntilCommit)).ToArray();
         for(int i=0;i<files.Count;i++)
             if(Encode(files[i])!=Encode(inspected[i]) ||
                 files[i].Source!=plan.Entries[i].Entry.Source.Locator || files[i].Destination!=plan.Entries[i].Entry.Destination.Locator ||
@@ -119,6 +135,7 @@ public sealed partial class SqliteTransferJournal(SqliteStateStore store)
                 if(existing.ExecuteScalar() is string old)
                 { if(old!=plan.Fingerprint)throw new IOException("Operation ID conflict."); return 0; }
             var state=SqliteStateCommandRepository.ReadSnapshot(c,t);
+            SqliteStorageRelocationJournal.RequirePathsAvailable(c,t,files.SelectMany(f=>new[]{f.Source,f.Destination}));
             var protectedDirectories=state.ContentCatalog.Collections.Where(x=>x.Kind==ContentCollectionKind.Managed).Select(x=>x.StorageLocator!).ToList();
             using(var roots=Command(c,t,"SELECT body_json FROM managed_storage_roots"))
             using(var rootRows=roots.ExecuteReader())while(rootRows.Read())protectedDirectories.Add(Decode<ManagedStorageRoot>(rootRows.GetString(0)).Locator);
@@ -157,6 +174,13 @@ public sealed partial class SqliteTransferJournal(SqliteStateStore store)
             using(var count=Command(c,t,"SELECT COUNT(*) FROM content_transfer_items"))
                 if(Convert.ToInt64(count.ExecuteScalar())+files.Count>10000)throw new IOException("Transfer row capacity reached.");
             var batch=new DurableTransferBatch(1,plan.Request,plan.Fingerprint,plan.ReadSet,plan.Entries.ToArray(),inspected,storageCollectionId,state.Revision);
+            if (batch.Request.Placement is not null)
+            {
+                if (batch.Entries.Length != 1 || batch.Request.Route != ContentDropRoute.IntoManagedStorage)
+                    throw new IOException("Positioned ingress is journaled per item.");
+                var proposed = IndexPlan(state,batch,0);
+                if (proposed.Rejection is not null) throw new IOException(proposed.Error);
+            }
             string body=Encode(batch);if(body.Length>4*1024*1024)throw new IOException("Transfer plan exceeds journal budget.");
             using var add=Command(c,t,"INSERT INTO content_transfers VALUES($id,$fp,$body,$reads)",
                 ("$id",plan.Request.OperationId.ToString()),("$fp",plan.Fingerprint),("$body",body),("$reads",Encode(plan.ReadSet)));add.ExecuteNonQuery();
@@ -213,6 +237,9 @@ public sealed partial class SqliteTransferJournal(SqliteStateStore store)
             before=>IndexPlan(before,batch,index),authorizedTransferId:id);
         if(result.Status is StateCommandStatus.Committed or StateCommandStatus.Replayed)
         {
+            if(result.Status == StateCommandStatus.Committed && batch.Request.Route == ContentDropRoute.IntoManagedStorage)
+                ManagedContentObservationStore.Capture(c,t,result.Snapshot.ContentCatalog,
+                    batch.Entries[index].AffectedContentIds.Append(batch.Entries[index].Entry.Item.Id));
             using var done=Command(c,t,"UPDATE content_transfer_items SET phase=4,error=NULL WHERE operation_id=$id AND item_index=$i",("$id",id.ToString()),("$i",index));done.ExecuteNonQuery();
             // Only this operation's own commit advances the batch read set. External conflicts
             // remain pending; never silently rebase over a repair/removal.
@@ -245,6 +272,15 @@ public sealed partial class SqliteTransferJournal(SqliteStateStore store)
         if(batch.Request.Route==ContentDropRoute.IntoManagedStorage)
             foreach(Guid id in affected)members.Add(new(Guid.NewGuid(),batch.StorageCollectionId!.Value,id,ContentMembershipOrigin.Source));
         var moved=state.ContentCatalog with {Items=items.Values.ToArray(),Memberships=members};
+        // Collecting an already-referenced object transfers its one visible owner. Historical
+        // entities and unrelated descendant cards remain; only exact source duplicates leave.
+        var owningMembers=state.ContentCatalog.Memberships.Where(m=>state.ContentCatalog.Items.Any(i=>i.Id==m.ContentItemId &&
+            ContentSingleOwnerPolicy.Key(i)==ContentSingleOwnerPolicy.Key(entry.Item))).Select(m=>m.Id).ToHashSet();
+        var oldOwners=batch.Request.Route==ContentDropRoute.IntoManagedStorage
+            ? state.ContentCatalog.PosterItems.Where(r=>r.PosterId!=batch.Request.PosterId&&owningMembers.Contains(r.MembershipId)).Select(r=>r.Id).ToArray() : [];
+        var ownership=ContentRelationRemoval.Prepare(state,oldOwners);
+        if(ownership.Rejection is not null)return ownership;
+        moved=moved with {PosterItems=ownership.ContentCatalog!.PosterItems};
         StateMutationPlan view;
         if(batch.Request.Route==ContentDropRoute.IntoManagedStorage)
         {
@@ -261,9 +297,30 @@ public sealed partial class SqliteTransferJournal(SqliteStateStore store)
                 batch.Reads with {ContentVersion=state.ContentVersion},batch.Request.PosterId,[relation.LayoutItemId],true),state with {ContentCatalog=moved});
         }
         if(view.Rejection is not null)return view;
+        if(oldOwners.Length==1 && state.ContentCatalog.PosterItems.Single(r=>r.Id==oldOwners[0]).IconAssetId is { } movingIcon &&
+            view.ContentCatalog is { } ownerCatalog)
+        {
+            var ownerMembers=ownerCatalog.Memberships.Where(m=>m.ContentItemId==entry.Item.Id).Select(m=>m.Id).ToHashSet();
+            view=view with {ContentCatalog=ownerCatalog with {PosterItems=ownerCatalog.PosterItems.Select(r=>
+                r.PosterId==batch.Request.PosterId&&ownerMembers.Contains(r.MembershipId)?r with {IconAssetId=movingIcon}:r).ToArray()}};
+        }
+        if(batch.Request.Placement is { } landing && view.Updates.Count != 0)
+        {
+            var target=view.Updates.Single(x=>x.PosterId==batch.Request.PosterId);
+            if(!ContentLayoutPolicy.TryRead(target.ContentLayoutJson,target.PosterId,out var layout,out var error))throw new IOException(error);
+            var catalog=view.ContentCatalog!;
+            var member=catalog.Memberships.Single(m=>m.CollectionId==catalog.Bindings.Single(b=>b.PosterId==target.PosterId).CollectionId && m.ContentItemId==entry.Item.Id);
+            var card=catalog.PosterItems.Single(poster=>poster.PosterId==target.PosterId && poster.MembershipId==member.Id);
+            // Existing memberships are not silently repositioned by collecting the same object again.
+            if(!state.ContentCatalog.PosterItems.Any(r=>r.Id==card.Id))
+                view=view with {Updates=view.Updates.Select(poster=>poster.PosterId==target.PosterId
+                    ? poster with {ContentLayoutJson=ContentLayoutPolicy.Serialize(landing.Apply(layout!,card.LayoutItemId))}:poster).ToArray()};
+        }
         var updates=view.Updates.ToDictionary(poster=>poster.PosterId);
+        foreach(var poster in ownership.Updates)updates.TryAdd(poster.PosterId,poster);
         foreach(var poster in p.AffectedPosterIds)updates.TryAdd(poster,state.Catalog.Posters.Single(x=>x.Poster.PosterId==poster).Poster);
         return view with {ContentCatalog=view.ContentCatalog??moved,Updates=updates.Values.ToArray(),
+            ExplicitDetachedRelations=view.ExplicitDetachedRelations.Concat(oldOwners).Distinct().ToArray(),
             RemovedStorageMemberships=removeMembers,TransferReceiptId=batch.Request.OperationId,TransferReceiptIndex=index};
     }
 
@@ -315,8 +372,29 @@ public sealed partial class SqliteTransferJournal(SqliteStateStore store)
     }
     internal static ContentTransferSnapshot Snapshot(DesktopStateSnapshot state,string posterId) =>
         new(state.ContentCatalog,state.ContentVersion,state.Catalog.Posters.ToDictionary(p=>p.Poster.PosterId,p=>p.EntityVersion),
-            state.Catalog.Posters.Any(p=>p.Poster.PosterId==posterId&&!p.Poster.IsLocked&&p.Poster.IsVisible));
+            state.Catalog.Posters.Any(p=>p.Poster.PosterId==posterId&&!p.Poster.IsLocked&&p.Poster.IsVisible),
+            !ContentLayoutPolicy.TryRead(state.Catalog.Posters.FirstOrDefault(p=>p.Poster.PosterId==posterId)?.Poster.ContentLayoutJson,
+                posterId,out var document,out _) || document!.Placements.Count>0);
     internal static bool Terminal(DurableTransferItem item)=>item.IsFinished;
+    internal string? HistoricalManagedIdentity(Guid contentId, string path) => store.ExecuteRead((c,t)=>
+    {
+        var identities = new HashSet<string>(StringComparer.Ordinal);
+        foreach(var row in ReadItems(c,t).Where(r=>r.Phase==DurableTransferPhase.IndexCommitted && r.Receipt is not null))
+        {
+            var batch=ReadBatch(c,t,row.OperationId);var entry=batch.Entries[row.Index];
+            if(batch.Request.Route!=ContentDropRoute.IntoManagedStorage ||
+                !entry.AffectedContentIds.Append(entry.Entry.Item.Id).Contains(contentId))continue;
+            if(string.Equals(path,row.File.Destination,StringComparison.OrdinalIgnoreCase))identities.Add(row.Receipt!.DestinationIdentity);
+            else if(LocalTransferFiles.Contains(row.File.Destination,path))
+            {
+                string relative=Path.GetRelativePath(row.File.Destination,path);
+                var objects=row.File.SameVolume?row.File.Objects:row.Receipt!.OwnedCopies;
+                var found=objects?.SingleOrDefault(o=>string.Equals(o.RelativePath,relative,StringComparison.OrdinalIgnoreCase));
+                if(found is not null)identities.Add(found.Identity);
+            }
+        }
+        return identities.Count==1?identities.Single():null;
+    });
     private static bool Overlaps(string a,string b)=>string.Equals(a,b,StringComparison.OrdinalIgnoreCase)||LocalTransferFiles.Contains(a,b)||LocalTransferFiles.Contains(b,a);
     private static SqliteCommand Command(SqliteConnection c,SqliteTransaction? t,string sql,params (string Name,object? Value)[] values)
     {

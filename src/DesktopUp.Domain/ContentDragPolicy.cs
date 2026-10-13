@@ -138,6 +138,16 @@ public static class ContentDragPolicy
     private static int FindFinalReadOrder(ContentLayoutSnapshot snapshot, ContentResolvedPlacement source,
         double centerX, double centerY, bool vertical)
     {
+        int insertion = FindInsertionReadOrder(snapshot, centerX, centerY);
+        return Math.Clamp(insertion - (source.ReadOrder < insertion ? 1 : 0), 0, snapshot.Items.Count - 1);
+    }
+
+    // External items use the same band/midline interpretation without removing an existing member.
+    public static int FindInsertionReadOrder(ContentLayoutSnapshot snapshot, double centerX, double centerY)
+    {
+        RequireDisplacement(centerX); RequireDisplacement(centerY);
+        if (snapshot.Items.Count == 0) return 0;
+        bool vertical = snapshot.FlowAxis == ContentFlowAxis.Vertical;
         double Main(ContentRect rect) => vertical ? rect.Y : rect.X;
         double MainEnd(ContentRect rect) => vertical ? rect.Bottom : rect.Right;
         double CrossCenter(ContentRect rect) => vertical ? rect.X + rect.Width / 2 : rect.Y + rect.Height / 2;
@@ -156,8 +166,7 @@ public static class ContentDragPolicy
         // sequence, then remove the source once to obtain the final zero-based member position.
         var before = band.Items.FirstOrDefault(p => cross < CrossCenter(p.Bounds));
         int insertion = before?.ReadOrder ?? band.Items[^1].ReadOrder + 1;
-        int final = insertion - (source.ReadOrder < insertion ? 1 : 0);
-        return Math.Clamp(final, 0, snapshot.Items.Count - 1);
+        return Math.Clamp(insertion, 0, snapshot.Items.Count);
     }
 
     private sealed record Band(double Start, double End, ContentResolvedPlacement[] Items);

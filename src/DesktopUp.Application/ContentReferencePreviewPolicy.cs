@@ -15,10 +15,10 @@ public static class ContentReferencePreviewPolicy
         var owners = catalog.PosterItems.GroupBy(p => members[p.MembershipId].ContentItemId)
             .ToDictionary(g => g.Key, g => (IReadOnlyList<string>)g.Select(p => p.PosterId).Distinct().Order().ToArray());
         var reusable = catalog.Items.Where(i => owners.ContainsKey(i.Id) &&
-                ContentIdentityPolicy.Compare(i, incoming) != ContentDuplicateHint.None)
+                ContentSingleOwnerPolicy.Key(i) == ContentSingleOwnerPolicy.Key(incoming))
             .Select(i => new ContentReuseCandidate(i, owners[i.Id], false)).ToList();
         foreach (var item in earlierInputs)
-            if (reusable.All(c => c.Item.Id != item.Id) && ContentIdentityPolicy.Compare(item, incoming) != ContentDuplicateHint.None)
+            if (reusable.All(c => c.Item.Id != item.Id) && ContentSingleOwnerPolicy.Key(item) == ContentSingleOwnerPolicy.Key(incoming))
                 reusable.Add(new(item, [], true));
         return new(reusable.AsReadOnly(), reusable.Count == 0 ? ContentReferenceChoice.CreateIndependent : ContentReferenceChoice.Skip);
     }

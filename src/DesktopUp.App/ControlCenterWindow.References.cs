@@ -12,8 +12,6 @@ public sealed partial class ControlCenterWindow
     private Func<ContentReferenceCommand, StateCommandResult>? _applyReferences;
     internal void ConfigureReferences(Func<ContentReferenceCommand, StateCommandResult> apply) => _applyReferences = apply;
 
-    private async void AddReferences_Click(object sender, RoutedEventArgs e) => await EditReferences(false);
-    private async void RepairReference_Click(object sender, RoutedEventArgs e) => await EditReferences(true);
     private async Task RemoveSelectedReference() => await PortableAction(async () =>
     {
         if (_view?.SelectedPosterId is not { } id || SelectedContentId is not { } item ||
@@ -22,7 +20,7 @@ public sealed partial class ControlCenterWindow
         var body = new StackPanel { Spacing = 10 };
         var selected = _contentRuntime?.Invoke()?.ReadContentEditor(id)?.SelectedIds.ToArray() ?? [item];
         if (selected.Length == 0) return;
-        body.Children.Add(new TextBlock { Text = $"仅从当前海报移除 {selected.Length} 项引用。原文件、共享内容和其他海报保持不变。", TextWrapping = TextWrapping.Wrap });
+        body.Children.Add(new TextBlock { Text = $"仅从当前海报移除 {selected.Length} 张卡片，不删除或移动原文件。", TextWrapping = TextWrapping.Wrap });
         if (!await ReferenceDialog("移除引用", body, "仅移除此关联")) return;
         var command = new ContentDetachCommand("detach-" + Guid.NewGuid().ToString("N"), StateCommandSource.ControlCenter,
             basis.Revision, new(new Dictionary<string,long> { [id] = owner.EntityVersion }, ContentVersion: basis.ContentVersion), id, selected, true);
@@ -34,7 +32,7 @@ public sealed partial class ControlCenterWindow
     {
         if (_view?.SelectedPosterId is not { } targetId || _readCommitted?.Invoke() is not { } basis ||
             !basis.PostersById.TryGetValue(targetId, out var target) || _applyReferences is null) return;
-        if (DesktopInteractionConflicts(targetId)) { await PortableDialog("暂不可编辑", "请先结束海报上的拖动或收展，再添加引用。"); return; }
+        if (DesktopInteractionConflicts(targetId)) { await PortableDialog("暂不可编辑", "请先结束海报上的拖动或收展，再编辑引用。"); return; }
         var relation = repair && SelectedContentId is { } selected ? ContentRelationPolicy.Resolve(basis.ContentCatalog, targetId, selected) : null;
         if (repair && relation is null) { await PortableDialog("请选择真实内容", "先选择已添加的真实 Item，再修复／更换其来源。DEMO 项目没有文件来源。"); return; }
         string[] affected = repair ? ContentReferencePolicy.AffectedPosters(basis.ContentCatalog, relation!.Item.Id).ToArray() : [targetId];
@@ -48,7 +46,7 @@ public sealed partial class ControlCenterWindow
             body.Children.Add(paths);
             var method = new ComboBox { Header = "下一步", SelectedIndex = 0, ItemsSource = new[] { "预览以上路径", "选择一个文件后继续", "选择一个文件夹后继续" } };
             body.Children.Add(method);
-            if (!await ReferenceDialog(repair ? "修复共享内容来源" : "添加内容引用", body, "继续")) return;
+            if (!await ReferenceDialog(repair ? "修复所选卡片来源" : "添加内容引用", body, "继续")) return;
             if (method.SelectedIndex == 0) break;
             var picker = new NativeProfilePicker(WinRT.Interop.WindowNative.GetWindowHandle(this), false,
                 _portableLedger!, _portableLog!, purpose: method.SelectedIndex == 2 ? NativePickerPurpose.ReferenceFolder : NativePickerPurpose.ReferenceFile);
@@ -74,15 +72,15 @@ public sealed partial class ControlCenterWindow
             rows.Children.Add(new TextBlock { Text = preview.Input + "\n" + preview.Message, TextWrapping = TextWrapping.Wrap });
             if (preview.Item is not { } item) continue; // explicit skip, no invented placeholder entity
             var entries = new List<ContentReferenceEntry> { new(item, ContentReferenceChoice.Skip), new(item, ContentReferenceChoice.CreateIndependent) };
-            var labels = new List<string> { "跳过", repair ? "使用此来源修复共享内容" : "独立添加" };
+            var labels = new List<string> { "跳过", repair ? "使用此来源修复卡片" : "添加" };
             var options = ContentReferencePreviewPolicy.ForItem(basis.ContentCatalog, item, seen);
             if (!repair) foreach (var duplicate in options.Reusable)
             {
-                entries.Add(new(item, ContentReferenceChoice.Reuse, duplicate.Item.Id));
                 string owners = duplicate.FromThisBatch ? "本批前项（须先添加）" : string.Join("、",
                     duplicate.PosterIds.Select(id => basis.PostersById.TryGetValue(id, out var poster) ? poster.Poster.Title : id));
-                labels.Add($"复用：{duplicate.Item.DisplayName} · {owners}");
+                rows.Children.Add(new TextBlock {Text=$"已在 {owners} 中；保持单一归属，不重复添加。",TextWrapping=TextWrapping.Wrap});
             }
+            if(!repair && options.Reusable.Count>0){entries.RemoveAt(1);labels.RemoveAt(1);}
             var choice = new ComboBox { ItemsSource = labels, SelectedIndex = repair || options.DefaultChoice == ContentReferenceChoice.CreateIndependent ? 1 : 0, MinWidth = 320 };
             rows.Children.Add(choice); choices.Add((preview, choice, entries)); seen.Add(item);
         }
@@ -91,10 +89,10 @@ public sealed partial class ControlCenterWindow
         var confirmConversion = new CheckBox { Content = "替换此海报的 DEMO 构图；旧构图归档，新引用从自动布局开始", IsChecked = false };
         if (conversion) rows.Children.Add(confirmConversion);
         if (repair)
-            rows.Children.Add(new TextBlock { Text = "共享来源将统一更新，顺序／图钉／尺寸不变。受影响海报：\n" +
+            rows.Children.Add(new TextBlock { Text = "修复当前卡片来源，顺序／图钉／尺寸不变。所在海报：\n" +
                 string.Join("\n", affected.Select(id => $"• {basis.PostersById[id].Poster.Title} ({id})")), TextWrapping = TextWrapping.Wrap });
-        rows.Children.Add(new TextBlock { Text = "原文件不动。添加后可双击打开，右键定位或仅移除此海报的引用。", TextWrapping = TextWrapping.Wrap, Opacity = .7 });
-        if (!await ReferenceDialog("确认引用预览", rows, repair ? "统一修复" : "确认添加")) return;
+        rows.Children.Add(new TextBlock { Text = "原文件不动。卡片可双击打开，并在所选项目菜单中定位来源。", TextWrapping = TextWrapping.Wrap, Opacity = .7 });
+        if (!await ReferenceDialog("确认引用预览", rows, repair ? "修复" : "确认添加")) return;
         var selectedRows = choices.Where(c => c.Entries[c.Choice.SelectedIndex].Choice != ContentReferenceChoice.Skip).ToArray();
         if (selectedRows.Length == 0) return;
         if (conversion && confirmConversion.IsChecked != true) { await PortableDialog("未添加", "尚未确认替换 DEMO 构图，当前配置保持不变。"); return; }
