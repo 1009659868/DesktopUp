@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "sdk": {
+    "version": "10.0.112",
+    "url": "https://builds.dotnet.microsoft.com/dotnet/Sdk/10.0.112/dotnet-sdk-10.0.112-win-x64.zip",
+    "fallbackUrl": "https://dotnetcli.blob.core.windows.net/dotnet/Sdk/10.0.112/dotnet-sdk-10.0.112-win-x64.zip",
+    "algorithm": "SHA512",
+    "hash": "db1e327925763c7d3e9dcb81e868067ff2da66623ec41f41e180a3faaa25a0d43eb7f079cda9d4b38cb2a8b3a3636a0b0d09353fc1cf1c0e3787eb906aaaf464"
+  },
+  "nsis": {
+    "version": "3.12",
+    "url": "https://downloads.sourceforge.net/project/nsis/NSIS%203/3.12/nsis-3.12.zip",
+    "fallbackUrl": "https://distfiles.macports.org/nsis/nsis-3.12.zip",
+    "algorithm": "SHA256",
+    "hash": "56581F90DB321581C5381193D796FFFCF2D24B2F8FED2160A6C6A3BAA67F2C4F"
+  }
+}

@@ -6,13 +6,14 @@ DesktopUp Preview — Windows 11 x64 独立预览版
 
 安装
 1. 将 DesktopUp-Preview-日期.序号-win-x64-Setup.exe 复制到 Windows 11 x64 电脑。
-2. 核对随包 SHA256 后，双击安装，可选择其他本地磁盘上的专用新目录或空目录。只为当前用户安装；选择当前用户可写的位置，无需另装 .NET。
-3. 在开始菜单中打开 DesktopUp Preview。新配置首次打开控制中心，零海报、无演示卡片；点击“新增海报”，默认“基础收纳”，随后可拖入自建文件。
+2. 核对随包 SHA256 后，双击安装，可选择其他本地磁盘上的可写目录；目录中可以已有其他文件。只为当前用户安装，无需另装 .NET。
+3. 在开始菜单中打开 DesktopUp Preview。新配置首次为零海报、无演示卡片；每次启动时，零海报打开控制中心，有海报则后台运行。点击“新增海报”，默认“基础收纳”，随后可拖入自建文件。
 4. 双击托盘图标打开控制中心。关闭控制中心并不退出；退出请用托盘 → 退出。
 
 独立边界
 - 安装目录可自选；建议默认：%LOCALAPPDATA%\Programs\DesktopUp Preview\<版本>。
-- 不覆盖非空目录，不安装到磁盘根、Windows目录、用户配置目录、联接路径或过长路径。
+- 可以安装到非空目录，保留已有文件。若 DesktopUp.exe、Uninstall.exe、PREVIEW-README.txt、app 或 licenses 已存在，请改选目录；不会覆盖这些同名内容。不安装到磁盘根、Windows目录、用户配置目录、联接路径或过长路径。
+- 根目录只放启动/卸载入口、此说明、app 和 licenses。app 集中存放程序、运行库、语言资源与模块；这些属于运行依赖，请勿单独删除。
 - 预览配置/日志：%LOCALAPPDATA%\DesktopUp\Preview
 - 默认收纳：%LOCALAPPDATA%\DesktopUp\Storage\preview\<配置身份>；通常位于C盘，遵循系统用户数据目录，不硬编码盘符。
 - 安装与用户数据相互独立，避免目录权限、升级或卸载影响收纳原文件。可在“控制中心 → 全局 → 收纳位置”修改并迁移已有收纳；原有配置中已选的位置不会被重装改写。
@@ -20,9 +21,9 @@ DesktopUp Preview — Windows 11 x64 独立预览版
 - 不设置开机启动。各预览版本共享 Preview 配置和单实例，不应同时运行。
 - 不包含本机测试数据库、个人配置或开发 SDK。
 - 自带 .NET 与 Windows App SDK 运行库；Windows 系统组件仍由操作系统提供。
-- 新建海报的默认模板/参数由此包的 config\preview-defaults.json 决定，具体值见 preview-build.json。
+- 新建海报的默认模板/参数由此包的 app\config\preview-defaults.json 决定，具体值见 app\preview-build.json。
 - 当前默认打包配置为“基础收纳”，不附加灯光或介绍文字区；构建时仍可显式选择其他已支持模板。
-- 仅首次生成/新增海报使用此默认值；重装、重启不覆盖已有配置，复制海报保留源配置。
+- 仅新增海报使用此默认值，首次启动不生成海报；重装、重启不覆盖已有配置，复制海报保留源配置。
 
 卸载与重装
 先从托盘正常退出，再通过 Windows 设置 → 应用 → 已安装的应用卸载。
@@ -41,5 +42,5 @@ DesktopUp Preview — Windows 11 x64 独立预览版
 异常时请提供 Windows 版本、截图、操作顺序，以及 Preview\logs\desktopup.jsonl。
 发送日志前检查其中的本机路径等信息。不要发送整个个人配置库。
 
-构建来源及依赖版本：preview-build.json；文件哈希：payload-manifest.json。
+构建来源及依赖版本：app\preview-build.json；文件哈希：app\payload-manifest.json。
 第三方许可证与归属声明：licenses 目录。此预览包不自动更新，请按后续版本重新安装。

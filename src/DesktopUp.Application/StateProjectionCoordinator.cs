@@ -14,7 +14,7 @@ public sealed partial class StateProjectionCoordinator(
 
     public event EventHandler<StateProjectionChangedEventArgs>? ProjectionChanged;
 
-    public DesktopUpProjection EnsureInitialized(PosterDefinition defaultPoster)
+    public DesktopUpProjection EnsureInitialized(PosterDefinition? defaultPoster = null)
     {
         DesktopUpProjection projection;
         lock (_sync) projection = AdoptLocked(repository.EnsureInitialized(defaultPoster), StateCommandSource.System, "initialize");

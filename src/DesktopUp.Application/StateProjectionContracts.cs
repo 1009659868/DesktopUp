@@ -176,7 +176,7 @@ public interface IStateProjectionCoordinator
 {
     event EventHandler<StateProjectionChangedEventArgs>? ProjectionChanged;
 
-    DesktopUpProjection EnsureInitialized(PosterDefinition defaultPoster);
+    DesktopUpProjection EnsureInitialized(PosterDefinition? defaultPoster = null);
     bool TryGetCurrent(out DesktopUpProjection? projection);
     DesktopUpProjection Refresh();
     PosterRemovalPreview? PrepareRemoval(string posterId);

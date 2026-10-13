@@ -919,9 +919,6 @@ internal sealed partial class PosterVisualWindow(
         spatial.ToggleCollapsed(this);
     }
 
-    internal static PosterDefinition CreateInitialDefault(DisplayMonitorSnapshot monitor) =>
-        DistributionBuild.ApplyCreationDefaults(CreateDefaultPoster(CreateDefaultBounds(monitor), monitor));
-
     private static DisplayMonitorSnapshot? ResolveMonitor(DisplayTopologySnapshot topology, string? savedName) =>
         topology.Monitors.FirstOrDefault(m => string.Equals(m.DeviceName, savedName, StringComparison.OrdinalIgnoreCase))
         ?? topology.PrimaryMonitor;
@@ -932,7 +929,7 @@ internal sealed partial class PosterVisualWindow(
     {
         PosterPlacementState placement = PlacementFromBounds(bounds, monitor);
         DesktopPixelRect work = monitor.WorkArea;
-        // First launch and both Add entry points share the same minimal presentation.
+        // Fallback presentation and both Add entry points share the same minimal defaults.
         // Only initial placement/identity differ; saved posters never pass through this seed.
         return PosterConfigurationFactory.NewBasicBox("我的收纳", monitor.DeviceName) with
         {

@@ -15,7 +15,10 @@ public sealed record StartupIntent(
     public static StartupIntent Background(string[] arguments) =>
         new(StartupIntentKind.StartBackground, arguments, DateTimeOffset.UtcNow);
 
-    public StartupIntent ForExistingInstance() => Kind == StartupIntentKind.StartBackground
-        ? this with { Kind = StartupIntentKind.ShowControlCenter }
-        : this;
+    public bool ShouldShowControlCenter(bool hasPosters) =>
+        Kind == StartupIntentKind.ShowControlCenter ||
+        (Kind == StartupIntentKind.StartBackground && !hasPosters);
+
+    // Preserve an ordinary launch; the running instance decides from its current catalog.
+    public StartupIntent ForExistingInstance() => this;
 }

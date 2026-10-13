@@ -103,6 +103,8 @@ public partial class App : Microsoft.UI.Xaml.Application
         _transferDiscovery=DiscoverStartupTransfers(_services.GetRequiredService<SqliteStateStore>());
         try
         {
+            _stateCoordinator = _services.GetRequiredService<IStateProjectionCoordinator>();
+            _stateCoordinator.EnsureInitialized();
             SettingsStateSnapshot settings =
                 _services.GetRequiredService<ISettingsRepository>().Read();
             _log.Write("info", "state_repositories.ready", new
@@ -124,7 +126,6 @@ public partial class App : Microsoft.UI.Xaml.Application
             ExitApplication();
             return;
         }
-        _stateCoordinator = _services.GetRequiredService<IStateProjectionCoordinator>();
         DebugSettings.IsXamlResourceReferenceTracingEnabled = true;
         DebugSettings.XamlResourceReferenceFailed += OnXamlResourceReferenceFailed;
         _stateCommands = _services.GetRequiredService<IStateCommandService>();
@@ -186,11 +187,6 @@ public partial class App : Microsoft.UI.Xaml.Application
             "startup", invalidateShell: false);
 
         DispatchIntent(_startupIntent);
-        // A new empty profile needs a visible entry point, not only an unfamiliar tray icon.
-        // Do not seed demonstration content or reset an existing user's workspace.
-        if (stateInitialization.Status == StateStoreInitializationStatus.Created &&
-            _startupIntent.Kind == StartupIntentKind.StartBackground)
-            ShowControlCenter();
         while (_pendingIntents.TryDequeue(out StartupIntent? pending))
         {
             DispatchIntent(pending);
@@ -549,7 +545,7 @@ public partial class App : Microsoft.UI.Xaml.Application
 
             if (topology.PrimaryMonitor is not { } primaryMonitor) return;
             if (!_stateCoordinator!.TryGetCurrent(out DesktopUpProjection? current) || current is null)
-                current = _stateCoordinator.EnsureInitialized(PosterVisualWindow.CreateInitialDefault(primaryMonitor));
+                current = _stateCoordinator.EnsureInitialized();
             ApplyStateProjection(new StateProjectionChangedEventArgs(current, StateCommandSource.System, $"sessions-recovery-{request}"));
             bool IsCurrentEnvironment() => Volatile.Read(ref _exiting) == 0 &&
                 !_systemLifecycle.IsSuspended &&
@@ -687,8 +683,11 @@ public partial class App : Microsoft.UI.Xaml.Application
         { _recoveryWindow.Activate(); return; }
         switch (intent.Kind)
         {
+            case StartupIntentKind.StartBackground:
             case StartupIntentKind.ShowControlCenter:
-                ShowControlCenter();
+                bool hasPosters = _stateCoordinator is not null && _stateCoordinator.TryGetCurrent(out var current) &&
+                    current is not null && current.Posters.Count > 0;
+                if (intent.ShouldShowControlCenter(hasPosters)) ShowControlCenter();
                 break;
             case StartupIntentKind.Exit:
                 ExitApplication();

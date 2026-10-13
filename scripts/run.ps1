@@ -1,11 +1,16 @@
+#requires -Version 5.1
 param(
-    [switch]$ShowControlCenter
+    [switch]$ShowControlCenter,
+    [switch]$Offline
 )
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 $output = Join-Path $root 'out\run\app'
-& (Join-Path $PSScriptRoot 'build.ps1') -Configuration Release -OutputDirectory $output
+. (Join-Path $PSScriptRoot 'toolchain.ps1')
+$runTools = Enter-DesktopUpToolchain -Offline:$Offline
+try {
+& (Join-Path $PSScriptRoot 'build.ps1') -Configuration Release -OutputDirectory $output -Offline:$Offline
 $exe = Join-Path $output 'DesktopUp.exe'
 $arguments = @()
 if ($ShowControlCenter) {
@@ -16,3 +21,4 @@ if ($arguments.Count -gt 0) {
 } else {
     Start-Process -FilePath $exe -WindowStyle Hidden
 }
+} finally { Exit-DesktopUpToolchain $runTools }
