@@ -88,6 +88,12 @@ public partial class App
                 if(repository.Read().ContentCatalog.PosterItems.Count!=4||Directory.Exists(folder))throw new IOException("Cross-volume manual ingress failed.");
                 if(!ReferenceEquals(center,_controlCenter.WindowForPortableProbe))throw new IOException("Ordinary incoming files opened control center.");
                 await _spatialRuntime.IncomingCollapsedProbe();
+                if (_startupIntent.Arguments.Contains("--inline-name-probe"))
+                {
+                    var window = _spatialRuntime.BackdropWindowForProbe(repository.Read().Catalog.Posters.Single().Poster.PosterId);
+                    await window.VerifyInlineNamingForProbe();
+                    _log!.Write("info", "contract.inline_naming_passed", new { nativeMouse = false, keyboardDispatch = false });
+                }
                 if(syncProbe)
                 {
                     var before=repository.Read();

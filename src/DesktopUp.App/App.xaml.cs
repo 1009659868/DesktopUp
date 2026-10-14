@@ -159,7 +159,7 @@ public partial class App : Microsoft.UI.Xaml.Application
         _spatialRuntime.EffectiveLayoutChanged += RefreshControlCenterRuntime;
         var openJournal = new SqliteContentOpenJournal(_services.GetRequiredService<SqliteStateStore>());
         openJournal.RetireInterruptedRequests();
-        _realContentWorker = new LocalContentWorkerClient(Path.Combine(AppContext.BaseDirectory, "content-worker", "DesktopUp.ContentWorker.exe"), _ledger);
+        _realContentWorker = new LocalContentWorkerClient(ContentWorkerLocation.InApplication(AppContext.BaseDirectory), _ledger);
         _spatialRuntime.ConfigureRealContent(_realContentWorker, openJournal, new SqliteContentIconStore(_services.GetRequiredService<SqliteStateStore>()));
         _spatialRuntime.ConfigureSceneMotionLedger(_ledger);
         _spatialRuntime.ConfigureTransfers(_services.GetRequiredService<SqliteStateStore>(),_transferDiscovery,

@@ -49,7 +49,6 @@ public sealed class PosterContentContextRouterTests
     [Theory]
     [InlineData(PosterInputTargetKind.Item)]
     [InlineData(PosterInputTargetKind.ContentSpanHandle)]
-    [InlineData(PosterInputTargetKind.ContentViewport)]
     [InlineData(PosterInputTargetKind.TitleBar)]
     [InlineData(PosterInputTargetKind.MoreButton)]
     public void ContextOnlyTargetsContentItemNotLegacyItemsHandlesOrPosterChrome(PosterInputTargetKind kind)
@@ -58,6 +57,21 @@ public sealed class PosterContentContextRouterTests
         var hit = new PosterInputHit(A, 1, Frame, Item() with { Kind = kind });
         Assert.Null(router.ResolveContext(hit, Point, new[] { A }));
         Assert.Null(router.Capture);
+    }
+
+    [Fact]
+    public void BlankContextUsesPublishedViewportWithoutSelectionOrCapture()
+    {
+        var viewport = new PosterInputRegion(PosterInputTargetKind.ContentViewport, 4, new(0, 0, 300, 200))
+            { ContentSnapshotGeneration = 7 };
+        var router = Router(Layout(1, Item(), viewport));
+        var point = new PointerScreenPoint(Frame.X + 200, Frame.Y + 120);
+        var hit = Assert.IsType<PosterInputHit>(router.Resolve(point.X, point.Y, [A]));
+        Assert.True(router.ResolveContext(hit, point, [A], point)!.IsBackground);
+        Assert.Null(router.Capture);
+        Assert.Null(router.ResolveContext(hit, Point, [A], point));
+        router.Invalidate(A);
+        Assert.Null(router.ResolveContext(hit, point, [A], point));
     }
 
     [Fact]

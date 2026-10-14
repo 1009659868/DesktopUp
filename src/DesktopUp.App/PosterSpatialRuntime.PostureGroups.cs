@@ -11,7 +11,7 @@ internal sealed partial class PosterSpatialRuntime
     private PostureRun? PostureFor(PosterVisualWindow owner) => _postures.Values.FirstOrDefault(r => r.Participants.Contains(owner));
     internal bool IsPosterSpatialBusy(string id, bool includeFileTransfer=true) => includeFileTransfer&&IsFileTransferActive(id) || _owner is not null || _title is not null ||
         _postures.Values.Any(r => r.Participants.Any(p => p.PosterId == id)) ||
-        _windows.TryGetValue(id, out var window) && window.HasContentGesture;
+        _windows.TryGetValue(id, out var window) && (window.HasContentGesture || window.HasFileAction);
 
     private bool TryPostureSnapshot(PosterVisualWindow owner, out SpatialSnapshot? snapshot, out DesktopUpProjection? projection)
     {

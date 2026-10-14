@@ -6,6 +6,14 @@ namespace DesktopUp;
 internal sealed partial class PosterSpatialRuntime
 {
     private TaskCompletionSource? _nativeExitLifetime;
+    private bool _nativeExitToMapped;
+    internal bool CanReceiveInto(string id)=>TransfersAvailable || _nativeExitLifetime is not null && _fileTransferPoster!=id &&
+        ContentActionPath(id,null) is not null && NativeExitCurrent;
+    internal void PrepareMappedDropHandoff(string id)
+    {
+        // OLE Drop must mark this before DoDragDrop unwinds; queued UI work is too late.
+        if(!TransfersAvailable && CanReceiveInto(id))_nativeExitToMapped=true;
+    }
     internal ShellExitIntent? BeginNativeExit(PosterVisualWindow window, string[] selection)
     {
         if (!TransfersAvailable) return null;
@@ -24,7 +32,7 @@ internal sealed partial class PosterSpatialRuntime
         try
         {
             var journal = new NativeShellExitJournal(_transferStore!);
-            bool external = result is { Released:true, ReturnedToOrigin:false };
+            bool external = !_nativeExitToMapped && result is { Released:true, ReturnedToOrigin:false };
             journal.End(intent, external);
             if (external)
             {
@@ -58,7 +66,7 @@ internal sealed partial class PosterSpatialRuntime
             finally
             {
                 _fileTransferBusy=false; _fileTransferPoster=null;
-                _nativeExitLifetime=null; lifetime?.TrySetResult(); ActivityChanged?.Invoke();
+                _nativeExitLifetime=null; _nativeExitToMapped=false; lifetime?.TrySetResult(); ActivityChanged?.Invoke();
             }
         }
     }

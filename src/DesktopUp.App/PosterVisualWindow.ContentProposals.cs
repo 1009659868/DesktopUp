@@ -12,7 +12,7 @@ internal sealed partial class PosterVisualWindow
     private bool _contentProposalDrainQueued;
     private bool _contentAwaitingCenterRelease;
     private long _contentProposalDrainEpoch, _contentHighestThemeVersion;
-    private bool ContentProposalsProtected => HasContentGesture || _incomingPreview is not null || _fileDrop?.IsHovering == true || IsEditing || PosterId is { } id && spatial.HasCenterDraft(id) || _posterMenu is not null ||
+    private bool ContentProposalsProtected => HasFileAction || HasContentGesture || _incomingPreview is not null || _fileDrop?.IsHovering == true || IsEditing || PosterId is { } id && spatial.HasCenterDraft(id) || _posterMenu is not null ||
         _transitionLayout is not null || _activeCommandRequestId is not null || _disposed || _contentPresentationSuspended || IsContentSpaceRestricted;
 
     // Future heat/theme owners submit proposals here. No scores, per-item timers or implicit persistence.

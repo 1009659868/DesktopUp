@@ -7,6 +7,15 @@ namespace DesktopUp.Contracts.Tests;
 
 public sealed class IncrementalContentRasterTests
 {
+    [Fact]
+    public void NativePropertiesRefreshOnlySelectedCard()
+    {
+        using var f=new Fixture();f.Commit(f.AddCommand(f.Main,Entry("a.txt"),Entry("b.txt")));
+        var source=new ReferenceContentRuntime(f.Current.ContentCatalog,f.Main,1,new Worker());
+        var keys=Keys(f,source);source.RefreshItem(keys[0].ItemId);var next=Keys(f,source);
+        Assert.NotEqual(keys[0],next[0]);Assert.Equal(keys[1],next[1]);
+        long version=source.Version;source.RefreshItem("removed-card");Assert.Equal(version,source.Version);
+    }
     private sealed class Worker : ILocalContentWorker
     {
         public int Calls;

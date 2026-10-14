@@ -129,6 +129,16 @@ public sealed class ReferenceContentRuntime : IObservableContentItemViewSource, 
         }
         Changed?.Invoke(this, EventArgs.Empty);
     }
+    public void RefreshItem(string id)
+    {
+        lock(gate)
+        {
+            if(!items.TryGetValue(id,out var entry))return;
+            items[id]=entry with {Generation=checked(++rasterGeneration)};
+            version=checked(version+1);
+        }
+        Changed?.Invoke(this,EventArgs.Empty);
+    }
     public static string AssetKey(ContentItem item) => $"local-icon:{item.Id:N}:{item.Version}";
     private static string AssetKeyFor(Entry entry) => entry.Icon is { } custom ? "custom:" + custom : AssetKey(entry.Item);
 }

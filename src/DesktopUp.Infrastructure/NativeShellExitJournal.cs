@@ -25,6 +25,12 @@ public sealed class NativeShellExitJournal(SqliteStateStore store)
         var state = new SqliteStateCommandRepository(store).Read();
         if(ContentSingleOwnerPolicy.Validate(state.ContentCatalog) is { } ownershipError)throw new IOException(ownershipError);
         var sources = DirectTransferPreparation.OutgoingSources(state, posterId, layoutIds);
+        if (state.ContentCatalog.Bindings.Any(b => b.PosterId == posterId &&
+            state.ContentCatalog.Collections.Any(c => c.Id == b.CollectionId && c.Kind == ContentCollectionKind.Mapped)))
+        {
+            var mapping = new MappedDirectoryService(store);
+            foreach (string itemId in layoutIds) mapping.ValidateAction(posterId, itemId, allowMissing: true);
+        }
         var items = sources.Select(s =>
         {
             var item = state.ContentCatalog.Items.Single(i => i.Id == s.ContentId);

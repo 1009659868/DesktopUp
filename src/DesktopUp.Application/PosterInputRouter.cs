@@ -84,7 +84,7 @@ public sealed class PosterInputRouter
         IEnumerable<PosterInputSessionKey> frontToBack, PointerScreenPoint? pressScreenPoint = null)
     {
         var order = frontToBack.ToArray();
-        if (press.Region.Kind != PosterInputTargetKind.ContentItem ||
+        if (press.Region.Kind is not (PosterInputTargetKind.ContentItem or PosterInputTargetKind.ContentViewport) ||
             !PosterContentInputPolicy.HasValidIdentity(press.Region) ||
             !IsCurrent(press.Session, press.LayoutRevision) ||
             Resolve(release.X, release.Y, order) != press ||

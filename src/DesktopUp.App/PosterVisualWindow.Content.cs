@@ -316,6 +316,7 @@ internal sealed partial class PosterVisualWindow
         var name = new TextBlock { Text=item.Name + (item.IsAvailable ? "" : " · 暂不可用"), FontSize=ContentParameters.LabelFontSizeDip, MaxLines=1, TextTrimming=TextTrimming.CharacterEllipsis,
             VerticalAlignment=VerticalAlignment.Center, Foreground=ColorBrush(_presentation.Parameters.Theme.Foreground,210) };
         Grid.SetRow(name,1); cell.Children.Add(name);
+        if (_inlineRenameItem == item.ItemId) name.Visibility = Visibility.Collapsed;
         if (ContentDocument.ShowSpanLabels)
         {
             var badge = new Border { Background=Brush(215,15,20,27), Padding=new Thickness(4,2,4,2), HorizontalAlignment=HorizontalAlignment.Left, VerticalAlignment=VerticalAlignment.Top,
@@ -364,7 +365,7 @@ internal sealed partial class PosterVisualWindow
     }
     private void ScrollItems(int wheelDelta, bool crossAxis = false)
     {
-        if (_contentPresentationSuspended || _monitor is null || _inputIsland is null || _geometry.IsCollapsed || wheelDelta==0 || HasContentGesture || _transitionLayout is not null) return;
+        if (_contentPresentationSuspended || _monitor is null || _inputIsland is null || _geometry.IsCollapsed || wheelDelta==0 || HasContentGesture || _inlineRenameItem is not null || _transitionLayout is not null) return;
         // Shift exposes the other axis only after qualified physical shortage; normal browsing
         // stays single-axis. A held content gesture never competes with wheel navigation.
         var flowSnapshot = EnsureContentSnapshot(_bounds);

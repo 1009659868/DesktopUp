@@ -9,7 +9,13 @@ internal sealed partial class PosterSpatialRuntime
     private CancellationTokenSource? _incomingCancellation;
     internal void ReceiveFiles(PosterVisualWindow window,IncomingDropTicket ticket,IncomingContentPlacement? landing)
     {
-        if(!TransfersAvailable || !window.CanTransferFiles || !window.IncomingGeometryCurrent(ticket.Preview.Surface))return;
+        if(!TransfersAvailable && CanReceiveInto(window.PosterId!) && _nativeExitLifetime is { } source)
+        {
+            _nativeExitToMapped=true;
+            TrackContentOperation(AfterSource());return;
+            async Task AfterSource(){await source.Task;ReceiveFiles(window,ticket,landing);}
+        }
+        if(!TransfersAvailable || !window.CanReceiveFiles || !window.IncomingGeometryCurrent(ticket.Preview.Surface))return;
         _fileTransferBusy=true;_fileTransferPoster=window.PosterId;
         _incomingCancellation=CancellationTokenSource.CreateLinkedTokenSource(_fileTransferStopping.Token);
         ActivityChanged?.Invoke();
@@ -23,6 +29,18 @@ internal sealed partial class PosterSpatialRuntime
             window.IncomingGeometryCurrent(ticket.Preview.Surface) && window.TransferEntityVersion==entity && !HasCenterDraft(id);
         try
         {
+            if(ContentActionPath(id,null) is not null)
+            {
+                // File/COM work stays off the UI thread. Read-set validation in the service
+                // rejects late layout changes before applying the drop position.
+                nint owner=window.TransferOwner;
+                var result=await Task.Run(()=>new MappedDirectoryIngress(_transferStore!).Execute(id,ticket.Paths,ticket.Preview.Effect==1,
+                    landing,owner,()=>!lifetime.IsCancellationRequested,lifetime.Token,entity));
+                state.Refresh();
+                SetMappingOperationMessage(id,result.Errors.Count>0?string.Join("；",result.Errors):null);
+                log.Write("info","transfer.mapped_ingress_finished",new{posterId=id,result.Completed,result.Skipped,result.Errors});
+                return;
+            }
             var storage=await _chooseTransferStorage!();
             if(storage is null || !Current())return;
             // Freeze payload order; overlapping parent/child paths cannot become two independent moves.
@@ -71,7 +89,12 @@ internal sealed partial class PosterSpatialRuntime
             window.TransferFeedback(lastError is null?$"已收纳 {completed} 项。":$"已收纳 {completed} 项；{lastError}");
             log.Write("info","transfer.ingress_finished",new{posterId=id,completed,failed,total=normalized.Length,lastError});
         }
-        catch(Exception e){window.TransferFeedback("本次未能完成，可重新拖动："+e.Message);log.Write("warning","transfer.ingress_failed",new{posterId=id,e.Message});}
+        catch(Exception e)
+        {
+            if(ContentActionPath(id,null) is not null)SetMappingOperationMessage(id,"本次未能完成："+e.Message);
+            window.TransferFeedback("本次未能完成，可重新拖动："+e.Message);
+            log.Write("warning","transfer.ingress_failed",new{posterId=id,e.Message});
+        }
         finally
         {
             state.Refresh();_fileTransferBusy=false;_fileTransferPoster=null;
