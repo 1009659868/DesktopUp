@@ -1,5 +1,9 @@
 # DesktopUp：agent 冷启动提示词
 
+## 当前验收与集成入口（2026-10-14）
+
+用户将 `impl/develop` 定义为基础能力闭环基线：新功能从它派生独立分支，实现/自动验证/集中人工通过再合回。本次 `impl/05-05-v2-card-icons` 源于 `eac727a`，单卡图标更换/重启保留/恢复默认三项人工已通过，用户要求合回并切到 develop，不推送远端。准确集成结果见[当前交接](../A_Project/40_Implementation/V3-04/HANDOFF.md)及 Git，[V2记录](../A_Project/40_Implementation/V3-05/CONTENT_ICON_ASSETS.md)保留范围与未验项。下一步 05-04-V3 构造卡片须另开功能分支，本轮不实施；以下“返回V3”仅描述上一轮同步。
+
 ## 最新分支入口（2026-10-14，开发集成线）
 
 本轮本机为 `G:\A_\Tools\DesktopUp_V2`，起始及返回分支 `impl/poster-redesign-V3`。用户授权同步当前成果和精简 `impl/main`，并从最终 V3 成果创建 `impl/develop`，供后续开发分支汇总，保留完整资料/测试。准确提交、发布验证和未验边界见[交接](../A_Project/40_Implementation/V3-04/HANDOFF.md)；流向为功能分支 → develop → 发布精简，不反向合入精简删除。近期新增原始图标资源提取、Shell 填充回退和可选桌面快捷方式；下一主线仍 05-05-V2。下方 D 盘/缓存清理是另一机器的历史，不能据此删除本机 out 或判断证据不存在。

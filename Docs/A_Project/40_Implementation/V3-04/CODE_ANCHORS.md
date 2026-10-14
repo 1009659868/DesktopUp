@@ -1,5 +1,9 @@
 # V3-04 代码锚点
 
+## 2026-10-14 所选卡片图标入口
+
+`src/DesktopUp.Application/ContentIconPreview.cs` 冻结预览身份；`src/DesktopUp.App/ControlCenterWindow.ContentIcons.cs` 复用原生选择器/资产命令/对话框生命周期，`UiCWorkspace.cs` 提供单卡菜单；`src/DesktopUp.Windows/NativeProfilePicker.cs` 新增 CardIcon 过滤。`tests/DesktopUp.Contracts.Tests/ContentIconPreviewTests.cs` 复核迟到结果、只读预览和恢复；既有 SettingsSmoke/IncomingProbe/PickerSmoke 扩展定点覆盖。人工入口 `scripts/start-card-icon-review.ps1`，状态归[V2记录](../V3-05/CONTENT_ICON_ASSETS.md)。
+
 ## 2026-10-14 开发集成与发布边界
 
 `Docs/Rules/GIT_STRATEGY.md`：功能分支 → `impl/develop` 完整集成 → `impl/main` 精简发布；根 README / 冷启动 / 当前入口同步职责。产品源 `f6a8199` 合入发布 `484fc02`，ContentWorker/安装器一致；发布 README 单独维护。验证及本地证据见[发布记录](PREVIEW_INSTALLER_DELIVERY.md#2026-10-14-开发集成线与发布同步)，不在发布线保留 Docs/tests。

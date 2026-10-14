@@ -138,7 +138,7 @@ public partial class App : Microsoft.UI.Xaml.Application
             () => ToggleDynamicEffectsPaused(StateCommandSource.ControlCenter),
             _stateCoordinator, _stateCommands, _inputRouter,
             target => _spatialRuntime?.GetEffectiveLayout(target), () => _spatialRuntime, _portableController,
-            _services.GetRequiredService<SqliteStateStore>(),_storageLocation);
+            _services.GetRequiredService<SqliteStateStore>(),_storageLocation, () => _realContentWorker);
         _tray = new TrayService(_ledger, _log);
         _tray.Create(QueueTrayAction);
         _log.Write("info", "application.started", new

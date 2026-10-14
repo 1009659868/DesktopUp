@@ -4,7 +4,7 @@ $ErrorActionPreference='Stop'
 . (Join-Path $PSScriptRoot 'Start-DesktopUpFixtureProcess.ps1')
 $taskRepo=Split-Path -Parent $PSScriptRoot
 $taskPackage=if ($PackageDirectory) { [IO.Path]::GetFullPath($PackageDirectory) } else { Join-Path $taskRepo 'out\verify\v3-04-06-picker-r3' }
-$taskAllowed=@('before-open','before-save','cancel-open','cancel-save','center-open','center-save','exit-open','exit-save','cancel-folder','center-folder','exit-folder','zero-folder')
+$taskAllowed=@('before-open','before-save','cancel-open','cancel-save','center-open','center-save','exit-open','exit-save','cancel-folder','center-folder','exit-folder','zero-folder','cancel-icon','center-icon','exit-icon')
 if (!$Cases.Count -or @($Cases | Where-Object { $_ -notin $taskAllowed }).Count) { throw 'Unknown native picker case.' }
 if (Get-Process DesktopUp -ErrorAction SilentlyContinue) { throw 'Exit DesktopUp normally first. No process was stopped.' }
 $taskExe=Join-Path $taskPackage 'app\DesktopUp.exe'

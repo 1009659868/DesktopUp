@@ -16,6 +16,7 @@ public sealed partial class ControlCenterWindow
     internal async Task CancelPortableAndWaitAsync()
     {
         _portableStopping = true;
+        _iconCancellation?.Cancel();
         _transferStopping.Cancel();
         _portableLog?.Write("info", "portable.cancel_requested", new { picker = _portablePicker is not null, busy = _portableBusy });
         _portableDialog?.Hide();
