@@ -21,8 +21,10 @@ internal sealed partial class PosterVisualWindow
     private double _contentScrollX;
     private ContentBrowseAnchor? _contentEndAnchor;
     private readonly Dictionary<string, FrameworkElement> _contentCards = new(StringComparer.Ordinal);
-    private string? _contentPaintKey;
-    private ContentLayoutDocument? _contentPaintDocument;
+    private sealed record CardPaint(ContentItemView View, ContentImageFit Fit, double Width, double Height,
+        int Columns, int Rows, int WantedColumns, int WantedRows, bool Fixed, ContentPinAdornment Pin, int? PinIndex,
+        bool Selected, bool Handle, bool Spans, bool Real, ResolvedPosterPresentation Presentation, ContentAssetKey? Asset);
+    private readonly Dictionary<string, CardPaint> _contentCardPaint = new(StringComparer.Ordinal);
 
     private ContentLayoutDocument ContentDocument
     {
@@ -147,7 +149,7 @@ internal sealed partial class PosterVisualWindow
             _itemsGrid.Children.Clear(); _itemsGrid.ColumnDefinitions.Clear(); _itemsGrid.RowDefinitions.Clear();
             _itemsGrid.ColumnSpacing = 0; _itemsGrid.RowSpacing = 0;
             _contentCanvas = new Canvas { IsHitTestVisible = false, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top };
-            _itemsGrid.Children.Add(_contentCanvas); _contentCards.Clear();
+            _itemsGrid.Children.Add(_contentCanvas); _contentCards.Clear(); _contentCardPaint.Clear();
         }
         _itemsGrid.Width = viewport.WidthDip;
         _itemsGrid.Height = viewport.HeightDip;
@@ -160,10 +162,10 @@ internal sealed partial class PosterVisualWindow
         if (_metaPanel?.Children.OfType<TextBlock>().LastOrDefault() is { } metaCount) metaCount.Text=$"{doc.Placements.Count:00} {itemKind}";
         // Lamp paint and host title ink never invalidate card identity or solver geometry.
         var cardPresentation = _presentation with { Parameters = _presentation.Parameters with { Lamp = null, TitleColors = null, ShowTitle = null } };
-        string paintKey = $"{doc.DocumentVersion}/{_contentSourceVersion}/{_mode}/{_selectedContentItem}/{cardPresentation}/{doc.ShowBaselineGrid}/{doc.ShowSpanLabels}";
-        if (_contentPaintKey != paintKey || !ReferenceEquals(_contentPaintDocument, doc))
-        { _contentCards.Clear(); _contentPaintKey = paintKey; _contentPaintDocument = doc; }
-        _contentCanvas.Children.Clear();
+        // Retain cards in their visual parent. Only ephemeral grid/gesture overlays are rebuilt.
+        var existingCards = _contentCards.Values.ToHashSet();
+        foreach (var child in _contentCanvas.Children.Where(child => child is not FrameworkElement element || !existingCards.Contains(element)).ToArray())
+            _contentCanvas.Children.Remove(child);
         double pitch = snapshot.CellDip + snapshot.GapDip;
         if (doc.ShowBaselineGrid)
         {
@@ -174,8 +176,13 @@ internal sealed partial class PosterVisualWindow
             { X1=0, X2=viewport.WidthDip, Y1=y, Y2=y, Stroke=Brush(30,180,200,218), StrokeThickness=.5, IsHitTestVisible=false });
         }
         var views = ReadContentViews();
-        SyncContentAssets(EffectiveContentDocument,snapshot,viewport,views);
+        var incoming = IncomingPaintPreview(viewport);
+        SyncContentAssets(EffectiveContentDocument,snapshot,viewport,views,incoming);
         var source = views.ToDictionary(p => p.ItemId, StringComparer.Ordinal);
+        // Keep the author/solver/native input basis untouched. Only painting uses incoming slots.
+        var originalTiles = incoming is null ? null : ContentLayoutFlow.ProjectTiles(snapshot, viewport, _contentBrowseMode)
+            .Select(TileKey).ToHashSet(StringComparer.Ordinal);
+        if (incoming is not null) { snapshot = incoming.Snapshot; doc = incoming.Document; }
         // Loop projection: a card straddling the seam is drawn on both sides, so the cache key carries
         // the loop index while the saved state (ItemId/SourceIndex) stays single-owned. At most one
         // cell of overscan is kept; no permanent XAML object exists per offscreen item.
@@ -184,15 +191,45 @@ internal sealed partial class PosterVisualWindow
         foreach (var tile in ContentLayoutFlow.ProjectTiles(snapshot, viewport, _contentBrowseMode))
         {
             if (tile.Bounds.Bottom < -pitch || tile.Bounds.Y > viewport.HeightDip + pitch) continue;
+            if (incoming?.Placeholders.Contains(tile.ItemId) == true)
+            {
+                // Target footprint, not a second drag image or a real/activatable card.
+                var footprint = new Border { Width = tile.Bounds.Width, Height = tile.Bounds.Height,
+                    BorderThickness = new Thickness(1.5), CornerRadius = new CornerRadius(5),
+                    BorderBrush = ColorBrush(_presentation.Parameters.Theme.Accent, 190),
+                    Background = ColorBrush(_presentation.Parameters.Theme.Accent, 28), IsHitTestVisible = false };
+                Canvas.SetLeft(footprint, tile.Bounds.X); Canvas.SetTop(footprint, tile.Bounds.Y);
+                Canvas.SetZIndex(footprint, 2); _contentCanvas.Children.Add(footprint);
+                continue;
+            }
             string key = TileKey(tile);
             retained.Add(key);
-            if (!_contentCards.TryGetValue(key, out var card) || card.Width != tile.Bounds.Width || card.Height != tile.Bounds.Height)
-                _contentCards[key] = card = CreateContentCard(source[tile.ItemId], doc.Placements[tile.SourceIndex], byId[tile.ItemId]);
+            var placement = doc.Placements[tile.SourceIndex]; var slot = byId[tile.ItemId];
+            bool selected = ContentCardPresentationPolicy.ShowOutline(SelectedContentIds(), tile.ItemId,
+                IsRealContent && _contentSelection.ShowHighlight, IsEditing);
+            var paint = new CardPaint(source[tile.ItemId], placement.ImageFit, tile.Bounds.Width, tile.Bounds.Height,
+                slot.ColumnSpan, slot.RowSpan, placement.ColumnSpan, placement.RowSpan, placement.FixedPosition,
+                ContentPinPresentationPolicy.Adornment(doc, placement), placement.PinnedIndex, selected,
+                selected && IsEditing && _selectedContentItem == tile.ItemId && !_geometry.IsLocked && !_contentReadOnly,
+                doc.ShowSpanLabels, IsRealContent, cardPresentation, _contentVisibleAssetKeys.GetValueOrDefault(tile.ItemId));
+            if (!_contentCards.TryGetValue(key, out var card) || !_contentCardPaint.TryGetValue(key, out var oldPaint) || oldPaint != paint)
+            {
+                if (card is not null) _contentCanvas.Children.Remove(card);
+                _contentCards[key] = card = CreateContentCard(source[tile.ItemId], placement, slot);
+                _contentCardPaint[key] = paint;
+                Canvas.SetZIndex(card, 1); _contentCanvas.Children.Add(card);
+            }
             // Tile bounds are already viewport-relative and carry the loop offset.
+            card.Opacity = 1;
             Canvas.SetLeft(card, tile.Bounds.X); Canvas.SetTop(card, tile.Bounds.Y);
-            _contentCanvas.Children.Add(card);
+            UpdateContentCardImage(tile.ItemId, card);
         }
-        foreach (string id in _contentCards.Keys.Where(id => !retained.Contains(id)).ToArray()) _contentCards.Remove(id);
+        foreach (string id in _contentCards.Keys.Where(id => !retained.Contains(id)).ToArray())
+        {
+            // A pushed-out original stays attached until hover ends; cancel cannot flash a fallback.
+            if (originalTiles?.Contains(id) == true) { _contentCards[id].Opacity = 0; continue; }
+            _contentCanvas.Children.Remove(_contentCards[id]); _contentCards.Remove(id); _contentCardPaint.Remove(id);
+        }
         if (!IsRealContent && _contentGesture is { IsDragging: true, CanEdit: true, Target: PosterInputTargetKind.ContentItem } gesture &&
             source.TryGetValue(gesture.Slot.ItemId, out var dragged))
         {
@@ -201,7 +238,7 @@ internal sealed partial class PosterVisualWindow
             var shadow = CreateContentCard(dragged, gesture.Document.Placements[gesture.Slot.SourceIndex], gesture.Slot);
             shadow.Opacity = .62;
             Canvas.SetLeft(shadow, gesture.GhostX); Canvas.SetTop(shadow, gesture.GhostY);
-            _contentCanvas.Children.Add(shadow);
+            Canvas.SetZIndex(shadow, 2); _contentCanvas.Children.Add(shadow);
         }
         RenderContentFeedback();
         DrawContentMarquee();
@@ -209,6 +246,24 @@ internal sealed partial class PosterVisualWindow
         // auto-scroll and the clamped extent; hiding a bar is never used to make content unreachable.
         if (_contentParseReadOnly || _contentProjectionFault)
             _contentCanvas.Children.Add(new TextBlock { Text=_contentProjectionFault ? "当前布局无法安全呈现 · 原配置保留" : "布局版本暂不支持 · 原配置只读保留", FontSize=12, TextWrapping=TextWrapping.Wrap, Width=viewport.WidthDip, Foreground=ColorBrush(_presentation.Parameters.Theme.Foreground,170) });
+    }
+
+    private void UpdateContentCardImage(string itemId, FrameworkElement? only = null)
+    {
+        if (!_contentVisibleAssetKeys.TryGetValue(itemId, out var key) || !_contentBitmaps.TryGetValue(key, out var bitmap)) return;
+        IEnumerable<FrameworkElement> cards = only is null ? _contentCards.Where(p => _contentCardPaint[p.Key].View.ItemId == itemId).Select(p => p.Value) : [only];
+        foreach (var cell in cards.OfType<Grid>())
+        {
+            if (cell.Children.OfType<Border>().FirstOrDefault()?.Child is not Grid host) continue;
+            if (host.Children.OfType<Image>().FirstOrDefault() is { } existing && ReferenceEquals(existing.Source, bitmap)) continue;
+            var placement = ContentDocument.Placements.FirstOrDefault(p => p.ItemId == itemId);
+            if (placement is null) continue;
+            var area = ContentCardPresentationPolicy.ImageArea(cell.Width, cell.Height, Math.Max(20, ContentParameters.LabelHeightDip + 7));
+            host.Children.Clear();
+            host.Children.Add(new Image { Source = bitmap, Stretch = placement.ImageFit == ContentImageFit.Cover ? Stretch.UniformToFill : Stretch.Uniform,
+                Width = area.Width, Height = area.Height, HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center, IsHitTestVisible = false });
+        }
     }
 
     private FrameworkElement CreateContentCard(ContentItemView item, ContentPlacement placement, ContentResolvedPlacement slot)
@@ -354,6 +409,6 @@ internal sealed partial class PosterVisualWindow
         CancelContentGesture("surface-release");
         ReleaseContentAssets();
         _contentEndAnchor=null;
-        _contentCanvas=null; _contentCards.Clear(); _contentSnapshot=null; _contentViewport=null; _solvedDocument=null;
+        _contentCanvas=null; _contentCards.Clear(); _contentCardPaint.Clear(); _contentSnapshot=null; _contentViewport=null; _solvedDocument=null;
     }
 }

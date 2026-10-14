@@ -32,7 +32,7 @@ public sealed class ContentIconRuntimeTests
         var runtime = new ReferenceContentRuntime(f.Current.ContentCatalog,f.Main,f.Current.ContentVersion,worker,store);
         ContentLayoutPolicy.TryRead(f.Current.PostersById[f.Main].Poster.ContentLayoutJson,f.Main,out var layout,out _);
         var view=runtime.Read(layout!).Single();
-        return (runtime,new(f.Main,view.ItemId,1,1,1,1,view.AssetKey!,128,128,96,96,1));
+        return (runtime,runtime.RasterKey(new(f.Main,view.ItemId,1,1,1,1,view.AssetKey!,128,128,96,96,1)));
     }
     [Fact] public async Task OverrideLoadsFromOwnedStoreAndRestoreUsesOriginalProviderAgain()
     {
@@ -55,10 +55,10 @@ public sealed class ContentIconRuntimeTests
         var worker=new Worker { Availability=ContentAvailability.Missing };
         var s=Source(f,worker,new SqliteContentIconStore(f.Store));
         ContentLayoutPolicy.TryRead(f.Current.PostersById[f.Main].Poster.ContentLayoutJson,f.Main,out var layout,out _);
-        Assert.Equal(Icon().Pixels,(await s.Runtime.LoadAsync(s.Key,CancellationToken.None))!.Bytes.ToArray());
+        Assert.Equal(Icon().Pixels,(await s.Runtime.LoadAsync(s.Runtime.RasterKey(s.Key),CancellationToken.None))!.Bytes.ToArray());
         Assert.False(s.Runtime.Read(layout!).Single().IsAvailable);
         worker.Availability=ContentAvailability.Available;s.Runtime.Refresh();
-        Assert.Equal(Icon().Pixels,(await s.Runtime.LoadAsync(s.Key,CancellationToken.None))!.Bytes.ToArray());
+        Assert.Equal(Icon().Pixels,(await s.Runtime.LoadAsync(s.Runtime.RasterKey(s.Key),CancellationToken.None))!.Bytes.ToArray());
         Assert.True(s.Runtime.Read(layout!).Single().IsAvailable);
         Assert.All(worker.Actions,a=>Assert.Equal(LocalContentAction.Inspect,a));
         Assert.Equal(Icon().Id,f.Current.ContentCatalog.PosterItems.Single().IconAssetId);

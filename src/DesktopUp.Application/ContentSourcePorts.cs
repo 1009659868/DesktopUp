@@ -2,6 +2,10 @@ using DesktopUp.Domain;
 
 namespace DesktopUp.Application;
 
+// Trusted host source whose Read returns one locked, coherent metadata snapshot. Its global
+// observation version may advance concurrently without invalidating unrelated Item identities.
+public interface IAtomicContentItemViewSource : IContentItemViewSource { }
+
 public interface IContentOpenHandler
 {
     // Trusted host adapter only. Neither SourceKey nor this intent is an executable instruction.
@@ -30,8 +34,9 @@ public static class ContentSourceProjection
         try
         {
             long version = source.Version;
-            supplied = version >= 1 && (!expectedVersion.HasValue || expectedVersion == version) ? source.Read(document) : [];
-            if (source.Version != version) supplied = [];
+            bool atomic = source is IAtomicContentItemViewSource;
+            supplied = version >= 1 && (atomic || !expectedVersion.HasValue || expectedVersion == version) ? source.Read(document) : [];
+            if (!atomic && source.Version != version) supplied = [];
         }
         catch (Exception) { supplied = []; }
         var accepted = new Dictionary<string, ContentItemView>(StringComparer.Ordinal);

@@ -1,5 +1,7 @@
 # DesktopUp V2 当前执行入口
 
+2026-10-14 当前：增量呈现与外部悬停让位两批人工分别通过，用户授权将 `impl/poster-render-optimization` 合入并切换 `impl/develop`；本轮不推送，Git结果见[当前交接](../A_Project/40_Implementation/V3-04/HANDOFF.md)。已验记录为 A DEC-049 → B[同一落点模型](../A_Project/20_Architecture/DROP_SURFACE_AND_STORAGE_PROPOSAL.md#4-落点与布局只用一套模型) → C[海报优化记录](../A_Project/40_Implementation/V3-05/POSTER_INCREMENTAL_RENDERING.md)。下一主线05-04-V3构造卡片：A DEC-037/047 → B卡片图标与来源分离 → C[主计划§6.4](../A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md#64-卡片独立图标与构造入口下一步)，须从集成后的develop另开分支，本轮不制作。首图偶发超时和其他未验项保持；下方为阶段历史。
+
 2026-10-14 当前：05-05-V2 更换卡片图标／恢复默认三项人工通过，用户授权将 `impl/05-05-v2-card-icons` 合入并切换至 `impl/develop`，本轮不推送、不更新发布线。A DEC-037（作用域）及 DEC-047（单一归属）→ B[卡片图标与来源分离](../A_Project/20_Architecture/GENERAL_CONTENT_MULTI_POSTER_CONTRACT_V1.md#31-卡片独立图标与来源分离补充)→ C[图标资产/V2记录](../A_Project/40_Implementation/V3-05/CONTENT_ICON_ASSETS.md)。下一制作项 05-04-V3 构造卡片，须由合入后的 develop 另开功能分支；本轮不实施，未验项不因合并关闭。
 
 2026-10-14 最新维护：同步原始图标提取与安装快捷方式选项，并新增完整开发集成线 `impl/develop`；精简 `impl/main` 不携带文档、测试。先核对实际工作区/Git，再读[当前交接](../A_Project/40_Implementation/V3-04/HANDOFF.md)和[分支策略](../Rules/GIT_STRATEGY.md)。本轮本机工作区为 `G:\A_\Tools\DesktopUp_V2`，新建 out 证据与下方另一机器清理记录分开；下一主线仍 05-05-V2，未验项不因同步关闭。

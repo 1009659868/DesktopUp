@@ -28,6 +28,7 @@ public partial class App
             bool combinedProbe = _startupIntent.Arguments.Contains("--d5-combined");
             bool entryProbe = _startupIntent.Arguments.Contains("--content-entry-probe");
             bool appearanceProbe = _startupIntent.Arguments.Contains("--appearance-cleanup-probe");
+            bool renderProbe = _startupIntent.Arguments.Contains("--incremental-render-probe");
             if (entryProbe || appearanceProbe) _controlCenter!.Show();
             if (appearanceProbe)
             {
@@ -65,6 +66,8 @@ public partial class App
                 var center=_controlCenter!.WindowForPortableProbe;
                 await _spatialRuntime.IncomingProbe([Make("first.txt")],frame:true);
                 if(repository.Read().ContentCatalog.PosterItems.Count!=1)throw new IOException("Frame ingress did not add one item.");
+                var renderWindow = renderProbe ? _spatialRuntime.BackdropWindowForProbe(repository.Read().Catalog.Posters.Single().Poster.PosterId) : null;
+                var renderBefore = renderWindow is not null ? await renderWindow.CaptureRenderIdentityForProbe() : null;
                 var storage=await Task.Run(()=>_storageLocation!.EnsureReady());
                 File.WriteAllText(Path.Combine(storage.Collection.StorageLocator!,"occupied.txt"),"other owner");
                 string one=Make("second.txt"),collision=Make("occupied.txt"),two=Make("third.txt");
@@ -72,6 +75,12 @@ public partial class App
                 if(repository.Read().ContentCatalog.PosterItems.Count!=3||File.Exists(one)||File.Exists(two)||!File.Exists(collision))
                     throw new IOException("Partial-batch ingress did not preserve failure and publish successes.");
                 if(File.ReadAllText(Path.Combine(storage.Collection.StorageLocator!,"occupied.txt"))!="other owner")throw new IOException("Collision overwritten.");
+                if (renderWindow is not null)
+                {
+                    await renderWindow.CaptureRenderIdentityForProbe();
+                    renderWindow.RequireRetainedRenderForProbe(renderBefore!, addedRequests: 2);
+                    _log!.Write("info", "contract.incremental_ingress_passed", new { oldCards = 1, addedRequests = 2, nativeMouse = false });
+                }
                 var external=Directory.CreateTempSubdirectory("DesktopUp-D3-App-");
                 string folder=Path.Combine(external.FullName,"folder");Directory.CreateDirectory(folder);
                 File.WriteAllText(Path.Combine(folder,"child.txt"),"owned cross-volume fixture");
@@ -84,6 +93,13 @@ public partial class App
                     var before=repository.Read();
                     var item=before.ContentCatalog.Items.Single(i=>Path.GetFileName(i.Target.Locator)=="first.txt");
                     var card=before.ContentCatalog.PosterItems.Single(p=>ContentRelationPolicy.Resolve(before.ContentCatalog,p.PosterId,p.LayoutItemId)!.Item.Id==item.Id);
+                    ContentRenderIdentity? unaffected = null;
+                    if (renderWindow is not null)
+                    {
+                        var all = await renderWindow.CaptureRenderIdentityForProbe();
+                        unaffected = all with { Cards = all.Cards.Where(p => p.Key != card.LayoutItemId).ToDictionary(p => p.Key, p => p.Value),
+                            Images = all.Images.Where(p => p.Key != card.LayoutItemId).ToDictionary(p => p.Key, p => p.Value) };
+                    }
                     async Task Until(Func<bool> check)
                     { var timeout=System.Diagnostics.Stopwatch.StartNew();while(!check()){if(timeout.Elapsed.TotalSeconds>20)throw new IOException("Managed sync UI did not converge.");await Task.Delay(100);} }
                     string renamed=Path.Combine(storage.Collection.StorageLocator!,"renamed.txt");File.Move(item.Target.Locator,renamed);
@@ -92,12 +108,24 @@ public partial class App
                     if(afterRename.ContentCatalog.PosterItems.Single(p=>p.Id==card.Id)!=card ||
                         afterRename.Catalog.Posters.Single().Poster.ContentLayoutJson!=before.Catalog.Posters.Single().Poster.ContentLayoutJson)
                         throw new IOException("Rename changed card identity/layout.");
+                    if (renderWindow is not null)
+                    {
+                        await renderWindow.CaptureRenderIdentityForProbe();
+                        renderWindow.RequireRetainedRenderForProbe(unaffected!, addedRequests: 1);
+                        unaffected = unaffected! with { Requests = unaffected.Requests + 1 };
+                    }
                     _spatialRuntime.SelectManagedItemForProbe(card.PosterId,card.LayoutItemId);
                     File.Move(renamed,Path.Combine(source,"externally-returned.txt"));
                     await Until(()=>_spatialRuntime.ManagedItemAbsentForProbe(card.PosterId,card.LayoutItemId) &&
                         _spatialRuntime.ReferenceNamesForProbe(card.PosterId,"second.txt","third.txt","folder"));
                     if(repository.Read().ContentCatalog.PosterItems.Count!=3 || !ReferenceEquals(center,_controlCenter.WindowForPortableProbe))
                         throw new IOException("External sync did not refresh without opening center.");
+                    if (renderWindow is not null)
+                    {
+                        await renderWindow.CaptureRenderIdentityForProbe();
+                        renderWindow.RequireRetainedRenderForProbe(unaffected!);
+                        _log!.Write("info", "contract.incremental_removal_passed", new { retained = 3, sourceRepairRequests = 1, removeRequests = 0 });
+                    }
                 }
                 // The unique empty temp parent remains as a trace; no user files or broad deletion.
                 if(combinedProbe)
@@ -126,6 +154,8 @@ public partial class App
                     _startupIntent.Arguments.Contains("--incoming-restart"), evidence);
                 _log.Write("info", "contract.card_icon_passed", new { restart = _startupIntent.Arguments.Contains("--incoming-restart"), nativeMouse = false });
             }
+            if (renderProbe)
+                await _spatialRuntime.BackdropWindowForProbe(repository.Read().Catalog.Posters.Single().Poster.PosterId).VerifyIncrementalRenderForProbe();
             _log!.Write("info","contract.incoming_passed",new{restart=_startupIntent.Arguments.Contains("--incoming-restart"),items=combinedProbe?1:syncProbe?3:4,managedSync=syncProbe,combinedProbe,nativeMouse=false});
         }
         catch(Exception e){Environment.ExitCode=1;_log?.Write("error","contract.incoming_failed",new{e.Message,e.StackTrace});}

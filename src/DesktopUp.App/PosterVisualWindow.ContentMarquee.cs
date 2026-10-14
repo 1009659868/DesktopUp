@@ -53,7 +53,7 @@ internal sealed partial class PosterVisualWindow
             _contentSelection = gesture.Control || gesture.Shift ? gesture.Before : ContentSelection.Empty;
         if (args.EventKind is PosterInputEventKind.GestureCompleted or PosterInputEventKind.Invoked)
         { _contentMarquee=null;gesture.Lease.Dispose();QueueContentProposalDrain(); }
-        _selectedContentItem=_contentSelection.Focus;_contentPaintKey=null;
+        _selectedContentItem=_contentSelection.Focus;
         RefreshContentSurface();spatial.NotifyContentEditorChanged(PosterId);
         return true;
     }
@@ -62,7 +62,7 @@ internal sealed partial class PosterVisualWindow
         if (_contentMarquee is not { } gesture) return;
         _contentMarquee=null;gesture.Lease.Dispose();
         _contentSelection=gesture.Before.Prune(ContentSelectionOrder());
-        _selectedContentItem=_contentSelection.Focus;_contentPaintKey=null;
+        _selectedContentItem=_contentSelection.Focus;
         _inputIsland?.CancelPointerGesture();
         RefreshContentSurface();QueueContentProposalDrain();spatial.NotifyContentEditorChanged(PosterId);
     }
@@ -72,6 +72,6 @@ internal sealed partial class PosterVisualWindow
         var r=gesture.Rectangle;
         var box=new Border {Width=r.Width,Height=r.Height,BorderThickness=new(1),
             BorderBrush=Brush(230,100,190,245),Background=Brush(40,100,190,245),IsHitTestVisible=false};
-        Canvas.SetLeft(box,r.X);Canvas.SetTop(box,r.Y);_contentCanvas.Children.Add(box);
+        Canvas.SetLeft(box,r.X);Canvas.SetTop(box,r.Y);Canvas.SetZIndex(box,3);_contentCanvas.Children.Add(box);
     }
 }

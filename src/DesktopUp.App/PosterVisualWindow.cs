@@ -83,6 +83,7 @@ internal sealed partial class PosterVisualWindow(
     public void SuspendInput()
     {
         _contentPresentationSuspended = true;
+        _incomingPreview = null; _incomingLayout = null; _incomingBasis = null;
         ReleaseContentAssets();
         UpdateScene();
         CancelContentGesture("input-suspended");

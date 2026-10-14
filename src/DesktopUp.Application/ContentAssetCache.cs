@@ -19,6 +19,14 @@ public interface IContentAssetProvider
     ValueTask<ContentAssetPayload?> LoadAsync(ContentAssetKey key, CancellationToken cancellationToken);
 }
 
+// Opt-in for normalized rasters whose pixels do not depend on layout, theme or requested size.
+// The provider owns source/member generations; the host still owns visibility and session admission.
+public interface IContentRasterIdentity
+{
+    ContentAssetKey RasterKey(ContentAssetKey demand);
+    bool IsCurrentRaster(ContentAssetKey key);
+}
+
 // The L-stage production provider deliberately has no filesystem, Shell, decoder or network effects.
 public sealed class NullContentAssetProvider : IContentAssetProvider
 {
