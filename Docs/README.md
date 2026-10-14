@@ -1,5 +1,7 @@
 # DesktopUp V2 文档入口
 
+2026-10-14 最新：单卡图标更换/重启保留/恢复默认三项人工通过，用户授权将 `impl/05-05-v2-card-icons` 合入并切换 `impl/develop`，本轮不推送或更新发布线。`impl/develop` 是基础能力闭环基线；后续新功能从它派生功能分支，集中验收通过后再合回。见[当前交接](A_Project/40_Implementation/V3-04/HANDOFF.md)和[V2实施](A_Project/40_Implementation/V3-05/CONTENT_ICON_ASSETS.md)。下一制作项 05-04-V3 构造卡片，本轮不实施、不沿旧 V3 分支开发。
+
 2026-10-14 当前分支约定：V3 功能开发 → `impl/develop` 完整开发集成 → `impl/main` 精简发布源码。此次同步图标提取与安装快捷方式修订，发布验证/最终提交见[当前交接](A_Project/40_Implementation/V3-04/HANDOFF.md)，职责见[Git策略](Rules/GIT_STRATEGY.md)。下方双分支流程为建立集成线之前的历史；下一主线仍 05-05-V2。
 
 2026-10-13发布同步：开发资料/测试继续保留在本分支；精简`impl/main`已完成独立构建及20261013.2自选路径安装、全新启动、登记卸载验证。公共打包修复两线一致，证据与未验边界见[发布同步记录](A_Project/40_Implementation/V3-04/PREVIEW_INSTALLER_DELIVERY.md#2026-10-13-发布同步)。本轮有Git同步授权，下方“无Git同步”为历史；下一主线仍05-05-V2。

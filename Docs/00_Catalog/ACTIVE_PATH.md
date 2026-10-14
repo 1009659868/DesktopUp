@@ -1,5 +1,7 @@
 # DesktopUp V2 当前执行入口
 
+2026-10-14 当前：05-05-V2 更换卡片图标／恢复默认三项人工通过，用户授权将 `impl/05-05-v2-card-icons` 合入并切换至 `impl/develop`，本轮不推送、不更新发布线。A DEC-037（作用域）及 DEC-047（单一归属）→ B[卡片图标与来源分离](../A_Project/20_Architecture/GENERAL_CONTENT_MULTI_POSTER_CONTRACT_V1.md#31-卡片独立图标与来源分离补充)→ C[图标资产/V2记录](../A_Project/40_Implementation/V3-05/CONTENT_ICON_ASSETS.md)。下一制作项 05-04-V3 构造卡片，须由合入后的 develop 另开功能分支；本轮不实施，未验项不因合并关闭。
+
 2026-10-14 最新维护：同步原始图标提取与安装快捷方式选项，并新增完整开发集成线 `impl/develop`；精简 `impl/main` 不携带文档、测试。先核对实际工作区/Git，再读[当前交接](../A_Project/40_Implementation/V3-04/HANDOFF.md)和[分支策略](../Rules/GIT_STRATEGY.md)。本轮本机工作区为 `G:\A_\Tools\DesktopUp_V2`，新建 out 证据与下方另一机器清理记录分开；下一主线仍 05-05-V2，未验项不因同步关闭。
 
 2026-10-14最新维护：工具链/中文编码、零海报启动规则、整洁安装布局及非空目标支持已完成，用户授权双分支同步；详见[最新交接](../A_Project/40_Implementation/V3-04/HANDOFF.md)与[交付记录](../A_Project/40_Implementation/V3-04/PREVIEW_INSTALLER_DELIVERY.md#2026-10-14-便携工具链与安装体验同步)。构建历史与本地缓存已按用户要求清除，旧out证据不再可访问。当前从源码重新准备工具链；不自动推进主线，下一步仍05-05-V2。下方日期记录仅适用于其对应版本。

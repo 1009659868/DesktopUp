@@ -89,12 +89,18 @@ public sealed partial class ControlCenterWindow
             throw new InvalidOperationException("Retired selection/removal actions still appear in the menu.");
         if (!ContentManageButton.IsEnabled || !Repair().IsEnabled)
             throw new InvalidOperationException("A single real item has no repair entry.");
+        MenuFlyoutItem IconEntry(string text) => ((MenuFlyout)ContentKeyboardPad.ContextFlyout).Items
+            .OfType<MenuFlyoutItem>().Single(x => x.Text == text);
+        if (!IconEntry("更换卡片图标…").IsEnabled || IconEntry("恢复默认图标").IsEnabled != (CaptureIconPreview()?.HasCustomIcon == true))
+            throw new InvalidOperationException("Default single card icon menu is invalid.");
         if (view.Document.Placements.Count > 1)
         {
             ContentAction((runtime, id) => runtime.SelectAllRealContent(id));
             await Task.Delay(80);
             RenderContentLayout();
             if (Repair().IsEnabled) throw new InvalidOperationException("Batch selection offered a single-item repair.");
+            if (IconEntry("更换卡片图标…").IsEnabled || IconEntry("恢复默认图标").IsEnabled)
+                throw new InvalidOperationException("Batch selection offered a single-card icon mutation.");
             ContentAction((runtime, id) => runtime.SelectContentEditor(id, item));
             await Task.Delay(80);
             RenderContentLayout();
@@ -143,5 +149,52 @@ public sealed partial class ControlCenterWindow
         }
         RenderContentLayout();
         await CaptureSettingsForProbeAsync(Path.Combine(evidenceRoot, "content-entry.png"));
+    }
+
+    // Uses a bounded decoded raster as picker/worker output; drives the real confirmation buttons,
+    // commit handler, restore handler and display. Native selection itself remains a manual check.
+    internal async Task VerifyCardIconForProbe(bool restart, string evidenceRoot)
+    {
+        var asset = DesktopUp.Domain.ContentIconAsset.Create(32, 16,
+            Enumerable.Range(0, 32 * 16).SelectMany(_ => new byte[] { 80, 30, 10, 160 }).ToArray());
+        var preview = CaptureIconPreview() ?? throw new IOException("No single real icon target.");
+        var before = _readCommitted!.Invoke()!;
+        var card = before.ContentCatalog.PosterItems.Single(p => p.LayoutItemId == preview.LayoutItemId);
+        if (card.IconAssetId != (restart ? asset.Id : null)) throw new IOException("Custom icon restart state differs.");
+        async Task Until(Func<bool> condition)
+        {
+            var deadline = DateTime.UtcNow.AddSeconds(8);
+            while (!condition()) { if (DateTime.UtcNow > deadline) throw new IOException("Icon UI timeout."); await Task.Delay(50); }
+        }
+        if (restart)
+        {
+            await Until(() => _contentRuntime!.Invoke()!.CustomIconForProbe(preview.PosterId, asset));
+            await EditCardIcon(true);
+            await Until(() => _readCommitted.Invoke()!.ContentCatalog.PosterItems.Single(p => p.Id == card.Id).IconAssetId is null);
+        }
+        else
+        {
+            foreach (bool confirm in new[] { false, true })
+            {
+                var operation = PortableAction(() => ConfirmCardIcon(preview, asset, CancellationToken.None));
+                await Until(() => _portableDialog is { IsLoaded: true } && RecipeVisuals<Button>(_portableDialog).Any(b => b.Content?.ToString() == "使用此图标"));
+                var dialog = _portableDialog!;
+                if (dialog.Title?.ToString() != "预览卡片图标" ||
+                    !RecipeVisuals<TextBox>(dialog).Any(x => x.IsReadOnly && x.Text == preview.SourcePath))
+                    throw new IOException("Icon preview does not show the read-only real source.");
+                await CaptureSettingsForProbeAsync(Path.Combine(evidenceRoot, confirm ? "icon-preview-confirm.png" : "icon-preview-cancel.png"));
+                InvokeRecipeButton(RecipeVisuals<Button>(dialog).Single(b => b.Content?.ToString() == (confirm ? "使用此图标" : "取消")));
+                await operation.WaitAsync(TimeSpan.FromSeconds(8));
+                var state = _readCommitted.Invoke()!;
+                if (state.ContentCatalog.PosterItems.Single(p => p.Id == card.Id).IconAssetId != (confirm ? asset.Id : null) ||
+                    state.Revision != before.Revision + (confirm ? 1 : 0)) throw new IOException("Icon confirm/cancel failed.");
+            }
+            await Until(() => _contentRuntime!.Invoke()!.CustomIconForProbe(preview.PosterId, asset));
+        }
+        var after = _readCommitted.Invoke()!;
+        if (!before.ContentCatalog.Items.SequenceEqual(after.ContentCatalog.Items) ||
+            before.PostersById[preview.PosterId].Poster != after.PostersById[preview.PosterId].Poster)
+            throw new IOException("Icon action changed source/layout/template.");
+        RenderContentLayout();
     }
 }

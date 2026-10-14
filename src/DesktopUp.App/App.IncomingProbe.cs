@@ -122,6 +122,9 @@ public partial class App
                 await _controlCenter!.WindowForPortableProbe!.VerifyContentEntryForProbe(false, evidence);
                 if (repository.Read().Revision != before.Revision) throw new IOException("Cancelling repair changed committed state.");
                 _log!.Write("info", "contract.content_entry_passed", new { emptyChecked = !_startupIntent.Arguments.Contains("--incoming-restart"), nativeMouse = false });
+                await _controlCenter.WindowForPortableProbe.VerifyCardIconForProbe(
+                    _startupIntent.Arguments.Contains("--incoming-restart"), evidence);
+                _log.Write("info", "contract.card_icon_passed", new { restart = _startupIntent.Arguments.Contains("--incoming-restart"), nativeMouse = false });
             }
             _log!.Write("info","contract.incoming_passed",new{restart=_startupIntent.Arguments.Contains("--incoming-restart"),items=combinedProbe?1:syncProbe?3:4,managedSync=syncProbe,combinedProbe,nativeMouse=false});
         }
