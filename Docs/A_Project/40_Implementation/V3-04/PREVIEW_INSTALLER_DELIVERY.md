@@ -1,5 +1,20 @@
 # Windows 11 x64 独立预览安装包
 
+## 2026-10-14 开发集成线与发布同步
+
+本轮按用户授权保存开发产品修订 `f6a8199`，合入精简发布线 `484fc02`，再从含交接的最终 V3 提交派生 `impl/develop`。集成线完整保留开发文档/测试，发布线继续只有产品、模块、配置、构建/启动/打包和许可证。发布合并的修改/删除冲突均为已退役资料/测试及 README，逐项处理；ContentWorker 与安装器产品代码和开发源一致，没有将发布精简反向带入开发线。最终推送结果以现场三条远端 refs 为准。
+
+验证只覆盖本次增量及发布边界，未机械重复拖放矩阵：
+
+- 沿用当前产品源的 3320/3320 合同、实际 iFt 像素取证和安装器五组隔离回归；本轮不把这些写成新增人工 PASS。
+- 精简线 `scripts/build.ps1 -Configuration Release -OutputDirectory out/git-sync-20261014/release-app`：0 警告/错误；没有 Docs/tests 工程依赖，354 个发布跟踪文件。
+- `scripts/package-preview.ps1 -ReleaseId 20261014.2 -OutputRoot out/git-sync-20261014/preview-20261014.2`：自包含重建/发布、启动器和安装器 `/WX` 编译、源指纹不变检查通过。载荷 814 项（813 项清单哈希，清单自身除外），无测试载荷/用户数据/PDB；实际产品源码与最终发布提交一致。
+- 完整安装包在独立中文含空格目录静默安装；813 项安装后哈希、桌面入口指向根启动器、Windows 卸载注册及 `Uninstall.exe` 验证通过。卸载正常清除程序、登记和本次快捷方式，保留未知文件 `user-kept.txt`。脚本与结果在 `out/git-sync-20261014/verify-install.ps1`、`install-result.json`；本次测试安装已卸载，可重新从保留的安装包恢复，不涉及现有用户配置或收纳文件。
+
+成品：`out/git-sync-20261014/preview-20261014.2/DesktopUp-Preview-20261014.2-win-x64-Setup.exe`，67,256,663 字节，SHA256 `1F667FE985A704809BB89BB6FBFADB3CC1F8D8064058E9E7944307F2DDEFE931`。源/产物指纹和日志在同目录 `evidence/`。遵循先验证再合并提交的流程，包内 `SourceCommit` 为合并前 HEAD `fde1860` 且 `IncludesUncommittedChanges=true`；确切已验证产品源以 `source-manifest.json` 与发布提交 `484fc02` 对照，不能把旧 HEAD 误认为全部源版本。
+
+边界：本轮未启动安装后的 App，未人工点击向导往返/Windows 设置页面，iFt 肉眼复验仍待用户反馈；跨机/普通权限/多 DPI/满盘/长时不新增结论。`package.json` 的整体 `Verified=false` 保持，不能因编译和定向安装成功就宣称全部验收完成。安装产物/证据不入 Git；下一主线仍 05-05-V2。
+
 ## 2026-10-14 可选桌面快捷方式
 
 用户要求安装过程中可选择是否添加桌面快捷方式。本轮修改`packaging/preview/installer.nsi`及随包/打包说明，保留已有未提交图标修复；不改应用、安装位置、数据目录、开始菜单和开机启动规则，不进行Git同步。
