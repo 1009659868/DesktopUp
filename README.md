@@ -1,6 +1,8 @@
 # DesktopUp V2 — Poster Redesign V3
 
-当前工作分支：`impl/poster-redesign-V3`（接手时重新核对Git）
+开发分支：`impl/poster-redesign-V3`；开发集成线：`impl/develop`；精简发布源码线：`impl/main`（接手时重新核对 Git）。功能分支后续汇入 `impl/develop`，完成里程碑后再同步 `impl/main`；前两者保留完整开发资料与测试，发布精简不得反向合入开发线。
+
+2026-10-14 增量：图标优先提取原始资源中的最大有效帧，保守回退 Shell 填充画布，不裁正常留白；安装目录页之后提供“创建桌面快捷方式”选项，默认勾选、可取消。图标肉眼复验及安装向导人工往返仍独立记录，不以 Git 同步替代验收。
 
 当前（2026-10-13）：全区域原生拖入、同/跨卷收纳、空白框选、外部移出同步、单一归属与原生 Shell 拖出已接线，D4-N 四组人工通过；05-14入口及六项界面减法已实现。普通点击穿透已按用户决定撤销，不再作为功能承诺。当前发布同步及验证见[交接](Docs/A_Project/40_Implementation/V3-04/HANDOFF.md)。`impl/main`仅保留发布源码；完整开发资料/测试留在本分支，不反向合入发布精简删除，规则见[Git策略](Docs/Rules/GIT_STRATEGY.md)。
 

@@ -94,7 +94,7 @@ public sealed class ContentIconDecodeTests
         await worker.StopAsync();Assert.True(File.Exists(item.Target.Locator));
     }
     // Owned test fixtures: minimal static RGBA PNG and grayscale baseline JPEG; no external assets.
-    private static byte[] Png(int w,int h,byte blue=80)
+    internal static byte[] Png(int w,int h,byte blue=80)
     {
         using var result=new MemoryStream();result.Write(new byte[]{137,80,78,71,13,10,26,10});
         byte[] header=new byte[13];BinaryPrimitives.WriteInt32BigEndian(header,w);BinaryPrimitives.WriteInt32BigEndian(header.AsSpan(4),h);

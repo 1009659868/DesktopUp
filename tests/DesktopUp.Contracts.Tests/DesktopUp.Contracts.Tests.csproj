@@ -27,6 +27,7 @@
     <Compile Include="../../scripts/MeasurementMath.cs" Link="MeasurementMath.cs" />
     <Compile Include="../../scripts/M08MeasurementRules.cs" Link="M08MeasurementRules.cs" />
     <Compile Include="../../src/DesktopUp.App/PresentationReadbackEquality.cs" Link="PresentationReadbackEquality.cs" />
+    <Compile Include="../../src/DesktopUp.ContentWorker/ShellIconQuality.cs" Link="ShellIconQuality.cs" />
     <None Include="../../scripts/fixtures/portable-p4-pending.desktopup.json" Link="Fixtures/portable-p4-pending.desktopup.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="../../packaging/preview/package-settings.json" Link="Fixtures/preview-package-settings.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>

@@ -4,6 +4,7 @@ Unicode true
 !include "WinVer.nsh"
 !include "LogicLib.nsh"
 !include "FileFunc.nsh"
+!include "nsDialogs.nsh"
 
 !ifndef RELEASE_ID
   !error "Build using scripts/package-preview.ps1"
@@ -27,11 +28,16 @@ Var GuardError
 Var GuardCursor
 Var GuardParent
 Var GuardAttributes
+Var DesktopShortcutEnabled
+Var DesktopShortcutCheckbox
+Var InstallOptionsDialog
+Var DesktopShortcutTarget
 
 !define MUI_WELCOMEPAGE_TEXT "Windows 11 x64 独立预览版。$\r$\n$\r$\n自带运行库，使用独立配置，不读取或迁移日常版配置，不设置开机启动。首次为空白工作区，无演示卡片；拖入收纳会移动真实文件，请先用无价值文件体验。$\r$\n$\r$\n下一步可自选安装目录。卸载保留配置和已收纳文件。"
 !insertmacro MUI_PAGE_WELCOME
 !define MUI_DIRECTORYPAGE_TEXT_TOP "选择当前用户可写的本地目录，可以已有其他文件；已有内容会保留。若存在同名的程序文件或 app、licenses 目录，请改选目录。配置和收纳内容独立于安装目录，收纳位置可在控制中心修改。"
 !insertmacro MUI_PAGE_DIRECTORY
+Page custom InstallOptionsCreate InstallOptionsLeave
 !insertmacro MUI_PAGE_INSTFILES
 !define MUI_FINISHPAGE_RUN "$INSTDIR\DesktopUp.exe"
 !define MUI_FINISHPAGE_RUN_NOTCHECKED
@@ -40,6 +46,85 @@ Var GuardAttributes
 !insertmacro MUI_UNPAGE_CONFIRM
 !insertmacro MUI_UNPAGE_INSTFILES
 !insertmacro MUI_LANGUAGE "SimpChinese"
+
+Function InstallOptionsCreate
+  !insertmacro MUI_HEADER_TEXT "附加选项" "选择是否在当前用户桌面创建启动入口。"
+  nsDialogs::Create 1018
+  Pop $InstallOptionsDialog
+  ${If} $InstallOptionsDialog == error
+    Abort
+  ${EndIf}
+  ${NSD_CreateCheckbox} 0 8u 100% 14u "创建桌面快捷方式"
+  Pop $DesktopShortcutCheckbox
+  ${NSD_SetState} $DesktopShortcutCheckbox $DesktopShortcutEnabled
+  ${NSD_OnClick} $DesktopShortcutCheckbox InstallOptionsChanged
+  ${NSD_CreateLabel} 0 30u 100% 32u "取消勾选后，仍可从开始菜单启动。不会设置开机启动，也不会覆盖已有同名桌面文件。"
+  Pop $0
+  nsDialogs::Show
+FunctionEnd
+
+Function InstallOptionsChanged
+  Pop $0
+  ; Update on click as well as Next, so Back / Next preserves the user's choice.
+  ${NSD_GetState} $DesktopShortcutCheckbox $DesktopShortcutEnabled
+FunctionEnd
+
+Function InstallOptionsLeave
+  ${NSD_GetState} $DesktopShortcutCheckbox $DesktopShortcutEnabled
+FunctionEnd
+
+Function CreateOptionalDesktopShortcut
+  ${If} $DesktopShortcutEnabled != ${BST_CHECKED}
+    Return
+  ${EndIf}
+  InitPluginsDir
+  ClearErrors
+  CreateShortCut "$PLUGINSDIR\desktop-entry.lnk" "$INSTDIR\DesktopUp.exe"
+  IfErrors shortcut_skipped
+  ; CopyFile's fail-if-exists flag is atomic with respect to name collisions.
+  ; A pre-existing shortcut/file is never overwritten or claimed by this install.
+  System::Call 'kernel32::CopyFileW(w "$PLUGINSDIR\desktop-entry.lnk", w "$DESKTOP\${PRODUCT}.lnk", i 1) i.r0'
+  ${If} $0 == 0
+    Goto shortcut_skipped
+  ${EndIf}
+  WriteINIStr "$INSTDIR\app\preview-install.ini" "Install" "DesktopShortcutCreated" "1"
+  Return
+  shortcut_skipped:
+    DetailPrint "未创建桌面快捷方式（同名文件已存在或桌面不可写）；仍可从开始菜单启动。"
+    ClearErrors
+FunctionEnd
+
+Function un.RemoveOwnedDesktopShortcut
+  ReadINIStr $0 "$INSTDIR\app\preview-install.ini" "Install" "DesktopShortcutCreated"
+  ${If} $0 != "1"
+    Return
+  ${EndIf}
+  ; Only remove a link that we created and that still points to this installation.
+  ; Read stored metadata, never Resolve (which may repair a link or search targets).
+  StrCpy $DesktopShortcutTarget ""
+  System::Call 'ole32::CoInitialize(p 0) i.r4'
+  System::Call 'ole32::CoCreateInstance(g "{00021401-0000-0000-C000-000000000046}", p 0, i 1, g "{0000010b-0000-0000-C000-000000000046}", *p.r0) i.r1'
+  ${If} $1 == 0
+    System::Call '$0->5(w "$DESKTOP\${PRODUCT}.lnk", i 0) i.r1'
+    ${If} $1 == 0
+      System::Call '$0->0(g "{000214F9-0000-0000-C000-000000000046}", *p.r2) i.r1'
+      ${If} $1 == 0
+        System::Call '$2->3(w .r3, i ${NSIS_MAX_STRLEN}, p 0, i 4) i.r1'
+        ${If} $1 == 0
+          StrCpy $DesktopShortcutTarget $3
+        ${EndIf}
+        System::Call '$2->2()'
+      ${EndIf}
+    ${EndIf}
+    System::Call '$0->2()'
+  ${EndIf}
+  ${If} $4 >= 0
+    System::Call 'ole32::CoUninitialize()'
+  ${EndIf}
+  ${If} $DesktopShortcutTarget == "$INSTDIR\DesktopUp.exe"
+    Delete "$DESKTOP\${PRODUCT}.lnk"
+  ${EndIf}
+FunctionEnd
 
 ; Check every ancestor, including an existing destination; never follow a junction.
 !macro ReparseGuard Prefix
@@ -146,6 +231,20 @@ FunctionEnd
 Function .onInit
   SetShellVarContext current
   SetRegView 64
+  StrCpy $DesktopShortcutEnabled ${BST_CHECKED}
+  ${GetParameters} $0
+  ClearErrors
+  ${GetOptions} $0 "/DESKTOPSHORTCUT=" $1
+  ${IfNot} ${Errors}
+    ${If} $1 != "0"
+    ${AndIf} $1 != "1"
+      MessageBox MB_OK|MB_ICONSTOP "DESKTOPSHORTCUT 仅接受 0（不创建）或 1（创建）。" /SD IDOK
+      SetErrorLevel 17
+      Quit
+    ${EndIf}
+    StrCpy $DesktopShortcutEnabled $1
+  ${EndIf}
+  ClearErrors
   ${IfNot} ${IsNativeAMD64}
     MessageBox MB_OK|MB_ICONSTOP "此预览包仅支持 AMD64 / x64 电脑。" /SD IDOK
     SetErrorLevel 10
@@ -201,6 +300,8 @@ Section "DesktopUp Preview"
   WriteRegDWORD HKCU "${UNINSTALL_KEY}" "NoModify" 1
   WriteRegDWORD HKCU "${UNINSTALL_KEY}" "NoRepair" 1
   WriteRegDWORD HKCU "${UNINSTALL_KEY}" "EstimatedSize" ${PAYLOAD_KB}
+  IfErrors installation_failed
+  Call CreateOptionalDesktopShortcut
   IfErrors installation_failed
   Goto installation_done
   installation_failed:
@@ -262,6 +363,7 @@ FunctionEnd
 Section "Uninstall"
   ClearErrors
   !include "${UNINSTALL_FILES}"
+  Call un.RemoveOwnedDesktopShortcut
   ; Empty-directory removals may fail for unknown user files: leave these untouched.
   ClearErrors
   Delete "$INSTDIR\app\preview-install.ini"

@@ -212,3 +212,23 @@ pwsh -File ./scripts/start-content-usage-review.ps1 -EvidenceRoot G:/A_/Tools/De
 ## 12. 独立图标资产接续（2026-10-10）
 
 05-05-V1底层已完成并通过自动门，记录见[独立图标资产与安全迁移](CONTENT_ICON_ASSETS.md)。SQLite15、单卡引用与同库像素、隔离静态图片解码、原缓存和生产显示已接，2654合同及真实应用添加/重启通过。按已确认DEC-039，下一步先[工作流§6.5剪切式拖放核心](../../30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md#65-桌面与海报的剪切式拖放主路径)合同/恢复与双向稳定验收；V2上传/预览/恢复默认控件和V3构造在该出口后继续，尚未实现。本页旧“资产未实现/SQLite14/下一步V2”等仅限原日期范围，介绍文字人工待验和其他携带项不变。无Git操作，不覆盖旧包/库或失败记录。
+
+## 13. Shell填充画布修复（2026-10-14）
+
+用户截图中异常项为`iFt.lnk`。本轮实际工作区`G:\A_\Tools\DesktopUp_V2`，开发线`impl/poster-redesign-V3`、起点`daa11cc`；只修提取层，不改卡片布局、默认图标覆盖、拖放、来源路径或数据库。未提交/推送，不同步发布线；主线下一步仍05-05-V2。
+
+### 根因与实现
+
+- 真实只读对照：旧worker输出256×256，alpha>128的主体仅48×48、位于(104,104)；低透明度边缘覆盖整个画布，所以只检查非零alpha或返回尺寸不足以识别。目标程序资源中的最大帧实际为完整128×128，显示层`Stretch.Uniform`只是正常缩放整张画布。
+- `ContentWorker/OriginalIconResource.cs`优先读取ICO或程序所选图标组中最大的有效帧（现有256上限）。快捷方式只读保存的IconLocation与索引；未显式指定时才取目标程序资源；支持正序号和负资源ID，不Resolve/Save、不执行目标。DLL/ICL资源仅接受快捷方式显式指定，普通文件仍由Shell决定关联图标。
+- PE使用`LOAD_LIBRARY_AS_DATAFILE | LOAD_LIBRARY_AS_IMAGE_RESOURCE`，不运行入口或依赖。复用本地非重解析路径检查，目录帧数/字节数与编码实际尺寸有界；DIB和PNG帧按原生尺寸栅格化，损坏大帧尝试其他有效帧。HICON/映射/GDI/COM句柄均在finally释放。全部解码仍在既有有界一次性worker中。
+- 原资源不可得时保留`IShellItemImageFactory`。`ShellIconQuality`仅在大画布主体可疑、另一次48/32请求得到近似同尺寸且颜色/alpha一致的主体时选择较小的**完整图像**；不确定、纯半透明或正常随画布缩放的留白均保留原结果。这是保守启发式，不承诺识别所有第三方Shell图标。最终HICON回退按实际尺寸读出，不再先放大到64。
+- 不裁边、不放大伪造提取分辨率、不修改原文件。原资源自身只有低分辨率时仍会受其限制；高DPI和大卡片不承诺无损锐化。已有自定义图标资产不经过此默认图标选择，不受影响。
+
+### 验证与候选
+
+- 开发定向42项通过：`out/icon-resource-fix/targeted/targeted.trx`。新增覆盖原生128、人工留白、多尺寸PE资源、快捷方式自定义图标与索引、坏大帧回退、同主体填充判定；最终另覆盖PNG压缩帧和半透明色彩。沿用真实Shell、多尺寸256细节及独立图标解码/运行时回归。
+- 最终完整合同**3320/3320通过，0失败/跳过**：`out/icon-resource-fix/final/contracts.trx`。Release x64 App构建0警告/错误。
+- 同一真实快捷方式经候选worker返回128×128，alpha>128主体也为128×128；源快捷方式SHA256前后相同。新旧证据为`sample-before.json`、`sample-after.json`及最终`sample-candidate.json`，均在`out/icon-resource-fix`；未运行iFt目标或移动文件。首次只读测量误用了根目录不存在的worker DLL，改为实际`content-worker/`后取得上述数据，不算产品失败。
+- 独立候选`out/icon-resource-fix/candidate/app`；worker SHA256 `A7B349E11C4B6F92882ACE15D5141B55D2B6895F8C0E456A8C730464B6D84789`，与最终测试辅助进程一致。旧`out/run/app`不覆盖。用户正常退出旧PID34392，日志确认资源归零；修订版PID33400已启动并响应，控制中心显示，沿用本机日常`%LOCALAPPDATA%\DesktopUp\V3`。
+- **人工待验**：查看iFt图标是否按比例占满可用区，并对照原本正常的几个图标留白/颜色是否保持。不重复已通过的文件拖放，不将提取像素证据当成肉眼验收；没有打包安装或跨机结论。

@@ -9,6 +9,18 @@ internal static partial class Program
     // paint a Shell background, or inflate a small resource and call it a high-resolution icon.
     private static (byte[] Pixels, int Width, int Height)? TryLargeShellIcon(string path)
     {
+        var large = ReadShellIcon(path, LocalContentProtocol.MaximumIconDimension);
+        if (large is not { } first || !ShellIconQuality.IsPossiblyPadded(first.Pixels, first.Width, first.Height)) return large;
+        foreach (int size in new[] { 48, 32 })
+        {
+            if (ReadShellIcon(path, size) is { } other && ShellIconQuality.PreferSmaller(
+                first.Pixels, first.Width, first.Height, other.Pixels, other.Width, other.Height)) return other;
+        }
+        return large; // Uncertain / intentional whitespace: preserve the full source.
+    }
+
+    private static (byte[] Pixels, int Width, int Height)? ReadShellIcon(string path, int requestedSize)
+    {
         IShellItemImageFactory? factory = null;
         nint bitmap = 0, dc = 0;
         try
@@ -16,8 +28,7 @@ internal static partial class Program
             Guid iid = typeof(IShellItemImageFactory).GUID;
             if (SHCreateItemFromParsingName(path, 0, ref iid, out factory) < 0 || factory is null) return null;
             const uint iconOnly = 4; // SIIGBF_ICONONLY | SIIGBF_RESIZETOFIT; no SCALEUP or ICONBACKGROUND
-            int maximum = LocalContentProtocol.MaximumIconDimension;
-            if (factory.GetImage(new NativeSize { Width = maximum, Height = maximum }, iconOnly, out bitmap) < 0 || bitmap == 0 ||
+            if (factory.GetImage(new NativeSize { Width = requestedSize, Height = requestedSize }, iconOnly, out bitmap) < 0 || bitmap == 0 ||
                 GetObjectBitmap(bitmap, Marshal.SizeOf<NativeBitmap>(), out var size) == 0 ||
                 size.Width is <= 0 or > LocalContentProtocol.MaximumIconDimension || size.Height is <= 0 or > LocalContentProtocol.MaximumIconDimension)
                 return null;

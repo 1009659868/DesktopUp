@@ -1,5 +1,9 @@
 # DesktopUp：agent 冷启动提示词
 
+## 最新分支入口（2026-10-14，开发集成线）
+
+本轮本机为 `G:\A_\Tools\DesktopUp_V2`，起始及返回分支 `impl/poster-redesign-V3`。用户授权同步当前成果和精简 `impl/main`，并从最终 V3 成果创建 `impl/develop`，供后续开发分支汇总，保留完整资料/测试。准确提交、发布验证和未验边界见[交接](../A_Project/40_Implementation/V3-04/HANDOFF.md)；流向为功能分支 → develop → 发布精简，不反向合入精简删除。近期新增原始图标资源提取、Shell 填充回退和可选桌面快捷方式；下一主线仍 05-05-V2。下方 D 盘/缓存清理是另一机器的历史，不能据此删除本机 out 或判断证据不存在。
+
 ## 当前接手基线（2026-10-14）
 
 先核对实际工作区、分支、提交与改动，再读[当前交接](../A_Project/40_Implementation/V3-04/HANDOFF.md)、[安装交付最新节](../A_Project/40_Implementation/V3-04/PREVIEW_INSTALLER_DELIVERY.md#2026-10-14-便携工具链与安装体验同步)及[Git策略](../Rules/GIT_STRATEGY.md)。本轮工作区为`D:\Project\Desktop-up`；`impl/poster-redesign-V3`保留开发资料/测试，`impl/main`为精简发布源码，不能反向合入发布删除。公共修复源`e7943af`，最终refs现场确认，勿按下方旧路径/旧HEAD切换。

@@ -1,5 +1,15 @@
 # V3-04 代码锚点
 
+## 2026-10-14 桌面快捷方式安装选项
+
+`packaging/preview/installer.nsi`：`InstallOptionsCreate/Changed/Leave`保存可选状态、`CreateOptionalDesktopShortcut`禁止覆盖创建、`un.RemoveOwnedDesktopShortcut`核实记录/目标后清理；`.onInit`解析静默0/1。`tests/Packaging/Test-DesktopShortcut.ps1`用惰性载荷运行同一NSIS脚本，结果归[安装交付记录](PREVIEW_INSTALLER_DELIVERY.md#2026-10-14-可选桌面快捷方式)。既有打包入口无需新参数，用户在安装时决定。
+
+## 2026-10-14 原始图标资源与填充回退
+
+- `ContentWorker/OriginalIconResource.cs`：快捷方式只读元数据、ICO/PE所选图标组与最大有效原始帧，资源映射不执行目标。
+- `ContentWorker/ShellIconQuality.cs`、`LargeShellIcon.cs`：多个Shell请求的保守整图选择，不裁原始留白；`Program.cs`接入优先级与原生HICON尺寸回退。
+- `OriginalIconResourceTests.cs`：原资源、索引、自定义图标、透明留白、坏帧和PNG回归；`RealContentNativeTests`原多尺寸细节保留。源码路径相对src，测试相对tests/DesktopUp.Contracts.Tests。证据归[显示记录§13](../V3-05/REAL_CONTENT_DISPLAY_AND_ACTIONS.md#13-shell填充画布修复2026-10-14)。显示层和文件业务未变。
+
 ## 2026-10-13 发布同步
 
 - `scripts/run.ps1`：每次构建当前源码；`scripts/package-preview.ps1`：产品指纹/路径元数据、自包含完整重建后发布（避免缺WinUI主题的PRI缓存）、项目及依赖许可证，不依赖测试目录。

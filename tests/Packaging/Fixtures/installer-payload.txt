@@ -1,0 +1,1 @@
+Owned inert installer fixture. Not an executable and never launched.

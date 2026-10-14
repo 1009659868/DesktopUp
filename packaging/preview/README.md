@@ -8,6 +8,8 @@
 
 主要交付物是 `DesktopUp-Preview-<编号>-win-x64-Setup.exe` 和 `SHA256SUMS.txt`。其余payload/build/evidence是本机构建/追溯资料，不必发给测试电脑。安装向导中可自选安装目录；安装与配置目录相互独立。
 
+选择安装目录后，“附加选项”页提供“创建桌面快捷方式”（默认勾选），可取消；返回上一页再前进会保留选择。快捷方式带版本号，指向安装根启动器；取消勾选不影响开始菜单入口。不覆盖已有同名桌面文件，卸载仅清理本次创建且仍指向本安装位置的快捷方式。
+
 脚本先按自包含发布参数完整重建，再发布同一输出，避免普通构建后复用缺少WinUI主题资源的旧PRI索引。保留`evidence/rebuild.log`，不要为了提速删除这一步。项目及依赖许可证随包位于`licenses`。
 
 ## 按需修改
@@ -55,6 +57,7 @@
 ## 安装/卸载与验证边界
 
 - 安装路径支持目录页及静默`/D=<完整路径>`（放最后，不加引号）；允许本地、当前用户可写且含无关文件的目录。遇到`DesktopUp.exe`、`Uninstall.exe`、`PREVIEW-README.txt`、`app`或`licenses`已有同名文件/目录则拒绝；仍拒绝已有同版注册记录、配置/系统根、联接/符号链接及超长路径。
+- 静默安装同样默认创建桌面快捷方式，可在`/D`之前传`/DESKTOPSHORTCUT=0`关闭或`/DESKTOPSHORTCUT=1`开启；其他值在安装前拒绝。选项属于安装时用户选择，不是打包模板配置。仅完整开发分支（`impl/poster-redesign-V3` / `impl/develop`）提供安装器选项隔离回归：`./tests/Packaging/Test-DesktopShortcut.ps1`，用惰性假载荷验证，不启动应用或触碰配置/收纳数据；不是成品安装验收，精简`impl/main`不携带此测试入口。
 - 卸载同时核对HKCU安装位置、`app/preview-install.ini`的版本/路径/通道；检查子目录未被替换为联接，再删除编译时的精确清单。运行中拒绝卸载，不强杀。未知文件保留，Preview配置始终保留。
 - 开始菜单及安装完成页使用普通启动规则；安装目录生成`Uninstall.exe`，Windows“已安装的应用”调用同一卸载器。默认收纳使用`%LOCALAPPDATA%\DesktopUp\Storage\preview\<配置身份>`，不放安装目录，不随卸载删除；普通源码运行使用`daily`通道。既有收纳位置不改写，通过“全局 → 收纳位置”修改/迁移。
 - `evidence/resolved-settings.json`、源码指纹、原始发布/NSIS日志、payload清单和Setup SHA256用于绑定；`Verified:false`只是尚未执行运行验收，编译成功不等于验收通过。
