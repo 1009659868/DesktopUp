@@ -1,5 +1,7 @@
 # DesktopUp：agent 冷启动提示词
 
+2026-10-14 最新工作：`impl/poster-render-optimization` 源于 `impl/develop@a9eeac9`；增量呈现及外部悬停让位两批人工均已通过，现授权本地合回并切换develop，详见[实施末节](../A_Project/40_Implementation/V3-05/POSTER_INCREMENTAL_RENDERING.md)与[当前交接](../A_Project/40_Implementation/V3-04/HANDOFF.md)。本轮不推送、不更新发布线，保留功能分支/旧候选/配置。下一主线05-04-V3构造卡片需从集成后的develop另开分支；本轮未开始制作，不恢复共享引用。首图偶发超时及其他未验项仍携带。先核对Git；下方为历史阶段记录，不沿用旧“暂不合并/待人工”状态。
+
 ## 当前验收与集成入口（2026-10-14）
 
 用户将 `impl/develop` 定义为基础能力闭环基线：新功能从它派生独立分支，实现/自动验证/集中人工通过再合回。本次 `impl/05-05-v2-card-icons` 源于 `eac727a`，单卡图标更换/重启保留/恢复默认三项人工已通过，用户要求合回并切到 develop，不推送远端。准确集成结果见[当前交接](../A_Project/40_Implementation/V3-04/HANDOFF.md)及 Git，[V2记录](../A_Project/40_Implementation/V3-05/CONTENT_ICON_ASSETS.md)保留范围与未验项。下一步 05-04-V3 构造卡片须另开功能分支，本轮不实施；以下“返回V3”仅描述上一轮同步。

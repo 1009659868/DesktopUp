@@ -1,5 +1,11 @@
 # V3-04 代码锚点
 
+## 2026-10-14 海报增量呈现
+
+外部悬停：`IncomingLayoutPreview.Create`纯预测，`ContentMemberPlacement.Append`与正式引用新增共享默认占位，`IncomingContentPlacement.Apply/Advance`与实际收纳共用；`PosterVisualWindow.Transfers.cs`保存临时预览，`Content.cs`只改变绘制，不污染原生命中依据；`IncomingLayoutPreviewTests`检查与正式提交等价，`VerifyIncomingHoverForProbe`检查真实节点位移/取消/稳定性。新人工入口 `scripts/start-poster-hover-review.ps1`。
+
+`ReferenceContentRuntime` 按成员对账/单项像素代次，`IContentRasterIdentity` 声明布局无关规范图，`IAtomicContentItemViewSource` 声明锁内观察快照；`PosterSpatialRuntime.ContentSource.cs` 保留适配器；`PosterVisualWindow.Content.cs` 保留可见卡片、`ContentAssets.cs` 定点图像更新。新增 `IncrementalContentRasterTests` 及 `PosterVisualWindow.IncrementalRenderProbe.cs`，复用 `smoke-incoming.ps1 -IncrementalRender -ManagedSync`；范围与结果见[增量呈现记录](../V3-05/POSTER_INCREMENTAL_RENDERING.md)。
+
 ## 2026-10-14 所选卡片图标入口
 
 `src/DesktopUp.Application/ContentIconPreview.cs` 冻结预览身份；`src/DesktopUp.App/ControlCenterWindow.ContentIcons.cs` 复用原生选择器/资产命令/对话框生命周期，`UiCWorkspace.cs` 提供单卡菜单；`src/DesktopUp.Windows/NativeProfilePicker.cs` 新增 CardIcon 过滤。`tests/DesktopUp.Contracts.Tests/ContentIconPreviewTests.cs` 复核迟到结果、只读预览和恢复；既有 SettingsSmoke/IncomingProbe/PickerSmoke 扩展定点覆盖。人工入口 `scripts/start-card-icon-review.ps1`，状态归[V2记录](../V3-05/CONTENT_ICON_ASSETS.md)。

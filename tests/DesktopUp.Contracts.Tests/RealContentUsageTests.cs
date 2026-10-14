@@ -130,7 +130,7 @@ public sealed class RealContentUsageTests
         var key=new ContentAssetKey(f.Main,view.ItemId,1,1,1,1,view.AssetKey!,32,32,96,96,1);
         var bytes=await source.LoadAsync(key,CancellationToken.None);
         Assert.Equal("image/bgra32",bytes!.MediaType);Assert.Equal(2,bytes.PixelWidth);
-        Assert.Equal(1,source.Version);Assert.Equal("Text document",source.Read(layout!).Single().TypeName);
+        Assert.Equal(2,source.Version);Assert.Equal("Text document",source.Read(layout!).Single().TypeName);
         Assert.Equal(ContentCatalogCodec.Write(catalog),ContentCatalogCodec.Write(f.Current.ContentCatalog));
     }
     [Fact] public async Task MissingViewRetainsIdentityAndCanRecoverByRefresh()
@@ -141,7 +141,7 @@ public sealed class RealContentUsageTests
         ContentLayoutPolicy.TryRead(f.Current.PostersById[f.Main].Poster.ContentLayoutJson,f.Main,out var layout,out _);
         var view=source.Read(layout!).Single();var key=new ContentAssetKey(f.Main,view.ItemId,1,1,1,1,view.AssetKey!,32,32,96,96,1);
         await source.LoadAsync(key,CancellationToken.None);Assert.False(source.Read(layout!).Single().IsAvailable);
-        available=true;source.Refresh();await source.LoadAsync(key,CancellationToken.None);
+        available=true;source.Refresh();await source.LoadAsync(source.RasterKey(key),CancellationToken.None);
         Assert.True(source.Read(layout!).Single().IsAvailable);Assert.Equal(view.ItemId,source.Read(layout!).Single().ItemId);
     }
     [Theory] [InlineData(-1,1,4)] [InlineData(1,1,8)] [InlineData(1024,1024,4)]

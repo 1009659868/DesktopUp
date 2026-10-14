@@ -1,5 +1,7 @@
 # DesktopUp V2 — Poster Redesign V3
 
+当前集成：海报增量呈现与外部拖入悬停让位两批人工分别通过，用户授权将 `impl/poster-render-optimization` 本地合回并切换 `impl/develop`，本轮不推送。范围与验证见[海报优化记录](Docs/A_Project/40_Implementation/V3-05/POSTER_INCREMENTAL_RENDERING.md)，准确Git结果见[当前交接](Docs/A_Project/40_Implementation/V3-04/HANDOFF.md)。下一主线05-04-V3构造卡片，需从集成后的develop另开分支；本轮只收口，不开始制作。
+
 基础能力闭环/开发集成线：`impl/develop`；后续新功能一律从它派生独立开发分支，实现和集中验收通过后合回。既有历史线 `impl/poster-redesign-V3` 保留，发布源码线 `impl/main` 继续精简。功能分支及集成线保留完整开发资料与测试，发布精简不得反向合入。首个试行功能 `impl/05-05-v2-card-icons`（更换卡片图标／恢复默认）已获三项人工通过，按用户要求本地合回并切换 develop，本轮不推送；接手时重新核对 Git。下一制作项为 05-04-V3 构造卡片，需另开功能分支。
 
 2026-10-14 增量：图标优先提取原始资源中的最大有效帧，保守回退 Shell 填充画布，不裁正常留白；安装目录页之后提供“创建桌面快捷方式”选项，默认勾选、可取消。图标肉眼复验及安装向导人工往返仍独立记录，不以 Git 同步替代验收。
