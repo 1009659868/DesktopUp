@@ -53,9 +53,10 @@ internal static partial class Program
             {
                 if (request.Action == LocalContentAction.Icon)
                 {
-                    var large = TryLargeShellIcon(path);
+                    var large = TryOriginalIcon(path) ?? TryLargeShellIcon(path);
                     if (large is { } icon) { pixels = icon.Pixels; width = icon.Width; height = icon.Height; }
-                    else if (info.Icon != 0) { pixels = Rasterize(info.Icon, 64); if (pixels is not null) width = height = 64; }
+                    else if (info.Icon != 0 && RasterizeNativeIcon(info.Icon) is { } fallback)
+                    { pixels = fallback.Pixels; width = fallback.Width; height = fallback.Height; }
                 }
             }
             finally { if (info.Icon != 0) DestroyIcon(info.Icon); }
@@ -92,19 +93,33 @@ internal static partial class Program
     }
 
     // Render twice to recover alpha for legacy AND-mask icons as well as modern alpha icons.
-    private static byte[]? Rasterize(nint icon, int size)
+    private static (byte[] Pixels, int Width, int Height)? RasterizeNativeIcon(nint icon)
+    {
+        if (!GetIconInfo(icon, out var info)) return null;
+        try
+        {
+            nint source = info.Color != 0 ? info.Color : info.Mask;
+            if (source == 0 || GetObjectBitmap(source, Marshal.SizeOf<NativeBitmap>(), out var bitmap) == 0) return null;
+            int width = bitmap.Width, height = info.Color != 0 ? bitmap.Height : bitmap.Height / 2;
+            if (width is <= 0 or > LocalContentProtocol.MaximumIconDimension || height is <= 0 or > LocalContentProtocol.MaximumIconDimension) return null;
+            return Rasterize(icon, width, height) is { } pixels ? (pixels, width, height) : null;
+        }
+        finally { if (info.Color != 0) DeleteObject(info.Color); if (info.Mask != 0) DeleteObject(info.Mask); }
+    }
+
+    private static byte[]? Rasterize(nint icon, int width, int height)
     {
         byte[]? Paint(byte background)
         {
             nint dc = CreateCompatibleDC(0), bitmap = 0, old = 0;
             try
             {
-                var header = new BitmapInfo { Size = 40, Width = size, Height = -size, Planes = 1, BitCount = 32 };
+                var header = new BitmapInfo { Size = 40, Width = width, Height = -height, Planes = 1, BitCount = 32 };
                 bitmap = CreateDIBSection(dc, ref header, 0, out nint bits, 0, 0);
                 if (dc == 0 || bitmap == 0 || bits == 0) return null;
                 old = SelectObject(dc, bitmap);
-                var bytes = new byte[size * size * 4]; Array.Fill(bytes, background); Marshal.Copy(bytes, 0, bits, bytes.Length);
-                if (!DrawIconEx(dc, 0, 0, icon, size, size, 0, 0, 3)) return null;
+                var bytes = new byte[width * height * 4]; Array.Fill(bytes, background); Marshal.Copy(bytes, 0, bits, bytes.Length);
+                if (!DrawIconEx(dc, 0, 0, icon, width, height, 0, 0, 3)) return null;
                 Marshal.Copy(bits, bytes, 0, bytes.Length); return bytes;
             }
             finally { if (old != 0) SelectObject(dc, old); if (bitmap != 0) DeleteObject(bitmap); if (dc != 0) DeleteDC(dc); }
@@ -139,6 +154,8 @@ internal static partial class Program
     [DllImport("shell32.dll")] private static extern int SHOpenFolderAndSelectItems(nint id, uint count, nint children, uint flags);
     [DllImport("kernel32.dll")] private static extern bool CloseHandle(nint handle);
     [DllImport("user32.dll")] private static extern bool DestroyIcon(nint icon);
+    [StructLayout(LayoutKind.Sequential)] private struct NativeIconInfo { public int IsIcon; public uint X, Y; public nint Mask, Color; }
+    [DllImport("user32.dll")] private static extern bool GetIconInfo(nint icon, out NativeIconInfo info);
     [DllImport("user32.dll")] private static extern bool DrawIconEx(nint dc, int x, int y, nint icon, int width, int height, uint step, nint brush, uint flags);
     [DllImport("gdi32.dll")] private static extern nint CreateCompatibleDC(nint dc);
     [DllImport("gdi32.dll")] private static extern nint CreateDIBSection(nint dc, ref BitmapInfo info, uint usage, out nint bits, nint section, uint offset);
