@@ -1,5 +1,32 @@
 # V3-04 代码锚点
 
+2026-10-14 Git检查点：下列N1～N4修订源码/测试归提交 `8ded3aa`，仅同步当前功能分支；本次没有新代码变更，不合回impl/develop。验收状态及验证记录保持原边界。
+
+## 2026-10-14 N4反馈修订
+
+- `Infrastructure/ContentWorkerLocation.cs`：Shell UI与图标提取共同使用完整 `content-worker/DesktopUp.ContentWorker.exe`；`App.xaml.cs` / `PosterVisualWindow.FileActions.cs` 使用同一定位。`ShellUiClient`增加有界准备失败诊断；`ShellUiHost --shell-ui-prepare-v1`仅准备COM菜单，不执行用户命令。
+- `PosterVisualWindow.NewContent.cs`直接新建→`PosterSpatialRuntime.CreateContent`返回已提交路径→`ContentItemAtPath`取真实卡片→`PosterVisualWindow.InlineRename.cs`名称行编辑。快捷方式仅先选目标；旧`RequestFileName`窗口删除。
+- `InlineRename`复用 `DesktopMenuInteraction` 输入/层级租约，TextBox处理选择/中文输入；`LocalFileNamePolicy.RenameSelectionLength`默认只选文件名主干、文件夹全选；`ContentSource`在编辑期间暂缓元数据引起的重发布，收尾增量刷新。
+- `ContentNativeActionTests`共享worker路径/真实Shell准备/命名选择；`App.IncomingProbe --inline-name-probe`及`PosterVisualWindow.InlineRenameProbe`只在自建隔离数据上检查真实Popup/焦点/业务回调，不代替原生键鼠人工验证。详见[本轮记录](../V3-05/CONTENT_NATIVE_ACTIONS.md)。
+
+## 2026-10-14 N3收尾与N4候选
+
+`Application/IncomingDropSession.cs`映射MOVE/Ctrl COPY反馈 → `Windows/NativeIncomingDropSession.cs`保留原生跟手图像/完成NONE，禁止源二次清理 → `App/PosterVisualWindow.Transfers.cs`及`PosterSpatialRuntime.Incoming.cs`按目标分流。`Infrastructure/MappedDirectoryIngress.cs`（schema24）保存意图、逐项Shell结果、单一归属与落点；`ShellDirectoryTransfer.cs`专用STA/IFileOperation、系统冲突提示与原生结果路径；普通受管流程不替换。跨海报到映射接收在OLE释放回调先标交接，等源会话结束再执行，不补一次鼠标拖动。
+
+失联反馈沿 `MappedDirectoryService.Reconcile` → `ManagedContentMonitor` → `App.Transfers` → `PosterSpatialRuntime.MappingStatus`/`PosterVisualWindow.MappingStatus`，只更新轻量标记、不整组刷新。`MappedDirectoryIngressTests`与既有N1/N2/N3/输入/持久化覆盖，启动 `scripts/start-content-native-review.ps1`。结果/未验项见[唯一C记录](../V3-05/CONTENT_NATIVE_ACTIONS.md)，下方锚点为历史。
+
+## 2026-10-14 真实内容基础操作N3
+
+`App/PosterVisualWindow.DirectoryMapping.cs`选择目录 → `PosterSpatialRuntime.FileActions.cs`/`ControlCenter.cs`复用新海报空间校验 → `Infrastructure/MappedDirectoryService.cs`扫描/创建/观察/新建/操作前身份验证 → `Application/DirectoryMappingPolicy.cs`增量关系与布局；`MappedDirectoryStore.cs`及`SqliteStateStore.cs`追加schema23。`ManagedContentMonitor.cs`共用单worker、直接子项watcher/稳定窗口/周期兜底；删除沿`ContentRelationRemoval`。`DirectoryMappingTests`22项、最终直接影响面212项通过。`DirectTransferPreparation.Incoming`和`PosterVisualWindow.CanReceiveFiles`暂时拒绝把受管拖入错接到映射目录，待N3收尾；N4实际界面未验。[本轮记录](../V3-05/CONTENT_NATIVE_ACTIONS.md)为准，下方为历史。
+
+## 2026-10-14 真实内容基础操作N2
+
+`App/PosterVisualWindow.FileActions.cs`空白新建子菜单 → `PosterVisualWindow.NewContent.cs`名称/目标选择与退出等待 → `PosterSpatialRuntime.FileActions.cs`位置、版本、文件任务保护 → `Infrastructure/ContentCreationService.cs`生成物、同名检查与既有转移账本。`ShellShortcutFile.cs`专用STA序列化真实.lnk，不执行目标；`LocalTransferFiles.NewContent.cs`CreateNew及原句柄快照。`ContentCreationTests`新增22项，N2直接影响面共100项通过。schema仍22，N3映射未接；构建/GUI未验边界以[实施日志N2](../V3-05/CONTENT_NATIVE_ACTIONS.md#n2空白区新建2026-10-14)为准。
+
+## 2026-10-14 真实内容基础操作N1
+
+`Application/PosterInputRouter.cs`、`PosterContentContextRequest.cs`与`Windows/PosterInputIslandManager.cs`在同一快照/版本门内开放空白右键；`App/PosterVisualWindow.ContentMenu.cs`及`FileActions.cs`接菜单。`FileDialogs.cs`名称窗口/退出保护，`PosterSpatialRuntime.FileActions.cs`桥接；`Infrastructure/ContentRenameService.cs`与`LocalTransferFiles.Rename.cs`负责持久收据、同目录身份改名和安全回退/观察，`SqliteStateStore.cs`追加schema22。`Application/ShellUiProtocol.cs`→`Infrastructure/ShellUiClient.cs`→`ContentWorker/ShellUiHost.cs`是独立STA系统菜单/属性路径；`ReferenceContentRuntime.RefreshItem`保证单项刷新。`ContentNativeActionTests`、`PosterContentContextRouterTests`、`IncrementalContentRasterTests`及受版本影响存储测试提供定向证据。N2见上节，N3映射尚无实现锚点，实际GUI未验；[实施日志](../V3-05/CONTENT_NATIVE_ACTIONS.md)为准。
+
 ## 2026-10-14 海报增量呈现
 
 外部悬停：`IncomingLayoutPreview.Create`纯预测，`ContentMemberPlacement.Append`与正式引用新增共享默认占位，`IncomingContentPlacement.Apply/Advance`与实际收纳共用；`PosterVisualWindow.Transfers.cs`保存临时预览，`Content.cs`只改变绘制，不污染原生命中依据；`IncomingLayoutPreviewTests`检查与正式提交等价，`VerifyIncomingHoverForProbe`检查真实节点位移/取消/稳定性。新人工入口 `scripts/start-poster-hover-review.ps1`。

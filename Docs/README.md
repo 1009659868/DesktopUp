@@ -1,5 +1,11 @@
 # DesktopUp V2 文档入口
 
+2026-10-14 Git检查点：用户授权提交并推送当前 `impl/05-content-native-actions`，**暂不合入 `impl/develop`**。源码/测试/验收入口提交 `8ded3aa`，本批文档随相邻提交保存；仅同步同名远端功能分支，不改集成/发布线。N4仍待人工复验，既有失败/未验项保持；本地out候选、配置和日志不上传。下方“不提交/推送”指此前制作阶段，当前边界见[交接](A_Project/40_Implementation/V3-04/HANDOFF.md)。
+
+2026-10-14 N4反馈修订：属性/原生菜单失败已定位为错误的worker启动目录；新建/重命名改为直接创建＋Item名称行编辑。当前交付修订候选，待复验，不是N4已通过。启动脚本切到candidate02/review02，旧包/数据保留。唯一[实施记录](A_Project/40_Implementation/V3-05/CONTENT_NATIVE_ACTIONS.md)包含失败证据与新验收项；仍不提交/合回/推送。下方“只等N4”是本次反馈前状态。
+
+2026-10-14 当前：`impl/05-content-native-actions` 已完成N3收尾（映射目录拖入目标、实际落点与失联/恢复反馈），进入N4集中人工，尚无本批USER PASS。独立入口 `scripts/start-content-native-review.ps1`；实现、证据、四组验收与未验边界统一见[真实内容基础操作](A_Project/40_Implementation/V3-05/CONTENT_NATIVE_ACTIONS.md)。构造卡片延期，不提交/合回/推送；下方为历史进度。
+
 2026-10-14 当前：[海报增量呈现与外部拖入悬停让位](A_Project/40_Implementation/V3-05/POSTER_INCREMENTAL_RENDERING.md)两批人工分别通过，用户授权优化分支本地合回并切换 `impl/develop`，本轮不推送。准确集成结果见[当前交接](A_Project/40_Implementation/V3-04/HANDOFF.md)。下一主线05-04-V3构造卡片，须从集成后的develop另开分支；本轮不制作。首图偶发等待超时及其他未验项保持，下方为阶段历史。
 
 2026-10-14 最新：单卡图标更换/重启保留/恢复默认三项人工通过，用户授权将 `impl/05-05-v2-card-icons` 合入并切换 `impl/develop`，本轮不推送或更新发布线。`impl/develop` 是基础能力闭环基线；后续新功能从它派生功能分支，集中验收通过后再合回。见[当前交接](A_Project/40_Implementation/V3-04/HANDOFF.md)和[V2实施](A_Project/40_Implementation/V3-05/CONTENT_ICON_ASSETS.md)。下一制作项 05-04-V3 构造卡片，本轮不实施、不沿旧 V3 分支开发。
