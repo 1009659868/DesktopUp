@@ -1,5 +1,12 @@
 # V3-04 代码锚点
 
+## 2026-10-15 外观UI统一（当前）
+
+- `ControlCenterWindow.xaml`：UiCAppearanceCard/UiCAppearanceFolder/UiCColorAction；SurfaceCard与TitleCard、状态摘要、TitleVisibilitySwitch归组，三处颜色按钮统一XAML声明。
+- `ControlCenterWindow.Surface.cs`、`TitleColors.cs`：只调整呈现/控件绑定，原ChangeSurface、ChangeTitleColors、AutoPosture.TitleVisibility_Changed保存逻辑不变。
+- `ControlCenterWindow.AppearanceProbe.cs`：实际加载/关闭后的颜色交互、目标切换、重启、主题与宽窄排版；`App.IncomingProbe.cs --appearance-layout-probe`复用隔离数据守卫并提前返回，不搭载文件搬移场景。
+- `scripts/start-control-center-appearance-review.ps1`：独立集中验收；`smoke-incoming.ps1 -AppearanceLayout`：UI专用首启/重启。详细结果归当前C记录。
+
 ## 2026-10-15 下一步控制中心外观UI（仅准备）
 
 - `ControlCenterWindow.xaml`：LayoutFolder、SurfaceFolder、SurfaceColorButton、SurfaceOpacitySlider、TitleVisibilitySwitch、TitleColorsFolder；现有UiCTemplateFolder/UiC资源作为风格参照。

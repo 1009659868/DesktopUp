@@ -1,5 +1,7 @@
 # DesktopUp V2 文档入口
 
+2026-10-15 当前：控制中心外观UI的1～3项集中人工 **USER PASS / CLOSED**，既有参数和提交逻辑保持。按本次授权提交/推送功能分支、合入及同步 `impl/develop`，再更新精简 `impl/main` 并验证打包体验，最终回develop。验收见[外观与布局修订](A_Project/40_Implementation/V3-04/CONTROL_CENTER_USABILITY_DELIVERY.md#2026-10-15-人工结果与集成)，发布证据与边界见[发布记录](A_Project/40_Implementation/V3-04/PREVIEW_INSTALLER_DELIVERY.md)。下方“待验/不合并/不更新发布线”均为此前任务。
+
 2026-10-15 最新：用户确认candidate04本轮1～3项通过，并授权当前功能分支提交/推送、合入及同步 `impl/develop`。本轮修订按[人工记录](A_Project/40_Implementation/V3-05/CONTENT_NATIVE_ACTIONS.md#2026-10-15-人工通过与集成授权)收口；历史长测/DPI等携带项不补PASS。随后从集成点创建并切换 `impl/control-center-ui-optimization`，只准备“外观与布局”的背景/标题/收纳栏优化，方案范围见[下一步](A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md#2026-10-15-下一步控制中心ui优化准备)。不更新 `impl/main`。下方此前“当前”均为阶段历史。
 
 2026-10-15 最新：N4修复Win菜单的“新建”子菜单通知与创建结果接线；Item/空白区入口统一“Win菜单”。candidate04/review04为新候选，candidate03及数据保留。定向78项通过，集中人工仍待确认；无本轮Git提交/推送/合并。详见[本轮C记录](A_Project/40_Implementation/V3-05/CONTENT_NATIVE_ACTIONS.md#2026-10-15-win菜单新建修订)。下方候选均为阶段历史。

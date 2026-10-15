@@ -1,7 +1,6 @@
 using DesktopUp.Application;
 using DesktopUp.Domain;
 using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 
@@ -13,24 +12,10 @@ public sealed partial class ControlCenterWindow
 
     private void InitializeTitleColors()
     {
-        foreach (bool actions in new[] { false, true })
-        {
-            var line = new StackPanel { Spacing = 5 };
-            string label = actions ? "动作符号" : "标题文字";
-            line.Children.Add(new TextBlock { Text = label, FontSize = 12 });
-            var swatch = new Border { Width = 24, Height = 18, CornerRadius = new(2),
-                BorderThickness = new(1), BorderBrush = new SolidColorBrush(Microsoft.UI.Colors.Gray) };
-            var value = new TextBlock { FontSize = 11, VerticalAlignment = VerticalAlignment.Center };
-            var content = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-            content.Children.Add(swatch); content.Children.Add(value);
-            var button = new Button { Content = content, Style = (Style)UiCRoot.Resources["UiCAction"], Padding = new(8, 6, 8, 6) };
-            AutomationProperties.SetName(button, label + "颜色");
-            AutomationProperties.SetAutomationId(button, actions ? "TitleActionColor" : "TitleTextColor");
-            ToolTipService.SetToolTip(button, "仅当前海报；标题无背景底板，可按桌面背景调整颜色。不会改变 Item 文字或控制中心主题。");
-            button.Click += (_, _) => OpenTitleColorPicker(actions);
-            line.Children.Add(button); TitleColorsPanel.Children.Add(line);
-            _titleColors.Add(actions, (button, swatch, value));
-        }
+        _titleColors.Add(false, (TitleTextColorButton, TitleTextColorChip, TitleTextColorValue));
+        _titleColors.Add(true, (TitleActionColorButton, TitleActionColorChip, TitleActionColorValue));
+        TitleTextColorButton.Click += (_, _) => OpenTitleColorPicker(false);
+        TitleActionColorButton.Click += (_, _) => OpenTitleColorPicker(true);
         RenderTitleColors();
     }
 
@@ -67,6 +52,7 @@ public sealed partial class ControlCenterWindow
     private void RenderTitleColors()
     {
         var ink = CurrentTitleColors;
+        TitleSummary.Text = TitleVisibilitySwitch.IsOn ? "标题显示 · 文字与符号独立配色" : "标题隐藏 · 收展与更多按钮保留";
         foreach (var (actions, controls) in _titleColors)
         {
             string hex = actions ? ink.Actions : ink.Text;
