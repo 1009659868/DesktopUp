@@ -11,6 +11,25 @@ internal sealed partial class PosterVisualWindow
     internal bool HasFileAction => _shellUiBusy;
     private void SetFileActionBusy(bool busy)
     { _shellUiBusy=busy;spatial.NotifyFileActionState(PosterId); }
+    private string? BeginContentDelete()
+    {
+        if (_disposed || HasFileAction || HasContentGesture || !spatial.TransfersAvailable || spatial.HasCenterDraft(PosterId!))
+            return "请先完成当前操作。";
+        string[] ids = SelectedContentIds();
+        if (ids.Length == 0) return "请先选择文件。";
+        SetFileActionBusy(true); spatial.TrackContentOperation(Delete()); return null;
+        async Task Delete()
+        {
+            try
+            {
+                var result = await spatial.DeleteContent(PosterId!, ids, _windowHandle, _contentOpenCancellation.Token);
+                if (!_disposed && result.Errors.Count > 0) await ShowFileActionError(string.Join("\n", result.Errors));
+            }
+            catch (OperationCanceledException) { }
+            catch (Exception e) { if (!_disposed) await ShowFileActionError("删除未完成：" + e.Message); }
+            finally { SetFileActionBusy(false); if (!_disposed) QueueContentProposalDrain(); }
+        }
+    }
     private string? BeginShellUi(string? itemId, ShellUiAction action)
     {
         if (_shellUiBusy || _disposed || HasContentGesture || spatial.IsPosterSpatialBusy(PosterId!)) return "请先完成当前操作。";
@@ -25,13 +44,26 @@ internal sealed partial class PosterVisualWindow
             try
             {
                 var client = new ShellUiClient(ContentWorkerLocation.InApplication(AppContext.BaseDirectory), ledger);
-                string? path = target?.Item.Target.Locator ?? await spatial.ResolveActionDirectory(PosterId!);
+                NewContentLocation? location = action == ShellUiAction.DirectoryMenu ? await spatial.PrepareNewContent(PosterId!) : null;
+                if (action == ShellUiAction.DirectoryMenu && location is null) return;
+                string? path = location?.Directory ?? target?.Item.Target.Locator ?? await spatial.ResolveActionDirectory(PosterId!);
                 if (path is null || _disposed || _contentOpenCancellation.IsCancellationRequested) return;
                 await spatial.ValidateMappedAction(PosterId!, itemId);
                 if (target is not null && spatial.ContentActionRelation(PosterId!,itemId!)?.Witness != target.Witness)
                     throw new IOException("所选对象已变化，请重新打开菜单。");
                 string identity = await Task.Run(()=>LocalTransferFiles.Identity(path));
                 var result = await client.RunAsync(new(Guid.NewGuid(), action, path, point.X, point.Y) { Identity=identity }, _contentOpenCancellation.Token);
+                if (location is not null && result.CreatedItem is { } created)
+                {
+                    try
+                    {
+                        await spatial.RegisterShellCreated(PosterId!, location, identity, created);
+                        if (!_disposed && created.EditName && spatial.ContentItemAtPath(PosterId!, created.Path) is { } newId)
+                            await RenameContentInline(newId);
+                    }
+                    catch(Exception e)
+                    { if (!_disposed) await ShowFileActionError("文件已由 Windows 创建并保留，未删除或重试。\n" + created.Path + "\n" + e.Message); }
+                }
                 if (!_disposed && result.Error is { } error) await ShowFileActionError(error);
                 // The managed observer handles actual movement. Refresh only the selected
                 // item's pixels/metadata (e.g. a shortcut's changed icon), never every card.
@@ -56,14 +88,6 @@ internal sealed partial class PosterVisualWindow
             status.Click+=(_,_)=>{flyout.Hide();spatial.TrackContentOperation(ShowFileActionError(mapped+"\n\n"+detail));};
             flyout.Items.Add(status);
         }
-        var mapping = StyleMenuItem(new MenuFlyoutItem { Text = "目录映射…", IsEnabled = !_shellUiBusy && spatial.TransfersAvailable });
-        mapping.Click += (_, _) =>
-        {
-            if (!current("map-directory")) return;
-            flyout.Hide();
-            if (BeginDirectoryMapping() is { } error) ReportContentFailure(error);
-        };
-        flyout.Items.Add(mapping);
         var create = new MenuFlyoutSubItem { Text = "新建", IsEnabled = !_shellUiBusy && spatial.TransfersAvailable && spatial.MappingAvailable(PosterId!) };
         foreach (var (label, kind) in new[] { ("文件夹", NewContentKind.Folder), ("文本文档", NewContentKind.TextFile), ("快捷方式…", NewContentKind.Shortcut) })
         {
@@ -90,6 +114,6 @@ internal sealed partial class PosterVisualWindow
             flyout.Items.Add(item);
         }
         Add("目录属性", "directory-properties", ShellUiAction.Properties);
-        Add("Windows 目录菜单…", "directory-menu", ShellUiAction.DirectoryMenu);
+        Add(ShellUiProtocol.MenuLabel, "directory-menu", ShellUiAction.DirectoryMenu);
     }
 }

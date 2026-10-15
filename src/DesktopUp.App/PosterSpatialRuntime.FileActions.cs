@@ -52,6 +52,34 @@ internal sealed partial class PosterSpatialRuntime
 
     internal void RefreshFileActionState() => state.Refresh();
 
+    internal async Task RegisterShellCreated(string posterId, NewContentLocation location, string directoryIdentity, ShellCreatedItem created)
+    {
+        if (_transferStore is null) throw new IOException("文件服务尚未就绪。");
+        await Task.Run(() => new ShellCreatedContentService(_transferStore).Register(posterId, location, directoryIdentity, created));
+        state.Refresh();
+    }
+
+    internal async Task<ContentDeletionResult> DeleteContent(string posterId, string[] items, nint owner, CancellationToken cancellation)
+    {
+        if (!TransfersAvailable || HasCenterDraft(posterId)) throw new IOException("请先完成当前文件操作。");
+        _fileTransferBusy = true; _fileTransferPoster = posterId; ActivityChanged?.Invoke();
+        using var stop = CancellationTokenSource.CreateLinkedTokenSource(cancellation, _fileTransferStopping.Token);
+        var operation = Task.Run(() => new ContentDeletionService(_transferStore!).Delete(posterId, items, owner, stop.Token));
+        _fileTransferTask = ObserveForShutdown();
+        try
+        {
+            var result = await operation;
+            log.Write("info", "content.deleted", new { posterId, result.Removed, result.Cancelled, result.Errors });
+            return result;
+        }
+        finally
+        {
+            try { state.Refresh(); }
+            finally { _fileTransferBusy = false; _fileTransferPoster = null; ActivityChanged?.Invoke(); }
+        }
+        async Task ObserveForShutdown() { try { await operation; } catch { /* caller reports failure */ } }
+    }
+
     internal async Task<NewContentLocation?> PrepareNewContent(string posterId)
     {
         if (!TransfersAvailable || _chooseTransferStorage is null || HasCenterDraft(posterId))
@@ -99,9 +127,11 @@ internal sealed partial class PosterSpatialRuntime
     internal void NotifyFileActionState(string? id)
     { NotifyContentEditorChanged(id); ActivityChanged?.Invoke(); }
 
-    internal async Task CreateMappedPoster(string path, CancellationToken cancellation)
+    internal async Task<string> CreateMappedPoster(string path, CancellationToken cancellation)
     {
-        if (!TransfersAvailable || _transferStore is null) throw new IOException("请先结束当前文件操作。");
+        // The center owns its picker/action lease. It intentionally blocks outside drag/drop,
+        // but must not reject its own catalog creation because that same lease is active.
+        if (!FileServiceReady || _transferStore is null) throw new IOException("请先结束当前文件操作。");
         if (!state.TryGetCurrent(out var current) || current is null) throw new IOException("桌面尚未就绪。");
         var reads = new StateReadSet(current.Posters.ToDictionary(p => p.Poster.PosterId, p => p.EntityVersion),
             CatalogVersion: current.CatalogVersion, ContentVersion: current.ContentVersion);
@@ -119,5 +149,6 @@ internal sealed partial class PosterSpatialRuntime
         state.Refresh();
         if (result.Status is not (StateCommandStatus.Committed or StateCommandStatus.Replayed)) throw new IOException(result.Error);
         log.Write("info", "content.directory_mapped", new { result.ResultPosterId, path });
+        return result.ResultPosterId!;
     }
 }

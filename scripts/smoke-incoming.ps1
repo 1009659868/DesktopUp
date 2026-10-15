@@ -1,6 +1,6 @@
 #requires -Version 5.1
 param([Parameter(Mandatory)][string]$AppDirectory,[Parameter(Mandatory)][string]$FixtureDirectory,
- [Parameter(Mandatory)][string]$EvidenceDirectory,[switch]$ManagedSync,[switch]$CombinedD5,[switch]$ContentEntry,[switch]$AppearanceCleanup,[switch]$IncrementalRender)
+ [Parameter(Mandatory)][string]$EvidenceDirectory,[switch]$ManagedSync,[switch]$CombinedD5,[switch]$ContentEntry,[switch]$AppearanceCleanup,[switch]$IncrementalRender,[switch]$MappingCenter)
 $ErrorActionPreference='Stop'
 $incomingRepo=Split-Path -Parent $PSScriptRoot
 $incomingRoot=[IO.Path]::GetFullPath($EvidenceDirectory)
@@ -22,6 +22,7 @@ foreach($incomingMode in @('first','restart')){
  if($ContentEntry){$incomingArgs+=' --content-entry-probe'}
  if($AppearanceCleanup){$incomingArgs+=' --appearance-cleanup-probe'}
  if($IncrementalRender){$incomingArgs+=' --incremental-render-probe'}
+ if($MappingCenter){$incomingArgs+=' --mapping-center-probe'}
  if($incomingMode -eq 'restart'){$incomingArgs+=' --incoming-restart'}
  $incomingProcess=Start-DesktopUpFixtureProcess -ExecutablePath (Join-Path $AppDirectory 'DesktopUp.exe') -DataRoot $incomingProfile -Arguments $incomingArgs -WindowStyle Hidden
  $incomingDeadline=[DateTime]::UtcNow.AddSeconds(75)
@@ -34,6 +35,7 @@ foreach($incomingMode in @('first','restart')){
  if($ContentEntry -and !($incomingEvents | Where-Object eventName -eq 'contract.content_entry_passed')){throw 'Content entry check did not complete.'}
  if($AppearanceCleanup -and !($incomingEvents | Where-Object eventName -eq 'contract.appearance_cleanup_passed')){throw 'Appearance cleanup check did not complete.'}
  if($IncrementalRender -and !($incomingEvents | Where-Object eventName -eq 'contract.incremental_render_passed')){throw 'Incremental rendering check did not complete.'}
+ if($MappingCenter -and !($incomingEvents | Where-Object eventName -eq 'contract.mapping_center_passed')){throw 'Center mapping check did not complete.'}
  $incomingResults+=[pscustomobject]@{Case=$incomingMode;Result='PASS';PID=$incomingProcess.Id;ExitCode=$incomingProcess.ExitCode;ActiveResources=0;NativeMouse=$false;ManagedSync=[bool]($ManagedSync -or $CombinedD5);CombinedD5=[bool]$CombinedD5;ContentEntry=[bool]$ContentEntry;AppearanceCleanup=[bool]$AppearanceCleanup;Profile=$incomingProfile}
 }
 $incomingResults | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $incomingRoot 'results.json') -Encoding UTF8

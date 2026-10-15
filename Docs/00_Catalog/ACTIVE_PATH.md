@@ -1,5 +1,11 @@
 # DesktopUp V2 当前执行入口
 
+2026-10-15 最新：candidate04的1～3项用户验收通过，用户授权同步功能分支并合回/推送develop，再派生 `impl/control-center-ui-optimization`。A：DEC-050验收及控制中心UI补充 → B：背景/标题既有参数合同不变 → C：[人工记录](../A_Project/40_Implementation/V3-05/CONTENT_NATIVE_ACTIONS.md#2026-10-15-人工通过与集成授权)与[UI优化准备](../A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md#2026-10-15-下一步控制中心ui优化准备)。本轮不制作UI、不改发布线；下方旧“待验/禁止合回”不覆盖本次授权，未验环境继续携带。
+
+2026-10-15 最新入口：DEC-050 Win菜单命名与原生新建反馈 → 真实内容合同 → [Win菜单新建修订](../A_Project/40_Implementation/V3-05/CONTENT_NATIVE_ACTIONS.md#2026-10-15-win菜单新建修订)。继续impl/05-content-native-actions；candidate04/review04独立复验，N4未收口，不合回develop。
+
+2026-10-15 最新入口：[DEC-050补充](../A_Project/10_Requirements/REQUIREMENTS_RISKS_AND_OPEN_QUESTIONS.md) → [真实内容合同](../A_Project/20_Architecture/GENERAL_CONTENT_MULTI_POSTER_CONTRACT_V1.md) → [N4本轮修订](../A_Project/40_Implementation/V3-05/CONTENT_NATIVE_ACTIONS.md#2026-10-15-真实删除属性生命周期与映射入口)。当前仍在impl/05-content-native-actions，新增真实删除/属性生命周期修复/映射入口迁移，待集中人工，不合回develop；下方阶段历史不覆盖本段。
+
 2026-10-14 Git检查点：当前功能分支源码 `8ded3aa`，用户已授权将代码、测试及文档推送至 `origin/impl/05-content-native-actions`；明确**不合并/切换到impl/develop**，不更新发布线。N4待修订人工复验，A→B→C内容入口仍如下；历史无Git授权描述不覆盖本次明确授权。
 
 2026-10-14 最新：A DEC-050补充（直接新建/行内命名）→ B真实内容合同修订 → C[CONTENT_NATIVE_ACTIONS](../A_Project/40_Implementation/V3-05/CONTENT_NATIVE_ACTIONS.md)的“N4反馈修订”。原candidate01被用户检出菜单/属性失败，不能记人工PASS；修订候选candidate02待复验，构造卡片继续延期，无Git操作授权。

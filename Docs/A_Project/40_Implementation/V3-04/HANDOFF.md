@@ -1,5 +1,21 @@
 # V3-04 当前交接
 
+## 2026-10-15 人工通过、Git同步与UI优化准备（当前）
+
+用户确认candidate04/review04本轮1～3项通过，授权提交/推送 `impl/05-content-native-actions`，合入并同步 `impl/develop`，再从集成点派生并切换 `impl/control-center-ui-optimization`。此前“暂不合回”被此次明确授权取代；不更改 `impl/main`，不删除旧分支、包、配置或用户文件。
+
+fetch结果：功能分支与远端0437ab8相同，develop本地475d8ba领先远端eac727a四个此前已接受提交、没有远端独有提交。本轮一并同步这些既有集成历史。修订证据保持78/78及同包首次/重启PASS，不因Git操作重跑所有测试；历史首次失败、DPI/满盘/长测/第三方广泛兼容等携带项不改写。
+
+下一步仅准备UI优化，当前不制作新控件；范围与代码入口见[工作流](../../30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md#2026-10-15-下一步控制中心ui优化准备)。实际集成结果以本轮Git记录/后续结果段为准。
+
+## 2026-10-15 Win菜单新建修订（当前）
+
+candidate03/PID3252已由用户正常退出。修复TPM_NONOTIFY抑制新建子菜单消息，并接入INewMenuClient把系统实际创建对象登记为卡片、转行内命名；两处名称统一“Win菜单”。本轮定向78项通过、candidate04 App/worker及fixture构建0警告0错误。当前功能分支不提交/推送/合并，旧数据保留；新入口candidate04/review04及同包证据统一见[唯一C记录](../V3-05/CONTENT_NATIVE_ACTIONS.md#2026-10-15-win菜单新建修订)。用户尚未验收本轮，不沿用下方candidate03为最新。
+
+## 2026-10-15 N4进一步修订（当前）
+
+用户已正常退出candidate02/PID6824。已实现真实删除、属性页生命周期与控制中心新增映射入口，独立candidate03/review03，旧配置/文件不动。分支仍impl/05-content-native-actions，HEAD为0437ab8，**本轮不提交/推送/合并**。95项直接影响面通过；扩展98轮97过/1项既有快捷方式夹具清理占用，相关36项无修改复跑过（占用来源未定，不称首次全过）。真实文件/目录属性页原生2项、App中心映射首次/重启探针过，退出资源0，不是完整人工通过。日志、候选启动结果及验收统一见[唯一C记录](../V3-05/CONTENT_NATIVE_ACTIONS.md#2026-10-15-真实删除属性生命周期与映射入口)，不沿用下方candidate02入口。N4及历史携带项仍USER PENDING。
+
 ## 2026-10-14 功能分支Git同步（当前）
 
 用户明确授权当前分支提交推送，**暂不合并至impl/develop**。当前保持 `impl/05-content-native-actions`；源码/测试/验收入口检查点 `8ded3aa`（78文件），文档随相邻提交保存。同步范围仅 `origin/impl/05-content-native-actions`，不创建PR、不切换分支，不改 `impl/main` 或其他远端分支。开始时本地develop为 `475d8ba`、远端develop为 `eac727a`（此前本地已接受的4个提交尚未推送到develop）；本次不代推集成线。

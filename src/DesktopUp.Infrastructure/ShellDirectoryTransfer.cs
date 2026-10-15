@@ -11,7 +11,7 @@ public interface IShellDirectoryTransfer
 
 // Dedicated STA; Windows owns collision UI and physical execution. A returned destination
 // comes from PostMove/CopyItem, not from guessing the name supplied to MoveItem.
-public sealed class ShellDirectoryTransfer : IShellDirectoryTransfer
+public sealed partial class ShellDirectoryTransfer : IShellDirectoryTransfer
 {
     public Task<ShellDirectoryResult> Run(string source, string destination, bool copy, nint owner,
         Func<bool> current, CancellationToken token)

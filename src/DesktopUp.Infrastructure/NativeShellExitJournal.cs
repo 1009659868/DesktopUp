@@ -7,7 +7,11 @@ namespace DesktopUp.Infrastructure;
 
 public sealed record ShellExitItem(Guid CardId, Guid ContentId, long Version, string Path,
     string ParentIdentity, string? Identity, bool Missing);
-public sealed record ShellExitIntent(Guid Id, string PosterId, DateTimeOffset Created, IReadOnlyList<ShellExitItem> Items);
+public sealed record ShellExitIntent(Guid Id, string PosterId, DateTimeOffset Created, IReadOnlyList<ShellExitItem> Items)
+{
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public bool ExplicitDelete { get; init; }
+}
 
 // Durable observation only. Shell owns execution; this class never moves, copies or deletes
 // a file and never interprets DROPEFFECT as evidence of completed physical movement.
@@ -20,7 +24,7 @@ public sealed class NativeShellExitJournal(SqliteStateStore store)
     internal static void Verify(SqliteConnection c, SqliteTransaction? t)
     { using var q = c.CreateCommand(); q.Transaction = t; q.CommandText = "SELECT operation_id,body_json,released,closed FROM native_shell_exits LIMIT 0"; using var r = q.ExecuteReader(); }
 
-    public ShellExitIntent Begin(string posterId, IReadOnlyList<string> layoutIds)
+    public ShellExitIntent Begin(string posterId, IReadOnlyList<string> layoutIds, bool explicitDelete = false)
     {
         var state = new SqliteStateCommandRepository(store).Read();
         if(ContentSingleOwnerPolicy.Validate(state.ContentCatalog) is { } ownershipError)throw new IOException(ownershipError);
@@ -46,7 +50,8 @@ public sealed class NativeShellExitJournal(SqliteStateStore store)
             return new ShellExitItem(s.CardId, s.ContentId, s.ContentVersion, s.Locator,
                 parentId, found is null ? null : LocalTransferFiles.Identity(found), found is null);
         }).ToArray();
-        var intent = new ShellExitIntent(Guid.NewGuid(), posterId, DateTimeOffset.UtcNow, items);
+        if (explicitDelete && items.Any(i => i.Missing)) throw new IOException("所选文件已不存在，未执行删除。");
+        var intent = new ShellExitIntent(Guid.NewGuid(), posterId, DateTimeOffset.UtcNow, items) { ExplicitDelete = explicitDelete };
         store.ExecuteWrite((c,t) =>
         {
             if (SqliteContentRepository.ReadVersion(c,t) != state.ContentVersion) throw new IOException("内容已变化，请重新拖动。");
@@ -61,6 +66,14 @@ public sealed class NativeShellExitJournal(SqliteStateStore store)
             using var q = Command(c,t,"UPDATE native_shell_exits SET released=$r,closed=$closed WHERE operation_id=$id",intent.Id);
             q.Parameters.AddWithValue("$r",released ? 1 : 0); q.Parameters.AddWithValue("$closed",released ? 0 : 1); return q.ExecuteNonQuery();
         });
+    // Same durable observation receipt as Shell exits; not a fabricated drag/drop result.
+    // Authorize before invoking delete so restart can observe an interrupted operation,
+    // but can never execute or retry a deletion itself.
+    public void AuthorizeDelete(ShellExitIntent intent)
+    {
+        if (!intent.ExplicitDelete) throw new InvalidOperationException("Not a deletion receipt.");
+        End(intent, true);
+    }
     public bool IsStillMissing(ShellExitItem item)
     {
         string parent = Path.GetDirectoryName(item.Path)!;

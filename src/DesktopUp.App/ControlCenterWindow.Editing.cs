@@ -182,12 +182,32 @@ public sealed partial class ControlCenterWindow
         if (_view is { } view) ApplyView(view);
         return true;
     }
-    private void CreatePoster_Click(object sender, RoutedEventArgs e) => ShowCatalogDialog("create");
+    private void CreatePoster_Click(object sender, RoutedEventArgs e)
+    {
+        if (_portableBusy || _editingClosed) return;
+        var menu = new MenuFlyout();
+        var normal = new MenuFlyoutItem { Text = "普通海报" };
+        normal.Click += (_, _) => ShowCatalogDialog("create");
+        var mapped = new MenuFlyoutItem { Text = "目录映射…", IsEnabled = _contentRuntime?.Invoke()?.TransfersAvailable == true };
+        mapped.Click += async (_, _) => await CreateMappedPosterFromCenter();
+        menu.Items.Add(normal); menu.Items.Add(mapped);
+        menu.ShowAt(CreatePosterButton);
+    }
+
+    private Task CreateMappedPosterFromCenter(Func<Task<string?>>? choose = null) => PortableAction(async () =>
+    {
+        var runtime = _contentRuntime?.Invoke();
+        if (runtime is null || !runtime.FileServiceReady) return;
+        string? path = await (choose?.Invoke() ?? PickPortableFile(false, purpose: DesktopUp.Windows.NativePickerPurpose.MappedDirectory));
+        if (path is null || _editingClosed || _portableStopping) return;
+        string id = await runtime.CreateMappedPoster(path, _transferStopping.Token);
+        if (!_editingClosed && !_portableStopping) _selectPoster(id);
+    });
     private void ClonePoster_Click(object sender, RoutedEventArgs e) => ShowCatalogDialog("clone");
     private void RenamePoster_Click(object sender, RoutedEventArgs e) => ShowCatalogDialog("rename");
     private async void ShowCatalogDialog(string kind)
     {
-        if (_catalogDialog is not null || _editor.IsPending || _readCommitted?.Invoke() is not { } basis) return;
+        if (_catalogDialog is not null || _portableBusy || _editor.IsPending || _readCommitted?.Invoke() is not { } basis) return;
         if (_lampColorFlyout is not null || _settings.ProtectsInteraction || _editor.ProtectsInteraction || IsContentFieldDraftActive || _view?.SelectedPosterId is { } selectedId && DesktopInteractionConflicts(selectedId))
         { CommonSettingsNotice.Text = "请先完成或取消当前海报操作。"; return; }
         var target = _view?.SelectedPoster;

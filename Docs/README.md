@@ -1,5 +1,11 @@
 # DesktopUp V2 文档入口
 
+2026-10-15 最新：用户确认candidate04本轮1～3项通过，并授权当前功能分支提交/推送、合入及同步 `impl/develop`。本轮修订按[人工记录](A_Project/40_Implementation/V3-05/CONTENT_NATIVE_ACTIONS.md#2026-10-15-人工通过与集成授权)收口；历史长测/DPI等携带项不补PASS。随后从集成点创建并切换 `impl/control-center-ui-optimization`，只准备“外观与布局”的背景/标题/收纳栏优化，方案范围见[下一步](A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md#2026-10-15-下一步控制中心ui优化准备)。不更新 `impl/main`。下方此前“当前”均为阶段历史。
+
+2026-10-15 最新：N4修复Win菜单的“新建”子菜单通知与创建结果接线；Item/空白区入口统一“Win菜单”。candidate04/review04为新候选，candidate03及数据保留。定向78项通过，集中人工仍待确认；无本轮Git提交/推送/合并。详见[本轮C记录](A_Project/40_Implementation/V3-05/CONTENT_NATIVE_ACTIONS.md#2026-10-15-win菜单新建修订)。下方候选均为阶段历史。
+
+2026-10-15 当前：N4继续修订真实删除、属性页生命周期及控制中心新增映射入口。旧candidate02已由用户正常退出；新candidate03/review03独立保留。实施/证据/集中验收以[本轮C记录](A_Project/40_Implementation/V3-05/CONTENT_NATIVE_ACTIONS.md#2026-10-15-真实删除属性生命周期与映射入口)为准；本轮不提交/推送/合回，未增加USER PASS。下方2026-10-14 Git同步及候选均为历史。
+
 2026-10-14 Git检查点：用户授权提交并推送当前 `impl/05-content-native-actions`，**暂不合入 `impl/develop`**。源码/测试/验收入口提交 `8ded3aa`，本批文档随相邻提交保存；仅同步同名远端功能分支，不改集成/发布线。N4仍待人工复验，既有失败/未验项保持；本地out候选、配置和日志不上传。下方“不提交/推送”指此前制作阶段，当前边界见[交接](A_Project/40_Implementation/V3-04/HANDOFF.md)。
 
 2026-10-14 N4反馈修订：属性/原生菜单失败已定位为错误的worker启动目录；新建/重命名改为直接创建＋Item名称行编辑。当前交付修订候选，待复验，不是N4已通过。启动脚本切到candidate02/review02，旧包/数据保留。唯一[实施记录](A_Project/40_Implementation/V3-05/CONTENT_NATIVE_ACTIONS.md)包含失败证据与新验收项；仍不提交/合回/推送。下方“只等N4”是本次反馈前状态。

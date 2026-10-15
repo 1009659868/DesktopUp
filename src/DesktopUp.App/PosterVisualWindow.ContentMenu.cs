@@ -84,8 +84,9 @@ internal sealed partial class PosterVisualWindow
             Add("在资源管理器中定位", "reveal", RevealSelectedContent);
             bool single = SelectedContentIds().Length == 1;
             Add("重命名", "rename", () => BeginContentRename(itemId), single && writable);
+            Add("删除", "delete", BeginContentDelete, writable && spatial.TransfersAvailable);
             Add("属性", "properties", () => BeginShellUi(itemId, ShellUiAction.Properties), single);
-            Add("Windows 原生菜单…", "shell-menu", () => BeginShellUi(itemId, ShellUiAction.ItemMenu), single && writable);
+            Add(ShellUiProtocol.MenuLabel, "shell-menu", () => BeginShellUi(itemId, ShellUiAction.ItemMenu), single && writable);
         }
         flyout.Items.Add(new MenuFlyoutSeparator());
         if (doc.Mode != ContentLayoutMode.Manual)

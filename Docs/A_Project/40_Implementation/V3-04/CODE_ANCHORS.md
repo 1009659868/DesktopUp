@@ -1,5 +1,26 @@
 # V3-04 代码锚点
 
+## 2026-10-15 下一步控制中心外观UI（仅准备）
+
+- `ControlCenterWindow.xaml`：LayoutFolder、SurfaceFolder、SurfaceColorButton、SurfaceOpacitySlider、TitleVisibilitySwitch、TitleColorsFolder；现有UiCTemplateFolder/UiC资源作为风格参照。
+- `ControlCenterWindow.Surface.cs`、`ControlCenterWindow.TitleColors.cs`、`ControlCenterWindow.AutoPosture.cs`（TitleVisibility_Changed）：沿用背景/颜色/显隐提交，先整理UI不换底层参数。
+- `ControlCenterWindow.Theme.cs`、`ControlCenterWindow.UiCWorkspace.cs`：主题与样片夹视觉。保留分支中的已验原生内容操作，不顺带重构文件业务。
+
+## 2026-10-15 Win菜单新建
+
+- `ContentWorker/ShellUiHost.cs`：保留子菜单初始化通知；`ShellNewMenuSite.cs`：INewMenuClient实际对象回调、Shell生命周期内接收。
+- `Application/ShellUiProtocol.cs`：统一Win菜单名称、创建结果直系路径/身份边界；`Infrastructure/ShellCreatedContentService.cs`：原地登记、不搬移/删除、不批量扫描收编。
+- `App/PosterVisualWindow.FileActions.cs` → `PosterSpatialRuntime.FileActions.cs`：创建结果登记后进入原有InlineRename。
+- `tests/DesktopUp.Contracts.Tests/ShellNewMenuTests.cs`：真实Shell新建＋索引／重启／保留失败结果；命令选择注入仅在测试ContentFixture入口，生产worker不接受该CLI。
+
+## 2026-10-15 N4删除/属性/新增映射
+
+- `PosterVisualWindow.ContentMenu.cs` → `FileActions.cs` → `PosterSpatialRuntime.FileActions.cs` → `Infrastructure/ContentDeletionService.cs`：删除所选真实文件，持久观察、确认消失后公共关系清理。
+- `Infrastructure/ShellFileDeletion.cs`：复用ShellDirectoryTransfer的COM ABI，专用STA调用IFileOperation回收；原生安全提示保留。`NativeShellExitJournal.cs`的ExplicitDelete标记兼容旧JSON，不重放删除。
+- `ContentWorker/ShellUiLifetime.cs`/`ShellUiHost.cs`：SHCreateThreadRef、SHSetThreadRef、SHSetInstanceExplorer和消息循环，修复属性页创建后worker提前退出。
+- `ControlCenterWindow.Editing.cs`：新增海报分普通/目录映射，复用可取消目录选择器；`PosterSpatialRuntime.Transfers.cs`区分底层FileServiceReady与对外TransfersAvailable，防止中心自身租约挡住映射创建。旧`PosterVisualWindow.DirectoryMapping.cs`删除，已有映射状态/目录操作保留。
+- `ContentDeletionTests`、`ShellPropertyLifetimeTests`、`ControlCenterWindow.MappingProbe`及`smoke-incoming.ps1 -MappingCenter`：定向删除安全、真实属性页可见/持续、生产中心创建/取消/重启。结果只查[C记录](../V3-05/CONTENT_NATIVE_ACTIONS.md#2026-10-15-真实删除属性生命周期与映射入口)。
+
 2026-10-14 Git检查点：下列N1～N4修订源码/测试归提交 `8ded3aa`，仅同步当前功能分支；本次没有新代码变更，不合回impl/develop。验收状态及验证记录保持原边界。
 
 ## 2026-10-14 N4反馈修订

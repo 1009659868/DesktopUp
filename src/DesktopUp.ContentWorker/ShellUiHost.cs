@@ -7,12 +7,12 @@ namespace DesktopUp.ContentWorker;
 
 // Same isolation pattern as DeskBox's native context-menu proxy. COM declarations follow
 // the Windows SDK ABI; extensions and owner-drawn callbacks never enter DesktopUp.App.
-internal static class ShellUiHost
+internal static partial class ShellUiHost
 {
     private static IContextMenu2? active2;
     private static IContextMenu3? active3;
     private static readonly WindowProc Procedure = Dispatch;
-    internal static int Run(bool prepareOnly=false)
+    internal static int Run(bool prepareOnly=false, Func<IReadOnlyDictionary<string,uint>, uint>? testSelection = null)
     {
         if (!Console.IsInputRedirected || !Console.IsOutputRedirected) return 2;
         int initialized = CoInitializeEx(0, 2);
@@ -31,6 +31,8 @@ internal static class ShellUiHost
             if (RegisterClass(ref wc) == 0) return 5;
             window = CreateWindowEx(0, wc.ClassName, "DesktopUp", 0, 0, 0, 0, 0, 0, 0, wc.Instance, 0);
             if (window == 0) return 5;
+            using var lifetime = new ShellUiLifetime();
+            var site = request.Action == ShellUiAction.DirectoryMenu ? new ShellNewMenuSite(request.Path) : null;
             ShellUiResult result;
             if (request.Action == ShellUiAction.Properties)
             {
@@ -40,7 +42,9 @@ internal static class ShellUiHost
                 bool invoked = SHObjectProperties(window, 2, request.Path, null);
                 result = new(request.Id, invoked, false, invoked ? null : "Windows未能打开属性。");
             }
-            else result = Menu(request, window,prepareOnly);
+            else result = Menu(request, window,prepareOnly, site, testSelection);
+            lifetime.Drain();
+            if(result.Invoked && site?.Created is { } created) result = result with { CreatedItem = created };
             Console.WriteLine(JsonSerializer.Serialize(result)); Console.Out.Flush();
             return 0;
         }
@@ -48,7 +52,7 @@ internal static class ShellUiHost
         finally { active2 = null; active3 = null; if (window != 0) DestroyWindow(window); if (initialized >= 0) CoUninitialize(); }
     }
     private static void Ready() { Console.WriteLine("ready"); Console.Out.Flush(); }
-    private static ShellUiResult Menu(ShellUiRequest request, nint window,bool prepareOnly)
+    private static ShellUiResult Menu(ShellUiRequest request, nint window,bool prepareOnly, ShellNewMenuSite? site, Func<IReadOnlyDictionary<string,uint>,uint>? testSelection)
     {
         nint absolute = 0, menu = 0; IShellFolder? parent = null, folder = null; object? context = null;
         try
@@ -65,13 +69,18 @@ internal static class ShellUiHost
             }
             else Marshal.ThrowExceptionForHR(parent.GetUIObjectOf(window, 1, [child], ref menuId, 0, out context));
             var shell = (IContextMenu)context;
+            if (site is not null && context is IObjectWithSite sited) Marshal.ThrowExceptionForHR(sited.SetSite(site));
             active3 = context as IContextMenu3; active2 = active3 is null ? context as IContextMenu2 : null;
             menu = CreatePopupMenu(); if (menu == 0) throw new IOException("Menu creation failed.");
             // No CMF_CANRENAME: rename is an explicit host command, not a view-owned verb.
             Marshal.ThrowExceptionForHR(shell.QueryContextMenu(menu, 0, 1, 0x7fff, request.Action == ShellUiAction.ItemMenu ? 0x84u : 0u));
-            if(prepareOnly){Ready();return new(request.Id,false,true);}
+            if(prepareOnly){InspectMenu(menu, window, shell);Ready();return new(request.Id,false,true);}
             Ready(); SetForegroundWindow(window);
-            uint command = TrackPopupMenuEx(menu, 0x100 | 0x80 | 0x2 | 0x40, request.X, request.Y, window, 0);
+            // TPM_NONOTIFY also suppresses WM_INITMENUPOPUP: Shell's New submenu
+            // would remain its unexpanded placeholder. RETURNCMD already avoids WM_COMMAND.
+            uint command;
+            if(testSelection is not null) command = testSelection(InspectMenu(menu, window, shell));
+            else command = TrackPopupMenuEx(menu, 0x100 | 0x2 | 0x40, request.X, request.Y, window, 0);
             PostMessage(window, 0, 0, 0);
             if (command == 0) return new(request.Id, false, true);
             if (command > 0x7fff) throw new IOException("Invalid Shell command.");
@@ -105,7 +114,7 @@ internal static class ShellUiHost
         catch { /* Never unwind through native menu callbacks. */ }
         return DefWindowProc(window, message, wParam, lParam);
     }
-    private static string Identity(string path)
+    internal static string Identity(string path)
     {
         using var handle=CreateFile(path,0x80,1|2|4,0,3,0x02200000,0);
         if(handle.IsInvalid)throw new IOException("File identity unavailable.");

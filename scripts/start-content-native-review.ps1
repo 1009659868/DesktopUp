@@ -2,8 +2,8 @@
 param([string]$CandidateDirectory,[string]$ReviewDirectory)
 $ErrorActionPreference='Stop'
 $nativeRepo=Split-Path -Parent $PSScriptRoot
-if(!$CandidateDirectory){$CandidateDirectory=Join-Path $nativeRepo 'out/native-actions-revision/candidate02'}
-if(!$ReviewDirectory){$ReviewDirectory=Join-Path $nativeRepo 'out/drop-d3/content-native-review02'}
+if(!$CandidateDirectory){$CandidateDirectory=Join-Path $nativeRepo 'out/native-actions-revision/candidate04'}
+if(!$ReviewDirectory){$ReviewDirectory=Join-Path $nativeRepo 'out/drop-d3/content-native-review04'}
 $nativeReview=[IO.Path]::GetFullPath($ReviewDirectory).TrimEnd('\')
 $nativeAllowed=[IO.Path]::GetFullPath((Join-Path $nativeRepo 'out/drop-d3')).TrimEnd('\')+'\'
 if(!$nativeReview.StartsWith($nativeAllowed,[StringComparison]::OrdinalIgnoreCase)){throw 'Review must stay inside repository/out/drop-d3.'}

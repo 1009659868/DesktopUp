@@ -1,5 +1,11 @@
 # V3-05 真实内容基础操作与目录映射
 
+2026-10-15 当前：candidate04本轮1～3项已获用户 **USER PASS**，授权提交推送当前功能分支并合入/同步develop，详见末节[人工通过与集成授权](#2026-10-15-人工通过与集成授权)。下一步另开控制中心UI优化分支；本轮修订验收收口，历史其他未验项继续携带。下方此前“待验/不合回”为当时状态。
+
+2026-10-15 最新入口：[Win菜单新建修订](#2026-10-15-win菜单新建修订)，candidate04/review04。用户报告candidate03原生新建失败并要求原生入口统一Win菜单；本轮修复与直接影响面78项通过，不代表人工已过。旧候选/数据保留，无Git同步/合并授权。
+
+2026-10-15 当前入口为末节[真实删除/属性生命周期/映射入口](#2026-10-15-真实删除属性生命周期与映射入口)。candidate02仍有属性页无反应，新增两项需求后继续N4修订；无新USER PASS，本轮不提交/合并/推送。下方candidate02与Git检查点为历史。
+
 2026-10-14 Git检查点：用户授权提交并推送当前功能分支，源码/测试/入口 `8ded3aa`，本文件与交接随相邻文档提交保存。仅目标 `origin/impl/05-content-native-actions`，**暂不合入impl/develop**；不上传out/配置/用户内容。N4仍USER PENDING，Git同步不改变下列验收与失败记录。本次仅复核已有证据及差异格式，不新增实现、不重复跑历史全量；下文“无Git提交/推送”为各次实施时的状态。
 
 **当前：N4反馈修订后待人工复验**。candidate01的属性/原生Item/目录菜单被用户报告全部失败，且确认式新建/独立改名窗口不符合预期。下方N1～N3自动记录保留，不是人工PASS。最新修订入口为candidate02/review02，详情见末节。
@@ -171,3 +177,74 @@ N3：选择目录 → 创建独立Borrowed映射海报 → 首次直接子项读
 3. 新建后Esc应保留默认名对象；已有项Esc不改名；同名不覆盖且可继续修改；连续新建/改名后关闭并重开仍保留。快捷方式先选目标，再在卡片命名，不搬/打开目标。未完成的原N4映射/拖放/退出组合仍一起验，不自动套用旧里程碑PASS。
 
 修订候选已由上述脚本启动，初始PID **6824**，同包自建incoming种子退出0。人工进程使用review02，旧review01未覆盖；新入口增加完整worker exe/DLL/runtimeconfig校验。实际原生菜单/属性和键鼠/IME仍USER PENDING，不将程序已启动写为人工通过。
+
+## 2026-10-15 真实删除、属性生命周期与映射入口
+
+用户报告Item/目录属性仍无反应，并要求新增真实文件删除、将映射迁至控制中心新增海报。旧PID6824已由用户正常退出；保留旧候选/资料，继续功能分支，不同步Git、不合回develop。
+
+### 实施与证据边界
+
+- 菜单顺序为重命名 → 删除 → 属性。删除所选本机文件/文件夹/快捷方式本身（不是快捷方式指向目标）；专用STA调用IFileOperation，回收站与系统撤销优先，保留不可回收/权限等Windows提示，无额外应用确认窗。取消、部分完成或失败逐项保留实际结果。失效路径不悄悄转成“仅删引用”。
+- 重用NativeShellExitJournal的预写观察收据，增加默认省略的ExplicitDelete字段兼容旧JSON；身份/父目录/关系校验及执行互斥在物理操作之前。来源确实消失才复用ContentRelationRemoval；索引失败留收据供重启观察，绝不重放删除。不改schema，不把文件系统和SQLite称为原子事务。
+- review02日志多次显示Properties Invoked=true，但原worker随即返回/销毁owner。新ShellUiLifetime注册Shell线程/进程引用并泵消息，属性页释放前保留worker。依据[Microsoft宿主生命周期](https://learn.microsoft.com/en-us/windows/win32/api/shlobj_core/nf-shlobj_core-shsetinstanceexplorer)与[线程引用](https://learn.microsoft.com/en-us/windows/win32/shell/managing-thread-references)；新原生测试已实际观察自建文件及目录的属性窗口可见并持续，而不是仅prepare/API返回值。
+- “＋新增海报”提供普通海报、目录映射两项；映射目录选择器关闭后创建独立海报并选中。取消不建海报，中心关闭可取消选择器。空白菜单撤创建映射项，但映射目录状态/新建/属性/原生菜单保留。底层就绪与外部拖放准入分开，中心持有选择器租约时仍能完成自己的新增，不开放其他并发拖放。
+
+### 验证记录
+
+- `out/native-actions-revision/results/delete-properties-targeted.trx`：76项中75过/1失败，原因是旧引用测试把文件放在同父目录不同名字，观察器按合同保留改名对象；修正自建夹具模拟移出，不放宽生产规则。
+- `delete-properties-native.trx`：13/13；`delete-properties-final-targeted.trx`：**95/95**，含取消/失败/同名替换/部分完成/索引失败重启、旧收据兼容、真实属性窗口及已有直接影响面。未跑历史全量，不改写旧3440/3442失败记录。
+- 补充普通/映射文件夹及预取消后，`delete-properties-final98.trx` **97/98**：既有DirectoryMappingTests快捷方式用例在Fixture.Dispose清理时报告link.lnk被占用；未修改产品或测试，相关目录映射＋删除两类`delete-mapped-recheck.trx` **36/36**。占用来源未定，不改称首次98项全过，不扩展为本轮全量认证；新增删除14项均通过。
+- 实际App同包生产回调：`out/drop-d3/center-mapping-probe04/results.json` 首次/重启均PASS，PID16428/23264退出0、资源0。核对Item删除菜单顺序、空白菜单不再创建映射、中心取消无新增、持有自身租约仍可创建并选中独立映射、原海报/目录不变、新增按钮继续可用及重启保留。probe03是前一版入口验证，保留不覆盖；没有模拟鼠标/目录选择器点击，不替代人工。
+- candidate03 App/worker与SessionFixture独立Release构建0警告/0错误。物理删除的单元验证由替身Shell移动自建文件模拟，Windows实际回收站及鼠标操作仍需人工；没有删除或搬移用户文件。真实属性测试只检查本次worker窗口，并在结束时停止本次worker，不碰Explorer。
+
+### 本次集中人工范围
+
+入口 `scripts/start-content-native-review.ps1` 默认改为 `out/native-actions-revision/candidate03` 与 `out/drop-d3/content-native-review03`，不覆盖review01/02。
+
+1. 用自建文件/文件夹/快捷方式右键“删除”：真实对象与卡片一起消失，可在回收站找到；取消Windows提示时对象与卡片保留。多选逐项结果正确；快捷方式目标不删。
+2. Item“属性”和空白“目录属性”真实打开、可停留与关闭；经Windows原生菜单打开属性也能保留，关闭后海报仍可操作。
+3. 控制中心“＋新增海报 → 目录映射…”选择本轮`mapped-directory`，新增独立海报并选中；原海报/目录不变。取消不新增；空白右键不再出现创建映射。重启保留映射，新建/改名及原N4未完组合继续同包验收，不逐小步骤确认。
+
+candidate03/review03已通过默认脚本启动，初始PID **3252**；同包自建incoming准备退出0，启动后控制中心正常显示、未见error/critical/fatal。旧review01/02保留；当前只等上述集中人工反馈，不记USER PASS，不提交/合回/推送。
+
+## 2026-10-15 Win菜单新建修订
+
+用户报告candidate03空白区原生菜单的“新建”只剩一个占位项，执行出现“结果未知”；要求Item与空白区原生入口统一“Win菜单”，以后亦然。PID3252已由用户正常关闭，继续当前功能分支，不提交/推送/合并。
+
+### 原因与修订
+
+- ShellUiHost沿参考实现使用TPM_NONOTIFY，阻断owner收到WM_INITMENUPOPUP，系统New处理器无法延迟填充。隔离菜单调用同一owner回调后，观察到NewFolder、NewLink、.txt、.docx、.pptx等系统注册命令，原先是占位项。移除此flag，保留TPM_RETURNCMD和IContextMenu2/3转发。[Microsoft TrackPopupMenuEx](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-trackpopupmenuex)说明通知边界；不把DeskBox的Item菜单样例直接视为完整目录背景宿主。
+- 增加IObjectWithSite/IServiceProvider → [INewMenuClient](https://learn.microsoft.com/en-us/windows/win32/api/shobjidl_core/nn-shobjidl_core-inewmenuclient)回调，系统自行执行新建和处理注册文档类型；不手写ShellNew注册表执行、不改系统注册表。回传实际PIDL解析的直系路径/身份及EditName标志，等Shell异步生命周期结束再返回主进程。
+- ShellCreatedContentService在目录/对象身份锁与执行互斥下原地登记：普通海报增加受管来源成员与单一卡片/布局，映射海报复用CommitIncoming观察。结果重复不增卡，非本目录/同名替换拒绝；失败不删除Windows已创建的文件，不自动重试，报告实际路径。成功后进入原有图标下行内命名，Esc仅取消命名。
+- ShellUiProtocol统一MenuLabel为“Win菜单”，两处UI使用同一常量；失败诊断保留worker的有界HRESULT信息，不只返回笼统“未知”。
+
+### 本轮验证与边界
+
+- `out/native-actions-revision/results/shell-new-targeted.trx`：6/6。真实Shell在自建目录中新建文件夹/文本，取得创建回调，普通/映射海报登记、改名、重启和幂等通过；同名替换及SQLite失败保留真实文件、无半份关系。
+- `shell-new-regression.trx`：78/78，覆盖上述新增和文件操作、映射、删除及真实属性窗口生命周期。只跑本轮直接影响面，不重跑历史全量，不改写旧失败/未验记录。
+- candidate04 App/worker、SessionFixture独立Release构建0警告/0错误。原生菜单初始化和命令调用由独立测试夹具触发，无模拟鼠标，无用户文件移动/删除；真实键鼠及其他已安装文档类型仍需人工确认。
+- `out/drop-d3/win-menu-probe04/results.json`：同包App首次/重启均PASS（PID46952/16488），退出0、活动资源0；实际WinUI菜单对象的两处Win菜单名称、删除顺序及中心新增映射回归通过。此探针不点击原生菜单、不替代鼠标展开/命名人工。
+
+### 集中复验
+
+默认入口 `scripts/start-content-native-review.ps1` → candidate04/review04；旧review01～03均保留。
+
+1. 空白区右键 → **Win菜单 → 新建**：可展开文件夹、快捷方式、文本及本机已注册的其他类型，不再只有一个“新建”占位项。
+2. 通过该菜单新建文件夹和文本文档：实际落在对应目录、海报立即出现卡片并进入名称行编辑；Enter保存，Esc保留默认名称，不弹应用确认。映射海报同样可用，重启后仍在。
+3. Item入口亦为**Win菜单**。菜单取消不新增；Item/目录属性及此前删除/中心新增映射如尚未验，可在同包继续，不要求重做已通过项。N4仍USER PENDING。
+
+candidate04/review04已由默认脚本启动，初始PID **50040**，独立incoming种子退出0；旧包、配置及收纳文件保留。本轮没有Git提交/推送/合并。等待菜单展开及新建行内命名的集中人工反馈。
+
+## 2026-10-15 人工通过与集成授权
+
+用户本轮明确反馈“1～3验证通过”，本轮集中复验记录为 **USER PASS**：
+
+1. 空白区Win菜单的系统新建类型列表可用，不再仅有占位项。
+2. 系统实际新建与海报卡片登记、名称行编辑符合预期。
+3. Item/空白区统一Win菜单及本轮所列关联回归通过。
+
+这是对最新candidate04/review04集中1～3项的确认，不追加推断此前所有未逐项反馈的映射/拖放/退出组合、所有注册类型或第三方扩展均已验；历史DPI/真实满盘/长时、全量首次失败及稳定性携带记录保持。按用户明确授权将当前已验修订集成到develop，不再以本轮1～3项待验阻挡。
+
+Git范围：提交/推送 `impl/05-content-native-actions` → `--no-ff` 合入并推送 `impl/develop` → 从该集成点创建并切换 `impl/control-center-ui-optimization`。fetch没有远端独有提交；develop此前本地领先的4个已接受提交随本轮同步。不强推、不删分支、不改impl/main，不上传out/配置/测试数据。当前仅复核78/78与同包首次/重启结果、Git差异，不重复运行无关全量，不修改已验源码。
+
+下一步仅准备控制中心背景/标题及其收纳栏UI，详见[工作流](../../30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md#2026-10-15-下一步控制中心ui优化准备)。旧候选、运行配置和用户收纳文件不覆盖、不清理。

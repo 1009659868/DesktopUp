@@ -40,8 +40,10 @@ public sealed class ShellUiClient(string executable, IResourceLedger ledger)
             string? json = await ReadLine(process.StandardOutput, timeout.Token);
             await process.WaitForExitAsync(timeout.Token);
             var result = json is null ? null : JsonSerializer.Deserialize<ShellUiResult>(json);
-            return process.ExitCode == 0 && result is not null && ShellUiProtocol.Valid(request, result)
-                ? result : new(request.Id, false, false, "系统操作结果未知；请核对文件，不会自动重试。");
+            if (process.ExitCode == 0 && result is not null && ShellUiProtocol.Valid(request, result)) return result;
+            string? detail = await ReadLine(process.StandardError, timeout.Token);
+            return new(request.Id, false, false, "系统操作结果未知；请核对文件，不会自动重试。" +
+                (string.IsNullOrWhiteSpace(detail) ? "" : "\n" + detail[..Math.Min(700,detail.Length)]));
         }
         catch (OperationCanceledException)
         { return new(request.Id, false, true, "系统界面已结束；已执行的文件操作不会被自动撤销。"); }
