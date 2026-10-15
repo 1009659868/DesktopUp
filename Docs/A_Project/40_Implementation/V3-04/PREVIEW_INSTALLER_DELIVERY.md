@@ -1,5 +1,31 @@
 # Windows 11 x64 独立预览安装包
 
+## 2026-10-15 develop里程碑与外观UI发布同步
+
+用户确认外观UI集中1～3项均通过，按授权保存功能分支 `0a75494`、非快进合入 `impl/develop@d66265f`，再合并到精简 `impl/main@f80765e`；三条分支已分别推送。最终工作区返回develop，本节和交接作为后续文档提交同步；不将发布精简反向合入开发。
+
+本轮发布一并纳入此前已接受的单卡图标更换/恢复、增量呈现/外部悬停让位、真实文件操作/Win菜单/目录映射及统一外观设置。修改/删除冲突按文件职责处理：开发资料、测试和验收探针仅在发布线移除；UI、文件业务、模块与安全保护保留。新增Shell准备/测试选择入口与行内命名测试回调也已剔除。发布线384个跟踪文件；381项打包源绑定复核通过，334个产品文件与develop逐字节Git内容一致，32个差异文件为发布专用的探针/诊断裁剪与调用名调整。未新增需要反向回写的产品修复。
+
+### 成品验证
+
+证据根 `out/git-sync-20261015`，不上传Git。`source-parity.json`记录来源及精简差异；`verify-install.ps1`、`profile-check.py`、`install-result.json`记录实际安装和运行检查。
+
+| 范围 | 本轮结果 |
+| --- | --- |
+| 精简线构建 | `scripts/build.ps1 -Configuration Release -Offline -OutputDirectory out/git-sync-20261015/release-app`，0警告/错误 |
+| 自包含打包 | `scripts/package-preview.ps1 -Offline -ReleaseId 20261015.1 -OutputRoot out/git-sync-20261015/preview-20261015.1`；重建/发布、启动器和NSIS `/WX` 通过，814项payload，无测试载荷/用户数据/PDB |
+| 安装及入口 | 独立中文含空格目录，813项安装文件哈希一致；桌面快捷方式开启/关闭均遵从，开始菜单保留，HKCU64安装位置及两种卸载命令正确 |
+| 首次体验 | 原Preview临时保全后，实际安装程序首启/重启都是零海报、无演示卡片，打开控制中心、默认基础收纳；第二实例请求复用已有实例 |
+| 已验配置一致性 | 只复制人工候选的两张空海报数据库（内容/成员/绑定均0），安装版启动/重启成功；只读SQLite逐项比较标题、模板、完整布局参数、内容布局、主题等配置保持一致 |
+| 运行与退出 | 最终四进程PID7296/35012/49124/29544均正常退出、资源0、无error；.NET和WinUI均从实际安装app目录加载 |
+| 卸载与保全 | 调用Windows登记的同一Uninstall.exe，清除程序/自身/登记/快捷方式；保留未知文件。原Preview和日常V3逐文件哈希未变，收纳文件不动 |
+
+首轮四次启动也通过，但验证脚本误把NSIS引导进程退出等同卸载完成，提前报“Registration/shortcuts left behind”；随后读取确认清理已完成。保留 `verify-install-first-wait-diagnostic.ps1`及首轮配置证据；仅修验证脚本等待真实目标全部消失，最终上述结果通过，未改产品/安装器来绕过检查。四份生成的验证配置已从AppData迁存至本证据根的 `profile-evidence/`，原Preview恢复原位；临时安装已卸载，未知文件仍保留。
+
+成品：`out/git-sync-20261015/preview-20261015.1/DesktopUp-Preview-20261015.1-win-x64-Setup.exe`，**67,295,034字节**，SHA256 **`621445A6B50EFE44E3962354743DDBDE26FA10654ACE3006A260872D286EADE9`**。App DLL SHA256 `F56764C263D8426DA7648F25AFB937FA2385150485EAA069E77E1F7E7A3D3B79`。按先验证再提交发布合并的流程，包内SourceCommit为合并前HEAD `484fc02`、IncludesUncommittedChanges=true；确切验证源码以381项source-manifest及发布提交 `f80765e` 对照，不能将旧HEAD误当完整来源。随后仅补README验证说明，不改变源绑定范围。
+
+边界：此为本机高完整性自动验证，没有Windows界面自动化入口，未人工点击向导/设置卸载页，也未在此包重做全部鼠标文件操作；开发人工结论不改写为成品全矩阵人工PASS。普通权限、干净另一台电脑、多DPI、真实满盘、联合长时及第三方扩展仍按原记录携带，安装包未签名，打包元数据整体Verified=false保持。默认存储仍为 `%LOCALAPPDATA%\DesktopUp\Storage\preview\<配置身份>`，不放安装目录，不随卸载删除。
+
 ## 2026-10-14 开发集成线与发布同步
 
 本轮按用户授权保存开发产品修订 `f6a8199`，合入精简发布线 `484fc02`，再从含交接的最终 V3 提交派生 `impl/develop`。集成线完整保留开发文档/测试，发布线继续只有产品、模块、配置、构建/启动/打包和许可证。发布合并的修改/删除冲突均为已退役资料/测试及 README，逐项处理；ContentWorker 与安装器产品代码和开发源一致，没有将发布精简反向带入开发线。最终推送结果以现场三条远端 refs 为准。

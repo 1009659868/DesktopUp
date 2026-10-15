@@ -1,6 +1,6 @@
 # DesktopUp V2 当前执行入口
 
-2026-10-15 当前：A DEC-050外观UI补充 → B既有背景/标题参数与提交合同不变 → C[外观UI人工收口](../A_Project/40_Implementation/V3-04/CONTROL_CENTER_USABILITY_DELIVERY.md#2026-10-15-人工结果与集成)。1～3项USER PASS；本次授权功能分支同步、合入develop并同步精简impl/main，最终返回develop。成品构建/安装证据归[发布记录](../A_Project/40_Implementation/V3-04/PREVIEW_INSTALLER_DELIVERY.md)，不补历史未验PASS。下方禁合并/待验为历史。
+2026-10-15 当前：A DEC-050外观UI补充 → B既有背景/标题参数与提交合同不变 → C[外观UI人工收口](../A_Project/40_Implementation/V3-04/CONTROL_CENTER_USABILITY_DELIVERY.md#2026-10-15-人工结果与集成)。1～3项USER PASS；功能0a75494 → develop d66265f → 精简impl/main f80765e均已推送，已返回develop。20261015.1成品构建/安装运行/配置保真/卸载通过，证据及未验边界归[发布记录](../A_Project/40_Implementation/V3-04/PREVIEW_INSTALLER_DELIVERY.md)。下方禁合并/待验为历史。
 
 2026-10-15 最新：candidate04的1～3项用户验收通过，用户授权同步功能分支并合回/推送develop，再派生 `impl/control-center-ui-optimization`。A：DEC-050验收及控制中心UI补充 → B：背景/标题既有参数合同不变 → C：[人工记录](../A_Project/40_Implementation/V3-05/CONTENT_NATIVE_ACTIONS.md#2026-10-15-人工通过与集成授权)与[UI优化准备](../A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md#2026-10-15-下一步控制中心ui优化准备)。本轮不制作UI、不改发布线；下方旧“待验/禁止合回”不覆盖本次授权，未验环境继续携带。
 

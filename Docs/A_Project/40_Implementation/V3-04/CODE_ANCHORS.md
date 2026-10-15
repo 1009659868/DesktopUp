@@ -2,6 +2,7 @@
 
 ## 2026-10-15 外观UI统一（当前）
 
+- 集成追溯：功能0a75494 → develop d66265f → 精简发布f80765e；产品设置和XAML保留，以下探针/验收脚本仅留开发线。发布构建/安装入口仍为 `scripts/build.ps1`、`package-preview.ps1` 与 `packaging/preview/installer.nsi`，同源和成品证据见 `PREVIEW_INSTALLER_DELIVERY.md` 最新节。
 - `ControlCenterWindow.xaml`：UiCAppearanceCard/UiCAppearanceFolder/UiCColorAction；SurfaceCard与TitleCard、状态摘要、TitleVisibilitySwitch归组，三处颜色按钮统一XAML声明。
 - `ControlCenterWindow.Surface.cs`、`TitleColors.cs`：只调整呈现/控件绑定，原ChangeSurface、ChangeTitleColors、AutoPosture.TitleVisibility_Changed保存逻辑不变。
 - `ControlCenterWindow.AppearanceProbe.cs`：实际加载/关闭后的颜色交互、目标切换、重启、主题与宽窄排版；`App.IncomingProbe.cs --appearance-layout-probe`复用隔离数据守卫并提前返回，不搭载文件搬移场景。
