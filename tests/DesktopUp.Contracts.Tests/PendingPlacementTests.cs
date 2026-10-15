@@ -50,7 +50,7 @@ public sealed partial class AutoPostureSettingsTests
         var result = f.Store.Initialize();
         Assert.True(result.Succeeded, result.Error);
         Assert.Equal(8, result.PreviousSchemaVersion);
-        Assert.Equal(24, result.Head!.SchemaVersion);
+        Assert.Equal(25, result.Head!.SchemaVersion);
         Assert.Equal(4, result.Head.Revision);
         Assert.Equal(before, PendingFields(f, excludePending: true));
         Assert.Equal(profile, Rows(f, "poster_profile"));
@@ -97,7 +97,7 @@ public sealed partial class AutoPostureSettingsTests
         using var f = new Fixture();
         f.Execute("ALTER TABLE posters DROP COLUMN placement_pending;");
         Assert.False(f.Store.Initialize().Succeeded);
-        Assert.Equal(24L, f.Scalar("PRAGMA user_version;"));
+        Assert.Equal(25L, f.Scalar("PRAGMA user_version;"));
     }
 
     [Fact]

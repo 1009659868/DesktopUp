@@ -1,5 +1,7 @@
 # DesktopUp V2 当前执行入口
 
+2026-10-15 当前入口：05-12位于 `impl/05-12-content-lifecycle`，四组集中人工USER PASS / 本批CLOSED，尚未Git同步。A原路径归还/不可用回桌面 → B独立来源与逐项安全结果 → C[人工结果§15.3](../A_Project/40_Implementation/V3-05/DIRECT_TRANSFER_DELIVERY.md#153-人工通过与右键问题处置2026-10-15)。用户决定不修订Snipaste相关右键问题；下一步建议见[系列计划](../A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md#2026-10-15-05-12本批收口后的系列计划建议)：获授权集成后再接完整卸载归还，不恢复任务向导，不把计划建议当实施授权。
+
 2026-10-15 最新：05-07四组人工已通过，按用户授权同步功能分支和develop；下一步05-12收纳生命周期（记录原路径、删海报归还、不可用回桌面）。A需求最新决定 → B安全归还边界 → C直接拖放§14验收及后续生命周期实施；不恢复任务管理UI、不改发布线。
 
 2026-10-15 当前：A[05-07执行边界](../A_Project/10_Requirements/REQUIREMENTS_RISKS_AND_OPEN_QUESTIONS.md) → B[跨海报交接合同](../A_Project/20_Architecture/GENERAL_CONTENT_MULTI_POSTER_CONTRACT_V1.md) → C[直接拖放§14](../A_Project/40_Implementation/V3-05/DIRECT_TRANSFER_DELIVERY.md#14-v3-05-07-跨海报直接拖放2026-10-15进行中)。分支 `impl/05-07-cross-poster-drag`，连续完成至集中人工；不提交/合并/推送。下方已完成里程碑为历史，不恢复旧恢复向导或点击穿透。

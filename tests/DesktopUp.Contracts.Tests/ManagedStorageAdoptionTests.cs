@@ -170,7 +170,7 @@ public sealed class ManagedStorageAdoptionTests
         using var f=new F();Legacy(f);
         f.Sql(StorageSchemaFixture.Drop19+"DROP TABLE managed_storage_adoptions;DELETE FROM schema_migrations WHERE version>=18;UPDATE state_head SET schema_version=17;PRAGMA user_version=17;");
         var sums=f.Sql("SELECT group_concat(checksum_sha256) FROM schema_migrations ORDER BY version");
-        var result=f.Store.Initialize();Assert.True(result.Succeeded,result.Error);Assert.Equal(24,result.Head!.SchemaVersion);
+        var result=f.Store.Initialize();Assert.True(result.Succeeded,result.Error);Assert.Equal(25,result.Head!.SchemaVersion);
         Assert.Equal(sums,f.Sql("SELECT group_concat(checksum_sha256) FROM schema_migrations WHERE version<=17 ORDER BY version"));
         Assert.False(File.Exists(RootClaim(f)));Assert.Equal(0L,f.Sql("SELECT count(*) FROM managed_storage_adoptions"));
     }

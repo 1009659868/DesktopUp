@@ -65,7 +65,7 @@ public sealed partial class AutoPostureSettingsTests
             "poster_catalog_operations", "spatial_operations", "spatial_participants", "spatial_continuity"];
         var before = tables.ToDictionary(t => t, t => Rows(f, t));
         var result = f.Store.Initialize(); Assert.True(result.Succeeded, result.Error);
-        Assert.Equal(6, result.PreviousSchemaVersion); Assert.Equal(24, result.Head!.SchemaVersion); Assert.Equal(8, result.Head.Revision);
+        Assert.Equal(6, result.PreviousSchemaVersion); Assert.Equal(25, result.Head!.SchemaVersion); Assert.Equal(8, result.Head.Revision);
         string backup = Path.Combine(f.Paths.Backups, result.PreMigrationBackupFileName!);
         Assert.Equal(6L, f.Scalar("PRAGMA user_version;", backup)); Assert.Equal("ok", f.Scalar("PRAGMA integrity_check;", backup));
         Assert.Equal(0L, f.Scalar("SELECT COUNT(*) FROM pragma_table_info('posters') WHERE name='auto_collapse_delay_seconds';", backup));
@@ -139,7 +139,7 @@ public sealed partial class AutoPostureSettingsTests
     public void Current_schema_missing_delay_column_fails_closed()
     {
         using var f = new Fixture(); f.Execute("ALTER TABLE posters DROP COLUMN auto_collapse_delay_seconds;");
-        Assert.False(f.Store.Initialize().Succeeded); Assert.Equal(24L, f.Scalar("PRAGMA user_version;"));
+        Assert.False(f.Store.Initialize().Succeeded); Assert.Equal(25L, f.Scalar("PRAGMA user_version;"));
     }
 
     [Fact]

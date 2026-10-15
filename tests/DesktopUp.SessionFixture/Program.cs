@@ -5,6 +5,11 @@ using System.Text.Json;
 using DesktopUp.Testing;
 
 // Read-only validation shares the production parser; no fixture/database is created in this mode.
+if (args.Length == 2 && args[1] == "--content-return")
+{
+    ContentReturnReviewFixture.Create(args[0]);
+    return;
+}
 if (args.Length == 2 && args[1] == "--cross-poster")
 {
     CrossPosterReviewFixture.Create(args[0]);

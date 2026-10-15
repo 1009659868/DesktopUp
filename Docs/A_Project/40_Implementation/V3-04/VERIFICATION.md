@@ -1,5 +1,15 @@
 # V3-04 验证记录
 
+## 2026-10-15 05-12集中人工结果
+
+用户明确“集中测试已通过”：candidate04/review01的四组人工登记USER PASS，覆盖原路归还、原位置不可用/新建回桌面、Windows冲突取消/重试、映射不搬动及重启，见[C§15.3](../V3-05/DIRECT_TRANSFER_DELIVERY.md#153-人工通过与右键问题处置2026-10-15)。既有542项定向/最终49项和同包证据保持，本轮只改记录、不重复跑测试或生成新软件包。
+
+右键反馈：只读现场采样观察到Snipaste全屏覆盖窗口被右键遮挡检查判为阻挡；用户决定不修复，输入代码未改，不新增修复PASS。此问题不再阻塞本批；普通权限/多屏DPI/锁屏/满盘/长时资源等原未验项保持，卸载归还尚未接线。下方USER PENDING为此前自动门快照。
+
+## 2026-10-15 05-12归还自动验证
+
+直接影响面 `out/content-lifecycle/final01/affected.trx` 542/542通过（含19项新专项），未重跑全部历史合同；最终删除说明文字微调后 `final02/returns.trx` 49/49通过。candidate04 App/fixture Release x64零警告错误，Application/Infrastructure DLL与最终测试哈希一致。`out/drop-d3/content-return-auto02/results.json`首启31760/重启48852均PASS、exit0/资源0；实际窗口入库、来源记录、归还、删除及零海报冷启通过，NativeMouse=false。原始失败、修正与限定边界见C§15；candidate04/review01已启动PID21396，USER PENDING，四组人工未填PASS。
+
 2026-10-15 人工增量：用户确认05-07 candidate03集中人工1～4项全部通过，覆盖普通/映射互拖落点、取消/回原海报/连续手势、系统冲突及重启/既有能力，按C§14限定范围收口。3485合同与同包证据保持；本轮Git记录不新增环境认证。
 
 ## 2026-10-15 V3-05-07 跨海报直接拖放

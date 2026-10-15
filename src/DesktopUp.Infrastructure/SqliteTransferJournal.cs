@@ -51,7 +51,7 @@ public sealed partial class SqliteTransferJournal(SqliteStateStore store)
     private static readonly JsonSerializerOptions Json = new()
     { UnmappedMemberHandling=JsonUnmappedMemberHandling.Disallow, RespectRequiredConstructorParameters=true, MaxDepth=64 };
     private static string Encode<T>(T value) => JsonSerializer.Serialize(value, Json);
-    private static T Decode<T>(string json)
+    internal static T Decode<T>(string json)
     {
         if (json.Length > 4 * 1024 * 1024) throw new InvalidDataException("Transfer record exceeds budget.");
         return JsonSerializer.Deserialize<T>(json, Json) ?? throw new InvalidDataException("Empty transfer record.");
@@ -237,6 +237,8 @@ public sealed partial class SqliteTransferJournal(SqliteStateStore store)
             before=>IndexPlan(before,batch,index),authorizedTransferId:id);
         if(result.Status is StateCommandStatus.Committed or StateCommandStatus.Replayed)
         {
+            if(result.Status == StateCommandStatus.Committed)
+                ContentReturnStore.CaptureIncoming(c,t,result.Snapshot.ContentCatalog,batch,index);
             if(result.Status == StateCommandStatus.Committed && batch.Request.Route == ContentDropRoute.IntoManagedStorage)
                 ManagedContentObservationStore.Capture(c,t,result.Snapshot.ContentCatalog,
                     batch.Entries[index].AffectedContentIds.Append(batch.Entries[index].Entry.Item.Id));

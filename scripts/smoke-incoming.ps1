@@ -1,7 +1,8 @@
 #requires -Version 5.1
 param([Parameter(Mandatory)][string]$AppDirectory,[Parameter(Mandatory)][string]$FixtureDirectory,
- [Parameter(Mandatory)][string]$EvidenceDirectory,[switch]$ManagedSync,[switch]$CombinedD5,[switch]$ContentEntry,[switch]$AppearanceCleanup,[switch]$IncrementalRender,[switch]$MappingCenter,[switch]$AppearanceLayout,[switch]$CrossPoster)
+ [Parameter(Mandatory)][string]$EvidenceDirectory,[switch]$ManagedSync,[switch]$CombinedD5,[switch]$ContentEntry,[switch]$AppearanceCleanup,[switch]$IncrementalRender,[switch]$MappingCenter,[switch]$AppearanceLayout,[switch]$CrossPoster,[switch]$ContentReturn)
 $ErrorActionPreference='Stop'
+if($ContentReturn -and ($ManagedSync -or $CombinedD5 -or $ContentEntry -or $AppearanceCleanup -or $IncrementalRender -or $MappingCenter -or $AppearanceLayout -or $CrossPoster)){throw 'ContentReturn requires its own isolated fixture.'}
 if($CrossPoster -and ($ManagedSync -or $CombinedD5 -or $ContentEntry -or $AppearanceCleanup -or $IncrementalRender -or $MappingCenter -or $AppearanceLayout)){throw 'CrossPoster requires its own four-item incoming fixture.'}
 if($AppearanceLayout -and ($ManagedSync -or $CombinedD5 -or $ContentEntry -or $AppearanceCleanup -or $IncrementalRender -or $MappingCenter)){throw 'AppearanceLayout is a UI-only probe; run it independently.'}
 $incomingRepo=Split-Path -Parent $PSScriptRoot
@@ -26,6 +27,7 @@ foreach($incomingMode in @('first','restart')){
  if($IncrementalRender){$incomingArgs+=' --incremental-render-probe'}
  if($MappingCenter){$incomingArgs+=' --mapping-center-probe'}
  if($CrossPoster){$incomingArgs+=' --cross-poster-probe'}
+ if($ContentReturn){$incomingArgs+=' --content-return-probe'}
  if($AppearanceLayout){$incomingArgs+=' --appearance-layout-probe'}
  if($incomingMode -eq 'restart'){$incomingArgs+=' --incoming-restart'}
  $incomingProcess=Start-DesktopUpFixtureProcess -ExecutablePath (Join-Path $AppDirectory 'DesktopUp.exe') -DataRoot $incomingProfile -Arguments $incomingArgs -WindowStyle Hidden
@@ -35,7 +37,7 @@ foreach($incomingMode in @('first','restart')){
  $incomingEvents=@(Get-Content -LiteralPath $incomingLog | Select-Object -Skip $incomingBefore | ForEach-Object {$_ | ConvertFrom-Json})
  $incomingErrors=@($incomingEvents | Where-Object level -in @('error','critical','fatal'))
  $incomingStopped=@($incomingEvents | Where-Object eventName -eq 'application.stopped')
- $incomingExpected=if($AppearanceLayout){'contract.appearance_layout_passed'}else{'contract.incoming_passed'}
+ $incomingExpected=if($ContentReturn){'contract.content_return_passed'}elseif($AppearanceLayout){'contract.appearance_layout_passed'}else{'contract.incoming_passed'}
  if($incomingProcess.ExitCode -ne 0 -or $incomingErrors.Count -or $incomingStopped.Count -ne 1 -or $incomingStopped[0].data.activeResources -ne 0 -or !($incomingEvents | Where-Object eventName -eq $incomingExpected)){throw "Incoming gate failed ($incomingMode); inspect $incomingLog"}
  if($ContentEntry -and !($incomingEvents | Where-Object eventName -eq 'contract.content_entry_passed')){throw 'Content entry check did not complete.'}
  if($AppearanceCleanup -and !($incomingEvents | Where-Object eventName -eq 'contract.appearance_cleanup_passed')){throw 'Appearance cleanup check did not complete.'}

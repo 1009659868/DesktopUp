@@ -11,7 +11,7 @@ public sealed class SqliteStateStore : IStateStore
     private const int ApplicationId = 0x44555033; // "DUP3"
     private const int BusyTimeoutMilliseconds = 5_000;
     // 14 adds durable opening receipts/facts. Earlier migration text/checksums stay frozen.
-    private const int CurrentSchemaVersion = 24;
+    private const int CurrentSchemaVersion = 25;
     private const string DatabaseFileName = "desktopup.sqlite3";
     private static readonly Migration[] Migrations =
     [
@@ -238,7 +238,8 @@ public sealed class SqliteStateStore : IStateStore
         new(21, "native-shell-exit-observation", NativeShellExitJournal.MigrationSql),
         new(22, "content-rename-receipts", ContentRenameService.MigrationSql),
         new(23, "mapped-directory-observations", MappedDirectoryStore.MigrationSql),
-        new(24, "mapped-directory-ingress", MappedDirectoryIngress.MigrationSql)
+        new(24, "mapped-directory-ingress", MappedDirectoryIngress.MigrationSql),
+        new(25, "content-return-provenance", ContentReturnStore.MigrationSql)
     ];
 
     private readonly object _gate = new();
@@ -663,6 +664,7 @@ public sealed class SqliteStateStore : IStateStore
             if (migration.Version >= 22) ContentRenameService.Verify(connection, transaction);
             if (migration.Version >= 23) MappedDirectoryStore.Verify(connection, transaction);
             if (migration.Version >= 24) MappedDirectoryIngress.Verify(connection, transaction);
+            if (migration.Version >= 25) ContentReturnStore.Verify(connection, transaction);
 
             string appliedUtc = DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture);
             using (SqliteCommand ledger = connection.CreateCommand())
@@ -788,6 +790,7 @@ public sealed class SqliteStateStore : IStateStore
         if (expectedVersion >= 22) ContentRenameService.Verify(connection, null);
         if (expectedVersion >= 23) MappedDirectoryStore.Verify(connection, null);
         if (expectedVersion >= 24) MappedDirectoryIngress.Verify(connection, null);
+        if (expectedVersion >= 25) ContentReturnStore.Verify(connection, null);
         if (head.SchemaVersion != version)
         {
             throw new InvalidDataException(

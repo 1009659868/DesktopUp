@@ -21,7 +21,7 @@ public sealed class ManagedContentSynchronizer(SqliteStateStore store, TimeProvi
 
     public ManagedContentSyncResult Reconcile(CancellationToken token = default)
     {
-        if(MappedDirectoryIngress.Pending(store))return new(0,0,true,[]);
+        if(MappedDirectoryIngress.Pending(store) || ContentReturnStore.Pending(store))return new(0,0,true,[]);
         int removed = 0, renamed = 0; bool pending = false, changed = false; var notices = new List<string>();
         var journal = new SqliteTransferJournal(store);
         try
