@@ -1,5 +1,9 @@
 # DesktopUp V2 文档入口
 
+2026-10-15 最新：跨海报拖放四组集中人工 **USER PASS / CLOSED**。本轮授权提交/推送功能分支并合入、同步 `impl/develop`，再从集成点派生05-12分支。下一批记录原始来源，删除普通收纳海报时归还文件，原路径不可用则回桌面；映射海报只解除映射，不引入恢复任务流程。Git结果见当前交接；本轮不更新 `impl/main`，下方待验/禁止同步为历史。
+
+2026-10-15 当前：`impl/05-07-cross-poster-drag` 从develop 55582a7派生，推进跨海报直接拖放至集中人工候选。唯一详细记录为[本批C§14](A_Project/40_Implementation/V3-05/DIRECT_TRANSFER_DELIVERY.md#14-v3-05-07-跨海报直接拖放2026-10-15进行中)；未提交/合并/推送，不改发布线。下方外观UI和发布同步已完成。
+
 2026-10-15 当前：控制中心外观UI的1～3项集中人工 **USER PASS / CLOSED**，既有参数和提交逻辑保持。功能0a75494、develop集成d66265f及精简发布f80765e已推送；20261015.1成品构建/安装运行/外观配置保真/卸载限定验证通过，已返回develop，交接随文档提交同步。验收见[外观与布局修订](A_Project/40_Implementation/V3-04/CONTROL_CENTER_USABILITY_DELIVERY.md#2026-10-15-人工结果与集成)，发布证据与边界见[发布记录](A_Project/40_Implementation/V3-04/PREVIEW_INSTALLER_DELIVERY.md)。下方“待验/不合并/不更新发布线”均为此前任务。
 
 2026-10-15 最新：用户确认candidate04本轮1～3项通过，并授权当前功能分支提交/推送、合入及同步 `impl/develop`。本轮修订按[人工记录](A_Project/40_Implementation/V3-05/CONTENT_NATIVE_ACTIONS.md#2026-10-15-人工通过与集成授权)收口；历史长测/DPI等携带项不补PASS。随后从集成点创建并切换 `impl/control-center-ui-optimization`，只准备“外观与布局”的背景/标题/收纳栏优化，方案范围见[下一步](A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md#2026-10-15-下一步控制中心ui优化准备)。不更新 `impl/main`。下方此前“当前”均为阶段历史。

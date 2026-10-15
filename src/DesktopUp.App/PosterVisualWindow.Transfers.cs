@@ -32,9 +32,9 @@ internal sealed partial class PosterVisualWindow
                 ticket=>
                 {
                     var placement=IncomingContentPlacement.From(EnsureContentSnapshot(_bounds),_contentViewport!,ticket.Preview.Location);
-                    spatial.PrepareMappedDropHandoff(PosterId!);
+                    var source=spatial.PreparePosterDropHandoff(PosterId!,ticket.Paths);
                     _window?.DispatcherQueue.TryEnqueue(()=>
-                    {if(CanReceiveFiles && ticket.Preview.Surface==IncomingSurface())spatial.ReceiveFiles(this,ticket,placement);});
+                    {if(CanReceiveFiles && ticket.Preview.Surface==IncomingSurface())spatial.ReceiveFiles(this,ticket,placement,source);});
                 },ShowIncomingPreview);
             log.Write("info","transfer.native_target_ready",new{PosterId});
         }

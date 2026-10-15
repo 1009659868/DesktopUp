@@ -6,13 +6,17 @@ namespace DesktopUp;
 internal sealed partial class PosterSpatialRuntime
 {
     private TaskCompletionSource? _nativeExitLifetime;
-    private bool _nativeExitToMapped;
+    private bool _nativeExitToPoster;
+    private ShellExitIntent? _nativeExitIntent;
     internal bool CanReceiveInto(string id)=>TransfersAvailable || _nativeExitLifetime is not null && _fileTransferPoster!=id &&
-        ContentActionPath(id,null) is not null && NativeExitCurrent;
-    internal void PrepareMappedDropHandoff(string id)
+        !_nativeExitToPoster && NativeExitCurrent;
+    internal ShellExitIntent? PreparePosterDropHandoff(string id, IReadOnlyList<string> paths)
     {
         // OLE Drop must mark this before DoDragDrop unwinds; queued UI work is too late.
-        if(!TransfersAvailable && CanReceiveInto(id))_nativeExitToMapped=true;
+        if(!TransfersAvailable && CanReceiveInto(id) && _nativeExitIntent is { } intent &&
+            intent.Items.Where(i=>!i.Missing).Select(i=>i.Path).SequenceEqual(paths,StringComparer.OrdinalIgnoreCase))
+        { _nativeExitToPoster=true; return intent; }
+        return null;
     }
     internal ShellExitIntent? BeginNativeExit(PosterVisualWindow window, string[] selection)
     {
@@ -21,6 +25,7 @@ internal sealed partial class PosterSpatialRuntime
         // physical paths to Shell; unlike the old path there is no proposed destination.
         var intent = new NativeShellExitJournal(_transferStore!).Begin(window.PosterId!, selection);
         _fileTransferBusy = true; _fileTransferPoster = window.PosterId;
+        _nativeExitIntent = intent;
         _nativeExitLifetime = new(TaskCreationOptions.RunContinuationsAsynchronously);
         _fileTransferTask = _nativeExitLifetime.Task; ActivityChanged?.Invoke(); return intent;
     }
@@ -32,7 +37,7 @@ internal sealed partial class PosterSpatialRuntime
         try
         {
             var journal = new NativeShellExitJournal(_transferStore!);
-            bool external = !_nativeExitToMapped && result is { Released:true, ReturnedToOrigin:false };
+            bool external = !_nativeExitToPoster && result is { Released:true, ReturnedToOrigin:false };
             journal.End(intent, external);
             if (external)
             {
@@ -66,7 +71,7 @@ internal sealed partial class PosterSpatialRuntime
             finally
             {
                 _fileTransferBusy=false; _fileTransferPoster=null;
-                _nativeExitLifetime=null; _nativeExitToMapped=false; lifetime?.TrySetResult(); ActivityChanged?.Invoke();
+                _nativeExitLifetime=null; _nativeExitToPoster=false; _nativeExitIntent=null; lifetime?.TrySetResult(); ActivityChanged?.Invoke();
             }
         }
     }
