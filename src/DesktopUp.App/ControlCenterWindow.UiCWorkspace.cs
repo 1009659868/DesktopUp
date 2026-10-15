@@ -217,6 +217,11 @@ public sealed partial class ControlCenterWindow
         {
             Add("在资源管理器中定位", () => ForSameItem(() => ContentAction((runtime, id) => runtime.RevealContentEditor(id))), !OtherContentOwner);
             Add("刷新来源状态与图标", () => ForSameItem(() => ContentAction((runtime, id) => runtime.RefreshRealContentEditor(id))), !OtherContentOwner);
+            var icon = CaptureIconPreview();
+            Add("更换卡片图标…", () => ForSameItem(() => _ = EditCardIcon(false)),
+                writable && icon is not null && _applyIcon is not null);
+            Add("恢复默认图标", () => ForSameItem(() => _ = EditCardIcon(true)),
+                writable && icon?.HasCustomIcon == true && _applyIcon is not null);
             Add("修复所选引用…", () => ForSameItem(() => _ = EditReferences(true)),
                 writable && item is not null && view?.SelectedIds.Count == 1 && _applyReferences is not null);
         }

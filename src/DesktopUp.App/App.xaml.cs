@@ -138,7 +138,7 @@ public partial class App : Microsoft.UI.Xaml.Application
             () => ToggleDynamicEffectsPaused(StateCommandSource.ControlCenter),
             _stateCoordinator, _stateCommands, _inputRouter,
             target => _spatialRuntime?.GetEffectiveLayout(target), () => _spatialRuntime, _portableController,
-            _services.GetRequiredService<SqliteStateStore>(),_storageLocation);
+            _services.GetRequiredService<SqliteStateStore>(),_storageLocation, () => _realContentWorker);
         _tray = new TrayService(_ledger, _log);
         _tray.Create(QueueTrayAction);
         _log.Write("info", "application.started", new
@@ -159,7 +159,7 @@ public partial class App : Microsoft.UI.Xaml.Application
         _spatialRuntime.EffectiveLayoutChanged += RefreshControlCenterRuntime;
         var openJournal = new SqliteContentOpenJournal(_services.GetRequiredService<SqliteStateStore>());
         openJournal.RetireInterruptedRequests();
-        _realContentWorker = new LocalContentWorkerClient(Path.Combine(AppContext.BaseDirectory, "content-worker", "DesktopUp.ContentWorker.exe"), _ledger);
+        _realContentWorker = new LocalContentWorkerClient(ContentWorkerLocation.InApplication(AppContext.BaseDirectory), _ledger);
         _spatialRuntime.ConfigureRealContent(_realContentWorker, openJournal, new SqliteContentIconStore(_services.GetRequiredService<SqliteStateStore>()));
         _spatialRuntime.ConfigureSceneMotionLedger(_ledger);
         _spatialRuntime.ConfigureTransfers(_services.GetRequiredService<SqliteStateStore>(),_transferDiscovery,

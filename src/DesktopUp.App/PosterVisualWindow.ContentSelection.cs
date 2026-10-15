@@ -14,7 +14,6 @@ internal sealed partial class PosterVisualWindow
     {
         _contentSelection = _contentSelection.Select(ContentSelectionOrder(), id, control, shift);
         _selectedContentItem = IsRealContent ? _contentSelection.Focus : id;
-        _contentPaintKey = null;
     }
     internal string? SelectAllRealContent(bool clear = false)
     {
@@ -24,7 +23,7 @@ internal sealed partial class PosterVisualWindow
         var order = ContentSelectionOrder();
         _contentSelection = clear ? ContentSelection.Empty : new(order, order.FirstOrDefault(), order.LastOrDefault()) { ShowHighlight = order.Length > 0 };
         _selectedContentItem = _contentSelection.Focus;
-        _contentActivation.Reset(); _contentPaintKey = null;
+        _contentActivation.Reset();
         RefreshContentSurface(); spatial.NotifyContentEditorChanged(PosterId); return null;
     }
 }

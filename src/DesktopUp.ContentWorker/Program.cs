@@ -11,6 +11,7 @@ internal static partial class Program
     [STAThread]
     private static int Main(string[] args)
     {
+        if (args is ["--shell-ui-v1"]) return ShellUiHost.Run();
         // Private stdio protocol only. The worker never opens a profile/database.
         if (args.Length != 1 || args[0] != "--stdio-v1" || !Console.IsInputRedirected || !Console.IsOutputRedirected) return 2;
         int initialized = CoInitializeEx(0, 2);

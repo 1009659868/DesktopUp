@@ -1,0 +1,31 @@
+using System.Text.Json;
+using DesktopUp.Application;
+using Microsoft.Data.Sqlite;
+
+namespace DesktopUp.Infrastructure;
+
+internal sealed record MappedDirectoryEvidence(string Identity, IReadOnlyList<MappedContentObservation> Items);
+internal static class MappedDirectoryStore
+{
+    internal const string MigrationSql = """
+        CREATE TABLE mapped_directory_observations(
+            collection_id TEXT PRIMARY KEY REFERENCES content_collections(collection_id) ON DELETE CASCADE,
+            root_identity TEXT NOT NULL, observations_json TEXT NOT NULL CHECK(json_valid(observations_json))) STRICT;
+        """;
+    internal static void Verify(SqliteConnection c, SqliteTransaction? t)
+    { using var q = c.CreateCommand(); q.Transaction = t; q.CommandText = "SELECT collection_id,root_identity,observations_json FROM mapped_directory_observations LIMIT 0"; using var r = q.ExecuteReader(); }
+    internal static MappedDirectoryEvidence? Read(SqliteConnection c, SqliteTransaction t, Guid collection)
+    {
+        using var q = c.CreateCommand(); q.Transaction = t; q.CommandText = "SELECT root_identity,observations_json FROM mapped_directory_observations WHERE collection_id=$id";
+        q.Parameters.AddWithValue("$id", collection.ToString()); using var r = q.ExecuteReader(); if (!r.Read()) return null;
+        string json = r.GetString(1); if (json.Length > 512 * 1024) throw new IOException("目录观察记录超限。");
+        return new(r.GetString(0), JsonSerializer.Deserialize<MappedContentObservation[]>(json) ?? throw new IOException("目录观察记录无效。"));
+    }
+    internal static void Put(SqliteConnection c, SqliteTransaction t, Guid collection, MappedDirectoryEvidence evidence)
+    {
+        using var q = c.CreateCommand(); q.Transaction = t;
+        q.CommandText = "INSERT INTO mapped_directory_observations VALUES($id,$root,$items) ON CONFLICT(collection_id) DO UPDATE SET root_identity=excluded.root_identity,observations_json=excluded.observations_json";
+        q.Parameters.AddWithValue("$id", collection.ToString()); q.Parameters.AddWithValue("$root", evidence.Identity);
+        q.Parameters.AddWithValue("$items", JsonSerializer.Serialize(evidence.Items)); q.ExecuteNonQuery();
+    }
+}

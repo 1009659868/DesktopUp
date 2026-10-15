@@ -17,7 +17,8 @@ internal sealed partial class PosterVisualWindow
         ArgumentNullException.ThrowIfNull(ports.Views); ArgumentNullException.ThrowIfNull(ports.Assets);
         ArgumentNullException.ThrowIfNull(ports.Open);
         if (_disposed || ports.Views.Version < 1) throw new InvalidOperationException("Invalid or disposed content source.");
-        if (ReferenceEquals(_contentPorts, ports) && (ports.Views is not IObservableContentItemViewSource || _contentSourceChanged is not null)) return;
+        if (ReferenceEquals(_contentPorts, ports) && (ports.Views is not IObservableContentItemViewSource || _contentSourceChanged is not null))
+        { RefreshContentSource(); return; }
         ReleaseContentSourceSubscription();
         _contentOpenLifetime++;
         ReleaseContentAssets();
@@ -44,25 +45,31 @@ internal sealed partial class PosterVisualWindow
         if (_disposed || _contentPorts.Views.Version == _contentSourceVersion) return;
         // Reject a regressing source; never re-author layout on a metadata notification.
         if (_contentPorts.Views.Version < _contentSourceVersion || _contentPorts.Views.Version < 1) return;
-        if (_transitionLayout is not null || _activeCommandRequestId is not null)
+        if (_transitionLayout is not null || _activeCommandRequestId is not null || _inlineRenameItem is not null)
         {
             // Invalidate result admission immediately, but retain the R4 prepared tree until
             // its existing end/recovery safe point. No new timer or parallel layout owner.
             _contentSourceRefreshPending = true;
-            _contentAssets?.SetVisible([]);
-            _contentVisibleAssetKeys.Clear(); _contentAssetAttempted.Clear();
+            if (_contentPorts.Assets is IContentRasterIdentity) PruneChangedRasterDemand();
+            else { _contentAssets?.SetVisible([]); _contentVisibleAssetKeys.Clear(); _contentAssetAttempted.Clear(); }
             return;
         }
         _contentSourceRefreshPending = false;
         _contentSourceVersion = _contentPorts.Views.Version;
-        _contentSpaceEpoch = checked(_contentSpaceEpoch + 1);
-        _contentPaintKey = null;
         // Keep the same cache's real in-flight budget across metadata churn. A source which
         // ignores cancellation cannot gain four more slots on every version notification.
-        _contentAssets?.SetVisible([]);
-        _contentVisibleAssetKeys.Clear(); _contentAssetAttempted.Clear();
-        CancelContentGesture("source-version-changed");
-        _contentActivation.Reset();
+        bool invalidated;
+        if (_contentPorts.Assets is IContentRasterIdentity) invalidated = PruneChangedRasterDemand();
+        else
+        {
+            _contentAssets?.SetVisible([]);
+            _contentVisibleAssetKeys.Clear(); _contentAssetAttempted.Clear(); invalidated = true;
+        }
+        if (invalidated)
+        {
+            _contentSpaceEpoch = checked(_contentSpaceEpoch + 1);
+            CancelContentGesture("source-version-changed"); _contentActivation.Reset();
+        }
         if (!_contentPresentationSuspended && _window is not null) RefreshContentSurface();
         spatial.NotifyContentEditorChanged(PosterId);
     }

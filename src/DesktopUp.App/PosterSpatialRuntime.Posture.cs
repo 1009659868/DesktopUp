@@ -62,7 +62,7 @@ internal sealed partial class PosterSpatialRuntime
         { completed(Failure(request, "动画轨迹未提交：" + exception.Message)); return; }
         var reservation = PostureGroupReservation.Create(scene, schedule.Frames);
         if (_postures.Values.Any(r => r.Command.SpatialPosture is null || reservation.Conflicts(r.Reservation)) ||
-            plan.Changes.Any(c => _windows[c.PosterId].HasContentGesture))
+            plan.Changes.Any(c => _windows[c.PosterId].HasContentGesture || _windows[c.PosterId].HasFileAction))
         { QueuePosture(request, completed); return; }
         var final = plan.Changes.FirstOrDefault(p => p.PosterId == request.PosterId)?.After ?? source.Bounds;
         var desired = SpatialGestureCommitPolicy.Capture(target.Poster, final, scene.Environment, target.Poster.ExpandedHeightDip)

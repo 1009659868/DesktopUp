@@ -10,8 +10,12 @@ internal sealed partial class PosterVisualWindow
 {
     private IPosterDropRegistration? _fileDrop;
     private readonly Guid _incomingRun=Guid.NewGuid();
-    private Border? _incomingMarker;
+    private IncomingDropPreview? _incomingPreview;
+    private IncomingLayoutPreview? _incomingLayout;
+    private (ContentLayoutDocument Document, IncomingContentPlacement Landing, int Count, long Entity, DesktopPixelRect Frame)? _incomingBasis;
     internal long TransferEntityVersion=>_posterEntityVersion;
+    internal nint TransferOwner=>_windowHandle;
+    internal bool CanReceiveFiles => CanTransferFiles && spatial.MappingAvailable(PosterId!);
     internal bool CanTransferFiles=>!_disposed&&!_contentPresentationSuspended&&!_geometry.IsLocked&&
         (!_contentReadOnly || _authoritativePoster?.IsCollapsed==true&&!_contentParseReadOnly)&&
         _transitionLayout is null&&!HasContentGesture&&!spatial.IsPosterSpatialBusy(PosterId!,includeFileTransfer:false)&&!spatial.HasCenterDraft(PosterId!);
@@ -24,12 +28,13 @@ internal sealed partial class PosterVisualWindow
         if(_inputIsland is null)return;
         try
         {
-            _fileDrop=_inputIsland.InstallDropReceiver(()=>CanTransferFiles&&spatial.TransfersAvailable?IncomingSurface():null,
+            _fileDrop=_inputIsland.InstallDropReceiver(()=>CanReceiveFiles&&spatial.CanReceiveInto(PosterId!)?IncomingSurface():null,
                 ticket=>
                 {
                     var placement=IncomingContentPlacement.From(EnsureContentSnapshot(_bounds),_contentViewport!,ticket.Preview.Location);
+                    spatial.PrepareMappedDropHandoff(PosterId!);
                     _window?.DispatcherQueue.TryEnqueue(()=>
-                    {if(CanTransferFiles && ticket.Preview.Surface==IncomingSurface())spatial.ReceiveFiles(this,ticket,placement);});
+                    {if(CanReceiveFiles && ticket.Preview.Surface==IncomingSurface())spatial.ReceiveFiles(this,ticket,placement);});
                 },ShowIncomingPreview);
             log.Write("info","transfer.native_target_ready",new{PosterId});
         }
@@ -43,27 +48,50 @@ internal sealed partial class PosterVisualWindow
             _bounds,_monitor?.ScaleX??1,_monitor?.ScaleY??1,
             collapsed?new(0,0,0,0):new(ContentLeftDip,ContentTopDip,viewport.WidthDip,viewport.HeightDip),
             snapshot.FlowAxis,snapshot.ScrollXDip,snapshot.ScrollYDip,
-            ContentLayoutFlow.IsLooping(snapshot,viewport)?ContentLayoutFlow.LoopPeriodDip(snapshot,viewport):0);
+            ContentLayoutFlow.IsLooping(snapshot,viewport)?ContentLayoutFlow.LoopPeriodDip(snapshot,viewport):0)
+            { SupportsCopy=spatial.ContentActionPath(PosterId!,null) is not null };
     }
     internal bool IncomingGeometryCurrent(IncomingDropSurface start) => !_disposed&&!_contentPresentationSuspended &&
         !_geometry.IsLocked && !HasContentGesture && _transitionLayout is null &&
         start.RunId==_incomingRun && start.Frame==_bounds && start.ScaleX==(_monitor?.ScaleX??1) && start.ScaleY==(_monitor?.ScaleY??1);
     private void ShowIncomingPreview(IncomingDropPreview? preview)
     {
-        if(_incomingMarker is not null)_contentCanvas?.Children.Remove(_incomingMarker);
-        _incomingMarker=null;
-        if(preview is null){if(!spatial.IsFileTransferActive(PosterId!))PublishContentFeedback(null);return;}
-        if(preview.Location.Area==IncomingDropArea.Frame)
-        {PublishContentFeedback($"松手收纳 {preview.Count} 项，按当前布局加入；Esc 取消。");return;}
-        var s=EnsureContentSnapshot(_bounds);var landing=IncomingContentPlacement.From(s,_contentViewport!,preview.Location)!;
-        PublishContentFeedback(ContentDocument.Mode==ContentLayoutMode.Manual
-            ? $"松手放在第 {landing.Column+1} 列／{landing.Row+1} 行；其他内容局部让位。"
-            : $"松手从第 {landing.ReadOrder+1} 位加入 {preview.Count} 项；成功项依次固定。");
-        if(_contentCanvas is null)return;
-        _incomingMarker=new Border {Width=18,Height=18,CornerRadius=new(9),BorderThickness=new(2),BorderBrush=Brush(240,110,200,245),IsHitTestVisible=false};
-        Canvas.SetLeft(_incomingMarker,(preview.ScreenPoint.X-_bounds.X)/preview.Surface.ScaleX-ContentLeftDip-9);
-        Canvas.SetTop(_incomingMarker,(preview.ScreenPoint.Y-_bounds.Y)/preview.Surface.ScaleY-ContentTopDip-9);
-        _contentCanvas.Children.Add(_incomingMarker);
+        bool hadPreview = _incomingLayout is not null;
+        _incomingPreview = preview;
+        if (preview?.Location.Area != IncomingDropArea.Content || !CanTransferFiles)
+        {
+            _incomingLayout = null; _incomingBasis = null;
+            if (!_disposed && !_contentPresentationSuspended && hadPreview) RedrawIncomingPreview();
+            if (preview is null && !spatial.IsFileTransferActive(PosterId!)) PublishContentFeedback(null);
+            if (preview is null && !_disposed) QueueContentProposalDrain();
+            return;
+        }
+        var snapshot = EnsureContentSnapshot(_bounds);
+        var landing = IncomingContentPlacement.From(snapshot, _contentViewport!, preview.Location)!;
+        // A move within one cell/order does not run the solver or rebuild any visual.
+        var basis = (ContentDocument, landing, preview.Count, _posterEntityVersion, _bounds);
+        if (_incomingBasis == basis) return;
+        _incomingBasis = basis;
+        try { _incomingLayout = IncomingLayoutPreview.Create(ContentDocument, landing, preview.Count); }
+        catch (Exception error) when (error is ArgumentException or IOException or OverflowException)
+        { _incomingLayout = null; } // No invented layout; Drop still revalidates through the normal transaction.
+        RedrawIncomingPreview();
+    }
+
+    private void RedrawIncomingPreview()
+    {
+        if (!_disposed && !_contentPresentationSuspended && _contentSnapshot is { } snapshot && _contentViewport is { } viewport)
+            DrawContentSnapshot(snapshot, viewport); // Paint only: never change native hit/surface witnesses.
+    }
+
+    private IncomingLayoutPreview? IncomingPaintPreview(ContentLayoutViewport viewport)
+    {
+        if (_incomingLayout is null) return null;
+        if (_incomingBasis is { } basis && ReferenceEquals(basis.Document, ContentDocument) &&
+            basis.Landing.Viewport == viewport && basis.Entity == _posterEntityVersion && basis.Frame == _bounds && CanTransferFiles)
+            return _incomingLayout;
+        _incomingLayout = null; _incomingBasis = null;
+        return null;
     }
     private bool _nativeContentDrag;
     private NativeShellDragSource? _nativeShellSource;

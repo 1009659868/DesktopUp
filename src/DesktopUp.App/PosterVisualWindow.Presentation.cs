@@ -43,7 +43,7 @@ internal sealed partial class PosterVisualWindow
         _posterMenu?.Hide();
         StopExpansionFeedback();
         _itemColumnCount = -1;
-        _contentCanvas = null; _contentCards.Clear(); _contentPaintKey = null;
+        _contentCanvas = null; _contentCards.Clear(); _contentCardPaint.Clear();
         // Replace only this instance's XAML tree on an explicit presentation revision.
         // No window/host replacement, no global Application.Resources, no outer geometry write.
         ApplyWindowBackdrop(_window);

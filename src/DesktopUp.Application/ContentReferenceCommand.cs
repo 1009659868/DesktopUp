@@ -87,19 +87,7 @@ public static class ContentReferencePolicy
             if (member is null) { member = new(Guid.NewGuid(), binding.CollectionId, item.Id); members.Add(member); }
             if (relations.Any(r => r.PosterId == target.PosterId && r.MembershipId == member.Id)) continue;
             var relation = new PosterItem(Guid.NewGuid(), target.PosterId, member.Id); relations.Add(relation);
-            int order = placements.Count == 0 ? 0 : checked(placements.Max(p => p.Order) + 1);
-            var placement = new ContentPlacement(relation.LayoutItemId, order, Math.Min(4, layout.MaximumColumns), 4)
-                { RegionId = layout.Regions.OrderBy(r => r.Order).First().Id };
-            if (layout.Mode == ContentLayoutMode.Manual)
-            {
-                // Append after authored content/reservations, never push or overwrite the old composition.
-                bool vertical = layout.FlowAxis == ContentFlowAxis.Vertical;
-                int end = placements.Select(p => vertical ? (p.Row ?? 0) + p.RowSpan : (p.Column ?? 0) + p.ColumnSpan)
-                    .Concat(layout.ReservedSpaces.Select(s => vertical ? s.Row + s.RowSpan : s.Column + s.ColumnSpan)).DefaultIfEmpty(0).Max();
-                placement = placement with { Column = vertical ? 0 : end, Row = vertical ? end : 0,
-                    SavedAutomaticState = layout.SavedAutomaticMode is null ? null : new(order, placement.ColumnSpan, placement.RowSpan, false, null) };
-            }
-            placements.Add(placement);
+            placements.Add(ContentMemberPlacement.Append(layout, placements, relation.LayoutItemId));
         }
         if (relations.Count == catalog.PosterItems.Count) return new() { ResultPosterId = target.PosterId };
         layout = layout with { Placements = placements, DocumentVersion = checked(layout.DocumentVersion + 1),

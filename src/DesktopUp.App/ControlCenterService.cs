@@ -11,7 +11,8 @@ internal sealed partial class ControlCenterService(
     Func<PosterSurfaceProjection, EffectivePosterLayout?> effectiveLayout,
     Func<PosterSpatialRuntime?>? spatialRuntime = null, PortableProfileController? portable = null,
     DesktopUp.Infrastructure.SqliteStateStore? transferStore = null,
-    DesktopUp.Infrastructure.ManagedStorageService? storageLocation = null) : IDisposable
+    DesktopUp.Infrastructure.ManagedStorageService? storageLocation = null,
+    Func<ILocalContentWorker?>? iconWorker = null) : IDisposable
 {
     private ControlCenterWindow? _window;
     private IDisposable? _lease;
@@ -69,6 +70,9 @@ internal sealed partial class ControlCenterService(
                 stage = "apply-projection";
                 pendingWindow.ConfigureContentLayout(() => spatialRuntime?.Invoke());
                 pendingWindow.ConfigureReferences(command => { var result = commands.Execute(command); ShowCommandResult(result); return result; });
+                if (iconWorker is not null && state is StateProjectionCoordinator iconCoordinator)
+                    pendingWindow.ConfigureContentIcons(iconWorker, (command, cancellation) =>
+                    { var result = iconCoordinator.Execute(command, cancellation); ShowCommandResult(result); return result; });
                 pendingWindow.ConfigureCenterTheme(theme =>
                 {
                     if (!state.TryGetCurrent(out var current) || current is null) return;

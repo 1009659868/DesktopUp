@@ -20,7 +20,12 @@ internal sealed partial class PosterSpatialRuntime
             if (!_referenceSources.TryGetValue(id, out var cached) || cached.Version != projection.ContentVersion)
             {
                 ContentSourcePorts ports;
-                if (_referenceWorker is not null && _openJournal is not null)
+                if (cached.Ports?.Views is ReferenceContentRuntime retained)
+                {
+                    retained.Reconcile(projection.ContentCatalog);
+                    ports = cached.Ports;
+                }
+                else if (_referenceWorker is not null && _openJournal is not null)
                 {
                     var source = new ReferenceContentRuntime(projection.ContentCatalog, id, projection.ContentVersion, _referenceWorker, _iconStore);
                     ports = new(source, source, new ReferenceContentActions(

@@ -82,6 +82,7 @@ internal sealed partial class PosterVisualWindow(
     public void SuspendInput()
     {
         _contentPresentationSuspended = true;
+        _incomingPreview = null; _incomingLayout = null; _incomingBasis = null;
         ReleaseContentAssets();
         UpdateScene();
         CancelContentGesture("input-suspended");
@@ -1451,6 +1452,7 @@ internal sealed partial class PosterVisualWindow(
         structure.Children.Add(footer);
         AddContentFeedback(structure);
         AddContentSpaceNavigation(structure);
+        AddMappingBadge(root);
         RebuildItemGrid(_geometry.WidthDip);
         UpdateVisualState();
         return root;
@@ -1461,15 +1463,16 @@ internal sealed partial class PosterVisualWindow(
         return CreateTitleChrome();
     }
 
-    private void ShowPosterMenu(string? contentItemId = null, PointerScreenPoint? contentPoint = null)
+    private void ShowPosterMenu(string? contentItemId = null, PointerScreenPoint? contentPoint = null, bool contentBackground = false)
     {
-        if (_disposed || _moreGlyph is null || _window is null || _inputIsland is null)
+        if (_disposed || HasFileAction || _moreGlyph is null || _window is null || _inputIsland is null)
         {
             return;
         }
 
         _posterMenu?.Hide();
         long menuLayout = _inputIsland.AppliedLayoutRevision;
+        _contentMenuPoint = contentPoint ?? new(_bounds.X + 30, _bounds.Y + 50);
         long menuEntity = _posterEntityVersion;
         var menuContentTarget = contentItemId is null ? null : ContentActivationTargetFor(contentItemId);
         if (contentItemId is not null && (_selectedContentItem != contentItemId || menuContentTarget is null)) return;
@@ -1487,6 +1490,8 @@ internal sealed partial class PosterVisualWindow(
         AddContentSpaceNavigationMenu(flyout, MenuCurrent);
         if (contentItemId is not null)
             AddContentItemMenu(flyout, contentItemId, MenuCurrent);
+        else if (contentBackground)
+            AddContentBackgroundMenu(flyout, MenuCurrent);
         else
         {
         var lockItem = StyleMenuItem(new MenuFlyoutItem
@@ -1927,6 +1932,7 @@ internal sealed partial class PosterVisualWindow(
 
     public void Dispose()
     {
+        _cancelInlineRename?.Invoke();
         ReleaseScene();
         CancelContentGesture("dispose");
         StopContentFeedbackTimer();

@@ -114,6 +114,9 @@
     <Style x:Key="UiCButton" TargetType="Button"><Setter Property="FontSize" Value="12"/><Setter Property="Padding" Value="10,6"/><Setter Property="MinWidth" Value="0"/><Setter Property="MinHeight" Value="30"/><Setter Property="CornerRadius" Value="6"/><Setter Property="Background" Value="{ThemeResource UiCFolderBrush}"/><Setter Property="Foreground" Value="{ThemeResource UiCTextBrush}"/><Setter Property="BorderBrush" Value="{ThemeResource UiCBorderBrush}"/><Setter Property="BorderThickness" Value="1"/></Style>
     <Style TargetType="Button" BasedOn="{StaticResource UiCButton}"/>
     <Style x:Key="UiCAction" TargetType="Button" BasedOn="{StaticResource UiCButton}"/>
+    <Style x:Key="UiCColorAction" TargetType="Button" BasedOn="{StaticResource UiCButton}"><Setter Property="MinHeight" Value="38"/><Setter Property="Padding" Value="8,6"/><Setter Property="HorizontalContentAlignment" Value="Stretch"/><Setter Property="Width" Value="148"/></Style>
+    <Style x:Key="UiCAppearanceCard" TargetType="Border"><Setter Property="Background" Value="{ThemeResource UiCPanelBrush}"/><Setter Property="CornerRadius" Value="8"/></Style>
+    <Style x:Key="UiCAppearanceFolder" TargetType="Expander"><Setter Property="MinHeight" Value="58"/><Setter Property="Padding" Value="16,0,16,14"/><Setter Property="Background" Value="Transparent"/><Setter Property="BorderBrush" Value="Transparent"/><Setter Property="BorderThickness" Value="0"/><Setter Property="CornerRadius" Value="8"/><Setter Property="HorizontalAlignment" Value="Stretch"/><Setter Property="HorizontalContentAlignment" Value="Stretch"/></Style>
     <Style x:Key="UiCDropDown" TargetType="DropDownButton" BasedOn="{StaticResource UiCButton}"/>
     <Style TargetType="TextBox"><Setter Property="FontSize" Value="12"/><Setter Property="CornerRadius" Value="5"/><Setter Property="Background" Value="{ThemeResource UiCFolderBrush}"/><Setter Property="Foreground" Value="{ThemeResource UiCTextBrush}"/><Setter Property="BorderBrush" Value="{ThemeResource UiCBorderBrush}"/><Setter Property="BorderThickness" Value="1"/></Style>
     <Style TargetType="ComboBox"><Setter Property="FontSize" Value="12"/><Setter Property="CornerRadius" Value="5"/><Setter Property="Background" Value="{ThemeResource UiCFolderBrush}"/><Setter Property="Foreground" Value="{ThemeResource UiCTextBrush}"/><Setter Property="BorderBrush" Value="{ThemeResource UiCBorderBrush}"/><Setter Property="BorderThickness" Value="1"/></Style>
@@ -221,29 +224,55 @@
        <Grid>
         <Grid.RowDefinitions><RowDefinition Height="20"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
         <Border Grid.Row="1" Background="{ThemeResource UiCFolderBrush}" BorderBrush="{ThemeResource UiCBorderBrush}" BorderThickness="1" CornerRadius="0,12,10,10">
-         <Expander x:Name="LayoutFolder" Header="外观与布局" IsExpanded="False" MinHeight="48" Padding="14,2,14,10" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Background="Transparent" BorderThickness="0" CornerRadius="0,12,10,10" AutomationProperties.AutomationId="LayoutFolder" ToolTipService.ToolTip="标题颜色、内容尺度与疏密、排布模式和浏览方式；折叠不会重置设置。">
+         <Expander x:Name="LayoutFolder" IsExpanded="False" MinHeight="56" Padding="14,2,14,14" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Background="Transparent" BorderThickness="0" BorderBrush="Transparent" CornerRadius="0,12,10,10" AutomationProperties.AutomationId="LayoutFolder" AutomationProperties.Name="外观与布局" ToolTipService.ToolTip="背景、标题、内容尺度与排布；折叠不会重置设置。">
+          <Expander.Header><StackPanel Spacing="2"><TextBlock Text="外观与布局" FontWeight="SemiBold"/><TextBlock Text="仅当前海报" FontSize="10" Opacity="0.65"/></StackPanel></Expander.Header>
           <Expander.Resources>
            <SolidColorBrush x:Key="ExpanderHeaderBackground" Color="Transparent"/><SolidColorBrush x:Key="ExpanderHeaderBorderBrush" Color="Transparent"/>
            <SolidColorBrush x:Key="ExpanderHeaderBorderPointerOverBrush" Color="Transparent"/><SolidColorBrush x:Key="ExpanderHeaderBorderPressedBrush" Color="Transparent"/>
            <SolidColorBrush x:Key="ExpanderContentBackground" Color="Transparent"/><SolidColorBrush x:Key="ExpanderContentBorderBrush" Color="Transparent"/>
           </Expander.Resources>
           <StackPanel x:Name="LayoutFolderPanel" Spacing="14">
-       <Expander x:Name="SurfaceFolder" Header="海报背景" IsExpanded="False" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
-        <StackPanel Spacing="10">
-         <Button x:Name="SurfaceColorButton" Click="SurfaceColor_Click" Style="{StaticResource UiCAction}" AutomationProperties.AutomationId="PosterSurfaceColor" AutomationProperties.Name="海报背景颜色">
-          <StackPanel Orientation="Horizontal" Spacing="10"><Border x:Name="SurfaceColorChip" Width="24" Height="18"/><TextBlock x:Name="SurfaceColorValue"/></StackPanel>
-         </Button>
-         <TextBlock x:Name="SurfaceOpacityLabel" Text="背景不透明度"/>
+       <Border x:Name="SurfaceCard" Style="{StaticResource UiCAppearanceCard}">
+       <Expander x:Name="SurfaceFolder" Style="{StaticResource UiCAppearanceFolder}" IsExpanded="False" AutomationProperties.Name="海报背景">
+        <Expander.Header><StackPanel Spacing="3"><TextBlock Text="海报背景" FontWeight="SemiBold"/><TextBlock x:Name="SurfaceSummary" FontSize="11" Opacity="0.65" TextTrimming="CharacterEllipsis"/></StackPanel></Expander.Header>
+        <StackPanel Spacing="8">
+         <Grid ColumnSpacing="12"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+          <TextBlock Text="背景颜色" VerticalAlignment="Center" TextWrapping="Wrap"/>
+          <Button Grid.Column="1" x:Name="SurfaceColorButton" Click="SurfaceColor_Click" Style="{StaticResource UiCColorAction}" AutomationProperties.AutomationId="PosterSurfaceColor" AutomationProperties.Name="海报背景颜色" ToolTipService.ToolTip="选择当前海报的背景颜色；支持预览、应用与取消。">
+           <Grid ColumnSpacing="8"><Grid.ColumnDefinitions><ColumnDefinition Width="24"/><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><Border x:Name="SurfaceColorChip" Height="24" CornerRadius="4" BorderThickness="1" BorderBrush="{ThemeResource UiCBorderBrush}"/><TextBlock Grid.Column="1" x:Name="SurfaceColorValue" FontFamily="Consolas" FontSize="12" VerticalAlignment="Center"/><FontIcon Grid.Column="2" Glyph="&#xE70D;" FontSize="10" Opacity="0.65"/></Grid>
+          </Button>
+         </Grid>
+         <Grid Margin="0,4,0,0"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock x:Name="SurfaceOpacityLabel" Text="背景不透明度" VerticalAlignment="Center"/><TextBlock Grid.Column="1" x:Name="SurfaceOpacityValue" FontFamily="Consolas" FontSize="14" Foreground="{ThemeResource UiCAccentBrush}" VerticalAlignment="Center"/></Grid>
          <Slider x:Name="SurfaceOpacitySlider" Minimum="0" Maximum="100" StepFrequency="1" AutomationProperties.AutomationId="PosterSurfaceOpacity" AutomationProperties.Name="背景不透明度" ToolTipService.ToolTip="0% 全透明，100% 不透明。只改变背景，不改变图标、文字和动效。"/>
+         <Grid Margin="0,-9,0,0"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions><TextBlock Text="透明" FontSize="10" Opacity="0.6"/><TextBlock Grid.Column="1" Text="不透明" FontSize="10" Opacity="0.6" HorizontalAlignment="Right"/></Grid>
         </StackPanel>
        </Expander>
+       </Border>
+       <Border x:Name="TitleCard" Style="{StaticResource UiCAppearanceCard}">
+       <Expander x:Name="TitleColorsFolder" Style="{StaticResource UiCAppearanceFolder}" IsExpanded="False" AutomationProperties.Name="标题与符号">
+        <Expander.Header><StackPanel Spacing="3"><TextBlock Text="标题与符号" FontWeight="SemiBold"/><TextBlock x:Name="TitleSummary" FontSize="11" Opacity="0.65" TextTrimming="CharacterEllipsis"/></StackPanel></Expander.Header>
+        <StackPanel Spacing="10">
        <Grid ColumnSpacing="10"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
         <TextBlock Text="显示标题" VerticalAlignment="Center"/>
         <ToggleSwitch x:Name="TitleVisibilitySwitch" Grid.Column="1" OnContent="显示" OffContent="隐藏" Toggled="TitleVisibility_Changed" AutomationProperties.AutomationId="TitleVisibility" AutomationProperties.Name="显示标题" ToolTipService.ToolTip="仅隐藏当前海报上的名称文字；控制中心名称、拖动区域、收展与更多按钮保持不变。"/>
        </Grid>
-       <Expander x:Name="TitleColorsFolder" Header="标题与符号" IsExpanded="False" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
-        <StackPanel x:Name="TitleColorsPanel" Orientation="Horizontal" Spacing="24"/>
+        <StackPanel x:Name="TitleColorsPanel" Spacing="8">
+         <Grid ColumnSpacing="12"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+          <TextBlock Text="标题文字" VerticalAlignment="Center" TextWrapping="Wrap"/>
+          <Button Grid.Column="1" x:Name="TitleTextColorButton" Style="{StaticResource UiCColorAction}" AutomationProperties.AutomationId="TitleTextColor" AutomationProperties.Name="标题文字颜色" ToolTipService.ToolTip="只改变当前海报的标题文字；隐藏标题时也可预设颜色。">
+           <Grid ColumnSpacing="8"><Grid.ColumnDefinitions><ColumnDefinition Width="24"/><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><Border x:Name="TitleTextColorChip" Height="24" CornerRadius="4" BorderThickness="1" BorderBrush="{ThemeResource UiCBorderBrush}"/><TextBlock Grid.Column="1" x:Name="TitleTextColorValue" FontFamily="Consolas" FontSize="12" VerticalAlignment="Center"/><FontIcon Grid.Column="2" Glyph="&#xE70D;" FontSize="10" Opacity="0.65"/></Grid>
+          </Button>
+         </Grid>
+         <Grid ColumnSpacing="12"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+          <TextBlock Text="动作符号" VerticalAlignment="Center" TextWrapping="Wrap"/>
+          <Button Grid.Column="1" x:Name="TitleActionColorButton" Style="{StaticResource UiCColorAction}" AutomationProperties.AutomationId="TitleActionColor" AutomationProperties.Name="动作符号颜色" ToolTipService.ToolTip="只改变当前海报的收展与更多按钮符号，不改变图标、文字或控制中心主题。">
+           <Grid ColumnSpacing="8"><Grid.ColumnDefinitions><ColumnDefinition Width="24"/><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><Border x:Name="TitleActionColorChip" Height="24" CornerRadius="4" BorderThickness="1" BorderBrush="{ThemeResource UiCBorderBrush}"/><TextBlock Grid.Column="1" x:Name="TitleActionColorValue" FontFamily="Consolas" FontSize="12" VerticalAlignment="Center"/><FontIcon Grid.Column="2" Glyph="&#xE70D;" FontSize="10" Opacity="0.65"/></Grid>
+          </Button>
+         </Grid>
+        </StackPanel>
+        </StackPanel>
        </Expander>
+       </Border>
        <Grid x:Name="MacroPair" ColumnSpacing="24"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
         <StackPanel x:Name="ScaleHost" Spacing="0" HorizontalAlignment="Stretch"><TextBlock x:Name="ScaleLabel" Text="内容尺度"/><Grid><Slider x:Name="ScaleSlider" Minimum="0.8" Maximum="1.5" StepFrequency="0.01" TickPlacement="None" AutomationProperties.AutomationId="ContentScale" AutomationProperties.Name="内容尺度"/><Canvas x:Name="ScaleMarks" IsHitTestVisible="False"/></Grid><Canvas x:Name="ScaleLabels" Height="20" IsHitTestVisible="False"/></StackPanel>
         <StackPanel Grid.Column="1" x:Name="SpacingHost" Spacing="0" HorizontalAlignment="Stretch"><TextBlock x:Name="SpacingLabel" Text="内容疏密"/><Grid><Slider x:Name="SpacingSlider" Minimum="0.5" Maximum="1.5" StepFrequency="0.01" TickPlacement="None" AutomationProperties.AutomationId="ContentSpacing" AutomationProperties.Name="内容疏密"/><Canvas x:Name="SpacingMarks" IsHitTestVisible="False"/></Grid><Canvas x:Name="SpacingLabels" Height="20" IsHitTestVisible="False"/></StackPanel>
@@ -268,7 +297,7 @@
         <Grid ColumnSpacing="8"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
          <ComboBox x:Name="ContentItemSelector" Header="所选项目" HorizontalAlignment="Stretch" SelectionChanged="ContentItem_Changed" DisplayMemberPath="Name" AutomationProperties.AutomationId="ContentItem"/>
          <Button Grid.Column="1" x:Name="ContentKeyboardPad" Content="打开 ↗" Click="ContentOpen_Click" PreviewKeyDown="ContentKeyboard_KeyDown" KeyUp="ContentKeyboard_KeyUp" LostFocus="ContentKeyboard_LostFocus" VerticalAlignment="Bottom" Style="{StaticResource UiCAction}" AutomationProperties.AutomationId="ContentKeyboardPad" ToolTipService.ToolTip="打开所选项目。此按钮聚焦时：方向键移动，Shift＋方向键改跨度，Shift＋F10管理。"/>
-         <Button Grid.Column="2" x:Name="ContentManageButton" Content="…" Click="ContentManage_Click" VerticalAlignment="Bottom" Style="{StaticResource UiCAction}" AutomationProperties.AutomationId="ContentManage" AutomationProperties.Name="管理所选项目" ToolTipService.ToolTip="定位、刷新或修复所选卡片的来源；不移动原文件。"/>
+         <Button Grid.Column="2" x:Name="ContentManageButton" Content="…" Click="ContentManage_Click" VerticalAlignment="Bottom" Style="{StaticResource UiCAction}" AutomationProperties.AutomationId="ContentManage" AutomationProperties.Name="管理所选项目" ToolTipService.ToolTip="更换卡片图标，或定位、刷新、修复来源；不移动原文件。"/>
         </Grid>
         <Grid ColumnSpacing="8"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
          <StackPanel Orientation="Horizontal" Spacing="7"><Button x:Name="ContentFixedButton" Content="固定顺序" Click="ContentFixed_Click" Style="{StaticResource UiCAction}"/><Button x:Name="ContentAutoSizeButton" Content="恢复尺寸" Click="ContentAutoSize_Click" Style="{StaticResource UiCAction}" ToolTipService.ToolTip="只撤销当前项目的尺寸覆盖，保留顺序图钉。"/></StackPanel>

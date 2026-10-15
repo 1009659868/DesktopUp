@@ -8,6 +8,7 @@ public sealed record PosterContentContextRequest(PosterInputHit Hit, PointerScre
     public PointerScreenPoint? PressScreenPoint { get; init; }
     public PosterInputSessionKey Session => Hit.Session;
     public string PosterId => Hit.Session.PosterId;
+    public bool IsBackground => Hit.Region.Kind == PosterInputTargetKind.ContentViewport;
     public string ContentItemId => Hit.Region.ContentItemId!;
     public long LayoutRevision => Hit.LayoutRevision;
     public long ContentSnapshotGeneration => Hit.Region.ContentSnapshotGeneration;

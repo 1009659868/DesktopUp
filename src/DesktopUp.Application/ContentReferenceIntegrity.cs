@@ -26,7 +26,8 @@ public static class ContentReferenceIntegrity
             var removedStorage = before.ContentCatalog.Memberships.Where(m => !catalog.Memberships.Contains(m)).ToArray();
             if (!removedStorage.Select(m => m.Id).ToHashSet().SetEquals(plan.RemovedStorageMemberships) ||
                 removedStorage.Any(m => (plan.TransferReceiptId is null && plan.ExternalSyncReceiptId is null) || m.Origin != ContentMembershipOrigin.Source ||
-                    before.ContentCatalog.Collections.Single(c => c.Id == m.CollectionId).Kind != ContentCollectionKind.Managed ||
+                    (before.ContentCatalog.Collections.Single(c => c.Id == m.CollectionId).Kind != ContentCollectionKind.Managed &&
+                        !(plan.ExternalSyncReceiptId is not null && before.ContentCatalog.Collections.Single(c => c.Id == m.CollectionId).Kind == ContentCollectionKind.Mapped)) ||
                     catalog.PosterItems.Any(p => p.MembershipId == m.Id)))
                 return "Storage membership removal requires verified transfer or external observation, never a view detach.";
             if (before.ContentCatalog.Items.Any(i => catalog.Items.All(n => n.Id != i.Id)) ||

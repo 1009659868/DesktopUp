@@ -13,6 +13,7 @@ public sealed record IncomingDropSurface(Guid RunId, string PosterId, long Entit
     double ScaleX, double ScaleY, ContentRect ContentViewport, ContentFlowAxis Axis,
     double ScrollX = 0, double ScrollY = 0, double LoopPeriod = 0)
 {
+    public bool SupportsCopy { get; init; }
     public IncomingDropLocation? Map(PointerScreenPoint point)
     {
         var v = ContentViewport;
@@ -47,7 +48,8 @@ public sealed record IncomingDropSurface(Guid RunId, string PosterId, long Entit
 }
 
 public sealed record IncomingDropPreview(long Session, IncomingDropSurface Surface,
-    PointerScreenPoint ScreenPoint, IncomingDropLocation Location, int Count);
+    PointerScreenPoint ScreenPoint, IncomingDropLocation Location, int Count)
+{ public uint Effect { get; init; } = 2; }
 public sealed record IncomingDropTicket(IncomingDropPreview Preview, IReadOnlyList<string> Paths);
 
 /// <summary>No I/O during OLE hover. A release consumes one immutable payload, only against
@@ -79,8 +81,9 @@ public sealed class IncomingDropSession
             if (owner is { } previous && previous != identity) { Leave(); return null; }
             owner = identity;
         }
-        Preview = Active && MoveAllowed(keys, offeredEffects) && surface?.Map(point) is { } location
-            ? new(generation, surface, point, location, paths!.Length) : null;
+        uint effect=Effect(keys,offeredEffects,surface?.SupportsCopy==true);
+        Preview = Active && effect!=0 && surface?.Map(point) is { } location
+            ? new(generation, surface, point, location, paths!.Length) { Effect=effect } : null;
         return Preview;
     }
 
@@ -90,12 +93,15 @@ public sealed class IncomingDropSession
         var previous = Preview;
         var owned = paths;
         Leave(); // End ownership before any callback/reentrancy/await.
-        if (owned is null || previous is null || previous.Surface != surface || !MoveAllowed(keys, offeredEffects) ||
+        uint effect=Effect(keys,offeredEffects,surface?.SupportsCopy==true);
+        if (owned is null || previous is null || previous.Surface != surface || effect==0 ||
             input is null || !owned.SequenceEqual(input, StringComparer.OrdinalIgnoreCase) || surface?.Map(point) is not { } location)
             return null;
-        return new(previous with { ScreenPoint = point, Location = location }, Array.AsReadOnly(owned));
+        return new(previous with { ScreenPoint = point, Location = location, Effect=effect }, Array.AsReadOnly(owned));
     }
 
     public void Leave() { paths = null; Preview = null; owner = null; }
     public static bool MoveAllowed(uint keys, uint offeredEffects) => (offeredEffects & 2) != 0 && (keys & (8u | 32u | 2u)) == 0;
+    private static uint Effect(uint keys,uint offered,bool copy) => copy && (keys&8)!=0 && (keys&(4u|32u|2u))==0
+        ? (offered&1) : MoveAllowed(keys,offered)?2u:0;
 }

@@ -9,12 +9,19 @@ internal sealed partial class PosterVisualWindow
 {
     private void OnContentContextRequested(object? sender, PosterContentContextEventArgs args)
     {
+        if(HasFileAction){args.Handled=true;return;}
         var request = args.Request;
         if (_disposed || _contentPresentationSuspended || _geometry.IsCollapsed || _inputIsland is null ||
             request.Session != inputSession || request.Hit.LayoutRevision != _inputIsland.AppliedLayoutRevision ||
             request.Frame != _bounds || inputRouter.ResolveContext(request.Hit, request.ScreenPoint, [inputSession], request.PressScreenPoint) is null ||
             request.ContentSnapshotGeneration != _contentSnapshot?.ViewportGeneration ||
             !inputRouter.IsCurrent(inputSession, request.Hit.LayoutRevision)) return;
+        if (request.IsBackground)
+        {
+            args.Handled = true;
+            ShowPosterMenu(contentPoint: request.ScreenPoint, contentBackground: true);
+            return;
+        }
         if (SelectContentItem(request.ContentItemId, preserveSet: true) is { } error)
         { ReportContentFailure(error); return; }
         args.Handled = true;
@@ -75,23 +82,11 @@ internal sealed partial class PosterVisualWindow
         if (IsRealContent)
         {
             Add("在资源管理器中定位", "reveal", RevealSelectedContent);
-            Add("刷新来源状态与图标", "refresh-source", RefreshRealContent);
-            if (spatial.TryGetProjection(out var basis) && basis!.PostersById.TryGetValue(doc.PosterId, out var owner))
-            {
-                var removal = new ContentDetachCommand("detach-" + Guid.NewGuid().ToString("N"), StateCommandSource.Poster,
-                    basis.Revision, new(new Dictionary<string,long> { [doc.PosterId] = owner.EntityVersion }, ContentVersion: basis.ContentVersion),
-                    doc.PosterId, SelectedContentIds(), true);
-                var confirm = new MenuFlyoutSubItem { Text = $"从此海报移除 {removal.ItemIds.Count} 项引用…", IsEnabled = writable };
-                var only = StyleMenuItem(new MenuFlyoutItem { Text = "确认移除 · 原文件和其他海报不变" });
-                only.Click += (_, _) =>
-                {
-                    if (!current("item-detach")) return;
-                    flyout.Hide();
-                    if (spatial.DetachContent(removal) is { } failure) ReportContentFailure(failure);
-                    else PublishContentFeedback("已从此海报移除；原文件未删除。", transient: true);
-                };
-                confirm.Items.Add(only); flyout.Items.Add(confirm);
-            }
+            bool single = SelectedContentIds().Length == 1;
+            Add("重命名", "rename", () => BeginContentRename(itemId), single && writable);
+            Add("删除", "delete", BeginContentDelete, writable && spatial.TransfersAvailable);
+            Add("属性", "properties", () => BeginShellUi(itemId, ShellUiAction.Properties), single);
+            Add(ShellUiProtocol.MenuLabel, "shell-menu", () => BeginShellUi(itemId, ShellUiAction.ItemMenu), single && writable);
         }
         flyout.Items.Add(new MenuFlyoutSeparator());
         if (doc.Mode != ContentLayoutMode.Manual)
@@ -105,6 +100,5 @@ internal sealed partial class PosterVisualWindow
             flyout.Items.Add(new MenuFlyoutSeparator());
         }
         Add("撤销上次调整", "undo", () => UndoContent(false), writable && _contentHistory.CanUndo(doc));
-        Add("重做调整", "redo", () => UndoContent(true), writable && _contentHistory.CanRedo(doc));
     }
 }

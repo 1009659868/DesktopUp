@@ -17,8 +17,9 @@ internal sealed partial class PosterSpatialRuntime
     private bool _fileTransferBusy;
     private string? _fileTransferPoster;
     internal bool IsFileTransferActive(string id)=>_fileTransferBusy&&_fileTransferPoster==id;
-    internal bool TransfersAvailable => _transferStore is not null && _transferStartup.IsCompletedSuccessfully &&
-        !_fileTransferStopping.IsCancellationRequested && !_fileTransferBusy && !_suspended && _transferDialogsBusy?.Invoke()!=true;
+    internal bool FileServiceReady => _transferStore is not null && _transferStartup.IsCompletedSuccessfully &&
+        !_fileTransferStopping.IsCancellationRequested && !_fileTransferBusy && !_suspended;
+    internal bool TransfersAvailable => FileServiceReady && _transferDialogsBusy?.Invoke()!=true;
     internal void ConfigureTransfers(SqliteStateStore store,Task startup,Func<Task<RegisteredManagedStorage?>> choose,
         Func<string,Task<bool>> confirm,Func<bool> dialogsBusy,Action<string> failure)
     { _transferStore=store;_transferStartup=startup;_chooseTransferStorage=choose;_confirmTransfer=confirm;_transferDialogsBusy=dialogsBusy;_showTransferFailure=failure; }

@@ -24,6 +24,8 @@ public partial class App
                 var journal=new SqliteTransferJournal(store);
                 var finished=new AutomaticTransferCompletion(journal).Settle();
                 SingleOwnerMigration.Apply(store);
+                new ContentRenameService(store).Reconcile();
+                new MappedDirectoryIngress(store).SettleInterrupted(); // Never replay a Shell move.
                 // Only previously released, originally live moves are observed. Old missing
                 // cards and crash-before-release intents are NEVER auto-removed (DEC-047).
                 new NativeShellExitJournal(store).Reconcile();
@@ -39,6 +41,7 @@ public partial class App
             _managedContentMonitor = new ManagedContentMonitor(store, result => _dispatcher?.TryEnqueue(() =>
             {
                 if (Volatile.Read(ref _exiting) != 0) return;
+                _spatialRuntime?.PublishMappingStates(result.MappingStates);
                 if (result.Changed)
                 {
                     _stateCoordinator?.Refresh();
