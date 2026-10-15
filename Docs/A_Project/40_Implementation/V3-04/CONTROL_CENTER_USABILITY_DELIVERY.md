@@ -1,5 +1,44 @@
 # V3-04-04 UX：首版可用性实施记录
 
+## 2026-10-15 外观与布局统一修订（当前）
+
+分支 `impl/control-center-ui-optimization`，基点 `f2c9c6d`。2026-10-15用户确认下列1～3项均通过，本项 **CLOSED / USER PASS**，并授权提交/推送功能分支、合入及同步 `impl/develop`，再同步精简发布线 `impl/main`，最终返回develop。下方2026-09-15记录为历史，不作为本轮候选或验收结论。
+
+### 范围与实现
+
+- 保留外层UiC设置夹；内部统一为圆角、无默认方框边线的“海报背景”和“标题与符号”收纳卡。折叠摘要展示背景色/不透明度、标题显隐状态。
+- “显示标题”收进标题与符号组，不再散放。背景/标题/动作符号三处颜色入口共用尺寸与配色样式；背景不透明度独立显示百分比和透明/不透明方向，滑块仍是0～100、步长1。
+- 不改配置schema、默认值、按海报作用域、颜色预览/应用/取消、滑块松手提交、切换目标取消草稿。标题隐藏仍保留拖动、收展和更多按钮；背景不透明度不作用于图标/文字。
+- 控件探针复用原背景合同，在独立两海报配置中覆盖显隐与颜色单次提交、颜色取消、切换目标取消、折叠不写库、重启保留及三种主题/宽窄窗口。不会移动文件，不运行无关拖放测试矩阵。
+
+### 最终自动验证与诊断边界
+
+自动阶段 **CODE/AUTO COMPLETE**，其后的三组人工已由用户确认通过。最终37/37直接影响面测试通过（`PosterSurfaceAppearanceTests / TitleColorTests / TitleVisibilityTests / ControlCenterUxTests / ControlCenterDraftOwnershipTests`），TRX：`out/control-center-appearance/results/appearance-final.trx`；初轮37项证据另存。App/worker及fixture Release构建0警告0错误。纯样式/呈现修订按本次计划采用定向门，不复跑文件业务历史全量。
+
+- 最终同包证据 `out/drop-d3/appearance-gate12/results.json`：首启PID45080、重启PID8028均PASS、退出码0、资源0。背景/标题预览取消与单次提交、切目标取消、两海报隔离、折叠不写库、重启保留通过；纸白/墨色/深海×980/480像素共6张实际XAML图及折叠图已检查，主要控件无水平溢出。此为实际控件回调/RenderTargetBitmap证据，不代替原生鼠标和桌面合成验收。
+- `appearance-gate01～11`为诊断失败证据，保留不覆盖：WinUI在未完成加载即被探针改色/关闭的标题颜色弹层之后切主题发生`0xc0000005`。排除截图、窄窗口、模板切换、第二海报和显隐单独触发；资源隔离试改无效，已全部撤回，`LampColors.cs`无产品差异。gate11与gate12产品源码相同，后者仅补探针等待真实控件加载及Flyout.Closed，分段主题切换、取消、应用全部通过。该结果不宣称修复Windows原生竞态，快速真实操作仍归人工。
+- 诊断尝试的旧candidate04模板综合探针在`background`旧字段读口处失败，未到主题检查；证据 `out/control-center-appearance/baseline-theme`。不作为本轮基线对照成功或新增产品回归；本轮专用探针使用当前公共背景读口，不顺带扩修历史夹具。
+
+### 集中人工范围
+
+1. 外观 → 外观与布局：两个收纳组的展开/折叠、状态摘要、颜色入口和数值排版；纸白/墨色/深海主题及窄窗口中不截断主要控件。
+2. 背景颜色/不透明度、显示标题、标题文字/动作符号颜色：即时预览、取消与保存保持原行为；隐藏标题不隐藏动作按钮。
+3. A/B切换、中心关闭重开、托盘正常退出并用同一入口重启：参数各自保留，不串到另一张海报。只验本轮UI，不重做已验文件操作。
+
+### 2026-10-15 人工结果与集成
+
+用户明确反馈“1～3项均验证通过，符合预期”：上述三组分别记为 **USER PASS**，不要求重复验收。关闭本轮UI项，不扩大到长时、多DPI、满盘、第三方Shell扩展等历史未验范围。下方候选PID和待合回措辞为交付时快照。
+
+本次fetch确认develop与远端同为f2c9c6d、发布线与远端同为484fc02，无远端独有提交。按授权进行功能提交、develop非快进集成和发布精简合并；发布线另做构建、打包及安装启动/卸载验证，不用开发候选代替成品证据。实际提交与证据归[发布同步记录](PREVIEW_INSTALLER_DELIVERY.md)及[交接](HANDOFF.md)。
+
+独立候选 `out/control-center-appearance/candidate01/{app,fixture}`；集中人工配置 `out/drop-d3/appearance-review01/profile`，含A/B两张空海报（不收纳真实文件）。入口：
+
+```powershell
+& 'G:\A_\Tools\DesktopUp_V2\scripts\start-control-center-appearance-review.ps1'
+```
+
+首次创建独立配置并执行同包UI探针，之后重复启动保留本配置；已有DesktopUp进程时拒绝覆盖/强停。进入“外观 → 外观与布局”展开两个设置组即可验收。review01已通过同包首启/重启，再打开集中人工进程PID20428。旧candidate04、配置、收纳文件与历史未验环境全部保留；未获集中人工确认不合回develop。
+
 日期：2026-09-15。依据：[当前计划](../../30_Plans/V3_04_04_CONTROL_CENTER_PLAN.md)、[设计](../../20_Architecture/CONTROL_CENTER_USABILITY_DESIGN_V1.md)、V2-DEC-005。
 
 ## 1. 当前出口

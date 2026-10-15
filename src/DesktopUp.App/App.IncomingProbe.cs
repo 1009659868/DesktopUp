@@ -24,6 +24,14 @@ public partial class App
             while(!_spatialRuntime!.IncomingProbeReady)
             {if(watch.Elapsed.TotalSeconds>20)throw new IOException("Incoming surface not ready.");await Task.Delay(100);}
             var repository=new SqliteStateCommandRepository(_services!.GetRequiredService<SqliteStateStore>());
+            if (_startupIntent.Arguments.Contains("--appearance-layout-probe"))
+            {
+                _controlCenter!.Show();
+                await _controlCenter.WindowForPortableProbe!.VerifyAppearanceLayoutForProbe(
+                    _startupIntent.Arguments.Contains("--incoming-restart"), root);
+                _log!.Write("info", "contract.appearance_layout_passed", new { restart = _startupIntent.Arguments.Contains("--incoming-restart"), nativeMouse = false });
+                return; // UI-only fixture: do not run ingress/file-move scenarios.
+            }
             bool syncProbe = _startupIntent.Arguments.Contains("--managed-sync");
             bool combinedProbe = _startupIntent.Arguments.Contains("--d5-combined");
             bool entryProbe = _startupIntent.Arguments.Contains("--content-entry-probe");

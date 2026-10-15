@@ -101,7 +101,7 @@ public sealed partial class ControlCenterWindow
             SpacingHost.Children.OfType<Grid>().Any(g => g.Children.Contains(SpacingSlider)) &&
             _templateSamples.Count == 3 && AppearanceTab.Parent == BehaviorTab.Parent,
             MacroPair.Children.Contains(ScaleHost) && MacroPair.Children.Contains(SpacingHost) && LayoutFolderPanel.Children.Contains(MacroPair) &&
-            LayoutFolderPanel.Children.Contains(TitleColorsFolder) && LayoutFolderPanel.Children.Contains(ContentLayoutStatus), bounds,
+            LayoutFolderPanel.Children.Contains(TitleCard) && TitleCard.Child == TitleColorsFolder && LayoutFolderPanel.Children.Contains(ContentLayoutStatus), bounds,
             SelectedTemplateKey ?? _view?.SelectedPoster?.Poster.TemplateKey ?? "",
             UiCTemplateSummary.Text, _view?.SelectedPosterId, _view?.Posters.Count ?? 0,
             _view?.Projection.Revision ?? 0)

@@ -1,5 +1,9 @@
 # V3-04 当前交接
 
+## 2026-10-15 外观UI优化候选（当前）
+
+外观UI1～3项由用户确认全部通过，本项CLOSED / USER PASS；候选进程已退出。背景/标题/收纳栏统一，配置/文件业务不变。App构建、37项直接影响面及gate12首启/重启通过；详细证据、失败诊断和人工范围见[当前C记录](CONTROL_CENTER_USABILITY_DELIVERY.md#2026-10-15-人工结果与集成)。本次授权提交并同步功能分支、合入develop、更新精简impl/main且检查成品体验，最终回develop；旧包/用户配置/收纳文件保留。实际提交及发布证据在本轮完成后登记，下方不合回/不更新发布线为历史。
+
 ## 2026-10-15 人工通过、Git同步与UI优化准备（当前）
 
 用户确认candidate04/review04本轮1～3项通过，授权提交/推送 `impl/05-content-native-actions`，合入并同步 `impl/develop`，再从集成点派生并切换 `impl/control-center-ui-optimization`。此前“暂不合回”被此次明确授权取代；不更改 `impl/main`，不删除旧分支、包、配置或用户文件。

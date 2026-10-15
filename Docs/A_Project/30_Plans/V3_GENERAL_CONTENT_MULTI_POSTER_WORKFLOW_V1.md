@@ -2,6 +2,8 @@
 
 ## 2026-10-15 下一步：控制中心UI优化准备
 
+2026-10-15收口：外观UI1～3项由用户确认通过，当前CLOSED / USER PASS；不改底层功能逻辑。按授权提交/推送并合入develop，再同步精简impl/main、验证成品，最终回develop。验收见[外观与布局统一修订](../40_Implementation/V3-04/CONTROL_CENTER_USABILITY_DELIVERY.md#2026-10-15-人工结果与集成)，发布边界见[发布记录](../40_Implementation/V3-04/PREVIEW_INSTALLER_DELIVERY.md)。05-04-V3继续延期，后续功能另从develop派生；下方准备/待验为阶段历史。
+
 用户已确认candidate04本轮1～3项通过，授权同步原生内容功能分支并合入/推送develop。随后从集成点创建并切换 `impl/control-center-ui-optimization`；本轮只完成验收记录、Git与下一步范围准备，尚不修改产品UI。05-04-V3构造卡片继续延期，发布线impl/main不动。
 
 范围：截图中的“外观与布局 → 海报背景 / 显示标题 / 标题与符号”及其折叠收纳。当前背景/标题颜色使用默认Expander样式，外层为UiC样片夹风格，显示标题单独散放；下一步统一层次、间距、颜色入口与数值反馈，减少无效占高。

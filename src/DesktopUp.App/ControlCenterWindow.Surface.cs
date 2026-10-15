@@ -84,7 +84,8 @@ public sealed partial class ControlCenterWindow
         var value = CurrentSurface;
         SurfaceColorValue.Text = value.Color;
         if (TryLampColor(value.Color, out var color)) SurfaceColorChip.Background = new SolidColorBrush(color);
-        SurfaceOpacityLabel.Text = $"背景不透明度 · {value.OpacityPercent:0}%";
+        SurfaceOpacityValue.Text = $"{value.OpacityPercent:0}%";
+        SurfaceSummary.Text = $"{value.Color} · 不透明度 {value.OpacityPercent:0}%";
         SurfaceOpacitySlider.Value = value.OpacityPercent;
         bool available = _view?.SelectedPoster?.Presentation.CanEdit == true && !_editor.ProtectsInteraction && !IsContentFieldDraftActive;
         SurfaceColorButton.IsEnabled = available && ((!_settings.ProtectsInteraction && _lampColorFlyout is null) ||
