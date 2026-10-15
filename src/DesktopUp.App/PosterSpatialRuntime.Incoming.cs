@@ -7,21 +7,21 @@ namespace DesktopUp;
 internal sealed partial class PosterSpatialRuntime
 {
     private CancellationTokenSource? _incomingCancellation;
-    internal void ReceiveFiles(PosterVisualWindow window,IncomingDropTicket ticket,IncomingContentPlacement? landing)
+    internal void ReceiveFiles(PosterVisualWindow window,IncomingDropTicket ticket,IncomingContentPlacement? landing,ShellExitIntent? origin=null)
     {
-        if(!TransfersAvailable && CanReceiveInto(window.PosterId!) && _nativeExitLifetime is { } source)
+        if(origin is not null && _nativeExitLifetime is { } source)
         {
-            _nativeExitToMapped=true;
             TrackContentOperation(AfterSource());return;
-            async Task AfterSource(){await source.Task;ReceiveFiles(window,ticket,landing);}
+            async Task AfterSource(){await source.Task;ReceiveFiles(window,ticket,landing,origin);}
         }
         if(!TransfersAvailable || !window.CanReceiveFiles || !window.IncomingGeometryCurrent(ticket.Preview.Surface))return;
         _fileTransferBusy=true;_fileTransferPoster=window.PosterId;
+        _crossPosterSource=origin?.PosterId;
         _incomingCancellation=CancellationTokenSource.CreateLinkedTokenSource(_fileTransferStopping.Token);
         ActivityChanged?.Invoke();
-        _fileTransferTask=RunIncoming(window,ticket,landing,_incomingCancellation);
+        _fileTransferTask=RunIncoming(window,ticket,landing,_incomingCancellation,origin);
     }
-    private async Task RunIncoming(PosterVisualWindow window,IncomingDropTicket ticket,IncomingContentPlacement? landing,CancellationTokenSource lifetime)
+    private async Task RunIncoming(PosterVisualWindow window,IncomingDropTicket ticket,IncomingContentPlacement? landing,CancellationTokenSource lifetime,ShellExitIntent? origin=null)
     {
         string id=window.PosterId!;long entity=window.TransferEntityVersion;
         int completed=0,failed=0;string? lastError=null;
@@ -29,6 +29,18 @@ internal sealed partial class PosterSpatialRuntime
             window.IncomingGeometryCurrent(ticket.Preview.Surface) && window.TransferEntityVersion==entity && !HasCenterDraft(id);
         try
         {
+            if(origin is not null && ticket.Preview.Effect==2)
+            {
+                var targetStorage=ContentActionPath(id,null) is null?await _chooseTransferStorage!():null;
+                if(!Current())return;
+                nint owner=window.TransferOwner;
+                var result=await Task.Run(()=>new CrossPosterTransfer(_transferStore!).Execute(origin,id,ticket.Paths,targetStorage,
+                    landing,owner,()=>!lifetime.IsCancellationRequested,lifetime.Token,entity));
+                state.Refresh();
+                if(result.Errors.Count>0)_showTransferFailure?.Invoke(string.Join("\n",result.Errors));
+                log.Write("info","transfer.cross_poster_finished",new{source=origin.PosterId,target=id,result.Completed,result.Skipped,result.Errors});
+                return;
+            }
             if(ContentActionPath(id,null) is not null)
             {
                 // File/COM work stays off the UI thread. Read-set validation in the service
@@ -97,8 +109,12 @@ internal sealed partial class PosterSpatialRuntime
         }
         finally
         {
-            state.Refresh();_fileTransferBusy=false;_fileTransferPoster=null;
-            _incomingCancellation=null;lifetime.Dispose();ActivityChanged?.Invoke();
+            try { state.Refresh(); }
+            finally
+            {
+                _fileTransferBusy=false;_fileTransferPoster=null;_crossPosterSource=null;
+                _incomingCancellation=null;lifetime.Dispose();ActivityChanged?.Invoke();
+            }
         }
     }
 }

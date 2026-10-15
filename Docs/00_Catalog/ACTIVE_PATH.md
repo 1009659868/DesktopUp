@@ -1,5 +1,9 @@
 # DesktopUp V2 当前执行入口
 
+2026-10-15 最新：05-07四组人工已通过，按用户授权同步功能分支和develop；下一步05-12收纳生命周期（记录原路径、删海报归还、不可用回桌面）。A需求最新决定 → B安全归还边界 → C直接拖放§14验收及后续生命周期实施；不恢复任务管理UI、不改发布线。
+
+2026-10-15 当前：A[05-07执行边界](../A_Project/10_Requirements/REQUIREMENTS_RISKS_AND_OPEN_QUESTIONS.md) → B[跨海报交接合同](../A_Project/20_Architecture/GENERAL_CONTENT_MULTI_POSTER_CONTRACT_V1.md) → C[直接拖放§14](../A_Project/40_Implementation/V3-05/DIRECT_TRANSFER_DELIVERY.md#14-v3-05-07-跨海报直接拖放2026-10-15进行中)。分支 `impl/05-07-cross-poster-drag`，连续完成至集中人工；不提交/合并/推送。下方已完成里程碑为历史，不恢复旧恢复向导或点击穿透。
+
 2026-10-15 当前：A DEC-050外观UI补充 → B既有背景/标题参数与提交合同不变 → C[外观UI人工收口](../A_Project/40_Implementation/V3-04/CONTROL_CENTER_USABILITY_DELIVERY.md#2026-10-15-人工结果与集成)。1～3项USER PASS；功能0a75494 → develop d66265f → 精简impl/main f80765e均已推送，已返回develop。20261015.1成品构建/安装运行/配置保真/卸载通过，证据及未验边界归[发布记录](../A_Project/40_Implementation/V3-04/PREVIEW_INSTALLER_DELIVERY.md)。下方禁合并/待验为历史。
 
 2026-10-15 最新：candidate04的1～3项用户验收通过，用户授权同步功能分支并合回/推送develop，再派生 `impl/control-center-ui-optimization`。A：DEC-050验收及控制中心UI补充 → B：背景/标题既有参数合同不变 → C：[人工记录](../A_Project/40_Implementation/V3-05/CONTENT_NATIVE_ACTIONS.md#2026-10-15-人工通过与集成授权)与[UI优化准备](../A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md#2026-10-15-下一步控制中心ui优化准备)。本轮不制作UI、不改发布线；下方旧“待验/禁止合回”不覆盖本次授权，未验环境继续携带。

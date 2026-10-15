@@ -1,5 +1,15 @@
 # V3-04 代码锚点
 
+2026-10-15：以下05-07实现已获四组人工通过，本轮授权集成；下一05-12从develop另开分支，先补原始路径/安全归还及海报删除接线，不重做原生拖放。
+
+## 2026-10-15 V3-05-07 跨海报直接拖放（当前）
+
+- `PosterSpatialRuntime.NativeExit.cs`：冻结源意图、按路径核对同步Drop交接，禁止源自己走外部入库；`PosterVisualWindow.Transfers.cs`仍使用同一OLE源/接收器、跟手与悬停预览。
+- `PosterSpatialRuntime.Incoming.cs`：等待源退栈后分流跨海报MOVE；`Transfers.cs`同时保护源/目标。外部拖入及映射Ctrl COPY沿用原链路。
+- `CrossPosterTransfer.cs`：schema24目录操作表中带Kind的意图/实际结果；同目录归属交接、跨目录Shell执行、身份核对与仅结果恢复。`App.Transfers.cs`在常规观察前核对未完成索引。
+- `CrossPosterPlacement.cs`：复用移除与目标落点规则，源/目标关系、自定义图标同事务；`ContentReferenceIntegrity.cs`仅对内部已授权观察/移动收据允许同实体图标转交。
+- `CrossPosterTransferTests.cs`；`PosterSpatialRuntime.CrossPosterProbe.cs`与`smoke-incoming.ps1 -CrossPoster`；人工入口`start-cross-poster-review.ps1`及`CrossPosterReviewFixture.cs`。详细证据归[C§14](../V3-05/DIRECT_TRANSFER_DELIVERY.md#14-v3-05-07-跨海报直接拖放2026-10-15进行中)。
+
 ## 2026-10-15 外观UI统一（当前）
 
 - 集成追溯：功能0a75494 → develop d66265f → 精简发布f80765e；产品设置和XAML保留，以下探针/验收脚本仅留开发线。发布构建/安装入口仍为 `scripts/build.ps1`、`package-preview.ps1` 与 `packaging/preview/installer.nsi`，同源和成品证据见 `PREVIEW_INSTALLER_DELIVERY.md` 最新节。

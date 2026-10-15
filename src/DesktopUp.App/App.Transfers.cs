@@ -27,7 +27,9 @@ public partial class App
                 var finished=new AutomaticTransferCompletion(journal).Settle();
                 SingleOwnerMigration.Apply(store);
                 new ContentRenameService(store).Reconcile();
-                new MappedDirectoryIngress(store).SettleInterrupted(); // Never replay a Shell move.
+                var crossNotices=new CrossPosterTransfer(store).Reconcile(); // Index only; never replay a Shell move.
+                foreach(string notice in crossNotices)_log?.Write("warning","transfer.cross_poster_preserved",new{notice});
+                new MappedDirectoryIngress(store).SettleInterrupted();
                 // Only previously released, originally live moves are observed. Old missing
                 // cards and crash-before-release intents are NEVER auto-removed (DEC-047).
                 new NativeShellExitJournal(store).Reconcile();

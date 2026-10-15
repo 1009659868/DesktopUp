@@ -16,7 +16,8 @@ internal sealed partial class PosterSpatialRuntime
     private Task _fileTransferTask=Task.CompletedTask;
     private bool _fileTransferBusy;
     private string? _fileTransferPoster;
-    internal bool IsFileTransferActive(string id)=>_fileTransferBusy&&_fileTransferPoster==id;
+    private string? _crossPosterSource;
+    internal bool IsFileTransferActive(string id)=>_fileTransferBusy&&(_fileTransferPoster==id || _crossPosterSource==id);
     internal bool FileServiceReady => _transferStore is not null && _transferStartup.IsCompletedSuccessfully &&
         !_fileTransferStopping.IsCancellationRequested && !_fileTransferBusy && !_suspended;
     internal bool TransfersAvailable => FileServiceReady && _transferDialogsBusy?.Invoke()!=true;

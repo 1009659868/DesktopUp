@@ -186,6 +186,8 @@ public partial class App
                 }
                 _log!.Write("info", "contract.mapping_center_passed", new { nativeMouse = false, picker = false });
             }
+            if (_startupIntent.Arguments.Contains("--cross-poster-probe"))
+                await _spatialRuntime.CrossPosterProbe(_startupIntent.Arguments.Contains("--incoming-restart"));
             _log!.Write("info","contract.incoming_passed",new{restart=_startupIntent.Arguments.Contains("--incoming-restart"),items=combinedProbe?1:syncProbe?3:4,managedSync=syncProbe,combinedProbe,nativeMouse=false});
         }
         catch(Exception e){Environment.ExitCode=1;_log?.Write("error","contract.incoming_failed",new{e.Message,e.StackTrace});}

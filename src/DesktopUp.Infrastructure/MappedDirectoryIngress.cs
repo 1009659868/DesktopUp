@@ -56,7 +56,7 @@ public sealed class MappedDirectoryIngress(SqliteStateStore store, IShellDirecto
                         throw new IOException("此路径受保护或与目标目录嵌套，未执行。");
                     if(string.Equals(Path.GetDirectoryName(source),target.Path,StringComparison.OrdinalIgnoreCase)){skipped++;continue;}
                     if(LocalContentReferenceProbe.Inspect(source).Item is null)throw new IOException("来源暂不可用："+source);
-                    ValidateTree(source,token);
+                    ValidateTree(store,source,token);
                     facts.Add(new(source,LocalTransferFiles.Identity(source)));
                 }
                 var intent=new MappedIngressIntent(Guid.NewGuid(),posterId,target,facts,copy);operation=intent.Id;
@@ -109,7 +109,7 @@ public sealed class MappedDirectoryIngress(SqliteStateStore store, IShellDirecto
         }
         return new(completed.Count,skipped,errors);
     }
-    private void ValidateTree(string source,CancellationToken token)
+    internal static void ValidateTree(SqliteStateStore store,string source,CancellationToken token)
     {
         // Do not let Shell follow a junction/cloud placeholder hidden inside an ordinary folder.
         // This is a read-only capability check, not a second copy or a hash of every file.

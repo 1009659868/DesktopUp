@@ -8,6 +8,7 @@ using F = DesktopUp.Contracts.Tests.ManagedTransferPersistenceTests.Fixture;
 
 namespace DesktopUp.Contracts.Tests;
 
+[Collection("Native Shell UI")]
 public sealed class ShellNewMenuTests
 {
     private static NewContentLocation Location(F f) => new(new(f.Root,f.Collection),f.State.ContentVersion,

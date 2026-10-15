@@ -9,6 +9,7 @@ namespace DesktopUp.Contracts.Tests;
 
 // Native integration: only fixture-owned files/folders and this test's helper process.
 // Reads window visibility; never synthesizes input or touches Explorer/user windows.
+[Collection("Native Shell UI")]
 public sealed class ShellPropertyLifetimeTests
 {
     [Theory][InlineData(false)][InlineData(true)]
