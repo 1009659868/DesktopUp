@@ -42,9 +42,11 @@ public sealed partial class StateProjectionCoordinator(
         {
             if (_current is null || !_current.PostersById.TryGetValue(posterId, out PosterSurfaceProjection? poster)) return null;
             return new(posterId, poster.Poster.Title, _current.Revision,
-                StateReadSet.ForPoster(posterId, poster.EntityVersion) with { CatalogVersion = _current.CatalogVersion },
+                StateReadSet.ForPoster(posterId, poster.EntityVersion) with { CatalogVersion = _current.CatalogVersion, ContentVersion = _current.ContentVersion },
                 _current.Posters.Count == 1, poster.Poster.CollectionId,
-                "仅删除此海报及其展示配置，不删除、移动或清理实际文件。删除最后一张后保留空目录，控制中心和托盘继续运行。");
+                ContentReturnPolicy.IsMapped(_current.ContentCatalog, posterId)
+                    ? "此海报是目录映射：只解除映射，不移动或删除目录中的任何文件。"
+                    : "收纳文件将返回收纳前的目录，并保留当前文件名；原目录不可用或来源未知时返回系统桌面。已有文件不静默覆盖，冲突交由Windows处理；取消或归还失败时保留海报和剩余内容。未收纳的外部引用保持原位。");
         }
     }
 

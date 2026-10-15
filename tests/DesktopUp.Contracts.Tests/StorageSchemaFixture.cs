@@ -3,7 +3,8 @@ namespace DesktopUp.Contracts.Tests;
 internal static class StorageSchemaFixture
 {
     // Only isolated fixtures call this when constructing a genuinely older schema.
-    internal const string Drop24 = "DROP TABLE mapped_directory_ingress; DELETE FROM schema_migrations WHERE version=24; ";
+    internal const string Drop25 = "DROP TABLE content_returns; DROP TABLE content_return_origins; DELETE FROM schema_migrations WHERE version=25; ";
+    internal const string Drop24 = Drop25 + "DROP TABLE mapped_directory_ingress; DELETE FROM schema_migrations WHERE version=24; ";
     internal const string Drop23 = Drop24 + "DROP TABLE mapped_directory_observations; DELETE FROM schema_migrations WHERE version=23; ";
     internal const string Drop22 = Drop23 + "DROP TABLE content_renames; DELETE FROM schema_migrations WHERE version=22; ";
     internal const string Drop21 = Drop22 + "DROP TABLE native_shell_exits; DELETE FROM schema_migrations WHERE version=21; ";

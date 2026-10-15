@@ -1,5 +1,15 @@
 # V3-04 代码锚点
 
+## 2026-10-15 05-12来源与归还
+
+2026-10-15用户已确认本批四组人工通过；以下实现不变，卸载器尚未调用归还服务。右键相关 `PosterInputIslandManager.TryReadContentContextHit` / `NativeDesktopPointerPlatform.CoversPoint` 仅检查未修订，按用户决定停止Snipaste相关专项。
+
+- `ContentReturnPolicy`区分受管卡片与映射；`StateCommandPolicy`阻止直接删除仍有受管内容的海报。
+- `ContentReturnStore`、SQLite schema25：独立来源与归还结果；普通入库/索引收尾/CrossPoster提交同事务记录来源；排除新建暂存，旧成功账本补录。
+- `PosterContentReturn`：Shell逐项移动、目录/桌面回退、实际结果核实、公用关系移除及最后删除海报；`Reconcile`仅补索引，不自动移动/删海报。`ManagedContentSynchronizer`避让未完成归还。
+- `ControlCenterService.RequestRemoval`、`PosterSpatialRuntime.ContentReturn`：既有删除确认与文件生命周期/退出等待接线；`App.Transfers`启动结果核对及异常位置提示。
+- `PosterContentReturnTests`（19项）、`ContentReturnProbe`与`smoke-incoming.ps1 -ContentReturn`；`ContentReturnReviewFixture`和`start-content-return-review.ps1`为独立人工入口。
+
 2026-10-15：以下05-07实现已获四组人工通过，本轮授权集成；下一05-12从develop另开分支，先补原始路径/安全归还及海报删除接线，不重做原生拖放。
 
 ## 2026-10-15 V3-05-07 跨海报直接拖放（当前）

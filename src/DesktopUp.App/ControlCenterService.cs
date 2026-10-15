@@ -270,6 +270,16 @@ internal sealed partial class ControlCenterService(
         try
         {
             if (!OriginCurrent()) return;
+            if (transferStore is not null)
+            {
+                // Settle recorded results before freezing this deletion's consent. No file replay.
+                var notices = await Task.Run(() => new DesktopUp.Infrastructure.PosterContentReturn(transferStore).Reconcile());
+                if (notices.Count > 0)
+                {
+                    _commandError = string.Join("\n", notices); Show(); Present(); return;
+                }
+                if (_disposed || !OriginCurrent()) return;
+            }
             var preview = state.PrepareRemoval(request.PosterId);
             if (preview is null || _removal.Begin(request, preview) is not { } ticket)
             {
@@ -289,10 +299,13 @@ internal sealed partial class ControlCenterService(
             state.Refresh();
             if (_removal.Complete(ticket.Id, confirmed) is { } command)
             {
-                var result = commands.Execute(command);
-                ShowCommandResult(result);
-                log.Write(result.Succeeded ? "info" : "warning", "poster.removal_completed",
-                    new { command.PosterId, command.RequestId, Status = result.Status.ToString(), result.Error });
+                if (spatialRuntime?.Invoke() is { } runtime)
+                {
+                    var result = await runtime.ReturnAndRemovePoster(command, WinRT.Interop.WindowNative.GetWindowHandle(_window!));
+                    if (!result.Removed) { _commandError = string.Join("\n", result.Errors); Present(); }
+                    log.Write(result.Removed ? "info" : "warning", "poster.removal_completed", new { command.PosterId, result.Removed, result.Returned });
+                }
+                else ShowCommandResult(Unavailable(command.RequestId, command.ExpectedRevision));
             }
             else log.Write("info", "poster.removal_confirmation_dismissed", new { request.PosterId, confirmed });
         }

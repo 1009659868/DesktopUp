@@ -124,7 +124,7 @@ public sealed class ManagedTransferPersistenceTests
         using var f=new Fixture();var state=f.State;
         f.Journal.Register(f.Root,f.Collection,new(new Dictionary<string,long>(),ContentVersion:state.ContentVersion));
         Assert.Single(f.State.ContentCatalog.Collections);Assert.Empty(f.State.ContentCatalog.Bindings);
-        Assert.Equal(state.Revision,f.State.Revision);Assert.Equal(24L,f.Sql("PRAGMA user_version"));
+        Assert.Equal(state.Revision,f.State.Revision);Assert.Equal(25L,f.Sql("PRAGMA user_version"));
     }
     [Fact] public void StaleStateBeforeExecutionRequiresNewPreview()
     {
@@ -318,8 +318,8 @@ public sealed class ManagedTransferPersistenceTests
     }
     [Fact] public void MalformedOrFutureStateCannotAuthorizeAFileAction()
     {
-        using var f=new Fixture();f.Sql("UPDATE state_head SET schema_version=25; PRAGMA user_version=25;");
-        var init=f.Store.Initialize();Assert.False(init.Succeeded);Assert.Equal(25L,f.Sql("PRAGMA user_version"));
+        using var f=new Fixture();f.Sql("UPDATE state_head SET schema_version=26; PRAGMA user_version=26;");
+        var init=f.Store.Initialize();Assert.False(init.Succeeded);Assert.Equal(26L,f.Sql("PRAGMA user_version"));
     }
     [Fact] public void StorageRootCannotLiveInsideTemporaryOrApplicationStateData()
     {

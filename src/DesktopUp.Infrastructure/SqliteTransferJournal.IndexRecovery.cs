@@ -70,6 +70,8 @@ public sealed partial class SqliteTransferJournal
                 new(ticket.RequestId,confirmation,state.Revision,ticket.Batch.Reads),
                 before=>IndexPlan(before,ticket.Batch,current.Index,confirmedRecovery:true),authorizedTransferId:current.OperationId);
             if(result.Status is not (StateCommandStatus.Committed or StateCommandStatus.Replayed))throw new IOException(result.Error??"恢复未提交，文件保持原位。");
+            if(result.Status == StateCommandStatus.Committed)
+                ContentReturnStore.CaptureIncoming(c,t,result.Snapshot.ContentCatalog,ticket.Batch,current.Index);
             if(result.Status == StateCommandStatus.Committed && ticket.IsIncoming)
                 ManagedContentObservationStore.Capture(c,t,result.Snapshot.ContentCatalog,
                     ticket.Batch.Entries[current.Index].AffectedContentIds.Append(ticket.Batch.Entries[current.Index].Entry.Item.Id));

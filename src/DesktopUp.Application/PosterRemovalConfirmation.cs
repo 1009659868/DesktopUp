@@ -5,8 +5,7 @@ public sealed record PosterRemovalRequest(string PosterId, long EntityVersion, S
 public sealed record PosterRemovalTicket(Guid Id, PosterRemovalRequest Request, PosterRemovalPreview Preview)
 {
     public string Message => $"海报：{Preview.Title}\nID：{Preview.PosterId}\n\n{Preview.Consequences}\n\n" +
-        "将移除该海报的位置、尺寸、锁定/收起及主题选择等展示配置，以及此海报的集合关联；不会清理真实内容或已安装主题包。\n" +
-        "当前版本尚未启用真实文件收纳，没有由本功能迁移的文件或专用找回目录；文件仍在原位置。\n\n" +
+        "实际文件按上述规则处理；完成后仅移除此海报的展示配置与关联，不删除真实文件或已安装主题包。\n\n" +
         (Preview.IsLastPoster ? "这是最后一张海报。删除后下次启动仍为空目录，不会自动补建默认海报；控制中心和托盘继续运行。" : "其他海报不受删除影响。") +
         "\n此操作没有界面内撤销；如需恢复配置，请使用已有备份。";
 }

@@ -13,6 +13,7 @@ public partial class App
     private string? _lastManagedContentNotice;
     private async Task DiscoverStartupTransfers(SqliteStateStore store)
     {
+        IReadOnlyList<string> returnNotices = [];
         bool isolated=!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DESKTOPUP_V3_TEST_DATA_ROOT"));
         _storageLocation=new ManagedStorageService(store,isolated?StorageProfileKind.Isolated:
             DistributionBuild.ApplicationId.Contains("Preview",StringComparison.Ordinal)?StorageProfileKind.Preview:StorageProfileKind.Daily,
@@ -27,6 +28,9 @@ public partial class App
                 var finished=new AutomaticTransferCompletion(journal).Settle();
                 SingleOwnerMigration.Apply(store);
                 new ContentRenameService(store).Reconcile();
+                returnNotices = new PosterContentReturn(store).Reconcile();
+                foreach(string notice in returnNotices)
+                    _log?.Write("warning","content.return_preserved",new{notice});
                 var crossNotices=new CrossPosterTransfer(store).Reconcile(); // Index only; never replay a Shell move.
                 foreach(string notice in crossNotices)_log?.Write("warning","transfer.cross_poster_preserved",new{notice});
                 new MappedDirectoryIngress(store).SettleInterrupted();
@@ -36,6 +40,11 @@ public partial class App
                 return new {pending=finished.Count(x=>!x.Item.IsFinished),preserved=finished.Count(x=>x.Kind==TransferFinishKind.Preserved),relocations=settled.Count};
             });
             _stateCoordinator?.Refresh();
+            if(returnNotices.Count > 0) _dispatcher?.TryEnqueue(() =>
+            {
+                if(Volatile.Read(ref _exiting) != 0)return;
+                _controlCenter?.Show(); _controlCenter?.WindowForPortableProbe?.ShowTransferFailure(string.Join("\n",returnNotices));
+            });
             _log?.Write("info","transfer.startup_discovered",new {counts.pending,counts.preserved,automaticFileReplay=false});
         }
         catch(Exception e){_log?.Write("warning","transfer.discovery_unavailable",new {e.Message,automaticFileReplay=false});}

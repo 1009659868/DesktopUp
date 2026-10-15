@@ -43,7 +43,7 @@ public sealed class PosterRemovalConfirmationTests
     [Fact] public void LastPosterRemovalPreservesZeroCatalogAcrossReinitialize()
     {
         using var f = new Fixture(); var gate = new PosterRemovalConfirmation(); var ticket = f.Begin(gate);
-        Assert.Contains("最后一张", ticket.Message); Assert.Contains("文件仍在原位置", ticket.Message);
+        Assert.Contains("最后一张", ticket.Message); Assert.Contains("返回收纳前的目录", ticket.Message); Assert.Contains("系统桌面", ticket.Message);
         Assert.Equal(StateCommandStatus.Committed, f.Core.Execute(gate.Complete(ticket.Id, true)!).Status);
         Assert.Empty(f.Core.EnsureInitialized(Fixture.Configuration()).Posters);
         Assert.Equal(0, f.Current.Tray.PosterCount);

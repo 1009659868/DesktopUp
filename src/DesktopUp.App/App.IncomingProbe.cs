@@ -20,6 +20,11 @@ public partial class App
                 !File.Exists(Path.Combine(root,".incoming-fixture"))||File.ReadAllText(Path.Combine(root,".incoming-fixture"))!="owned")
                 throw new IOException("Owned isolated ingress fixture required.");
             lease=_ledger!.Acquire("fixture.incoming","production-command");await _transferDiscovery;
+            if (_startupIntent.Arguments.Contains("--content-return-probe"))
+            {
+                await _spatialRuntime!.ContentReturnProbe(root, _startupIntent.Arguments.Contains("--incoming-restart"));
+                return;
+            }
             var watch=System.Diagnostics.Stopwatch.StartNew();
             while(!_spatialRuntime!.IncomingProbeReady)
             {if(watch.Elapsed.TotalSeconds>20)throw new IOException("Incoming surface not ready.");await Task.Delay(100);}

@@ -185,6 +185,7 @@ public sealed class CrossPosterTransfer(SqliteStateStore store, IShellDirectoryT
             if (commit.Status is not (StateCommandStatus.Committed or StateCommandStatus.Replayed)) throw new IOException(commit.Error);
             if (commit.Status == StateCommandStatus.Committed)
             {
+                if (intent.Storage is not null) ContentReturnStore.Capture(c, t, commit.Snapshot.ContentCatalog, source.ContentId, source.Path);
                 if (intent.Storage is not null) ManagedContentObservationStore.Capture(c, t, commit.Snapshot.ContentCatalog, [source.ContentId]);
                 else
                 {

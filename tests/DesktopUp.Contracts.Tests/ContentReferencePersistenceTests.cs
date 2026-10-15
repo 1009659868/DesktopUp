@@ -10,7 +10,7 @@ public sealed class ContentReferencePersistenceTests
     [Fact] public void FreshSchemaIsEmptyAndDoesNotConvertDemo()
     {
         using var f = new Fixture();
-        Assert.Equal(24L, f.Sql("PRAGMA user_version"));
+        Assert.Equal(25L, f.Sql("PRAGMA user_version"));
         Assert.Empty(f.Current.ContentCatalog.Items); Assert.Equal(0, f.Current.ContentVersion);
         Assert.Null(f.Current.PostersById[f.Main].Poster.ContentLayoutJson);
         Assert.Equal(0L, f.Sql("SELECT count(*) FROM content_demo_archive"));
@@ -135,7 +135,7 @@ public sealed class ContentReferencePersistenceTests
         var history = f.Sql("SELECT group_concat(checksum_sha256) FROM schema_migrations WHERE version<=12");
         f.DowngradeToTwelve();
         Assert.True(f.Store.Initialize().Succeeded);
-        Assert.Equal(24L, f.Sql("PRAGMA user_version")); Assert.Equal(history, f.Sql("SELECT group_concat(checksum_sha256) FROM schema_migrations WHERE version<=12"));
+        Assert.Equal(25L, f.Sql("PRAGMA user_version")); Assert.Equal(history, f.Sql("SELECT group_concat(checksum_sha256) FROM schema_migrations WHERE version<=12"));
         Assert.Equal(raw, new SqliteStateCommandRepository(f.Store).Read().Catalog.Posters.Single().Poster.ContentLayoutJson);
         Assert.Empty(f.Current.ContentCatalog.Items);
         if (unknown) Assert.False(f.Coordinator.Execute(f.AddCommand(f.Main, Entry())).Succeeded);
