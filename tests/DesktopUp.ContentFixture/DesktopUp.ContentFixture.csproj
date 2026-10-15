@@ -1,3 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup><OutputType>WinExe</OutputType><RuntimeIdentifier>win-x64</RuntimeIdentifier></PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/DesktopUp.Infrastructure/DesktopUp.Infrastructure.csproj" />
+    <Compile Include="../../src/DesktopUp.ContentWorker/ShellUiHost*.cs" Link="Shell/%(Filename)%(Extension)" />
+    <Compile Include="../../src/DesktopUp.ContentWorker/ShellUiLifetime.cs" Link="Shell/ShellUiLifetime.cs" />
+    <Compile Include="../../src/DesktopUp.ContentWorker/ShellNewMenuSite.cs" Link="Shell/ShellNewMenuSite.cs" />
+  </ItemGroup>
 </Project>

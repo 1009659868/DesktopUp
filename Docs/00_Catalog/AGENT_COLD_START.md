@@ -1,5 +1,11 @@
 # DesktopUp：agent 冷启动提示词
 
+2026-10-14 Git检查点：用户授权保存并推送当前功能分支，源码提交 `8ded3aa`；本轮不合入 `impl/develop`，不切换分支、不更新 `impl/main`。开发文档随相邻提交保存，out产物/本地配置不上传。N4人工及全量稳定性携带项不因Git同步关闭；先核对实际Git状态，再沿下方C记录继续。
+
+2026-10-14 最新N4：用户报告属性/原生菜单失效并要求去除新建/改名弹窗，已经进入反馈修订；不要把下方旧候选状态理解为验收完成。入口脚本当前为candidate02/review02，旧candidate01/review01保留。实现锚点为ContentWorkerLocation与PosterVisualWindow.InlineRename，具体验证/携带项见[本轮C记录](../A_Project/40_Implementation/V3-05/CONTENT_NATIVE_ACTIONS.md)。无本轮Git授权。
+
+2026-10-14 当前入口：`impl/05-content-native-actions`，未提交/合回/推送。先读[实施与N4验收](../A_Project/40_Implementation/V3-05/CONTENT_NATIVE_ACTIONS.md)：N3收尾CODE/AUTO完成、schema24；独立候选及自建资料通过 `scripts/start-content-native-review.ps1` 重开。N4仍USER PENDING，不继承旧界面人工结果。映射为独立Borrowed海报、原文件不因建立映射而搬移；构造卡片仍延期，下方为历史。
+
 2026-10-14 最新工作：`impl/poster-render-optimization` 源于 `impl/develop@a9eeac9`；增量呈现及外部悬停让位两批人工均已通过，现授权本地合回并切换develop，详见[实施末节](../A_Project/40_Implementation/V3-05/POSTER_INCREMENTAL_RENDERING.md)与[当前交接](../A_Project/40_Implementation/V3-04/HANDOFF.md)。本轮不推送、不更新发布线，保留功能分支/旧候选/配置。下一主线05-04-V3构造卡片需从集成后的develop另开分支；本轮未开始制作，不恢复共享引用。首图偶发超时及其他未验项仍携带。先核对Git；下方为历史阶段记录，不沿用旧“暂不合并/待人工”状态。
 
 ## 当前验收与集成入口（2026-10-14）

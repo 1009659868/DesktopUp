@@ -1,6 +1,7 @@
 using System.Text.Json;
 
 // Owned disposable test program only; never shipped in the app/candidate app directory.
+if (args is ["--shell-new-probe", var kind]) return ShellNewProbe.Run(kind);
 if (args.Length == 0)
 {
     File.WriteAllText(Path.Combine(AppContext.BaseDirectory, "opened.marker"), "owned-fixture-opened");

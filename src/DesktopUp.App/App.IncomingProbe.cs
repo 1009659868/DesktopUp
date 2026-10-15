@@ -88,6 +88,12 @@ public partial class App
                 if(repository.Read().ContentCatalog.PosterItems.Count!=4||Directory.Exists(folder))throw new IOException("Cross-volume manual ingress failed.");
                 if(!ReferenceEquals(center,_controlCenter.WindowForPortableProbe))throw new IOException("Ordinary incoming files opened control center.");
                 await _spatialRuntime.IncomingCollapsedProbe();
+                if (_startupIntent.Arguments.Contains("--inline-name-probe"))
+                {
+                    var window = _spatialRuntime.BackdropWindowForProbe(repository.Read().Catalog.Posters.Single().Poster.PosterId);
+                    await window.VerifyInlineNamingForProbe();
+                    _log!.Write("info", "contract.inline_naming_passed", new { nativeMouse = false, keyboardDispatch = false });
+                }
                 if(syncProbe)
                 {
                     var before=repository.Read();
@@ -156,6 +162,22 @@ public partial class App
             }
             if (renderProbe)
                 await _spatialRuntime.BackdropWindowForProbe(repository.Read().Catalog.Posters.Single().Poster.PosterId).VerifyIncrementalRenderForProbe();
+            if (_startupIntent.Arguments.Contains("--mapping-center-probe"))
+            {
+                if (_startupIntent.Arguments.Contains("--incoming-restart"))
+                {
+                    var mapped = repository.Read();
+                    if (mapped.Catalog.Posters.Count != 2 || mapped.ContentCatalog.Collections.Count(c => c.Kind == ContentCollectionKind.Mapped) != 1)
+                        throw new IOException("Center-created mapping did not survive restart.");
+                }
+                else
+                {
+                    _spatialRuntime.BackdropWindowForProbe(repository.Read().Catalog.Posters.Single().Poster.PosterId).VerifyFileActionMenusForProbe();
+                    _controlCenter!.Show();
+                    await _controlCenter.WindowForPortableProbe!.VerifyMappingCreationForProbe(root);
+                }
+                _log!.Write("info", "contract.mapping_center_passed", new { nativeMouse = false, picker = false });
+            }
             _log!.Write("info","contract.incoming_passed",new{restart=_startupIntent.Arguments.Contains("--incoming-restart"),items=combinedProbe?1:syncProbe?3:4,managedSync=syncProbe,combinedProbe,nativeMouse=false});
         }
         catch(Exception e){Environment.ExitCode=1;_log?.Write("error","contract.incoming_failed",new{e.Message,e.StackTrace});}

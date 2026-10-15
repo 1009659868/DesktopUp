@@ -4,7 +4,7 @@ using DesktopUp.Application;
 
 namespace DesktopUp.Windows;
 
-public enum NativePickerPurpose { Profile, ReferenceFile, ReferenceFolder, ManagedStorageFolder, CardIcon }
+public enum NativePickerPurpose { Profile, ReferenceFile, ReferenceFolder, ManagedStorageFolder, CardIcon, MappedDirectory }
 
 /// <summary>
 /// Owns exactly one common-item dialog and one STA message endpoint. Cancel posts to that
@@ -125,13 +125,13 @@ public sealed class NativeProfilePicker
                 // Filesystem only, do not change cwd or write test files. Save retains overwrite prompt.
                 Marshal.ThrowExceptionForHR(dialog.SetOptions(options | 0x40 | 0x8 | 0x800 | 0x02000000 |
                     (_save ? 0x2u : 0x1000u) | (_purpose == NativePickerPurpose.Profile ? 0u : 0x100000u) |
-                    (_purpose is NativePickerPurpose.ReferenceFolder or NativePickerPurpose.ManagedStorageFolder ? 0x20u : 0u)));
-                if (_purpose is not (NativePickerPurpose.ReferenceFolder or NativePickerPurpose.ManagedStorageFolder))
+                    (_purpose is NativePickerPurpose.ReferenceFolder or NativePickerPurpose.ManagedStorageFolder or NativePickerPurpose.MappedDirectory ? 0x20u : 0u)));
+                if (_purpose is not (NativePickerPurpose.ReferenceFolder or NativePickerPurpose.ManagedStorageFolder or NativePickerPurpose.MappedDirectory))
                     Marshal.ThrowExceptionForHR(dialog.SetFileTypes(1, [new(
                         _purpose == NativePickerPurpose.CardIcon ? "静态图标图片（PNG、JPEG、ICO）" : _purpose == NativePickerPurpose.Profile ? "DesktopUp 配置" : "所有文件",
                         _purpose == NativePickerPurpose.CardIcon ? "*.png;*.jpg;*.jpeg;*.ico" : _purpose == NativePickerPurpose.Profile ? "*.json" : "*.*")]));
                 if (_purpose == NativePickerPurpose.Profile) Marshal.ThrowExceptionForHR(dialog.SetDefaultExtension("json"));
-                Marshal.ThrowExceptionForHR(dialog.SetTitle(_purpose == NativePickerPurpose.CardIcon ? "选择当前卡片的图标（不改变真实来源）" : _purpose == NativePickerPurpose.ManagedStorageFolder ? "选择持久收纳根目录（不移动现有文件）" : _purpose == NativePickerPurpose.ReferenceFolder ? "选择要引用的文件夹" :
+                Marshal.ThrowExceptionForHR(dialog.SetTitle(_purpose == NativePickerPurpose.MappedDirectory ? "选择目录并新建独立映射海报（不搬动文件）" : _purpose == NativePickerPurpose.CardIcon ? "选择当前卡片的图标（不改变真实来源）" : _purpose == NativePickerPurpose.ManagedStorageFolder ? "选择持久收纳根目录（不移动现有文件）" : _purpose == NativePickerPurpose.ReferenceFolder ? "选择要引用的文件夹" :
                     _purpose == NativePickerPurpose.ReferenceFile ? "选择要引用的文件（不移动原文件）" : _save ? "导出 DesktopUp 习惯配置" : "导入 DesktopUp 习惯配置"));
                 if (_save) Marshal.ThrowExceptionForHR(dialog.SetFileName("DesktopUp-habits.desktopup.json"));
                 string documents = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);

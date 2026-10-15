@@ -23,7 +23,7 @@ public sealed class NativeIncomingDropSession(nint window, Func<IncomingDropSurf
         {
             var preview = session.Enter(NativeFileDropTarget.ReadPaths(data), surface(), Point(point), keys, offered);
             changed?.Invoke(preview);
-            effect = preview is null ? 0u : 2u;
+            effect = preview?.Effect ?? 0u;
             imageActive = true; // Also pair a partially failed helper Enter with Leave.
             images.Enter(window, data, point, effect);
         }
@@ -38,7 +38,7 @@ public sealed class NativeIncomingDropSession(nint window, Func<IncomingDropSurf
         {
             var preview = session.Over(surface(), Point(point), keys, offered);
             changed?.Invoke(preview);
-            effect = preview is null ? 0u : 2u;
+            effect = preview?.Effect ?? 0u;
             if (imageActive) images.Over(point, effect); // Even a refused point keeps its icon.
         }
         catch (Exception e) { effect = 0; Failed(e); End(); }

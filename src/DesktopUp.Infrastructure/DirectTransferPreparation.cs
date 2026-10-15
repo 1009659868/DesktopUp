@@ -24,6 +24,8 @@ public static class DirectTransferPreparation
         IncomingContentPlacement? placement=null)
     {
         if(paths.Count is <1 or >ContentTransferPlanning.MaximumBatch)throw new IOException("一次最多拖入100项。");
+        if(state.ContentCatalog.Bindings.Any(b=>b.PosterId==posterId && state.ContentCatalog.Collections.Any(c=>c.Id==b.CollectionId && c.Kind==ContentCollectionKind.Mapped)))
+            throw new IOException("映射海报不能走受管收纳拖入；请在资源管理器中将文件放入映射目录。");
         var inputs=paths.Select(path=>
         {
             var observed=LocalContentReferenceProbe.Inspect(path);

@@ -45,7 +45,7 @@ internal sealed partial class PosterVisualWindow
         if (_disposed || _contentPorts.Views.Version == _contentSourceVersion) return;
         // Reject a regressing source; never re-author layout on a metadata notification.
         if (_contentPorts.Views.Version < _contentSourceVersion || _contentPorts.Views.Version < 1) return;
-        if (_transitionLayout is not null || _activeCommandRequestId is not null)
+        if (_transitionLayout is not null || _activeCommandRequestId is not null || _inlineRenameItem is not null)
         {
             // Invalidate result admission immediately, but retain the R4 prepared tree until
             // its existing end/recovery safe point. No new timer or parallel layout owner.

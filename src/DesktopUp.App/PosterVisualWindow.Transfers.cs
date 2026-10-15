@@ -14,6 +14,8 @@ internal sealed partial class PosterVisualWindow
     private IncomingLayoutPreview? _incomingLayout;
     private (ContentLayoutDocument Document, IncomingContentPlacement Landing, int Count, long Entity, DesktopPixelRect Frame)? _incomingBasis;
     internal long TransferEntityVersion=>_posterEntityVersion;
+    internal nint TransferOwner=>_windowHandle;
+    internal bool CanReceiveFiles => CanTransferFiles && spatial.MappingAvailable(PosterId!);
     internal bool CanTransferFiles=>!_disposed&&!_contentPresentationSuspended&&!_geometry.IsLocked&&
         (!_contentReadOnly || _authoritativePoster?.IsCollapsed==true&&!_contentParseReadOnly)&&
         _transitionLayout is null&&!HasContentGesture&&!spatial.IsPosterSpatialBusy(PosterId!,includeFileTransfer:false)&&!spatial.HasCenterDraft(PosterId!);
@@ -26,12 +28,13 @@ internal sealed partial class PosterVisualWindow
         if(_inputIsland is null)return;
         try
         {
-            _fileDrop=_inputIsland.InstallDropReceiver(()=>CanTransferFiles&&spatial.TransfersAvailable?IncomingSurface():null,
+            _fileDrop=_inputIsland.InstallDropReceiver(()=>CanReceiveFiles&&spatial.CanReceiveInto(PosterId!)?IncomingSurface():null,
                 ticket=>
                 {
                     var placement=IncomingContentPlacement.From(EnsureContentSnapshot(_bounds),_contentViewport!,ticket.Preview.Location);
+                    spatial.PrepareMappedDropHandoff(PosterId!);
                     _window?.DispatcherQueue.TryEnqueue(()=>
-                    {if(CanTransferFiles && ticket.Preview.Surface==IncomingSurface())spatial.ReceiveFiles(this,ticket,placement);});
+                    {if(CanReceiveFiles && ticket.Preview.Surface==IncomingSurface())spatial.ReceiveFiles(this,ticket,placement);});
                 },ShowIncomingPreview);
             log.Write("info","transfer.native_target_ready",new{PosterId});
         }
@@ -45,7 +48,8 @@ internal sealed partial class PosterVisualWindow
             _bounds,_monitor?.ScaleX??1,_monitor?.ScaleY??1,
             collapsed?new(0,0,0,0):new(ContentLeftDip,ContentTopDip,viewport.WidthDip,viewport.HeightDip),
             snapshot.FlowAxis,snapshot.ScrollXDip,snapshot.ScrollYDip,
-            ContentLayoutFlow.IsLooping(snapshot,viewport)?ContentLayoutFlow.LoopPeriodDip(snapshot,viewport):0);
+            ContentLayoutFlow.IsLooping(snapshot,viewport)?ContentLayoutFlow.LoopPeriodDip(snapshot,viewport):0)
+            { SupportsCopy=spatial.ContentActionPath(PosterId!,null) is not null };
     }
     internal bool IncomingGeometryCurrent(IncomingDropSurface start) => !_disposed&&!_contentPresentationSuspended &&
         !_geometry.IsLocked && !HasContentGesture && _transitionLayout is null &&

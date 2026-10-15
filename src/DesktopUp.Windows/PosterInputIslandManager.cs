@@ -535,7 +535,7 @@ public sealed class PosterInputIslandManager : IInputRegionHost
             !_contextNative.IsDesktopReceiver(host.Identity.ContainerHandle, host) ||
             !_contextNative.IsSurfaceCurrent(_visualHandle, WindowHandle, _frame) ||
             ResolveRoute(new NativePoint { X = point.X, Y = point.Y }) is not { } route ||
-            !ReferenceEquals(route.Owner, this) || route.Hit.Region.Kind != PosterInputTargetKind.ContentItem ||
+            !ReferenceEquals(route.Owner, this) || route.Hit.Region.Kind is not (PosterInputTargetKind.ContentItem or PosterInputTargetKind.ContentViewport) ||
             !PosterContentInputPolicy.HasValidIdentity(route.Hit.Region) ||
             _contextNative.ReadWindowOrder() is not { } order) return false;
         foreach (nint window in order)

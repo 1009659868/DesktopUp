@@ -75,7 +75,7 @@ internal sealed partial class PosterSpatialRuntime
         }
     }
 
-    public StateCommandResult ApplyControlCenterCatalog(ControlCenterCatalogRequest request)
+    public StateCommandResult ApplyControlCenterCatalog(ControlCenterCatalogRequest request, Func<CreatePosterCommand, StateCommandResult>? create = null)
     {
         StateCommandResult Reject(string error, StateCommandStatus status = StateCommandStatus.Failed)
         { state.TryGetCurrent(out var p); return new(status, request.RequestId, request.Revision, p?.Revision ?? 0, p, error); }
@@ -117,7 +117,8 @@ internal sealed partial class PosterSpatialRuntime
                 request.Revision, request.Reads, source) { Placement = proof, Title = request.Title });
         var configuration = DistributionBuild.ApplyCreationDefaults(
             PosterConfigurationFactory.NewBasicBox(request.Title, monitor.DeviceName));
-        return commands.Execute(new CreatePosterCommand(request.RequestId, request.Source,
-            request.Revision, request.Reads, configuration) { Placement = proof });
+        var command = new CreatePosterCommand(request.RequestId, request.Source,
+            request.Revision, request.Reads, configuration) { Placement = proof };
+        return create is null ? commands.Execute(command) : create(command);
     }
 }

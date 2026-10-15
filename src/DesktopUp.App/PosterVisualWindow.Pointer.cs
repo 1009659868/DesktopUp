@@ -11,6 +11,6 @@ internal sealed partial class PosterVisualWindow
         !_disposed && _window is not null && _inputIsland is not null && inputRouter.ReadSurface(inputSession) is not null,
         _authoritativePoster?.IsVisible == true, _authoritativePoster?.IsCollapsed == true,
         (IsEditing ? AutoPostureProtection.Editing : AutoPostureProtection.None) |
-        (_spatialGesture is not null || HasContentGesture || _fileDrop?.IsHovering==true || spatial.IsFileTransferActive(PosterId!)
+        (_spatialGesture is not null || HasContentGesture || HasFileAction || _fileDrop?.IsHovering==true || spatial.IsFileTransferActive(PosterId!)
             ? AutoPostureProtection.Gesture : AutoPostureProtection.None));
 }

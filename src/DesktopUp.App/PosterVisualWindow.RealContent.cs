@@ -21,6 +21,12 @@ internal sealed partial class PosterVisualWindow
             var lease = ledger.Acquire("content.open:" + intent.ActivationId, intent.Target.ItemId);
             try
             {
+                try { await spatial.ValidateMappedAction(PosterId!, intent.Target.ItemId); }
+                catch (IOException e)
+                {
+                    if (!_disposed) await ShowFileActionError(e.Message);
+                    return;
+                }
                 var result = await Task.Run(async () => await actions.OpenAsync(intent, _contentOpenCancellation.Token));
                 if (!_disposed && lifetime == _contentOpenLifetime && ReferenceEquals(ports, _contentPorts) &&
                     ContentDocument.Placements.Any(p => p.ItemId == intent.Target.ItemId))

@@ -10,6 +10,15 @@ public sealed class IncomingDropSessionTests
     private static readonly PointerScreenPoint Point = new(-900, 0);
     private static readonly string[] Paths = [@"G:\test-only\one.txt", @"G:\test-only\two.lnk"];
 
+    [Theory][InlineData(0u,2u)][InlineData(8u,1u)][InlineData(4u,2u)][InlineData(12u,0u)][InlineData(32u,0u)]
+    public void MappedSurfaceUsesMoveOrExplicitCopyButNeverLink(uint keys,uint expected)
+    {
+        var session=new IncomingDropSession();var surface=Surface() with {SupportsCopy=true};
+        Assert.Equal(expected,session.Enter(Paths,surface,Point,keys,3)?.Effect??0);
+        Assert.Equal(expected,session.Drop(Paths,surface,Point,keys,3)?.Preview.Effect??0);
+        Assert.False(session.Active);
+    }
+
     [Theory]
     [InlineData(0u, 2u, true)] [InlineData(4u, 2u, true)] [InlineData(8u, 3u, false)]
     [InlineData(32u, 3u, false)] [InlineData(2u, 3u, false)] [InlineData(0u, 1u, false)] [InlineData(0u, 0u, false)]
