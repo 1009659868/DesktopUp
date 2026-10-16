@@ -1,5 +1,17 @@
 # V3-04 代码锚点
 
+## 2026-10-16 基础架构余项入口
+
+当前R1文件动作首片USER PASS；拖放切片CODE/AUTO PASS、集中人工待验，余项退出标准与证据统一见[余项计划第8～9节](../Architecture/FOUNDATION_REMAINDER_PLAN.md)。继续impl/architecture-foundation；R1映射创建/同步、生命周期等及R2～R4仍待做，真实热度HOLD。
+
+- Application/Features/Content/FileActions：ContentFileActionService、Creation/Rename/DeletionUseCase、ContentFileActionPlans，分别承接操作编排和原索引规则；Ports/Content 为请求结果与窄事务/系统端口。
+- Infrastructure/ContentActions：实际文件系统、创建/删除事务、改名回执和上下文适配；原三个Service只兼容转接；ShellCreatedContentService仍负责原子登记。
+- App/Bootstrap/App.ContentServices.cs：本片生产组装；PosterSpatialRuntime.FileActions、PosterVisualWindow.FileActions/NewContent/InlineRename 仅接应用边界。MappedPosterCreation原方法体独立移动，仍为后续R1例外。
+- ContentFileActionUseCaseTests、ArchitectureTests；tools/review/App/App.IncomingProbe.cs 的 --r1-file-actions-probe 只复用行内命名检查，不附带历史拖放矩阵。
+- Application/Features/Content/Transfers：ManagedIngressUseCase、MappedIngressUseCase、CrossPosterTransferUseCase、NativeShellExitUseCase；Ports/Content/ContentTransferPorts为原回执及窄准备/提交/观察端口。
+- Infrastructure/ContentTransfers/SqliteManagedIngressStorage及CrossPosterTransfer/MappedDirectoryIngress attempt适配原账本、文件身份与原子提交；NativeShellExitJournal实现观察端口。Bootstrap统一组装，运行器Incoming/NativeExit与窗口Transfers无具体存储依赖。
+- ContentTransferUseCaseTests、ArchitectureTests.TransferVerticalSlice；App.IncomingProbe的--r1-transfers-probe只复用本片窗口接线，不附带历史交互矩阵。
+
 ## 2026-10-16 架构C热度运行入口
 
 - 展开闪烁修订：App/PosterVisualWindow.ContentAssets.cs将收起暂停加载与真正释放分开；tools/review/App/PosterVisualWindow.IncrementalRenderProbe.cs逐合成回调检查保留图像；smoke-content-heat-runtime.ps1 -PostureOnly只跑收展路径。C及修订视觉复验均已确认通过，详见下方C记录。

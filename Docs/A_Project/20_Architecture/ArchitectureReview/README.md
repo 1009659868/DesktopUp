@@ -1,5 +1,11 @@
 # 架构图源与重生成
 
+## A/B/C 集成后更新（2026-10-16）
+
+当前代码基线为 `impl/develop@53b6bec`。见[集成后当前架构与流程说明](Integrated-53b6bec/README.md)：整体架构已通过 9/9 showcase、四尺寸浏览器检查及深浅主题目视检查；三张新流程图因 Archify 布线校验冲突停止于图源，未交付 HTML，文字流程与诊断已保留。本次不改产品源码，不提交/推送，不开始下一批。
+
+## 原始审查快照（4ae822a）
+
 审查基线为 `impl/develop@4ae822a`。现状与目标建议分开，详见[审查报告](../ARCHITECTURE_EVOLUTION_REVIEW_2026-10-16.md)。
 
 - 两张 architecture：当前运行职责、建议目标职责。

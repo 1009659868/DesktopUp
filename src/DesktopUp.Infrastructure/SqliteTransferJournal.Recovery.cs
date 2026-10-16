@@ -17,7 +17,6 @@ public sealed record TransferRecoveryEntry(DurableTransferItem Item,string Poste
 {
     public ContentDropRoute Route { get; init; }
 }
-public sealed record RegisteredManagedStorage(ManagedStorageRoot Root,Collection Collection);
 
 public sealed partial class SqliteTransferJournal
 {

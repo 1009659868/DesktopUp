@@ -1,5 +1,4 @@
 using DesktopUp.Application;
-using DesktopUp.Infrastructure;
 using Microsoft.UI.Xaml.Controls;
 
 namespace DesktopUp;
@@ -43,25 +42,23 @@ internal sealed partial class PosterVisualWindow
         {
             try
             {
-                var client = new ShellUiClient(ContentWorkerLocation.InApplication(AppContext.BaseDirectory), ledger);
                 NewContentLocation? location = action == ShellUiAction.DirectoryMenu ? await spatial.PrepareNewContent(PosterId!) : null;
                 if (action == ShellUiAction.DirectoryMenu && location is null) return;
                 string? path = location?.Directory ?? target?.Item.Target.Locator ?? await spatial.ResolveActionDirectory(PosterId!);
                 if (path is null || _disposed || _contentOpenCancellation.IsCancellationRequested) return;
-                await spatial.ValidateMappedAction(PosterId!, itemId);
-                if (target is not null && spatial.ContentActionRelation(PosterId!,itemId!)?.Witness != target.Witness)
-                    throw new IOException("所选对象已变化，请重新打开菜单。");
-                string identity = await Task.Run(()=>LocalTransferFiles.Identity(path));
-                var result = await client.RunAsync(new(Guid.NewGuid(), action, path, point.X, point.Y) { Identity=identity }, _contentOpenCancellation.Token);
-                if (location is not null && result.CreatedItem is { } created)
+                var outcome = await spatial.InvokeShellAction(PosterId!, itemId, target, location, path, action,
+                    point.X, point.Y, _contentOpenCancellation.Token);
+                var result = outcome.Result;
+                if (outcome.PublicationError is { } publicationError && !_disposed)
+                    await ShowFileActionError(publicationError);
+                if (outcome.Registered && result.CreatedItem is { EditName: true } created && !_disposed)
                 {
                     try
                     {
-                        await spatial.RegisterShellCreated(PosterId!, location, identity, created);
-                        if (!_disposed && created.EditName && spatial.ContentItemAtPath(PosterId!, created.Path) is { } newId)
+                        if (spatial.ContentItemAtPath(PosterId!, created.Path) is { } newId)
                             await RenameContentInline(newId);
                     }
-                    catch(Exception e)
+                    catch (Exception e)
                     { if (!_disposed) await ShowFileActionError("文件已由 Windows 创建并保留，未删除或重试。\n" + created.Path + "\n" + e.Message); }
                 }
                 if (!_disposed && result.Error is { } error) await ShowFileActionError(error);

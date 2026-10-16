@@ -2,7 +2,6 @@ using DesktopUp.Application;
 
 namespace DesktopUp.Infrastructure;
 
-public enum TransferFinishKind { Completed, NotMoved, Preserved }
 public sealed record TransferFinish(DurableTransferItem Item, TransferFinishKind Kind);
 
 // Production boundary: finish an attempt, never retry its Move. The lower-level executor

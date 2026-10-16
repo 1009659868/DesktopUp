@@ -1,13 +1,8 @@
 using System.Runtime.InteropServices;
+using DesktopUp.Application;
 
 namespace DesktopUp.Infrastructure;
 
-public sealed record ShellDirectoryResult(string? Destination, bool Cancelled, int HResult);
-public interface IShellDirectoryTransfer
-{
-    Task<ShellDirectoryResult> Run(string source, string destination, bool copy, nint owner,
-        Func<bool> current, CancellationToken token);
-}
 
 // Dedicated STA; Windows owns collision UI and physical execution. A returned destination
 // comes from PostMove/CopyItem, not from guessing the name supplied to MoveItem.

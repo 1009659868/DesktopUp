@@ -1,6 +1,5 @@
 using DesktopUp.Application;
 using DesktopUp.Domain;
-using DesktopUp.Infrastructure;
 using DesktopUp.Windows;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -21,7 +20,7 @@ internal sealed partial class PosterVisualWindow
         var target = spatial.ContentActionRelation(PosterId!, itemId);
         if (target is null || _disposed || _window?.Content is not FrameworkElement root) return;
         string path = target.Item.Target.Locator;
-        string identity = await Task.Run(() => LocalTransferFiles.Identity(path));
+        string identity = await spatial.CaptureFileActionIdentity(path);
         if (_disposed || _contentOpenCancellation.IsCancellationRequested) return;
         string initial = Path.GetFileName(path);
         var snapshot = EnsureContentSnapshot(_bounds);

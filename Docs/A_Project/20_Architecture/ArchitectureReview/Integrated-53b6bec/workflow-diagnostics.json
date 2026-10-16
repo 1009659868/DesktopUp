@@ -1,0 +1,142 @@
+{
+  "schemaVersion": 1,
+  "baseline": "53b6bec27bbb0f236eded579013ead17c79dea91",
+  "skill": "Archify 2.17",
+  "status": "blocked",
+  "correction_rounds": 2,
+  "reason": "workflow/route-preset-conflict after two focused correction rounds; no workflow HTML delivered or browser checked",
+  "diagrams": {
+    "open": {
+      "specification": "current-open.workflow.json",
+      "validation_exit_code": 1,
+      "schemaVersion": 1,
+      "ok": false,
+      "command": "validate",
+      "stage": "render",
+      "type": "workflow",
+      "input": "G:\\A_\\Tools\\DesktopUp_V2\\Docs\\A_Project\\20_Architecture\\ArchitectureReview\\Integrated-53b6bec\\current-open.workflow.json",
+      "error": "Workflow edge \"f\" cannot satisfy route preset \"straight\" under readable-v2 constraints (minimum 8px endpoint stubs, 16px interior turns, and 28px direct clearance).",
+      "diagnostics": [
+        {
+          "code": "workflow/route-preset-conflict",
+          "severity": "error",
+          "message": "Workflow edge \"f\" cannot satisfy route preset \"straight\" under readable-v2 constraints (minimum 8px endpoint stubs, 16px interior turns, and 28px direct clearance).",
+          "subject": {
+            "diagramType": "workflow",
+            "edge": "f",
+            "from": "prepare",
+            "to": "invalid",
+            "route": "straight"
+          },
+          "evidence": {
+            "attemptedCandidateFamily": "straight",
+            "points": [
+              [
+                242.4,
+                145
+              ],
+              [
+                242.4,
+                217
+              ]
+            ],
+            "fromSide": "bottom",
+            "toSide": "top",
+            "requiredEndpointStubPx": 8,
+            "requiredInteriorSegmentPx": 16,
+            "requiredDirectClearancePx": 28
+          },
+          "supportedFixes": []
+        }
+      ]
+    },
+    "heat": {
+      "specification": "current-heat.workflow.json",
+      "validation_exit_code": 1,
+      "schemaVersion": 1,
+      "ok": false,
+      "command": "validate",
+      "stage": "render",
+      "type": "workflow",
+      "input": "G:\\A_\\Tools\\DesktopUp_V2\\Docs\\A_Project\\20_Architecture\\ArchitectureReview\\Integrated-53b6bec\\current-heat.workflow.json",
+      "error": "Workflow edge \"g\" cannot satisfy route preset \"straight\" under readable-v2 constraints (minimum 8px endpoint stubs, 16px interior turns, and 28px direct clearance).",
+      "diagnostics": [
+        {
+          "code": "workflow/route-preset-conflict",
+          "severity": "error",
+          "message": "Workflow edge \"g\" cannot satisfy route preset \"straight\" under readable-v2 constraints (minimum 8px endpoint stubs, 16px interior turns, and 28px direct clearance).",
+          "subject": {
+            "diagramType": "workflow",
+            "edge": "g",
+            "from": "gate",
+            "to": "waiting",
+            "route": "straight"
+          },
+          "evidence": {
+            "attemptedCandidateFamily": "straight",
+            "points": [
+              [
+                372.4,
+                145
+              ],
+              [
+                372.4,
+                217
+              ]
+            ],
+            "fromSide": "bottom",
+            "toSide": "top",
+            "requiredEndpointStubPx": 8,
+            "requiredInteriorSegmentPx": 16,
+            "requiredDirectClearancePx": 28
+          },
+          "supportedFixes": []
+        }
+      ]
+    },
+    "icons": {
+      "specification": "current-icons.workflow.json",
+      "validation_exit_code": 1,
+      "schemaVersion": 1,
+      "ok": false,
+      "command": "validate",
+      "stage": "render",
+      "type": "workflow",
+      "input": "G:\\A_\\Tools\\DesktopUp_V2\\Docs\\A_Project\\20_Architecture\\ArchitectureReview\\Integrated-53b6bec\\current-icons.workflow.json",
+      "error": "Workflow edge \"f\" cannot satisfy route preset \"straight\" under readable-v2 constraints (minimum 8px endpoint stubs, 16px interior turns, and 28px direct clearance).",
+      "diagnostics": [
+        {
+          "code": "workflow/route-preset-conflict",
+          "severity": "error",
+          "message": "Workflow edge \"f\" cannot satisfy route preset \"straight\" under readable-v2 constraints (minimum 8px endpoint stubs, 16px interior turns, and 28px direct clearance).",
+          "subject": {
+            "diagramType": "workflow",
+            "edge": "f",
+            "from": "retain",
+            "to": "obsolete",
+            "route": "straight"
+          },
+          "evidence": {
+            "attemptedCandidateFamily": "straight",
+            "points": [
+              [
+                447.59999999999997,
+                145
+              ],
+              [
+                447.59999999999997,
+                217
+              ]
+            ],
+            "fromSide": "bottom",
+            "toSide": "top",
+            "requiredEndpointStubPx": 8,
+            "requiredInteriorSegmentPx": 16,
+            "requiredDirectClearancePx": 28
+          },
+          "supportedFixes": []
+        }
+      ]
+    }
+  }
+}

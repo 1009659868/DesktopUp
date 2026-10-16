@@ -102,7 +102,7 @@ internal sealed partial class PosterVisualWindow
         var point=args.LatestPoint;
         bool outside=point.X<_bounds.X||point.Y<_bounds.Y||point.X>=_bounds.X+_bounds.Width||point.Y>=_bounds.Y+_bounds.Height;
         if(!outside)return false;
-        DesktopUp.Infrastructure.ShellExitIntent? intent=null;
+        ShellExitIntent? intent=null;
         NativeShellDragResult? result=null;
         try
         {

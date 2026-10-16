@@ -1,10 +1,46 @@
 # V3-04 当前交接
 
-## 2026-10-16 架构A/B/C收口与本地集成（当前）
+## 2026-10-16 架构分支检查点与develop来源发布同步（当前）
+
+用户授权提交/推送当前impl/architecture-foundation，但暂不合入impl/develop；拖放切片人工仍待验，不因Git同步补PASS。已fetch核对：本地develop为53b6bec（已验A/B/C集成），origin/develop为4ae822a，发布线impl/main及origin/main为f80765e。后续发布同步只以本地develop@53b6bec为源，不包含当前R1余项代码。旧候选PID11416已由用户正常退出，旧包/配置保留。
+
+本轮继续按发布精简规则合并、构建和打包，并在impl/main安装环境推进之前未验的真实登录自启。不自动注销/重启、不以手动--autostart代替真实登录通过；最终远端提交、安装包及验收状态在本节续记。基础架构仍IN PROGRESS，真实热度HOLD。
+
+## 2026-10-16 R1 拖放切片集中待验（历史交付，人工结论未变）
+
+上一批文件动作USER PASS已记录；本批普通/映射拖入、跨海报交接、原生拖出观察迁入Application用例，原原子事务、OLE、手势和安全规则保持。75项定向、正常/Review/夹具构建及隔离生产接线冒烟通过，PID41976退出activeResources=0；非原生鼠标结论。详细职责、边界、证据及两组人工统一见[余项计划第9节](../Architecture/FOUNDATION_REMAINDER_PLAN.md#9-r1-拖放用例切片-2026-10-16)。
+
+正常候选已打开PID11416，入口scripts/start-architecture-transfer-review.ps1，独立数据out/drop-d3/architecture-r1-transfers-review01；旧包/配置保留。仅需普通连续拖入→跨海报→拖出，以及映射拖入/交接与Esc取消两组集中人工。R1整体IN PROGRESS、真实热度HOLD，下一片映射创建/同步；未提交、合并、推送或更新impl/main。
+
+## 2026-10-16 R1 文件动作首片通过，继续拖放用例（历史）
+
+用户确认上一批集中验收通过，文件动作首片 USER PASS；继续 R1 拖放业务编排/存储边界整理，保留原生手势、单一所有权、取消与安全规则。映射同步、生命周期等未覆盖项继续携带；R1整体仍 IN PROGRESS，真实热度 HOLD。本轮未授权提交/推送/合并。
+
+## 2026-10-16 R1 文件动作首片集中待验（历史）
+
+在 impl/architecture-foundation 完成新建/重命名/真实删除/属性与Win菜单的应用用例接线；窗口和本片运行器不再直接持有SQLite文件服务、ShellUiClient或文件身份访问。原事务、回执、取消/回退、行内命名及系统提示保持。详细职责与证据唯一归[余项计划第8节](../Architecture/FOUNDATION_REMAINDER_PLAN.md#8-r1-文件动作纵向切片-2026-10-16)。
+
+108项定向、正常/Review构建、编译边界及一次实际行内控件冒烟通过，退出activeResources=0。正常产品候选已打开（PID6728），入口 scripts/start-architecture-file-actions-review.ps1，独立数据 out/drop-d3/architecture-r1-review01。人工仅新建→命名→删除、属性/Win菜单两组，MANUAL PENDING；本机高完整性环境不代表普通权限认证，未改系统权限。
+
+**R1整体仍IN PROGRESS，真实热度HOLD。** 本片后续还有拖放/映射同步、归还/卸载/收纳位置及配置入口，然后R2～R4。旧包、配置、图源及真实文件保持，没有提交/推送/合并，没有更新impl/main。用户已正常关闭旧C候选PID52956。
+
+## 2026-10-16 基础架构余项与原分支续作（历史）
+
+按用户要求切回 impl/architecture-foundation@57e90d4，保留上轮未提交图源/资料及develop的最终集成记录；产品/模块/构建/测试与develop@53b6bec一致，fetch后origin/develop仍4ae822a。本轮没有提交、合并或推送。两份跨分支差异文档先备份到out/architecture-resume-20261016-01，恢复后哈希与切换前一致；没有改用户文件或运行程序。
+
+**整体基础架构仍IN PROGRESS，真实热度HOLD**。原A/B/C关闭只覆盖已验切片；新增[唯一余项计划](../Architecture/FOUNDATION_REMAINDER_PLAN.md)定义R1用例/存储、R2会话、R3呈现/同代命中、R4组装/平台依赖的实施清单、可核查出口及热度准入条件。下一项R1先做新建/重命名/删除/Win菜单纵向调用链，再覆盖其余既有入口；不增加确认框、不改已验业务，不先做AI/模板平台。本轮仅计划和文档检查，余项代码尚未开始，不新增功能验收结论。
+
+## 2026-10-16 集成后架构图刷新（历史）
+
+按用户要求用 Archify 核对 impl/develop@53b6bec 当前代码，生成[新架构及流程说明](../../20_Architecture/ArchitectureReview/Integrated-53b6bec/README.md)。整体架构16个来源验证、9/9 showcase、四尺寸浏览器检查和4张深浅截图目视均通过；三个流程图的语义已核对，绘图线路经两轮修正仍未通过，保留图源及诊断，不称已交付。不覆盖旧现状/目标图，不修改产品/技能包，不Git提交/推送；V3-06未开始，当前未提交变化仅文档/图源。
+
+## 2026-10-16 架构已验切片收口与本地集成（历史）
 
 用户确认“ok,修复好了”，C收展闪烁复验USER PASS，前序A/B及C其他操作结论保持，架构整理限定范围CLOSED。按本轮授权提交已验收成果并以--no-ff合入impl/develop，纯文件移动与后续结构/行为修订分开；本轮不推送、不更新impl/main、不开始V3-06。
 
-集成检查：fetch后develop与origin/develop同为4ae822a；既有构建/定向/人工结果复用，仅复核编译边界（产品99源/0验收源、Review165源/66验收源、Preview互斥通过）与Git差异，不新增运行矩阵。Git提交和最终分支结果将在合并完成后补记。详见[C收口记录](../Architecture/C_HEAT_RUNTIME.md#6-收口与本地集成2026-10-16)；旧包/配置及真实文件保留，自启登录、长测、满盘等未验照常携带。
+集成检查：fetch后develop与origin/develop同为4ae822a；既有构建/定向/人工结果复用，仅复核编译边界（产品99源/0验收源、Review165源/66验收源、Preview互斥通过）与Git差异，不新增运行矩阵。详见[C收口记录](../Architecture/C_HEAT_RUNTIME.md#6-收口与本地集成2026-10-16)；旧包/配置及真实文件保留，自启登录、长测、满盘等未验照常携带。
+
+Git记录：纯移动9d1a1af（75个100%重命名、0行变更）；结构/热度运行边界与收展修订57e90d4。impl/develop从4ae822a以--no-ff合入57e90d4，无冲突，集成树相对功能分支仅增加本页/C记录的最终交接，产品源码/构建入口一致。最终停留impl/develop，功能分支保留；本轮未推送，origin/develop仍4ae822a，impl/main仍f80765e。合并提交即包含本段记录的当前集成提交。
 
 ## 2026-10-16 C其他操作确认，展开闪烁修订待复验（历史）
 

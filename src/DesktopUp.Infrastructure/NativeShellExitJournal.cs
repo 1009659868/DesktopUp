@@ -5,18 +5,14 @@ using Microsoft.Data.Sqlite;
 
 namespace DesktopUp.Infrastructure;
 
-public sealed record ShellExitItem(Guid CardId, Guid ContentId, long Version, string Path,
-    string ParentIdentity, string? Identity, bool Missing);
-public sealed record ShellExitIntent(Guid Id, string PosterId, DateTimeOffset Created, IReadOnlyList<ShellExitItem> Items)
-{
-    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
-    public bool ExplicitDelete { get; init; }
-}
 
 // Durable observation only. Shell owns execution; this class never moves, copies or deletes
 // a file and never interprets DROPEFFECT as evidence of completed physical movement.
-public sealed class NativeShellExitJournal(SqliteStateStore store)
+public sealed class NativeShellExitJournal(SqliteStateStore store) : INativeShellExitStore
 {
+    public bool HasRemainingPresentCards(ShellExitIntent intent) =>
+        new SqliteStateCommandRepository(store).Read().ContentCatalog.PosterItems.Any(p =>
+            intent.Items.Any(i => !i.Missing && i.CardId == p.Id));
     internal const string MigrationSql = """
         CREATE TABLE native_shell_exits(operation_id TEXT PRIMARY KEY, body_json TEXT NOT NULL,
             released INTEGER, closed INTEGER NOT NULL DEFAULT 0 CHECK(closed IN(0,1))) STRICT;

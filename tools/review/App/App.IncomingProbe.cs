@@ -29,6 +29,21 @@ public partial class App
             while(!_spatialRuntime!.IncomingProbeReady)
             {if(watch.Elapsed.TotalSeconds>20)throw new IOException("Incoming surface not ready.");await Task.Delay(100);}
             var repository=new SqliteStateCommandRepository(_services!.GetRequiredService<SqliteStateStore>());
+            if (_startupIntent.Arguments.Contains("--r1-transfers-probe"))
+            {
+                await _spatialRuntime.R1TransfersProbe(root);
+                return; // Only this slice, not the accumulated ingress/selection/UI suites.
+            }
+            if (_startupIntent.Arguments.Contains("--r1-file-actions-probe"))
+            {
+                // Reuse the actual inline naming fixture without replaying old drag/drop suites.
+                string poster = repository.Read().Catalog.Posters.Single().Poster.PosterId;
+                var location = await _spatialRuntime.PrepareNewContent(poster) ?? throw new IOException("No action location.");
+                await _spatialRuntime.CreateContent(poster, location, NewContentKind.TextFile, "first.txt", null, CancellationToken.None);
+                await _spatialRuntime.BackdropWindowForProbe(poster).VerifyInlineNamingForProbe();
+                _log!.Write("info", "contract.r1_file_actions_passed", new { nativeMouse = false, keyboardDispatch = false });
+                return;
+            }
             if (_startupIntent.Arguments.Contains("--appearance-layout-probe"))
             {
                 _controlCenter!.Show();

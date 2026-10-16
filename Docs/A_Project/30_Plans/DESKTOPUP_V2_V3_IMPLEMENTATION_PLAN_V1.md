@@ -1,6 +1,6 @@
 # DesktopUp V2 V3 制作计划 V1
 
-2026-10-16 当前：架构A/B/C及展开图标闪烁复验均USER PASS / CLOSED；本轮按授权本地集成impl/develop，不推送、不更新impl/main。结果归[收口记录](../40_Implementation/Architecture/C_HEAT_RUNTIME.md)与当前交接；下一项V3-06真实热度尚未开始。普通构建不含独立验收执行器；原自启登录/长测等未验继续携带，架构图仍为4ae822a基线，下方为历史。
+2026-10-16 当前：**基础架构整改 IN PROGRESS，真实热度准入 HOLD**。已切回 `impl/architecture-foundation`，按[余项实施清单与退出标准](../40_Implementation/Architecture/FOUNDATION_REMAINDER_PLAN.md)推进 R1 现有业务用例/存储解耦 → R2 海报会话 → R3 增量呈现与同代命中 → R4 组装/平台依赖收口，完成集中验收后再决定进入 V3-06。此前 A、B 打开切片、C 热度切片及闪烁修订已通过并本地集成，不等于整体目标架构完成；AI/模板平台/更新器不作为此次前置。R1文件动作首片USER PASS；本批受管/映射拖入、原生拖出观察与跨海报交接CODE/AUTO PASS，集中人工待验，详见余项计划第8～9节；映射创建/同步、生命周期等其余链路仍待实施。保留未提交图源/资料，不提交、推送或重新合并。下方为阶段历史。
 
 2026-10-16 最新：[前移V3-09-03自启动](../40_Implementation/V3-04/PREVIEW_INSTALLER_DELIVERY.md#2026-10-16-v3-09-03开机自启动前移计划)关闭/卸载人工通过，真实登录暂缓未验。用户授权携带该项同步并集成impl/develop，不更新impl/main，不补整体PASS；实际Git结果见HANDOFF。下一制作项V3-06真实热度，本轮不实施，升级能力及其他未验环境继续携带。
 

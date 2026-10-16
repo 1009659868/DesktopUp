@@ -86,6 +86,44 @@ public sealed class ArchitectureTests
     }
 
     [Fact]
+    public void FileActionVerticalSliceUsesApplicationPortsAndBootstrapComposition()
+    {
+        string root = FindRepositoryRoot();
+        var surfaces = string.Join("\n", new[] { "PosterVisualWindow.FileActions.cs",
+            "PosterVisualWindow.NewContent.cs", "PosterVisualWindow.InlineRename.cs",
+            "PosterSpatialRuntime.FileActions.cs" }.Select(name =>
+                File.ReadAllText(Path.Combine(root, "src/DesktopUp.App", name))));
+        foreach (string forbidden in new[] { "DesktopUp.Infrastructure", "Sqlite", "LocalTransferFiles",
+            "new ContentCreationService", "new ContentRenameService", "new ContentDeletionService", "new ShellUiClient" })
+            Assert.DoesNotContain(forbidden, surfaces, StringComparison.Ordinal);
+        Assert.Contains("IContentFileActionService", surfaces);
+        string bootstrap = File.ReadAllText(Path.Combine(root, "src/DesktopUp.App/Bootstrap/App.ContentServices.cs"));
+        foreach (string useCase in new[] { "ContentCreationUseCase", "ContentRenameUseCase", "ContentDeletionUseCase", "ConfigureFileActions" })
+            Assert.Contains(useCase, bootstrap);
+    }
+
+    [Fact]
+    public void TransferVerticalSliceUsesApplicationOrchestrationAndNoConcreteStorage()
+    {
+        string root = FindRepositoryRoot();
+        var surfaces = string.Join("\n", new[] { "PosterSpatialRuntime.Incoming.cs", "PosterSpatialRuntime.NativeExit.cs",
+            "PosterSpatialRuntime.TransferUseCases.cs", "PosterVisualWindow.Transfers.cs" }.Select(name =>
+                File.ReadAllText(Path.Combine(root, "src/DesktopUp.App", name))));
+        foreach (string forbidden in new[] { "DesktopUp.Infrastructure", "Sqlite", "LocalTransferFiles", "_transferStore" })
+            Assert.DoesNotContain(forbidden, surfaces, StringComparison.Ordinal);
+        string bootstrap = File.ReadAllText(Path.Combine(root, "src/DesktopUp.App/Bootstrap/App.ContentServices.cs"));
+        foreach (string useCase in new[] { "ManagedIngressUseCase", "MappedIngressUseCase", "CrossPosterTransferUseCase", "NativeShellExitUseCase" })
+        {
+            Assert.Contains(useCase, bootstrap);
+            Assert.Contains(useCase, surfaces);
+        }
+        string exit = File.ReadAllText(Path.Combine(root, "src/DesktopUp.Application/Features/Content/Transfers/NativeShellExitUseCase.cs"));
+        Assert.DoesNotContain("IShellDirectoryTransfer", exit);
+        Assert.DoesNotContain("File.Move", exit);
+        Assert.DoesNotContain("File.Delete", exit);
+    }
+
+    [Fact]
     public void ExecutableManifestRequestsOrdinaryUserPrivileges()
     {
         string root = FindRepositoryRoot();

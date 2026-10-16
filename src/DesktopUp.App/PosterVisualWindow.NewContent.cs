@@ -1,5 +1,4 @@
 using DesktopUp.Application;
-using DesktopUp.Infrastructure;
 using DesktopUp.Windows;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -36,7 +35,7 @@ internal sealed partial class PosterVisualWindow
     {
         if (_disposed || _contentOpenCancellation.IsCancellationRequested) return null;
         string title = kind switch { NewContentKind.Folder => "新建文件夹", NewContentKind.TextFile => "新建文本文档", _ => "新建快捷方式" };
-        string initial = await Task.Run(() => ContentCreationService.SuggestName(directory, kind));
+        string initial = await spatial.SuggestContentName(directory, kind);
         if (_disposed || _contentOpenCancellation.IsCancellationRequested) return null;
         if (kind != NewContentKind.Shortcut) return (initial, null);
         var done = new TaskCompletionSource<(string, string?)?>(TaskCreationOptions.RunContinuationsAsynchronously);

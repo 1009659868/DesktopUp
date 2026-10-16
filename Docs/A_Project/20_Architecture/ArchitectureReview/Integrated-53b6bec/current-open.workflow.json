@@ -1,0 +1,184 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "真实打开｜用例独立执行，成功交接才记事实",
+    "locale": "zh-CN",
+    "quality_profile": "showcase"
+  },
+  "lanes": [
+    {
+      "id": "open",
+      "label": "成功打开主链"
+    },
+    {
+      "id": "guard",
+      "label": "已有保护",
+      "variant": "exception"
+    }
+  ],
+  "mainPath": [
+    "activate",
+    "prepare",
+    "admit",
+    "dispatch",
+    "verify",
+    "commit"
+  ],
+  "nodes": [
+    {
+      "id": "activate",
+      "lane": "open",
+      "col": 0,
+      "type": "frontend",
+      "label": "卡片激活",
+      "sublabel": "视图适配器传递意图"
+    },
+    {
+      "id": "prepare",
+      "lane": "open",
+      "col": 1,
+      "type": "backend",
+      "label": "准备打开请求",
+      "sublabel": "能力与当前关系见证"
+    },
+    {
+      "id": "admit",
+      "lane": "open",
+      "col": 2,
+      "type": "database",
+      "label": "请求去重",
+      "sublabel": "ActivationId 唯一准入"
+    },
+    {
+      "id": "dispatch",
+      "lane": "open",
+      "col": 3,
+      "type": "external",
+      "label": "Worker 打开",
+      "sublabel": "派发前再次核对关系"
+    },
+    {
+      "id": "verify",
+      "lane": "open",
+      "col": 4,
+      "type": "security",
+      "label": "校验交接结果",
+      "sublabel": "协议与提供方证据"
+    },
+    {
+      "id": "commit",
+      "lane": "open",
+      "col": 5,
+      "type": "database",
+      "label": "原子完成记录",
+      "sublabel": "结束请求＋成功事实"
+    },
+    {
+      "id": "invalid",
+      "lane": "guard",
+      "col": 1,
+      "type": "security",
+      "label": "拒绝失效来源",
+      "sublabel": "不派发外部操作"
+    },
+    {
+      "id": "duplicate",
+      "lane": "guard",
+      "col": 2,
+      "type": "security",
+      "label": "停止重复请求",
+      "sublabel": "忙／已处理均不重放"
+    },
+    {
+      "id": "failed",
+      "lane": "guard",
+      "col": 4,
+      "type": "backend",
+      "label": "记录非成功结果",
+      "sublabel": "不产生成功事实"
+    }
+  ],
+  "edges": [
+    {
+      "id": "a",
+      "from": "activate",
+      "to": "prepare",
+      "label": "打开意图",
+      "role": "main"
+    },
+    {
+      "id": "b",
+      "from": "prepare",
+      "to": "admit",
+      "label": "准入通过",
+      "role": "main"
+    },
+    {
+      "id": "c",
+      "from": "admit",
+      "to": "dispatch",
+      "label": "唯一请求",
+      "role": "main"
+    },
+    {
+      "id": "d",
+      "from": "dispatch",
+      "to": "verify",
+      "label": "返回结果",
+      "role": "main"
+    },
+    {
+      "id": "e",
+      "from": "verify",
+      "to": "commit",
+      "label": "成功证据",
+      "role": "main"
+    },
+    {
+      "id": "f",
+      "from": "prepare",
+      "to": "invalid",
+      "label": "关系失效",
+      "role": "error",
+      "variant": "security",
+      "route": "straight"
+    },
+    {
+      "id": "g",
+      "from": "admit",
+      "to": "duplicate",
+      "label": "重复／忙",
+      "role": "error",
+      "variant": "security",
+      "route": "straight"
+    },
+    {
+      "id": "h",
+      "from": "verify",
+      "to": "failed",
+      "label": "失败／取消",
+      "role": "error",
+      "variant": "security",
+      "route": "straight"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "B 批已实现",
+      "items": [
+        "ContentActionService 不依赖视图；视图关闭后仍可完成事实记录。",
+        "ReferenceContentActions 只更新仍匹配来源的视图观察。"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "计数和持久化边界",
+      "items": [
+        "定位、排队、失败、取消均不计成功；事务失败不自动重试外部打开。",
+        "事实已落库，但生产统计消费、热度评分仍是下一批。"
+      ]
+    }
+  ]
+}

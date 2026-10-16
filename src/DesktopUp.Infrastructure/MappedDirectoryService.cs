@@ -11,7 +11,6 @@ public sealed record MappedDirectoryScan(string Path, string Identity, IReadOnly
 public sealed record MappedDirectoryState(string PosterId,string Path,bool Available,string? Message=null);
 public sealed record MappedDirectorySyncResult(bool Changed, bool Pending, IReadOnlyList<string> Notices)
 { public IReadOnlyList<MappedDirectoryState> States { get; init; } = []; }
-public sealed record MappedNewContent(Guid CollectionId, string Path, string Identity);
 
 // Borrowed roots have only local DB evidence; no owner markers or file moves. Missing,
 // unreadable, replaced or oversized directories never become an empty successful scan.

@@ -1,11 +1,26 @@
 using DesktopUp.Application;
 using DesktopUp.Domain;
-using DesktopUp.Infrastructure;
 
 namespace DesktopUp;
 
 internal sealed partial class PosterSpatialRuntime
 {
+    private IContentFileActionService? _fileActions;
+    internal void ConfigureFileActions(IContentFileActionService actions) => _fileActions = actions;
+    private IContentFileActionService FileActions => _fileActions ?? throw new IOException("文件服务尚未就绪。");
+    internal Task<string> CaptureFileActionIdentity(string path) => Task.Run(() => FileActions.CaptureIdentity(path));
+    internal Task<string> SuggestContentName(string directory, NewContentKind kind) =>
+        Task.Run(() => FileActions.SuggestName(directory, kind));
+    internal async Task<ContentShellOutcome> InvokeShellAction(string posterId, string? itemId,
+        ContentRelationResolution? expected, NewContentLocation? location, string path, ShellUiAction action,
+        int x, int y, CancellationToken token)
+    {
+        var outcome = await Task.Run(() => FileActions.InvokeShell(posterId, itemId, expected, location, path, action, x, y, token));
+        // Publish accepted facts even when the invoking view no longer exists.
+        if (outcome.Registered) state.Refresh();
+        return outcome;
+    }
+
     internal string? ContentActionPath(string posterId, string? itemId)
     {
         if (!TryGetProjection(out var projection) || projection is null) return null;
@@ -36,35 +51,27 @@ internal sealed partial class PosterSpatialRuntime
     {
         if(ContentActionPath(posterId,null) is { } mapped)
         { await ValidateMappedAction(posterId, null); return mapped; }
-        if(_chooseTransferStorage is null || _transferStore is null)return null;
+        if(_chooseTransferStorage is null || _fileActions is null)return null;
         return (await _chooseTransferStorage())?.Collection.StorageLocator;
     }
 
-    internal Task ValidateMappedAction(string posterId, string? itemId) => _transferStore is null || ContentActionPath(posterId, null) is null ? Task.CompletedTask :
-        Task.Run(() => new MappedDirectoryService(_transferStore).ValidateAction(posterId, itemId));
+    internal Task ValidateMappedAction(string posterId, string? itemId) => _fileActions is null || ContentActionPath(posterId, null) is null ? Task.CompletedTask :
+        Task.Run(() => FileActions.ValidateMappedAction(posterId, itemId));
 
     internal async Task RenameContent(string posterId,string itemId,Guid contentId,long version,string name,string identity)
     {
-        if(_transferStore is null)throw new IOException("文件服务尚未就绪。");
-        await Task.Run(()=>new ContentRenameService(_transferStore).Rename(posterId,itemId,contentId,version,name,_fileTransferStopping.Token,identity));
+        await Task.Run(()=>FileActions.Rename(posterId,itemId,contentId,version,name,identity,_fileTransferStopping.Token));
         state.Refresh();
     }
 
     internal void RefreshFileActionState() => state.Refresh();
-
-    internal async Task RegisterShellCreated(string posterId, NewContentLocation location, string directoryIdentity, ShellCreatedItem created)
-    {
-        if (_transferStore is null) throw new IOException("文件服务尚未就绪。");
-        await Task.Run(() => new ShellCreatedContentService(_transferStore).Register(posterId, location, directoryIdentity, created));
-        state.Refresh();
-    }
 
     internal async Task<ContentDeletionResult> DeleteContent(string posterId, string[] items, nint owner, CancellationToken cancellation)
     {
         if (!TransfersAvailable || HasCenterDraft(posterId)) throw new IOException("请先完成当前文件操作。");
         _fileTransferBusy = true; _fileTransferPoster = posterId; ActivityChanged?.Invoke();
         using var stop = CancellationTokenSource.CreateLinkedTokenSource(cancellation, _fileTransferStopping.Token);
-        var operation = Task.Run(() => new ContentDeletionService(_transferStore!).Delete(posterId, items, owner, stop.Token));
+        var operation = Task.Run(() => FileActions.Delete(posterId, items, owner, stop.Token));
         _fileTransferTask = ObserveForShutdown();
         try
         {
@@ -86,17 +93,12 @@ internal sealed partial class PosterSpatialRuntime
             throw new IOException("请先完成当前文件操作或未保存的编辑。");
         if (ContentActionPath(posterId, null) is not null)
         {
-            var mapped = await Task.Run(() => new MappedDirectoryService(_transferStore!).ResolveNewContent(posterId));
-            var current = new SqliteStateCommandRepository(_transferStore!).Read();
-            return new(null, current.ContentVersion, current.Catalog.Posters.Single(p => p.Poster.PosterId == posterId).EntityVersion) { Mapping = mapped };
+            return await Task.Run(() => FileActions.PrepareNewContent(posterId, null, mapped: true));
         }
         var storage = await _chooseTransferStorage();
         if (storage is null) return null;
         if (!TransfersAvailable || HasCenterDraft(posterId)) throw new IOException("当前状态已变化，请重新打开新建菜单。");
-        var basis = new SqliteStateCommandRepository(_transferStore!).Read();
-        var owner = basis.Catalog.Posters.SingleOrDefault(p => p.Poster.PosterId == posterId)
-            ?? throw new IOException("海报已关闭。");
-        return new(storage, basis.ContentVersion, owner.EntityVersion);
+        return await Task.Run(() => FileActions.PrepareNewContent(posterId, storage, mapped: false));
     }
 
     internal async Task<string> CreateContent(string posterId, NewContentLocation location, NewContentKind kind,
@@ -114,7 +116,7 @@ internal sealed partial class PosterSpatialRuntime
             using var stopping = CancellationTokenSource.CreateLinkedTokenSource(cancellation, _fileTransferStopping.Token);
             try
             {
-                string path = await Task.Run(() => new ContentCreationService(_transferStore!).Create(posterId, location, kind, name, target, stopping.Token));
+                string path = await Task.Run(() => FileActions.Create(posterId, location, kind, name, target, stopping.Token));
                 log.Write("info", "content.created", new { posterId, kind, path });
                 return path;
             }
@@ -127,28 +129,4 @@ internal sealed partial class PosterSpatialRuntime
     internal void NotifyFileActionState(string? id)
     { NotifyContentEditorChanged(id); ActivityChanged?.Invoke(); }
 
-    internal async Task<string> CreateMappedPoster(string path, CancellationToken cancellation)
-    {
-        // The center owns its picker/action lease. It intentionally blocks outside drag/drop,
-        // but must not reject its own catalog creation because that same lease is active.
-        if (!FileServiceReady || _transferStore is null) throw new IOException("请先结束当前文件操作。");
-        if (!state.TryGetCurrent(out var current) || current is null) throw new IOException("桌面尚未就绪。");
-        var reads = new StateReadSet(current.Posters.ToDictionary(p => p.Poster.PosterId, p => p.EntityVersion),
-            CatalogVersion: current.CatalogVersion, ContentVersion: current.ContentVersion);
-        CreatePosterCommand? prepared = null;
-        var request = new ControlCenterCatalogRequest("map-" + Guid.NewGuid().ToString("N"), current.Revision, reads, null, Path.GetFileName(path));
-        var preparation = ApplyControlCenterCatalog(request, command =>
-        {
-            prepared = command;
-            // Only captures the validated placement command; no state is published here.
-            return new(StateCommandStatus.NotReady, request.RequestId, current.Revision, current.Revision, current, null);
-        });
-        if (prepared is null) throw new IOException(preparation.Error);
-        using var stopping = CancellationTokenSource.CreateLinkedTokenSource(cancellation, _fileTransferStopping.Token);
-        var result = await Task.Run(() => new MappedDirectoryService(_transferStore).Create(prepared, path, stopping.Token));
-        state.Refresh();
-        if (result.Status is not (StateCommandStatus.Committed or StateCommandStatus.Replayed)) throw new IOException(result.Error);
-        log.Write("info", "content.directory_mapped", new { result.ResultPosterId, path });
-        return result.ResultPosterId!;
-    }
 }
