@@ -1,5 +1,13 @@
 # V3-04 代码锚点
 
+## 2026-10-16 V3-09-03自启动
+
+- Application/StartupRegistration.cs：纯登记状态、显式变更与读回；Windows/WindowsStartupRegistration.cs：实际安装身份、HKCU64 Run/DesktopUp适配、其他安装保护，无后台补登记或StartupApproved私有格式。
+- Domain/StartupIntent.cs、Application/StartupIntentParser.cs、App.xaml.cs：精确AutoStart意图，零海报不弹中心、第二实例不转发唤醒。
+- ControlCenterWindow.Startup.cs / xaml、ControlCenterService.cs：全局开关、激活/展开刷新、系统启动设置入口、读回成功后保存现有偏好。
+- packaging/preview/installer.nsi：内容准备成功后仅移除自身启动命令；DistributionBuild.cs / App.Transfers.cs / package-preview.ps1：仅显式StartupReview构建隔离配置/存储，常规包默认不变。
+- StartupRegistrationTests / StartupIntentTests、tests/Packaging/Test-StartupCleanup.ps1 / Test-StartupPackage.ps1：本批定向覆盖；scripts/start-startup-review.ps1：同包集中人工。结果/已知边界见[自启C记录](PREVIEW_INSTALLER_DELIVERY.md#2026-10-16-v3-09-03开机自启动前移计划)。
+
 ## 2026-10-16 05-13兼容准入
 
 - Application/LocalContentCompatibility.cs：纯路径、实体类型和未落地属性策略；供IncomingDropSession、LocalContentProtocol及Infrastructure的引用/搬运/映射入口复用，不替代身份/归属和事务。

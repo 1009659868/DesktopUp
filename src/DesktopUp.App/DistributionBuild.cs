@@ -6,14 +6,29 @@ namespace DesktopUp;
 // Build-channel identity only; never changes layout, persistence schema or user authoring.
 internal static class DistributionBuild
 {
+#if DESKTOPUP_STARTUP_REVIEW
+    public static string? ReviewStorageBase => DefaultDataRoot + ".storage";
+#else
+    public static string? ReviewStorageBase => null;
+#endif
     public static PosterDefinition ApplyCreationDefaults(PosterDefinition seed) => CreationDefaults?.ApplyToNew(seed) ?? seed;
 #if DESKTOPUP_PREVIEW
+    public const bool IsInstallable = true;
+#if DESKTOPUP_STARTUP_REVIEW
+    public const string ApplicationId = "DesktopUp.V3.StartupReview";
+    public const string DisplayName = "DesktopUp · 自启动验收";
+    public const string TrayName = "DesktopUp · 自启动验收";
+    public const string TraySuffix = " · 自启动验收";
+    public static string? DefaultDataRoot => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DesktopUp", "StartupReview");
+#else
     public const string ApplicationId = "DesktopUp.V3.Preview";
     public const string DisplayName = "DesktopUp Preview";
     public const string TrayName = "DesktopUp Preview";
     public const string TraySuffix = " · 预览版";
     public static string? DefaultDataRoot => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DesktopUp", "Preview");
+#endif
     private static readonly Lazy<(PosterCreationDefaults? Value, string? Error)> LoadedDefaults = new(ReadDefaults);
     public static PosterCreationDefaults? CreationDefaults => LoadedDefaults.Value.Value;
     public static string? CreationDefaultsError => LoadedDefaults.Value.Error;
@@ -36,6 +51,7 @@ internal static class DistributionBuild
         }
     }
 #else
+    public const bool IsInstallable = false;
     public const string ApplicationId = "DesktopUp.V3";
     public const string DisplayName = "DesktopUp";
     public const string TrayName = "DesktopUp V3";

@@ -80,6 +80,16 @@ internal sealed partial class ControlCenterService(
                         StateCommandSource.ControlCenter, SettingsStateCommandKind.SetCenterTheme, current.Revision,
                         current.ControlCenter.Settings.Settings with { CenterTheme = theme })));
                 });
+                pendingWindow.ConfigureStartup(new StartupRegistrationService(new DesktopUp.Windows.WindowsStartupRegistration(
+                    AppContext.BaseDirectory, DistributionBuild.IsInstallable,
+                    !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DESKTOPUP_V3_TEST_DATA_ROOT")))), enabled =>
+                {
+                    if (!state.TryGetCurrent(out var current) || current is null) return Unavailable("startup", 0);
+                    return commands.Execute(new SettingsStateCommand(Guid.NewGuid().ToString("N"),
+                        StateCommandSource.ControlCenter, SettingsStateCommandKind.SetLaunchAtStartupRequested, current.Revision,
+                        current.ControlCenter.Settings.Settings with { LaunchAtStartupRequested = enabled })
+                    { ReadSet = StateReadSet.ForSettings(current.ControlCenter.Settings.EntityVersion) });
+                });
                 pendingWindow.ConfigureTemplateRegistration((source, targetId, revision) =>
                 {
                     string requestId = "template-register-" + Guid.NewGuid().ToString("N");

@@ -17,7 +17,8 @@ public sealed class StartupIntentParser
                 : normalized.Any(static value =>
                     value.Equals("--show-control-center", StringComparison.OrdinalIgnoreCase))
                     ? StartupIntentKind.ShowControlCenter
-                    : StartupIntentKind.StartBackground;
+                    : normalized.Any(static value => value.Equals("--autostart", StringComparison.OrdinalIgnoreCase))
+                        ? StartupIntentKind.AutoStart : StartupIntentKind.StartBackground;
 
         return new StartupIntent(kind, normalized, DateTimeOffset.UtcNow);
     }

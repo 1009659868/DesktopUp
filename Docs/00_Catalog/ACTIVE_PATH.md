@@ -1,6 +1,6 @@
 # DesktopUp V2 当前执行入口
 
-2026-10-16 最新：05-13三组USER PASS；[05-14真实场景](../A_Project/40_Implementation/V3-05/CONTENT_COMPATIBILITY.md#5-05-14真实场景差异收口2026-10-16)已REVIEW CLOSED，既有证据复用、无新首版差异、不追加人工。A真实内容/安全边界→B提供方/交接合同→C该收口；下一制作项V3-06真实热度。当前impl/05-13-content-compatibility未提交/合回/推送，本轮未操作Git或新源码；开工新功能前按约定获授权集成/派生，impl/main不动。下方为历史。
+2026-10-16 最新：自启动关闭/卸载USER PASS，真实登录按用户要求暂缓未验。A[自启需求§24.2](../A_Project/10_Requirements/DESKTOPUP_V2_REQUIREMENTS_PROFILE_V1.md#242-自启)→B[模块H08](../A_Project/20_Architecture/DESKTOPUP_V2_V3_MODULE_CATALOG_V1.md)→C[实施与人工记录](../A_Project/40_Implementation/V3-04/PREVIEW_INSTALLER_DELIVERY.md#2026-10-16-v3-09-03开机自启动前移计划)。本轮授权携带未验项同步功能分支并集成impl/develop，结果见HANDOFF；impl/main不变。下一主线V3-06，本轮不实施；下方为历史。
 
 2026-10-16 当前：[卸载集中人工§16.3](../A_Project/40_Implementation/V3-05/DIRECT_TRANSFER_DELIVERY.md#163-人工通过与测试收尾2026-10-16)四组USER PASS，本批收口；已完成授权桌面样例清理，真实数据不动。下一入口为[系列计划](../A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md#2026-10-16-卸载归还收口后的系列计划)：获授权集成后推进05-13兼容范围→05-14场景→V3-06。当前仍impl/05-12-content-lifecycle，本轮只记录/清理，无Git或新功能实现；后续测试须遵守[收尾规则](../Rules/IMPLEMENTATION_AND_VALIDATION.md#测试数据与收尾2026-10-16)。下方旧PENDING为历史。
 

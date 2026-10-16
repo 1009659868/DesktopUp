@@ -4,7 +4,8 @@ public enum StartupIntentKind
 {
     StartBackground = 0,
     ShowControlCenter = 1,
-    Exit = 2
+    Exit = 2,
+    AutoStart = 3
 }
 
 public sealed record StartupIntent(

@@ -26,6 +26,8 @@ public sealed class StartupIntentTests
     [InlineData(StartupIntentKind.ShowControlCenter, true, true)]
     [InlineData(StartupIntentKind.Exit, false, false)]
     [InlineData(StartupIntentKind.Exit, true, false)]
+    [InlineData(StartupIntentKind.AutoStart, false, false)]
+    [InlineData(StartupIntentKind.AutoStart, true, false)]
     public void VisibilityUsesIntentAndCurrentPosterCatalog(StartupIntentKind kind, bool hasPosters, bool expected)
     {
         var intent = new StartupIntent(kind, [], DateTimeOffset.UtcNow);
@@ -40,4 +42,14 @@ public sealed class StartupIntentTests
         Assert.Equal(StartupIntentKind.ShowControlCenter, intent.Kind);
         Assert.Equal(intent, intent.ForExistingInstance());
     }
+
+    [Theory]
+    [InlineData("--autostart", StartupIntentKind.AutoStart)]
+    [InlineData("--AUTOSTART", StartupIntentKind.AutoStart)]
+    [InlineData("--autostart-fake", StartupIntentKind.StartBackground)]
+    public void AutoStartIsAnExactIntent(string argument, StartupIntentKind expected) =>
+        Assert.Equal(expected, new StartupIntentParser().Parse([argument]).Kind);
+
+    [Fact] public void ExplicitCommandsStillTakePriority() =>
+        Assert.Equal(StartupIntentKind.ShowControlCenter, new StartupIntentParser().Parse(["--autostart", "--show-control-center"]).Kind);
 }

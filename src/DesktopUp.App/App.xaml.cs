@@ -54,7 +54,8 @@ public partial class App : Microsoft.UI.Xaml.Application
         _startupIntent = parser.Parse(Environment.GetCommandLineArgs().Skip(1));
         _singleInstance = new SingleInstanceCoordinator(SingleInstanceNames.ForCurrentUser(DistributionBuild.ApplicationId));
         _singleInstance.IntentReceived += OnExternalIntent;
-        _isPrimary = _singleInstance.TryAcquireOrForward(_startupIntent.ForExistingInstance(), forwardExisting: !IsUninstallMode);
+        _isPrimary = _singleInstance.TryAcquireOrForward(_startupIntent.ForExistingInstance(),
+            forwardExisting: !IsUninstallMode && _startupIntent.Kind != StartupIntentKind.AutoStart);
     }
 
     protected override void OnLaunched(LaunchActivatedEventArgs args)
@@ -853,6 +854,8 @@ public partial class App : Microsoft.UI.Xaml.Application
         { _recoveryWindow.Activate(); return; }
         switch (intent.Kind)
         {
+            case StartupIntentKind.AutoStart:
+                break; // Includes zero posters: login must not open/focus the center.
             case StartupIntentKind.StartBackground:
             case StartupIntentKind.ShowControlCenter:
                 bool hasPosters = _stateCoordinator is not null && _stateCoordinator.TryGetCurrent(out var current) &&
