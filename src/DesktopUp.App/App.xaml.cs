@@ -54,20 +54,28 @@ public partial class App : Microsoft.UI.Xaml.Application
         _startupIntent = parser.Parse(Environment.GetCommandLineArgs().Skip(1));
         _singleInstance = new SingleInstanceCoordinator(SingleInstanceNames.ForCurrentUser(DistributionBuild.ApplicationId));
         _singleInstance.IntentReceived += OnExternalIntent;
-        _isPrimary = _singleInstance.TryAcquireOrForward(_startupIntent.ForExistingInstance());
+        _isPrimary = _singleInstance.TryAcquireOrForward(_startupIntent.ForExistingInstance(), forwardExisting: !IsUninstallMode);
     }
 
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
         if (!_isPrimary)
         {
+            if (IsUninstallMode) Environment.ExitCode = 31;
             Exit();
             return;
         }
 
         _dispatcher = DispatcherQueue.GetForCurrentThread();
+        if (!IsUninstallMode)
+        {
+            try { _profileLifecycleLease = ProfileLifecycleGate.Acquire(new UserDataPaths(Environment.GetEnvironmentVariable("DESKTOPUP_V3_TEST_DATA_ROOT") ?? DistributionBuild.DefaultDataRoot).Root); }
+            catch (IOException) { Environment.ExitCode = 31; _singleInstance.Dispose(); Exit(); return; }
+            catch (UnauthorizedAccessException) { Environment.ExitCode = 31; _singleInstance.Dispose(); Exit(); return; }
+        }
         _services = BuildServices();
         _log = _services.GetRequiredService<IStructuredLog>();
+        if (IsUninstallMode) { RunUninstallPreparation(); return; }
         _ledger = _services.GetRequiredService<IResourceLedger>();
         if (TryEnterOfflineRecovery()) return;
         PosterAnimationOptions animationOptions;
@@ -828,6 +836,7 @@ public partial class App : Microsoft.UI.Xaml.Application
 
     private void OnExternalIntent(StartupIntent intent)
     {
+        if (IsUninstallMode) return; // Maintenance is not an interactive primary instance.
         DispatcherQueue? dispatcher = _dispatcher;
         if (dispatcher is null)
         {
@@ -1089,6 +1098,7 @@ public partial class App : Microsoft.UI.Xaml.Application
         });
         _services?.Dispose();
         _services = null;
+        _profileLifecycleLease?.Dispose(); _profileLifecycleLease = null;
         _storageInitialized = false;
         StartRequestedReplacement();
         Exit();

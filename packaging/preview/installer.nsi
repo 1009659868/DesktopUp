@@ -32,8 +32,13 @@ Var DesktopShortcutEnabled
 Var DesktopShortcutCheckbox
 Var InstallOptionsDialog
 Var DesktopShortcutTarget
+Var ContentDisposition
+Var ContentReturnRadio
+Var ContentKeepRadio
+Var UninstallProfile
+Var UninstallLease
 
-!define MUI_WELCOMEPAGE_TEXT "Windows 11 x64 独立预览版。$\r$\n$\r$\n自带运行库，使用独立配置，不读取或迁移日常版配置，不设置开机启动。首次为空白工作区，无演示卡片；拖入收纳会移动真实文件，请先用无价值文件体验。$\r$\n$\r$\n下一步可自选安装目录。卸载保留配置和已收纳文件。"
+!define MUI_WELCOMEPAGE_TEXT "Windows 11 x64 独立预览版。$\r$\n$\r$\n自带运行库，使用独立配置，不读取或迁移日常版配置，不设置开机启动。首次为空白工作区，无演示卡片；拖入收纳会移动真实文件，请先用无价值文件体验。$\r$\n$\r$\n下一步可自选安装目录。卸载可归还收纳内容或保留原位，配置保留。"
 !insertmacro MUI_PAGE_WELCOME
 !define MUI_DIRECTORYPAGE_TEXT_TOP "选择当前用户可写的本地目录，可以已有其他文件；已有内容会保留。若存在同名的程序文件或 app、licenses 目录，请改选目录。配置和收纳内容独立于安装目录，收纳位置可在控制中心修改。"
 !insertmacro MUI_PAGE_DIRECTORY
@@ -44,7 +49,10 @@ Page custom InstallOptionsCreate InstallOptionsLeave
 !define MUI_FINISHPAGE_RUN_TEXT "启动 DesktopUp Preview"
 !insertmacro MUI_PAGE_FINISH
 !insertmacro MUI_UNPAGE_CONFIRM
+UninstPage custom un.ContentOptionsCreate un.ContentOptionsLeave
 !insertmacro MUI_UNPAGE_INSTFILES
+!define MUI_UNFINISHPAGE_TEXT "程序卸载完成。配置、位置清单和未移出的内容不会随程序删除。$\r$\n$\r$\n位置清单位于：$\r$\n$UninstallProfile\uninstall-reports$\r$\n$\r$\n映射目录及其他版本/日常版配置未移动。"
+!insertmacro MUI_UNPAGE_FINISH
 !insertmacro MUI_LANGUAGE "SimpChinese"
 
 Function InstallOptionsCreate
@@ -295,7 +303,7 @@ Section "DesktopUp Preview"
   WriteRegStr HKCU "${UNINSTALL_KEY}" "DisplayVersion" "${RELEASE_ID}"
   WriteRegStr HKCU "${UNINSTALL_KEY}" "InstallLocation" "$INSTDIR"
   WriteRegStr HKCU "${UNINSTALL_KEY}" "UninstallString" '"$INSTDIR\Uninstall.exe"'
-  WriteRegStr HKCU "${UNINSTALL_KEY}" "QuietUninstallString" '"$INSTDIR\Uninstall.exe" /S'
+  WriteRegStr HKCU "${UNINSTALL_KEY}" "QuietUninstallString" '"$INSTDIR\Uninstall.exe" /S /CONTENT=keep'
   WriteRegStr HKCU "${UNINSTALL_KEY}" "DisplayIcon" "$INSTDIR\DesktopUp.exe"
   WriteRegDWORD HKCU "${UNINSTALL_KEY}" "NoModify" 1
   WriteRegDWORD HKCU "${UNINSTALL_KEY}" "NoRepair" 1
@@ -323,6 +331,28 @@ FunctionEnd
 Function un.onInit
   SetShellVarContext current
   SetRegView 64
+  StrCpy $UninstallLease 0
+  StrCpy $ContentDisposition "return"
+  IfSilent 0 +2
+    StrCpy $ContentDisposition "keep"
+  ${GetParameters} $0
+  ClearErrors
+  ${GetOptions} $0 "/CONTENT=" $1
+  ${IfNot} ${Errors}
+    ${If} $1 != "return"
+    ${AndIf} $1 != "keep"
+      SetErrorLevel 30
+      Quit
+    ${EndIf}
+    StrCpy $ContentDisposition $1
+  ${EndIf}
+  ClearErrors
+  StrCpy $UninstallProfile "$LOCALAPPDATA\DesktopUp\Preview"
+  ; Same explicit isolated profile as the app, used only by owned package validation.
+  ReadEnvStr $0 "DESKTOPUP_V3_TEST_DATA_ROOT"
+  ${If} $0 != ""
+    StrCpy $UninstallProfile $0
+  ${EndIf}
   ReadRegStr $0 HKCU "${UNINSTALL_KEY}" "InstallLocation"
   ${If} $0 == ""
   ${OrIf} $INSTDIR != $0
@@ -360,7 +390,98 @@ Function un.onInit
     Quit
 FunctionEnd
 
+Function un.ContentOptionsCreate
+  !insertmacro MUI_HEADER_TEXT "收纳内容" "先处理文件，再卸载程序。不会删除收纳文件。"
+  nsDialogs::Create 1018
+  Pop $0
+  ${If} $0 == error
+    Abort
+  ${EndIf}
+  ${NSD_CreateRadioButton} 0 4u 100% 16u "归还收纳内容后卸载（推荐）"
+  Pop $ContentReturnRadio
+  ${NSD_CreateLabel} 12u 24u 100% 36u "返回原目录，原目录不可用或来源未知时返回系统桌面。包含收纳目录中未显示在海报内的文件；保留当前文件名，重名由 Windows 处理。取消或失败将停止卸载。"
+  Pop $0
+  ${NSD_CreateRadioButton} 0 70u 100% 16u "保留在原收纳位置，仅卸载程序"
+  Pop $ContentKeepRadio
+  ${NSD_CreateLabel} 12u 90u 100% 38u "文件不移动，配置继续保留；在配置目录生成本机位置清单。目录映射与外部引用在两种方式下均保持原位。所有预览版本共用当前预览配置，日常版不受影响。"
+  Pop $0
+  ${If} $ContentDisposition == "return"
+    ${NSD_Check} $ContentReturnRadio
+  ${Else}
+    ${NSD_Check} $ContentKeepRadio
+  ${EndIf}
+  nsDialogs::Show
+FunctionEnd
+
+Function un.ContentOptionsLeave
+  ${NSD_GetState} $ContentReturnRadio $0
+  ${If} $0 == ${BST_CHECKED}
+    StrCpy $ContentDisposition "return"
+  ${Else}
+    StrCpy $ContentDisposition "keep"
+  ${EndIf}
+FunctionEnd
+
+Function un.PrepareContents
+  StrCpy $GuardPath $UninstallProfile
+  Call un.RequireSafeDirectory
+  CreateDirectory "$UninstallProfile"
+  StrCpy $GuardPath "$UninstallProfile\uninstall-session.lock"
+  Call un.RequireSafeDirectory
+  ; Held until the uninstaller exits. The ordinary app holds this same file while running.
+  System::Call 'kernel32::CreateFileW(w "$UninstallProfile\uninstall-session.lock", i 0xC0000000, i 0, p 0, i 4, i 0, p 0) p.r1'
+  ${If} $1 == -1
+    MessageBox MB_OK|MB_ICONSTOP "DesktopUp 或另一个卸载正在使用此配置，请先正常退出后再试。未删除程序或内容。" /SD IDOK
+    SetErrorLevel 31
+    Quit
+  ${EndIf}
+  StrCpy $UninstallLease $1
+  ; Success is mandatory. A missing/broken helper cannot silently authorize cleanup.
+  ; Only explicit preservation may resume a partially completed, previously prepared
+  ; uninstall whose helper/dependencies were already removed. No file moves are replayed.
+  ${If} $ContentDisposition == "keep"
+    ReadINIStr $0 "$INSTDIR\app\preview-install.ini" "Uninstall" "PreparedPath"
+    ${If} $0 == $INSTDIR
+      ReadINIStr $0 "$INSTDIR\app\preview-install.ini" "Uninstall" "PreparedProfile"
+      ${If} $0 == $UninstallProfile
+        Goto content_prepared
+      ${EndIf}
+    ${EndIf}
+  ${EndIf}
+  IfFileExists "$INSTDIR\app\DesktopUp.exe" 0 content_failed
+  StrCpy $0 ""
+  IfSilent 0 +2
+    StrCpy $0 "--uninstall-silent"
+  SetOutPath "$INSTDIR\app"
+  ClearErrors
+  ExecWait '"$INSTDIR\app\DesktopUp.exe" --prepare-uninstall=$ContentDisposition $0' $1
+  IfErrors content_failed
+  ${If} $1 != 0
+    Goto content_failed
+  ${EndIf}
+  ClearErrors
+  WriteINIStr "$INSTDIR\app\preview-install.ini" "Uninstall" "PreparedPath" "$INSTDIR"
+  WriteINIStr "$INSTDIR\app\preview-install.ini" "Uninstall" "PreparedProfile" "$UninstallProfile"
+  IfErrors content_failed
+  content_prepared:
+  DetailPrint "内容处理完成。配置及位置清单保留在 $UninstallProfile"
+  Return
+  content_failed:
+    MessageBox MB_OK|MB_ICONSTOP "内容处理未完成或已取消，已停止卸载。程序、配置和剩余文件保留；已归还文件保持原位。可正常启动核对，或重新卸载并明确选择保留原位。" /SD IDOK
+    SetErrorLevel 32
+    Quit
+FunctionEnd
+
+Function un.onGUIEnd
+  ${If} $UninstallLease != 0
+    System::Call 'kernel32::CloseHandle(p $UninstallLease)'
+    StrCpy $UninstallLease 0
+  ${EndIf}
+FunctionEnd
+
 Section "Uninstall"
+  Call un.PrepareContents
+  SetOutPath "$TEMP"
   ClearErrors
   !include "${UNINSTALL_FILES}"
   Call un.RemoveOwnedDesktopShortcut

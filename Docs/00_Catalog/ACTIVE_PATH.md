@@ -1,5 +1,9 @@
 # DesktopUp V2 当前执行入口
 
+2026-10-16 当前：[卸载集中人工§16.3](../A_Project/40_Implementation/V3-05/DIRECT_TRANSFER_DELIVERY.md#163-人工通过与测试收尾2026-10-16)四组USER PASS，本批收口；已完成授权桌面样例清理，真实数据不动。下一入口为[系列计划](../A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md#2026-10-16-卸载归还收口后的系列计划)：获授权集成后推进05-13兼容范围→05-14场景→V3-06。当前仍impl/05-12-content-lifecycle，本轮只记录/清理，无Git或新功能实现；后续测试须遵守[收尾规则](../Rules/IMPLEMENTATION_AND_VALIDATION.md#测试数据与收尾2026-10-16)。下方旧PENDING为历史。
+
+2026-10-15 最新入口：A[本轮卸载决定](../A_Project/10_Requirements/REQUIREMENTS_RISKS_AND_OPEN_QUESTIONS.md) → B[归还与卸载合同](../A_Project/20_Architecture/GENERAL_CONTENT_MULTI_POSTER_CONTRACT_V1.md) → C[直接拖放§16](../A_Project/40_Implementation/V3-05/DIRECT_TRANSFER_DELIVERY.md#16-卸载内容归还2026-10-15实施中)。已验收05-12批b639a4b、集成4517efb已推送；按用户指定留在原功能分支继续卸载归还，不另开分支。新批64项定向、同应用连续流程及安装包自动验证通过；20261015.12/review01已打开，下一步§16.2集中人工，不提前集成或更新发布线。
+
 2026-10-15 当前入口：05-12位于 `impl/05-12-content-lifecycle`，四组集中人工USER PASS / 本批CLOSED，尚未Git同步。A原路径归还/不可用回桌面 → B独立来源与逐项安全结果 → C[人工结果§15.3](../A_Project/40_Implementation/V3-05/DIRECT_TRANSFER_DELIVERY.md#153-人工通过与右键问题处置2026-10-15)。用户决定不修订Snipaste相关右键问题；下一步建议见[系列计划](../A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md#2026-10-15-05-12本批收口后的系列计划建议)：获授权集成后再接完整卸载归还，不恢复任务向导，不把计划建议当实施授权。
 
 2026-10-15 最新：05-07四组人工已通过，按用户授权同步功能分支和develop；下一步05-12收纳生命周期（记录原路径、删海报归还、不可用回桌面）。A需求最新决定 → B安全归还边界 → C直接拖放§14验收及后续生命周期实施；不恢复任务管理UI、不改发布线。

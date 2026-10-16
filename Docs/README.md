@@ -1,5 +1,9 @@
 # DesktopUp V2 文档入口
 
+2026-10-16 当前：05-12余项＋09-07/08卸载归还四组集中人工 **USER PASS / 本批CLOSED**；已按用户授权清理4个确认的桌面样例并保留可恢复副本，habits配置及真实文件不动。验收/收尾见[C§16.3](A_Project/40_Implementation/V3-05/DIRECT_TRANSFER_DELIVERY.md#163-人工通过与测试收尾2026-10-16)，下一顺序见[系列计划](A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md#2026-10-16-卸载归还收口后的系列计划)。当前功能分支不变，本轮无Git同步或新功能实现；下方待验与登记排障为历史，未验环境不补PASS。
+
+2026-10-15 最新：已按本轮授权将05-12已验收批提交b639a4b、合入develop 4517efb，两分支均推送。继续使用 `impl/05-12-content-lifecycle` 开发05-12余项＋09-07/08卸载内容归还；本批新实现未合入develop，不更新impl/main。A归还决定 → B受管归属/独占卸载 → C[直接拖放§16](A_Project/40_Implementation/V3-05/DIRECT_TRANSFER_DELIVERY.md#16-卸载内容归还2026-10-15实施中)。64项定向、应用连续归还、成品首启/重启、四段安装卸载和五组快捷方式回归通过；独立20261015.12已打开，集中人工仍待验。下方“尚未Git同步/卸载尚未接线”为阶段历史。
+
 2026-10-15 当前：05-12原路径记录与删海报归还四组集中人工 **USER PASS / 本批CLOSED**；右键问题按用户决定不修订输入代码，详见[直接拖放§15.3](A_Project/40_Implementation/V3-05/DIRECT_TRANSFER_DELIVERY.md#153-人工通过与右键问题处置2026-10-15)。当前 `impl/05-12-content-lifecycle` 未提交/合回/推送，不改impl/main；本轮仅更新记录和[后续系列计划](A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md#2026-10-15-05-12本批收口后的系列计划建议)。完整卸载归还尚未接线；下方待验/下一步05-12为历史。
 
 2026-10-15 最新：跨海报拖放四组集中人工 **USER PASS / CLOSED**。本轮授权提交/推送功能分支并合入、同步 `impl/develop`，再从集成点派生05-12分支。下一批记录原始来源，删除普通收纳海报时归还文件，原路径不可用则回桌面；映射海报只解除映射，不引入恢复任务流程。Git结果见当前交接；本轮不更新 `impl/main`，下方待验/禁止同步为历史。
