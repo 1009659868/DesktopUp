@@ -1,5 +1,28 @@
 # Windows 11 x64 独立预览安装包
 
+## 2026-10-16 发布同步阻断与现场保全
+
+**状态：发布同步未完成；构建/安装载荷校验通过，启动与真实登录未验通过；兼容问题未修。** 本轮用户转为要求同步架构进度，未授权或实施此修复。历史自启动“关闭/卸载”人工通过仍保留，但不覆盖此次新包失败。
+
+来源为本地已验 `impl/develop@53b6bec`，发布基线 `impl/main@f80765e`；不含 `impl/architecture-foundation@b3bfdc6` 的 R1 文件动作/拖放余项。合并按发布边界排除了 Docs/tests/tools、独立 Review 源及专用 StartupReview 通道/测试环境覆盖；服务注册保留在 Bootstrap，当前窗口反馈使用既有 CurrentWindow。README/包内说明同步已验能力、自启及卸载边界；没有业务功能改造。
+
+### 实际结果
+
+- 精简源码普通 Release 构建及正常 Preview 自包含构建均 0 警告/0 错误；403项源码清单哈希在打包后仍一致，索引406个跟踪路径，不含开发目录/验收脚本。
+- 包：`out/releases/main-20261016-startup01/DesktopUp-Preview-20261016.101-win-x64-Setup.exe`；SHA256 `3F2F62D35AFDAF5C663FDAAE43567FA80420DCB1E62D11CCA97A8C4C528C16AF`。这是未提交合并树生成的失败候选，元数据 SourceCommit=f80765e、IncludesUncommittedChanges=true；不是已发布的 main 成品。
+- 安装到 `out/releases/main-20261016-startup-check01/installed space`，未创建桌面快捷方式；813项安装载荷清单验证通过。旧安装登记未改，新安装仍保留以供定位，不运行。
+- 启动前把原 `%LOCALAPPDATA%/DesktopUp/Preview` 完整复制并逐项核验到同证据目录 `profile-before`，未重置配置。随后 `--autostart` 启动 PID52312，在状态库初始化前置校验处失败并显示保护窗口；已经正常 `--exit` 退出，没有强杀。
+- 原数据库 schema=21，失败点为 `Migration ledger mismatch at schema version 13`。只读核对：原记录 `217BFBF8017E342B013D34777FECB68B54A3C28713A28293280D58346F19FA79`；新包编译 SQL 的 LF 哈希 `E94E6680BA64CCDB8A679EC088F5532DEFC4E7305E0B6066DE7F2C0A4CA4D57A`。仅转为 CRLF 即精确复现原记录。迁移校验直接散列 SQL 原始字符串字节，换行差异会被误判；不能据此认定用户数据损坏。
+- 原数据库尝试前后 SHA256 均为 `72A5B4ECC0B35ABA9E2526A688784E8F2BC19261E10501C30DFD8E8F08E09DA3`。未搬文件、未写 Run 自启项、未注销/重启；静默启动、重复启动等后续检查没有完成，不能写 PASS。
+
+### 保全与后续处理
+
+本机草稿 stash：`0d082b90b9ef500b519162444bce869a28b49757`，描述 `release-sync-f80765e-from-53b6bec-blocked-sql-line-endings-20261016`；保存树 `1f09dacfb86c880ff7b2ede2dad1b802eb12fe68` 与合并结束前索引一致。原合并来源为53b6bec；merge元状态已经结束以便切回架构分支，没有形成发布 merge commit。main/origin/main仍f80765e。不得把stash当正式发布提交，或反向应用到架构/develop。
+
+stash、失败包、备份、results/app-events和BLOCKER均仅本机out/Git暂存，不随架构拉取；上面保留了另机重新定位所需来源与证据摘要。继续发布时应先核对实际refs；在干净发布工作区重新按Git策略合并来源，或审查本机stash后恢复等价树并正确保留合并父提交，不能直接把没有merge元状态的暂存当普通提交发布。
+
+建议的窄修复范围仍待后续授权：在不重置库、不改表结构、不改写历史迁移记录、不跳过schema/身份校验的前提下，兼容**同一 SQL 的 LF/CRLF 等价字节形式**。先用原库副本和两种换行生成的记录验证兼容，同时验证任意改动哈希仍拒绝，再重建新编号正常安装包继续自启动验证。可能影响其他版本迁移及备份校验的范围仍需核清，不把它只限定为 schema13，也不借机扩大到 R1 架构改造。真实登录需用户准备后进行；手动 --autostart 不替代登录验收。
+
 ## 2026-10-16 V3-09-03开机自启动前移（计划）
 
 用户要求在V3-06真实热度之前插入该发布能力。已验05-13/05-14源提交31c11b5、develop集成3c33a68；功能分支impl/09-03-startup从此派生。现为 **AUTO PASS / 部分USER PASS / 真实登录暂缓未验**：用户确认“关闭与卸载”通过，暂不验收真实登录自启，并明确授权提交、推送及合入impl/develop。此次允许携带该未验项集成，不把V3-09-03整体或真实登录标为PASS；impl/main不在同步范围。Git结果见[当前交接](HANDOFF.md)。

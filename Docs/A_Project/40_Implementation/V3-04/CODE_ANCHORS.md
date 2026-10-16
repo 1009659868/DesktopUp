@@ -2,7 +2,7 @@
 
 ## 2026-10-16 基础架构余项入口
 
-当前R1文件动作首片USER PASS；拖放切片CODE/AUTO PASS、集中人工待验，余项退出标准与证据统一见[余项计划第8～9节](../Architecture/FOUNDATION_REMAINDER_PLAN.md)。继续impl/architecture-foundation；R1映射创建/同步、生命周期等及R2～R4仍待做，真实热度HOLD。
+当前 R1 文件动作、拖放两片均 USER PASS，职责及证据见[余项计划第8～9节](../Architecture/FOUNDATION_REMAINDER_PLAN.md)。源码 b3bfdc6 已同步，继续 impl/architecture-foundation；下一片为 PosterSpatialRuntime.MappedPosterCreation、App.Transfers 与 ManagedContentMonitor/ManagedContentSynchronizer 的创建和同步调用链。生命周期等其余 R1、R2～R4 仍待做，真实热度 HOLD；拉取接续见该计划第10节。
 
 - Application/Features/Content/FileActions：ContentFileActionService、Creation/Rename/DeletionUseCase、ContentFileActionPlans，分别承接操作编排和原索引规则；Ports/Content 为请求结果与窄事务/系统端口。
 - Infrastructure/ContentActions：实际文件系统、创建/删除事务、改名回执和上下文适配；原三个Service只兼容转接；ShellCreatedContentService仍负责原子登记。

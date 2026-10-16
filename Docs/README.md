@@ -1,6 +1,6 @@
 # DesktopUp V2 文档入口
 
-2026-10-16 当前：**基础架构整改 IN PROGRESS，真实热度准入 HOLD**。已切回 `impl/architecture-foundation`，按[余项实施清单与退出标准](A_Project/40_Implementation/Architecture/FOUNDATION_REMAINDER_PLAN.md)推进 R1 现有业务用例/存储解耦 → R2 海报会话 → R3 增量呈现与同代命中 → R4 组装/平台依赖收口，完成集中验收后再决定进入 V3-06。此前 A、B 打开切片、C 热度切片及闪烁修订已通过并本地集成，不等于整体目标架构完成；AI/模板平台/更新器不作为此次前置。R1文件动作首片USER PASS；本批受管/映射拖入、原生拖出观察与跨海报交接CODE/AUTO PASS，集中人工待验，详见余项计划第8～9节；映射创建/同步、生命周期等其余链路仍待实施。保留未提交图源/资料，不提交、推送或重新合并。下方为阶段历史。
+2026-10-16 当前：**基础架构整改 IN PROGRESS，真实热度准入 HOLD**。工作分支 `impl/architecture-foundation`；R1 文件动作及拖放两片均 USER PASS，源码检查点 `b3bfdc6` 已推送，本次同步验收与接续记录，不合入 develop。下一片为映射创建／同步，再收清 R1 生命周期及配置入口，之后 R2 会话 → R3 呈现与同代命中 → R4 组装／平台依赖；详见[余项计划及拉取接续入口](A_Project/40_Implementation/Architecture/FOUNDATION_REMAINDER_PLAN.md#10-拉取后的接续入口)。此前 main 发布草稿因迁移 SQL 换行哈希兼容问题暂存，未发布、未修复，自启真实登录仍未验；详见当前 HANDOFF。下方为阶段历史，不覆盖本段。
 
 2026-10-16 当前：[代码架构审查与增量演进建议](A_Project/20_Architecture/ARCHITECTURE_EVOLUTION_REVIEW_2026-10-16.md)及五张Archify图已完成，基线impl/develop@4ae822a。仅静态审查/设计提案，未重构源码、未建分支或提交；建议先收敛内容用例、会话/呈现边界，再接V3-06。方案待确认，不替代既有产品合同；自启真实登录仍暂缓未验。下方记录为既有里程碑。
 
