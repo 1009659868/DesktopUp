@@ -1,5 +1,7 @@
 # DesktopUp V2 — Poster Redesign V3
 
+2026-10-16 当前：05-13人工USER PASS；[05-14场景收口](Docs/A_Project/40_Implementation/V3-05/CONTENT_COMPATIBILITY.md#5-05-14真实场景差异收口2026-10-16)复用既有证据完成，未新增重复测试。下一制作项V3-06真实热度；当前impl/05-13-content-compatibility未提交/合回/推送，impl/main不变。本轮仅资料核对，下方为历史阶段。
+
 2026-10-16 最新：05-12余项＋09-07/08卸载归还四组集中人工USER PASS / 本批CLOSED；支持保留原位后重装，或先归还内容再卸载（原路径不可用/未知回系统桌面），冲突取消保留程序及剩余内容，无卡片受管文件也处理，映射目录和配置/位置清单保留。验收与样例收尾见[直接拖放§16.3](Docs/A_Project/40_Implementation/V3-05/DIRECT_TRANSFER_DELIVERY.md#163-人工通过与测试收尾2026-10-16)。当前仍`impl/05-12-content-lifecycle`，新批未提交/合入develop/推送，impl/main未更新；下一顺序见[系列计划](Docs/A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md#2026-10-16-卸载归还收口后的系列计划)。下方“最终在develop”等为历史阶段，未验环境不补PASS。
 
 2026-10-15 当前集成：控制中心外观UI1～3项人工通过，功能 `0a75494` 已合入 `impl/develop@d66265f` 并推送；同时将已验收的图标更换、增量呈现/悬停让位、原生文件操作/Win菜单/目录映射和统一外观同步至精简发布线 `impl/main@f80765e`。成品20261015.1完成构建、安装启动/配置保真和卸载的限定验证，见[发布记录](Docs/A_Project/40_Implementation/V3-04/PREVIEW_INSTALLER_DELIVERY.md#2026-10-15-develop里程碑与外观ui发布同步)；准确交接见[当前交接](Docs/A_Project/40_Implementation/V3-04/HANDOFF.md)。最终工作区在develop，构造卡片继续延期，本轮不开始新功能。

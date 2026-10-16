@@ -225,7 +225,9 @@ public sealed class ScopedStateCommandTests
         using var f = new Fixture();
         PosterRemovalPreview preview = f.Coordinator.PrepareRemoval(Main)!;
         Assert.True(preview.IsLastPoster);
-        Assert.Contains("不删除", preview.Consequences);
+        Assert.Contains("返回收纳前的目录", preview.Consequences);
+        Assert.Contains("返回系统桌面", preview.Consequences);
+        Assert.Contains("取消或归还失败时保留海报和剩余内容", preview.Consequences);
         var remove = new RemovePosterCommand(Id(), StateCommandSource.ControlCenter, preview.Revision, preview.ReadSet, preview.PosterId, false);
         Assert.Equal(StateCommandStatus.ConfirmationRequired, f.Coordinator.Execute(remove).Status);
         Assert.Equal(1, f.Current.Revision);

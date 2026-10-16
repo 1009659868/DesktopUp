@@ -1,5 +1,11 @@
 # V3-04 代码锚点
 
+## 2026-10-16 05-13兼容准入
+
+- Application/LocalContentCompatibility.cs：纯路径、实体类型和未落地属性策略；供IncomingDropSession、LocalContentProtocol及Infrastructure的引用/搬运/映射入口复用，不替代身份/归属和事务。
+- tests/DesktopUp.Contracts.Tests/LocalContentCompatibilityTests.cs：路径拒绝、实体链接字节/目标与重启；SessionFixture/ContentCompatibilityReviewFixture.cs和scripts/start-content-compatibility-review.ps1：隔离四海报集中验收。
+- 结果/未支持范围见[兼容范围](../V3-05/CONTENT_COMPATIBILITY.md)，旧卸载验收入口保留但不用于当前05-13。
+
 2026-10-16验收环境补充：卸载验收脚本目标改为review01/installed-user，复用原profile，旧installed不删除。由用户正常终端完成安装登记；工具环境仍有旧登记时Mismatch保持阻止，不绕过。Status补UserSid及RegistryKey帮助区分执行上下文；程序业务代码无变化。
 
 2026-10-16登记识别：同一验收脚本 `Get-ReviewInstallation`显式读取当前用户Registry64，并核对安装标记/位置/程序文件；`Status`在任何工具链或进程操作之前返回。`Test-ReviewInstallationState.ps1`仅运行Status，含函数局部HKCU PSDrive错误映射模拟，不改注册表、安装文件或用户数据。程序/安装器没有修改。

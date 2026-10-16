@@ -1,5 +1,7 @@
 # DesktopUp V2 当前执行入口
 
+2026-10-16 最新：05-13三组USER PASS；[05-14真实场景](../A_Project/40_Implementation/V3-05/CONTENT_COMPATIBILITY.md#5-05-14真实场景差异收口2026-10-16)已REVIEW CLOSED，既有证据复用、无新首版差异、不追加人工。A真实内容/安全边界→B提供方/交接合同→C该收口；下一制作项V3-06真实热度。当前impl/05-13-content-compatibility未提交/合回/推送，本轮未操作Git或新源码；开工新功能前按约定获授权集成/派生，impl/main不动。下方为历史。
+
 2026-10-16 当前：[卸载集中人工§16.3](../A_Project/40_Implementation/V3-05/DIRECT_TRANSFER_DELIVERY.md#163-人工通过与测试收尾2026-10-16)四组USER PASS，本批收口；已完成授权桌面样例清理，真实数据不动。下一入口为[系列计划](../A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md#2026-10-16-卸载归还收口后的系列计划)：获授权集成后推进05-13兼容范围→05-14场景→V3-06。当前仍impl/05-12-content-lifecycle，本轮只记录/清理，无Git或新功能实现；后续测试须遵守[收尾规则](../Rules/IMPLEMENTATION_AND_VALIDATION.md#测试数据与收尾2026-10-16)。下方旧PENDING为历史。
 
 2026-10-15 最新入口：A[本轮卸载决定](../A_Project/10_Requirements/REQUIREMENTS_RISKS_AND_OPEN_QUESTIONS.md) → B[归还与卸载合同](../A_Project/20_Architecture/GENERAL_CONTENT_MULTI_POSTER_CONTRACT_V1.md) → C[直接拖放§16](../A_Project/40_Implementation/V3-05/DIRECT_TRANSFER_DELIVERY.md#16-卸载内容归还2026-10-15实施中)。已验收05-12批b639a4b、集成4517efb已推送；按用户指定留在原功能分支继续卸载归还，不另开分支。新批64项定向、同应用连续流程及安装包自动验证通过；20261015.12/review01已打开，下一步§16.2集中人工，不提前集成或更新发布线。

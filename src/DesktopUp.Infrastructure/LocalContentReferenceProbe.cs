@@ -1,4 +1,5 @@
 using DesktopUp.Domain;
+using DesktopUp.Application;
 
 namespace DesktopUp.Infrastructure;
 
@@ -13,12 +14,8 @@ public static class LocalContentReferenceProbe
     {
         try
         {
-            string path = input.Trim().Trim('"');
-            if (path.Length is < 3 or > 8192 || path.Any(char.IsControl) ||
-                !char.IsAsciiLetter(path[0]) || path[1] != ':' || path[2] is not ('\\' or '/') ||
-                path.AsSpan(2).Contains(':') || path.IndexOfAny(['*', '?', '<', '>', '|', '"']) >= 0)
-                return new(input, null, "仅支持本机绝对路径；网络、Shell、协议及虚拟流入口留待对应提供方。");
-            path = Path.TrimEndingDirectorySeparator(Path.GetFullPath(path));
+            if (!LocalContentCompatibility.TryNormalize(input.Trim().Trim('"'), true, out string path, out string reason))
+                return new(input, null, reason);
             var drive = new DriveInfo(Path.GetPathRoot(path)!);
             if (drive.DriveType is not (DriveType.Fixed or DriveType.Removable))
                 return new(input, null, "此入口暂不访问网络或非本地驱动器。");
@@ -28,17 +25,16 @@ public static class LocalContentReferenceProbe
             foreach (var segment in segments.Take(Math.Max(0, segments.Length - 1)))
             {
                 ancestor = Path.Combine(ancestor, segment);
-                if ((File.GetAttributes(ancestor) & (FileAttributes.ReparsePoint | FileAttributes.Offline)) != 0)
+                if (!LocalContentCompatibility.IsMaterialized(File.GetAttributes(ancestor)))
                     return new(input, null, "路径经过重解析或离线目录，此入口暂不跟随。");
             }
             var attributes = File.GetAttributes(path);
-            if ((attributes & (FileAttributes.ReparsePoint | FileAttributes.Offline)) != 0)
+            if (!LocalContentCompatibility.IsMaterialized(attributes))
                 return new(input, null, "重解析点或离线占位暂不跟随、不下载，请使用已落地的本机内容。");
             bool folder = attributes.HasFlag(FileAttributes.Directory);
-            string extension = Path.GetExtension(path).ToLowerInvariant();
-            bool shortcut = !folder && extension is ".lnk" or ".url";
+            ContentKind kind = LocalContentCompatibility.Kind(path, attributes);
+            bool shortcut = kind == ContentKind.Shortcut;
             // A selected .exe is still a file reference, not proof of an installed/Shell application identity.
-            ContentKind kind = folder ? ContentKind.Folder : shortcut ? ContentKind.Shortcut : ContentKind.File;
             FileSystemInfo info = folder ? new DirectoryInfo(path) : new FileInfo(path);
             string name = info.Name.Length == 0 ? path : info.Name;
             var item = new ContentItem(id ?? Guid.NewGuid(), kind, new("local-file-reference-v1", path),

@@ -25,6 +25,7 @@ public static class LocalContentProtocol
     public static bool IsSupported(ContentItem item) => item is { Source: not null, Target: not null } &&
         item.Source.ProviderId == "local-file-reference-v1" && item.Source.Key == item.Target.Locator &&
         item.Target.Arguments is { Length: 0 } && item.Target.WorkingDirectory is { Length: 0 } &&
+        LocalContentCompatibility.TryNormalize(item.Target.Locator, true, out _, out _) &&
         (item.Kind is ContentKind.File or ContentKind.Folder && item.Target.Kind == ContentTargetKind.FileSystem ||
          item.Kind == ContentKind.Shortcut && item.Target.Kind == ContentTargetKind.Shortcut);
     public static bool ValidPixels(byte[]? pixels, int width, int height) => pixels is not null &&
