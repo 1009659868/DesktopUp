@@ -1,5 +1,7 @@
 # DesktopUp V2 文档入口
 
+2026-10-16 最新：05-13三组USER PASS，[05-14场景差异收口](A_Project/40_Implementation/V3-05/CONTENT_COMPATIBILITY.md#5-05-14真实场景差异收口2026-10-16)REVIEW CLOSED，复用既有证据，不重跑旧项/追加人工。下一制作项真实热度；当前impl/05-13-content-compatibility未提交/合入/推送，impl/main不变。本轮只资料核对，无源码或Git操作；详细交接见HANDOFF页首，下方为历史阶段。
+
 2026-10-16 当前：05-12余项＋09-07/08卸载归还四组集中人工 **USER PASS / 本批CLOSED**；已按用户授权清理4个确认的桌面样例并保留可恢复副本，habits配置及真实文件不动。验收/收尾见[C§16.3](A_Project/40_Implementation/V3-05/DIRECT_TRANSFER_DELIVERY.md#163-人工通过与测试收尾2026-10-16)，下一顺序见[系列计划](A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md#2026-10-16-卸载归还收口后的系列计划)。当前功能分支不变，本轮无Git同步或新功能实现；下方待验与登记排障为历史，未验环境不补PASS。
 
 2026-10-15 最新：已按本轮授权将05-12已验收批提交b639a4b、合入develop 4517efb，两分支均推送。继续使用 `impl/05-12-content-lifecycle` 开发05-12余项＋09-07/08卸载内容归还；本批新实现未合入develop，不更新impl/main。A归还决定 → B受管归属/独占卸载 → C[直接拖放§16](A_Project/40_Implementation/V3-05/DIRECT_TRANSFER_DELIVERY.md#16-卸载内容归还2026-10-15实施中)。64项定向、应用连续归还、成品首启/重启、四段安装卸载和五组快捷方式回归通过；独立20261015.12已打开，集中人工仍待验。下方“尚未Git同步/卸载尚未接线”为阶段历史。

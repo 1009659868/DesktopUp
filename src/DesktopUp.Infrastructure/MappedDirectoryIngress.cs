@@ -119,7 +119,7 @@ public sealed class MappedDirectoryIngress(SqliteStateStore store, IShellDirecto
             token.ThrowIfCancellationRequested();
             if(++count>LocalTransferFiles.MaximumTreeEntries)throw new IOException("目录超过本批支持的4096项预算，未移动。");
             var attributes=File.GetAttributes(path);
-            if((attributes&(FileAttributes.ReparsePoint|FileAttributes.Offline))!=0 || store.ProtectedTransferPath(path))
+            if(!LocalContentCompatibility.IsMaterialized(attributes) || store.ProtectedTransferPath(path))
                 throw new IOException("目录包含受保护、重解析或离线对象，未移动。");
             if((attributes&FileAttributes.Directory)!=0)
                 foreach(var child in Directory.EnumerateFileSystemEntries(path))

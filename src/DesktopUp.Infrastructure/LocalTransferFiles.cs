@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Win32.SafeHandles;
+using DesktopUp.Application;
 
 namespace DesktopUp.Infrastructure;
 
@@ -27,13 +28,8 @@ public static partial class LocalTransferFiles
 
     public static string Normalize(string path)
     {
-        if (string.IsNullOrWhiteSpace(path) || path.Length > 8192 || path.Any(char.IsControl) ||
-            path.Length < 4 || !char.IsAsciiLetter(path[0]) || path[1] != ':' ||
-            path[2] is not ('\\' or '/') || path.AsSpan(2).Contains(':') || path.IndexOfAny(['*','?','"','<','>','|']) >= 0)
-            throw new IOException("Only explicit local non-root paths are supported.");
-        var value = Path.TrimEndingDirectorySeparator(Path.GetFullPath(path));
-        if (value.Length <= 3 || value.Split('\\').Any(p => p.EndsWith(' ') || p.EndsWith('.')))
-            throw new IOException("Ambiguous/root paths are not supported.");
+        if (!LocalContentCompatibility.TryNormalize(path, false, out string value, out string reason))
+            throw new IOException(reason);
         var drive = new DriveInfo(Path.GetPathRoot(value)!);
         if (drive.DriveType != DriveType.Fixed) throw new IOException("First executor supports fixed local volumes only.");
         return value;
@@ -251,6 +247,18 @@ public static partial class LocalTransferFiles
     }
     private static SafeFileHandle Open(string path, bool delete, bool attributesOnly = false, bool pin = false)
     {
+        // Reject known remote-data placeholders before requesting data access. Recheck the
+        // opened object's attributes as well; this does not relax the existing parent leases.
+        FileAttributes attributes;
+        try { attributes = File.GetAttributes(path); }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        {
+            // Preserve this executor's existing IOException boundary, including missing
+            // sources: the new metadata preflight must not change its callers' contract.
+            throw new IOException("无法核实来源属性；未请求文件数据或执行移动。", error);
+        }
+        if (!LocalContentCompatibility.IsMaterialized(attributes))
+            throw new IOException("重解析点或未完全落地的内容暂不支持；未读取或下载内容。");
         var handle = CreateFile(path, (attributesOnly ? 0x80u : 0x80000000u) | (delete ? 0x10000u : 0),
             attributesOnly ? 3u : delete || pin ? 1u : 5u, 0, 3, 0x02200000, 0);
         if (handle.IsInvalid) { handle.Dispose(); ThrowWin32(); }
@@ -259,7 +267,8 @@ public static partial class LocalTransferFiles
             var info = Information(handle);
             if (delete && (info.Attributes & 1) != 0 && (info.Attributes & 0x10) == 0)
                 throw new IOException("Read-only sources require an explicit permission decision; attributes are not cleared.");
-            if ((info.Attributes & (0x400u | 0x1000u | 0x4000u)) != 0)
+            if (!LocalContentCompatibility.IsMaterialized((FileAttributes)info.Attributes) ||
+                (info.Attributes & 0x4000u) != 0)
                 throw new IOException("Reparse, offline and encrypted objects are not supported.");
             return handle;
         }
