@@ -8,10 +8,15 @@ param(
     [ValidatePattern('^\d+\.\d+\.\d+$')][string]$RuntimeVersion,
     [string]$MakeNsis,
     [switch]$Offline,
+    [switch]$StartupReview,
     [switch]$CheckOnly
 )
 $ErrorActionPreference = 'Stop'
 $pkgRepo = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..')).TrimEnd('\')
+$pkgChannel = if ($StartupReview) { 'StartupReview' } else { 'Preview' }
+$pkgApplicationId = if ($StartupReview) { 'DesktopUp.V3.StartupReview' } else { 'DesktopUp.V3.Preview' }
+$pkgDataRoot = '%LOCALAPPDATA%\DesktopUp\' + $pkgChannel
+$pkgStorageBase = if ($StartupReview) { $pkgDataRoot + '.storage' } else { '%LOCALAPPDATA%\DesktopUp\Storage\preview' }
 if (!$SettingsPath) { $SettingsPath = Join-Path $pkgRepo 'packaging/preview/package-settings.json' }
 $pkgSettingsText = Get-Content -LiteralPath $SettingsPath -Raw -Encoding UTF8
 $pkgSettings = $pkgSettingsText | ConvertFrom-Json
@@ -45,7 +50,7 @@ foreach ($pkgPath in @($pkgRepo, $pkgOutput, $MakeNsis)) {
 }
 $pkgResolved = [ordered]@{ ReleaseId=$ReleaseId; Version=$pkgSettings.version; FileVersion=$pkgSettings.fileVersion;
     RuntimeVersion=$RuntimeVersion; DefaultTemplate=$DefaultTemplate; BackgroundOpacityPercent=$BackgroundOpacityPercent;
-    OutputRoot=$pkgOutput; MakeNsis=$MakeNsis; DotNet=$pkgToolInfo.DotNet; SdkVersion=$pkgToolInfo.Manifest.sdk.version;
+    OutputRoot=$pkgOutput; StartupReview=[bool]$StartupReview; MakeNsis=$MakeNsis; DotNet=$pkgToolInfo.DotNet; SdkVersion=$pkgToolInfo.Manifest.sdk.version;
     SdkPresent=$pkgToolInfo.SdkPresent; NsisPresent=$pkgToolInfo.NsisPresent;
     SettingsSHA256=(Get-FileHash -LiteralPath $SettingsPath).Hash }
 if ($CheckOnly) { [pscustomobject]$pkgResolved; return }
@@ -67,6 +72,7 @@ $pkgResolved.SdkPresent = $true
 $pkgResolved.NsisPresent = $true
 $pkgBuildOptions = @()
 if ($Offline) { $pkgBuildOptions += @("-p:RestoreConfigFile=$($pkgTools.OfflineConfig)", '-p:NuGetAudit=false') }
+if ($StartupReview) { $pkgBuildOptions += '-p:DesktopUpStartupReview=true' }
 $pkgPayload = Join-Path $pkgOutput 'payload'
 $pkgApp = Join-Path $pkgPayload 'app'
 $pkgBuildPath = $pkgOutput.Replace('\','/') + '/build/'
@@ -127,7 +133,7 @@ try {
     Copy-Item -LiteralPath (Join-Path $pkgRepo 'THIRD_PARTY_NOTICES.md') -Destination $pkgLicenses
     $pkgDependencies | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $pkgLicenses 'packages.json') -Encoding utf8
     $pkgWinAppSdk = @($pkgPackages | Where-Object { $_ -match '^microsoft.windowsappsdk/' })[0].Split('/')[1]
-    [ordered]@{ Release=$ReleaseId; Channel='Preview'; Architecture='AMD64'; MinimumOS='Windows 11'; DotNet=$RuntimeVersion; WindowsAppSDK=$pkgWinAppSdk; SourceCommit=$pkgHead; IncludesUncommittedChanges=($pkgStatus.Count -gt 0); DataRoot='%LOCALAPPDATA%\DesktopUp\Preview'; DefaultStorageBase='%LOCALAPPDATA%\DesktopUp\Storage\preview'; ApplicationId='DesktopUp.V3.Preview'; DefaultTemplate=$DefaultTemplate; BackgroundOpacityPercent=$BackgroundOpacityPercent; CustomInstallDirectory=$true; Content='Real content; empty initial profile; no demo cards'; Signed=$false } |
+    [ordered]@{ Release=$ReleaseId; Channel=$pkgChannel; Architecture='AMD64'; MinimumOS='Windows 11'; DotNet=$RuntimeVersion; WindowsAppSDK=$pkgWinAppSdk; SourceCommit=$pkgHead; IncludesUncommittedChanges=($pkgStatus.Count -gt 0); DataRoot=$pkgDataRoot; DefaultStorageBase=$pkgStorageBase; ApplicationId=$pkgApplicationId; DefaultTemplate=$DefaultTemplate; BackgroundOpacityPercent=$BackgroundOpacityPercent; CustomInstallDirectory=$true; Content='Real content; empty initial profile; no demo cards'; Signed=$false } |
         ConvertTo-Json | Set-Content (Join-Path $pkgApp 'preview-build.json') -Encoding utf8
     $pkgFiles = @(Get-ChildItem -LiteralPath $pkgPayload -Recurse -File | Sort-Object FullName)
     $pkgManifest = @(foreach ($pkgFile in $pkgFiles) {
@@ -169,7 +175,9 @@ try {
     $pkgSizeKb = [int][Math]::Ceiling(($pkgFiles | Measure-Object Length -Sum).Sum / 1024)
     $pkgMaximumRelative = ($pkgFiles | ForEach-Object { $_.FullName.Length-$pkgPayload.Length } | Measure-Object -Maximum).Maximum
     $pkgMaximumInstall = [int][Math]::Min(180, 240-$pkgMaximumRelative)
-    & $MakeNsis /V3 /WX /INPUTCHARSET UTF8 /OUTPUTCHARSET UTF8 "/DRELEASE_ID=$ReleaseId" "/DFILE_VERSION=$($pkgSettings.fileVersion)" "/DSETUP_OUTPUT=$pkgSetup" "/DINSTALL_FILES=$pkgInstallList" "/DUNINSTALL_FILES=$pkgUninstallList" "/DUNINSTALL_GUARDS=$pkgGuardList" "/DMAX_INSTALL_PATH=$pkgMaximumInstall" "/DPAYLOAD_KB=$pkgSizeKb" (Join-Path $pkgRepo 'packaging/preview/installer.nsi') 2>&1 |
+    $pkgReviewOptions = @()
+    if ($StartupReview) { $pkgReviewOptions += '/DSTARTUP_REVIEW' }
+    & $MakeNsis /V3 /WX /INPUTCHARSET UTF8 /OUTPUTCHARSET UTF8 @pkgReviewOptions "/DRELEASE_ID=$ReleaseId" "/DFILE_VERSION=$($pkgSettings.fileVersion)" "/DSETUP_OUTPUT=$pkgSetup" "/DINSTALL_FILES=$pkgInstallList" "/DUNINSTALL_FILES=$pkgUninstallList" "/DUNINSTALL_GUARDS=$pkgGuardList" "/DMAX_INSTALL_PATH=$pkgMaximumInstall" "/DPAYLOAD_KB=$pkgSizeKb" (Join-Path $pkgRepo 'packaging/preview/installer.nsi') 2>&1 |
         Tee-Object -FilePath (Join-Path $pkgEvidence 'nsis.log') | Out-Host
     if ($LASTEXITCODE -ne 0) { throw 'Installer compile failed; evidence preserved.' }
     if (($pkgSource | ConvertTo-Json -Compress) -cne (@(Get-SourceBinding) | ConvertTo-Json -Compress)) { throw 'Sources changed during packaging; do not distribute this build.' }

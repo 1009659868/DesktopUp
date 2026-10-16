@@ -14,11 +14,11 @@ public partial class App
     private async Task DiscoverStartupTransfers(SqliteStateStore store)
     {
         IReadOnlyList<string> returnNotices = [];
-        bool isolated=!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DESKTOPUP_V3_TEST_DATA_ROOT"));
+        bool isolated=!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DESKTOPUP_V3_TEST_DATA_ROOT")) || DistributionBuild.ReviewStorageBase is not null;
         _storageLocation=new ManagedStorageService(store,isolated?StorageProfileKind.Isolated:
             DistributionBuild.ApplicationId.Contains("Preview",StringComparison.Ordinal)?StorageProfileKind.Preview:StorageProfileKind.Daily,
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            isolated?Environment.GetEnvironmentVariable("DESKTOPUP_V3_TEST_STORAGE_BASE"):null);
+            isolated?Environment.GetEnvironmentVariable("DESKTOPUP_V3_TEST_STORAGE_BASE") ?? DistributionBuild.ReviewStorageBase:null);
         try
         {
             var counts=await Task.Run(()=>

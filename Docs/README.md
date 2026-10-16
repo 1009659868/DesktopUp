@@ -1,6 +1,6 @@
 # DesktopUp V2 文档入口
 
-2026-10-16 最新：05-13三组USER PASS，[05-14场景差异收口](A_Project/40_Implementation/V3-05/CONTENT_COMPATIBILITY.md#5-05-14真实场景差异收口2026-10-16)REVIEW CLOSED，复用既有证据，不重跑旧项/追加人工。下一制作项真实热度；当前impl/05-13-content-compatibility未提交/合入/推送，impl/main不变。本轮只资料核对，无源码或Git操作；详细交接见HANDOFF页首，下方为历史阶段。
+2026-10-16 最新：[自启动](A_Project/40_Implementation/V3-04/PREVIEW_INSTALLER_DELIVERY.md#2026-10-16-v3-09-03开机自启动前移计划)关闭/卸载USER PASS，真实登录暂缓未验，整体不记PASS。用户明确授权携带未验项同步功能分支并集成impl/develop；不更新impl/main，Git结果见HANDOFF。本轮仅记录与同步，复用定向及同包证据，不重测。下方为历史。
 
 2026-10-16 当前：05-12余项＋09-07/08卸载归还四组集中人工 **USER PASS / 本批CLOSED**；已按用户授权清理4个确认的桌面样例并保留可恢复副本，habits配置及真实文件不动。验收/收尾见[C§16.3](A_Project/40_Implementation/V3-05/DIRECT_TRANSFER_DELIVERY.md#163-人工通过与测试收尾2026-10-16)，下一顺序见[系列计划](A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md#2026-10-16-卸载归还收口后的系列计划)。当前功能分支不变，本轮无Git同步或新功能实现；下方待验与登记排障为历史，未验环境不补PASS。
 

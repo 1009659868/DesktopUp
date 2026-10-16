@@ -348,6 +348,9 @@ Function un.onInit
   ${EndIf}
   ClearErrors
   StrCpy $UninstallProfile "$LOCALAPPDATA\DesktopUp\Preview"
+  !ifdef STARTUP_REVIEW
+    StrCpy $UninstallProfile "$LOCALAPPDATA\DesktopUp\StartupReview"
+  !endif
   ; Same explicit isolated profile as the app, used only by owned package validation.
   ReadEnvStr $0 "DESKTOPUP_V3_TEST_DATA_ROOT"
   ${If} $0 != ""
@@ -481,6 +484,24 @@ FunctionEnd
 
 Section "Uninstall"
   Call un.PrepareContents
+  ; No registration mutation until all cancellable content preparation succeeds.
+  ; Another version may own DesktopUp now: remove only our exact launcher command.
+  ClearErrors
+  ReadRegStr $0 HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "DesktopUp"
+  ${If} $0 == '$\"$INSTDIR\DesktopUp.exe$\" --autostart'
+    ClearErrors
+    DeleteRegValue HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "DesktopUp"
+    ${If} ${Errors}
+      MessageBox MB_OK|MB_ICONSTOP "无法移除本安装的启动登记，已停止卸载；程序和配置保留。" /SD IDOK
+      SetErrorLevel 35
+      Quit
+    ${EndIf}
+    ReadRegStr $0 HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "DesktopUp"
+    ${If} $0 == '$\"$INSTDIR\DesktopUp.exe$\" --autostart'
+      SetErrorLevel 35
+      Quit
+    ${EndIf}
+  ${EndIf}
   SetOutPath "$TEMP"
   ClearErrors
   !include "${UNINSTALL_FILES}"
