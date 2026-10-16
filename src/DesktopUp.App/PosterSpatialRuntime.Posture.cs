@@ -9,7 +9,7 @@ namespace DesktopUp;
 internal sealed partial class PosterSpatialRuntime
 {
     // Off for every normal launch; enabled only by the existing isolated spatial probe.
-    private bool _measurePostureFrames;
+    private bool _measurePostureFrames = false;
     public event Action? RecoveryRequired;
 
     public void ToggleCollapsed(PosterVisualWindow window)
@@ -181,6 +181,7 @@ internal sealed partial class PosterSpatialRuntime
             else
             {
                 run.AcceptedFrames = run.Cursor.Index; // Exact refined prefix retained for title handoff.
+#if DESKTOPUP_REVIEW_TOOLS
                 if (BackdropFrameObserverForProbe is { } observer &&
                     prepared.FirstOrDefault(p => p!.Owner == run.Owner) is { } source)
                 {
@@ -190,6 +191,7 @@ internal sealed partial class PosterSpatialRuntime
                         run.Command.DesiredState.IsCollapsed, run.AcceptedFrames, run.Frames.Count,
                         Pixels(initial), Pixels(final), source.Bounds));
                 }
+#endif
             }
             return;
         }

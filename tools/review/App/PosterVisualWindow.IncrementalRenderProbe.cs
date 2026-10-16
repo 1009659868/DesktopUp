@@ -55,6 +55,46 @@ internal sealed partial class PosterVisualWindow
             if (!after.Images.TryGetValue(id, out var retained) || !ReferenceEquals(image, retained)) throw new IOException("Unchanged raster replaced: " + id);
     }
 
+    // Exercise production posture commands, not a test-only visibility toggle. Cards may be
+    // virtualized at compact height, but every warm image must survive and paint immediately.
+    internal async Task VerifyPostureRastersForProbe(Func<bool, Task> posture)
+    {
+        var before = await CaptureRenderIdentityForProbe();
+        int frames = 0, transitionFrames = 0;
+        Exception? frameError = null;
+        void Check()
+        {
+            var after = RenderIdentity();
+            if (!ReferenceEquals(before.Cache, after.Cache) || !ReferenceEquals(before.Source, after.Source) ||
+                after.Requests != before.Requests) throw new IOException("Posture discarded or re-requested warm rasters.");
+            foreach (var (id, image) in before.Images)
+                if (!after.Images.TryGetValue(id, out var retained) || !ReferenceEquals(image, retained))
+                    throw new IOException("Posture lost a warm bitmap: " + id);
+        }
+        void Frame(object? sender, object args)
+        {
+            try { frames++; if (_transitionLayout is not null) transitionFrames++; Check(); }
+            catch (Exception error) { frameError ??= error; }
+        }
+        Microsoft.UI.Xaml.Media.CompositionTarget.Rendering += Frame;
+        try
+        {
+            for (int cycle = 0; cycle < 6; cycle++)
+            {
+                await posture(true); Check();
+                await Task.Delay(60);
+                await posture(false); Check();
+                await Task.Delay(60);
+                if (frameError is not null) throw frameError;
+            }
+            if (frames == 0 || transitionFrames == 0) throw new IOException("No composed transition frames observed.");
+            log.Write("info", "contract.posture_rasters_passed", new { cycles = 6, frames, transitionFrames,
+                retainedImages = before.Images.Count, requestsDuringPosture = _contentAssetRequestCount - before.Requests,
+                nativeMouse = false, nativeKeyboard = false });
+        }
+        finally { Microsoft.UI.Xaml.Media.CompositionTarget.Rendering -= Frame; }
+    }
+
     // Actual published hit regions and production gesture handlers; no OS input synthesis.
     internal async Task VerifyIncrementalRenderForProbe()
     {

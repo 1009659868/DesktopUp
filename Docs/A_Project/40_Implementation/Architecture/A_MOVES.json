@@ -1,0 +1,381 @@
+{
+  "baseline": "4ae822afe08c6064ae9ee1a4835fbbacaa94a473",
+  "purpose": "Pure path changes only. Hashes identify original bytes before any separately documented wiring edits.",
+  "moves": [
+    {
+      "from": "Modules/Lamp/App/App.BackdropContinuousProbe.cs",
+      "to": "tools/review/Modules/Lamp/App/App.BackdropContinuousProbe.cs",
+      "sha256": "4aeb8512fe3f4c972876a0ef1d823ecafe402a30b6c85624e974f8fb2befd0c9"
+    },
+    {
+      "from": "Modules/Lamp/App/App.BackdropProbe.cs",
+      "to": "tools/review/Modules/Lamp/App/App.BackdropProbe.cs",
+      "sha256": "b1610b847001a4667b2dd1024df30e234d565a48dd6ffcefcaa83bb1d703285e"
+    },
+    {
+      "from": "Modules/Lamp/App/App.LampParameterProbe.cs",
+      "to": "tools/review/Modules/Lamp/App/App.LampParameterProbe.cs",
+      "sha256": "88bb753b7ac0a7bb32396189dbba6f91cc73968f3467d048056f5c110919e87a"
+    },
+    {
+      "from": "Modules/Lamp/App/App.LampPointerProbe.cs",
+      "to": "tools/review/Modules/Lamp/App/App.LampPointerProbe.cs",
+      "sha256": "719da74867ddedadcbf50f7646853b5c6bd7f79d00b8fbb957c9b1aa81a2d867"
+    },
+    {
+      "from": "Modules/Rain/App/App.RainResourceProbe.cs",
+      "to": "tools/review/Modules/Rain/App/App.RainResourceProbe.cs",
+      "sha256": "1e4584c31388891ba1b7178bdb8c2798c2ca3e2adbe00344a2d1bb6465f97f39"
+    },
+    {
+      "from": "Modules/Rain/App/App.RainSceneProbe.cs",
+      "to": "tools/review/Modules/Rain/App/App.RainSceneProbe.cs",
+      "sha256": "c5ffedea07c333a0a4153e563bb87fe18c5337a0fff068b098d25eacbf24624a"
+    },
+    {
+      "from": "src/DesktopUp.App/App.AutoLifetimeSmoke.cs",
+      "to": "tools/review/App/App.AutoLifetimeSmoke.cs",
+      "sha256": "c41f98db8b1c1e814f1809b4b8862174e8a14bfc064ae83506d7ac88a02f1208"
+    },
+    {
+      "from": "src/DesktopUp.App/App.AutoMeasurement.cs",
+      "to": "tools/review/App/App.AutoMeasurement.cs",
+      "sha256": "3307a9282fb462ddcb05378bd3886c0681562e12cf0729b238d07b02f3cb6890"
+    },
+    {
+      "from": "src/DesktopUp.App/App.AutoPostureSmoke.cs",
+      "to": "tools/review/App/App.AutoPostureSmoke.cs",
+      "sha256": "3a5aa6ce41fd560fa5f0f65144c666170404baf858737878756fe414338d7ef0"
+    },
+    {
+      "from": "src/DesktopUp.App/App.AutoSettingsSmoke.cs",
+      "to": "tools/review/App/App.AutoSettingsSmoke.cs",
+      "sha256": "8b3360053ed2f958a8cfcb21f4100e92477908c9d3fa781b99259da5cf6f996a"
+    },
+    {
+      "from": "src/DesktopUp.App/App.ContentBrowseProbe.cs",
+      "to": "tools/review/App/App.ContentBrowseProbe.cs",
+      "sha256": "4d66bb15b9f19b807a507cb5d950d809fa38cd9a2dc3ecdd700b10725e88664f"
+    },
+    {
+      "from": "src/DesktopUp.App/App.ContentCompositionProbe.cs",
+      "to": "tools/review/App/App.ContentCompositionProbe.cs",
+      "sha256": "caaccda0977368da3a22b0dea9954a5c48f900a75114e45e1628dc598a89c5c1"
+    },
+    {
+      "from": "src/DesktopUp.App/App.ContentFieldsProbe.cs",
+      "to": "tools/review/App/App.ContentFieldsProbe.cs",
+      "sha256": "fb58fa5b40161ab82573f5287496b6117c85ea32f087fdd8d31d4d170fc5abdf"
+    },
+    {
+      "from": "src/DesktopUp.App/App.ContentInteractionProbe.cs",
+      "to": "tools/review/App/App.ContentInteractionProbe.cs",
+      "sha256": "aa5a2ea610cfb87e12253780716935bbe3707c6600166376139721e93c64a66b"
+    },
+    {
+      "from": "src/DesktopUp.App/App.ContentLayoutSmoke.cs",
+      "to": "tools/review/App/App.ContentLayoutSmoke.cs",
+      "sha256": "9214999560740d8701644ca5126e084f15307d4cc62f16f766505d7359dbb3a6"
+    },
+    {
+      "from": "src/DesktopUp.App/App.ContentReferenceProbe.cs",
+      "to": "tools/review/App/App.ContentReferenceProbe.cs",
+      "sha256": "c3b1e3c8644a765533ea02c83f9ea21ac1b78c06aebf2772e71b4a644692514b"
+    },
+    {
+      "from": "src/DesktopUp.App/App.ContentSourceProbe.cs",
+      "to": "tools/review/App/App.ContentSourceProbe.cs",
+      "sha256": "d6ec5580c113223c50eac97bc6fdda80ac7765b765864516a4cd7d14b5393076"
+    },
+    {
+      "from": "src/DesktopUp.App/App.ContinuousLifetimeProbe.cs",
+      "to": "tools/review/App/App.ContinuousLifetimeProbe.cs",
+      "sha256": "097f84057d347f8abe9d92d7a9135302c122c30e59e5f10b533134564c23f4d5"
+    },
+    {
+      "from": "src/DesktopUp.App/App.ControlCenterSmoke.cs",
+      "to": "tools/review/App/App.ControlCenterSmoke.cs",
+      "sha256": "f79f61449e68a62f5b4158e44f4f717e7224b62ef7826571ead517dc61551850"
+    },
+    {
+      "from": "src/DesktopUp.App/App.IncomingProbe.cs",
+      "to": "tools/review/App/App.IncomingProbe.cs",
+      "sha256": "8748330e92c6ccee0fbf53502a2368d376c20296e7288ab9631ef2bfbda54058"
+    },
+    {
+      "from": "src/DesktopUp.App/App.MultiInstanceSmoke.cs",
+      "to": "tools/review/App/App.MultiInstanceSmoke.cs",
+      "sha256": "51a45c550f608ba7b7b0c4fe1cceebc68d4c63cc227aa8cc618f1308f02fff24"
+    },
+    {
+      "from": "src/DesktopUp.App/App.PickerSmoke.cs",
+      "to": "tools/review/App/App.PickerSmoke.cs",
+      "sha256": "8e432b7503145cc0f73c66da4e559d3d99f2950a6e1341d3fdff009d9e688bc7"
+    },
+    {
+      "from": "src/DesktopUp.App/App.PortableFidelityProbe.cs",
+      "to": "tools/review/App/App.PortableFidelityProbe.cs",
+      "sha256": "b9a55fad1e742f6552afb128e6a5622c25b3ae61f4dbdcaef1a5cf9b97f5281b"
+    },
+    {
+      "from": "src/DesktopUp.App/App.PortableSmoke.cs",
+      "to": "tools/review/App/App.PortableSmoke.cs",
+      "sha256": "cb4488e62d3e1287418589319cde1dfe4936515944c20de554c8bd5edf8b1719"
+    },
+    {
+      "from": "src/DesktopUp.App/App.PostureCombinationProbe.cs",
+      "to": "tools/review/App/App.PostureCombinationProbe.cs",
+      "sha256": "fc332f054bb982e75a178904672b3267227794efb12f089899ee90384e62e5ad"
+    },
+    {
+      "from": "src/DesktopUp.App/App.PostureGroupsProbe.cs",
+      "to": "tools/review/App/App.PostureGroupsProbe.cs",
+      "sha256": "920de4669705f11bb156d2bb0f91f179e456c65329ab64bd0d8981f91b500e24"
+    },
+    {
+      "from": "src/DesktopUp.App/App.RecoverySmoke.cs",
+      "to": "tools/review/App/App.RecoverySmoke.cs",
+      "sha256": "e9d0ccc77c5fce373bfc1ec861258f50f84d63a00ed49d1a6661a331e1b83f9d"
+    },
+    {
+      "from": "src/DesktopUp.App/App.SceneModuleProbe.cs",
+      "to": "tools/review/App/App.SceneModuleProbe.cs",
+      "sha256": "a58aabe12e5b52a68374f70c482047bb334b65b2bf3fb30a1b3221a9e69bc542"
+    },
+    {
+      "from": "src/DesktopUp.App/App.StorageSettingsProbe.cs",
+      "to": "tools/review/App/App.StorageSettingsProbe.cs",
+      "sha256": "a7431ba3271e378f68c8518469e0bb83904c63e385b527a25730b60a969ff088"
+    },
+    {
+      "from": "src/DesktopUp.App/App.TemplateRecipeProbe.cs",
+      "to": "tools/review/App/App.TemplateRecipeProbe.cs",
+      "sha256": "188e9af91f3f31ab61be93a48383637f9a3fb5f059b3c1a9b8a9e88ac2d4521c"
+    },
+    {
+      "from": "src/DesktopUp.App/App.TraySmoke.cs",
+      "to": "tools/review/App/App.TraySmoke.cs",
+      "sha256": "4f9001e83e9c1937ba62ba0770458473c44cbdc727498f6f16fbf39fb6bf48ff"
+    },
+    {
+      "from": "src/DesktopUp.App/App.UiCSampleProbe.cs",
+      "to": "tools/review/App/App.UiCSampleProbe.cs",
+      "sha256": "da399807a2323ee5f61aeda1b124d54d283884647454a5d15252d5f0640e1432"
+    },
+    {
+      "from": "src/DesktopUp.App/ControlCenterService.Smoke.cs",
+      "to": "tools/review/App/ControlCenterService.Smoke.cs",
+      "sha256": "0aa3c93bab114afc34f334a6d8bb960e6f6a79fb64fa4faaded5a73b838cd7a7"
+    },
+    {
+      "from": "src/DesktopUp.App/ControlCenterWindow.AppearanceProbe.cs",
+      "to": "tools/review/App/ControlCenterWindow.AppearanceProbe.cs",
+      "sha256": "f2eb5ecde1b426a652b07c9c6b9dc95068de6a005ef8fbb530dcfc84558a8784"
+    },
+    {
+      "from": "src/DesktopUp.App/ControlCenterWindow.ContentFieldsProbe.cs",
+      "to": "tools/review/App/ControlCenterWindow.ContentFieldsProbe.cs",
+      "sha256": "5d8c3b12ac82212c4bcd9d8a07f6ab9a97f431c9d313048000faa44418160fe8"
+    },
+    {
+      "from": "src/DesktopUp.App/ControlCenterWindow.EditingSmoke.cs",
+      "to": "tools/review/App/ControlCenterWindow.EditingSmoke.cs",
+      "sha256": "2bfbaec0279738c1eaab205d2b0e69630e7e810f233493554bd6e44eb40488ad"
+    },
+    {
+      "from": "src/DesktopUp.App/ControlCenterWindow.LampProbe.cs",
+      "to": "tools/review/App/ControlCenterWindow.LampProbe.cs",
+      "sha256": "c0dd17e9b4a24580944004f3f4f3da6de6f6dbb6ede154d907a87aafb9c3654c"
+    },
+    {
+      "from": "src/DesktopUp.App/ControlCenterWindow.MappingProbe.cs",
+      "to": "tools/review/App/ControlCenterWindow.MappingProbe.cs",
+      "sha256": "49e6bcb94844828939892d599784dec850267510a8b4760092434c1ce910e545"
+    },
+    {
+      "from": "src/DesktopUp.App/ControlCenterWindow.SettingsSmoke.cs",
+      "to": "tools/review/App/ControlCenterWindow.SettingsSmoke.cs",
+      "sha256": "2b53ab646c6e11930073017055c6d4bd9a6a846b8013568c34cbbffa59691011"
+    },
+    {
+      "from": "src/DesktopUp.App/ControlCenterWindow.TemplateRecipeProbe.cs",
+      "to": "tools/review/App/ControlCenterWindow.TemplateRecipeProbe.cs",
+      "sha256": "460592046fe8bbc073a483920f78753fd4cb06ebb2e987c69666cc646480d04b"
+    },
+    {
+      "from": "src/DesktopUp.App/ControlCenterWindow.ThemeProbe.cs",
+      "to": "tools/review/App/ControlCenterWindow.ThemeProbe.cs",
+      "sha256": "50141f1984c3036d70a4a6a0f998ff627b8c8cefe805e3ec67d60dea5e065518"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterSpatialRuntime.ContentReturnProbe.cs",
+      "to": "tools/review/App/PosterSpatialRuntime.ContentReturnProbe.cs",
+      "sha256": "4053cd72b291370cd1b81fefd8c79571ad6b80485ba7e31077548e20a3af9ed2"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterSpatialRuntime.ContinuitySmoke.cs",
+      "to": "tools/review/App/PosterSpatialRuntime.ContinuitySmoke.cs",
+      "sha256": "0350252eceeb09e31154d2891d5b9e55e9eac52aa73ee3aeeb940e2d2c4124a5"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterSpatialRuntime.CrossPosterProbe.cs",
+      "to": "tools/review/App/PosterSpatialRuntime.CrossPosterProbe.cs",
+      "sha256": "ae6227cd5aea0afa46bb5238484b4c3119c93c0ce01646ba1274a94cb6317af7"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterSpatialRuntime.MenuSmoke.cs",
+      "to": "tools/review/App/PosterSpatialRuntime.MenuSmoke.cs",
+      "sha256": "7f68890c8cf5067920d057df0a8521e79c83ed66b92d4243a77879b0a84f4331"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterSpatialRuntime.PresentationSmoke.cs",
+      "to": "tools/review/App/PosterSpatialRuntime.PresentationSmoke.cs",
+      "sha256": "1c64667ab134cc257e6ce5dda758e4a807e5e1b326366f1d1254e42bff429b20"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterSpatialRuntime.Smoke.cs",
+      "to": "tools/review/App/PosterSpatialRuntime.Smoke.cs",
+      "sha256": "3b6cc117f66f0dc82b2b66a722734d1c80a929b82d12350ffca9ddb7be8c054a"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterSpatialRuntime.SurfaceProbe.cs",
+      "to": "tools/review/App/PosterSpatialRuntime.SurfaceProbe.cs",
+      "sha256": "521bee13e5701f5c8ea92211c095e4033deb64d47ed6489bbe31c96a21960513"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterSpatialRuntime.TitleSurfaceSmoke.cs",
+      "to": "tools/review/App/PosterSpatialRuntime.TitleSurfaceSmoke.cs",
+      "sha256": "275ef7b6a77f7ec70023ee85e59fe17dd9246f13baed44cbc76a75f908c28713"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterSpatialRuntime.UsabilitySmoke.cs",
+      "to": "tools/review/App/PosterSpatialRuntime.UsabilitySmoke.cs",
+      "sha256": "08d940700f8a87115b65f6ce6ad40151511233f35ffa01601908accedd7b90df"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterVisualWindow.CaptureProbe.cs",
+      "to": "tools/review/App/PosterVisualWindow.CaptureProbe.cs",
+      "sha256": "3a225182ad5163fc63de2a2abec00d9cc2c41827872244ee3e5b01bc4fd89f3c"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterVisualWindow.CombinedSelectionProbe.cs",
+      "to": "tools/review/App/PosterVisualWindow.CombinedSelectionProbe.cs",
+      "sha256": "c44d4ae5e5916e6974f5d2ebddd8402cefc64d602bbc4c1a2efc60f5b72a1cc9"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterVisualWindow.ContentFrameProbe.cs",
+      "to": "tools/review/App/PosterVisualWindow.ContentFrameProbe.cs",
+      "sha256": "c3e43ca7ae0247d77d88e1b36248774f295fc8e5a8032d83843ebc5424d0a873"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterVisualWindow.ContentInteractionProbe.cs",
+      "to": "tools/review/App/PosterVisualWindow.ContentInteractionProbe.cs",
+      "sha256": "db643e41085300207ea13d12239ff6b05391becf365e1f02e64e37c16432d27e"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterVisualWindow.ContentLoopDragProbe.cs",
+      "to": "tools/review/App/PosterVisualWindow.ContentLoopDragProbe.cs",
+      "sha256": "1bb51fe7f4277322af01610c9b3cdbbeec5645a8cc735bfd07b20b7ed5b38938"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterVisualWindow.ContentProposalProbe.cs",
+      "to": "tools/review/App/PosterVisualWindow.ContentProposalProbe.cs",
+      "sha256": "76fe368f88c9de7c8c14eb36bf4f0f9cce976a7aba188fb2846890670bfe1c3f"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterVisualWindow.ContentRejectedPreviewProbe.cs",
+      "to": "tools/review/App/PosterVisualWindow.ContentRejectedPreviewProbe.cs",
+      "sha256": "cca67106959a4e337ae930494819d91fb300bd3143eee579819ba0a49bc124ea"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterVisualWindow.ContentSmoke.cs",
+      "to": "tools/review/App/PosterVisualWindow.ContentSmoke.cs",
+      "sha256": "46534e7093541ffb29faf6090198375cbe38aa572509ec808f94cfb52cc631c2"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterVisualWindow.ContentSpaceProbe.cs",
+      "to": "tools/review/App/PosterVisualWindow.ContentSpaceProbe.cs",
+      "sha256": "a1f46cd4e1b3d25bb602a6632bb5c6215b938eadd1da76c5e10988fa95b90beb"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterVisualWindow.IncrementalRenderProbe.cs",
+      "to": "tools/review/App/PosterVisualWindow.IncrementalRenderProbe.cs",
+      "sha256": "ddca41d1cb6b663f396e663a53036992c1f189cc119a206d2f8088c141b71b92"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterVisualWindow.InlineRenameProbe.cs",
+      "to": "tools/review/App/PosterVisualWindow.InlineRenameProbe.cs",
+      "sha256": "84606122badefde20cb00cd7549287de5ba5cc502595958b9d4807ed04480b38"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterVisualWindow.MenuSmoke.cs",
+      "to": "tools/review/App/PosterVisualWindow.MenuSmoke.cs",
+      "sha256": "7595144c026c3d160108d2ef3042a65b80026e46df11b15d193c7531b2d3da0a"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterVisualWindow.SparseInputProbe.cs",
+      "to": "tools/review/App/PosterVisualWindow.SparseInputProbe.cs",
+      "sha256": "7b4d5bc88d999046c640188083137651519e6032c3b429a8ed8040147353713a"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterVisualWindow.SurfaceProbe.cs",
+      "to": "tools/review/App/PosterVisualWindow.SurfaceProbe.cs",
+      "sha256": "1cc33f5ede97170f9c0704a1c01319ce2d40a69ab5faf345617e7472d1bf87a9"
+    },
+    {
+      "from": "src/DesktopUp.Domain/RealContent.cs",
+      "to": "src/DesktopUp.Domain/Content/RealContent.cs",
+      "sha256": "d4286dd4bbcda983af10364ca29c57457f38871dd2ad719c2cd4e673d2278524"
+    },
+    {
+      "from": "src/DesktopUp.Domain/ContentCapabilityPolicy.cs",
+      "to": "src/DesktopUp.Domain/Content/ContentCapabilityPolicy.cs",
+      "sha256": "d93d49b925100b8f3f5e66a2aef9827fade33950bcf77bbf3a9de8e89b54e0dc"
+    },
+    {
+      "from": "src/DesktopUp.Domain/ContentIconAsset.cs",
+      "to": "src/DesktopUp.Domain/Content/ContentIconAsset.cs",
+      "sha256": "751155cd4a80a6415d002df3b6c92bfcb5eeee3d74a8f1aefce1605d239581fe"
+    },
+    {
+      "from": "src/DesktopUp.Application/ContentOpenContract.cs",
+      "to": "src/DesktopUp.Application/Features/Content/Open/ContentOpenContract.cs",
+      "sha256": "f865e0fa4dfadec7414427b96e7d702e41f4912bb24af0327ad54907a54b204a"
+    },
+    {
+      "from": "src/DesktopUp.Application/ReferenceContentRuntime.cs",
+      "to": "src/DesktopUp.Application/Features/Content/Open/ReferenceContentRuntime.cs",
+      "sha256": "aab885afb417deb78f51ecd1e16dc7ca3457620844acaf7019a7b4a4687efed1"
+    },
+    {
+      "from": "src/DesktopUp.Application/ReferenceContentViewSource.cs",
+      "to": "src/DesktopUp.Application/Features/Content/Open/ReferenceContentViewSource.cs",
+      "sha256": "cb5891d8805fa93a4c139099acf23566b808d060ad5afcd65313f6ad0942f5f8"
+    },
+    {
+      "from": "src/DesktopUp.Application/ContentSourcePorts.cs",
+      "to": "src/DesktopUp.Application/Ports/Content/ContentSourcePorts.cs",
+      "sha256": "cf1819ece42a1685b8805df88c63e81e4e35d90023ad136193ac4a4f9ea16400"
+    },
+    {
+      "from": "src/DesktopUp.Application/LocalContentProtocol.cs",
+      "to": "src/DesktopUp.Application/Ports/Content/LocalContentProtocol.cs",
+      "sha256": "2a12c05bd0b0d8f410648e6e6e5b87f1a2d7f37a2845f14301ea8d6267d483e9"
+    },
+    {
+      "from": "src/DesktopUp.Application/ShellUiProtocol.cs",
+      "to": "src/DesktopUp.Application/Ports/Content/ShellUiProtocol.cs",
+      "sha256": "5e97b625c085a3e8142244f8dece7cdb5f139da3136513d4b4750c8199d8b5e5"
+    },
+    {
+      "from": "src/DesktopUp.Infrastructure/SqliteContentOpenJournal.cs",
+      "to": "src/DesktopUp.Infrastructure/Persistence/Content/SqliteContentOpenJournal.cs",
+      "sha256": "b01fd10d806bd5945e0fb24a4e55ac35db6339feca4143ab50987062a9a2eaf4"
+    },
+    {
+      "from": "src/DesktopUp.Infrastructure/SqliteContentIconStore.cs",
+      "to": "src/DesktopUp.Infrastructure/Persistence/Content/SqliteContentIconStore.cs",
+      "sha256": "ace48d60f2de4955895bfdb1cfa2c6fe092d732979f2aaa18c6da10071be6355"
+    }
+  ]
+}

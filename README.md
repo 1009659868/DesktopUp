@@ -1,5 +1,7 @@
 # DesktopUp V2 — Poster Redesign V3
 
+2026-10-16 当前：架构A/B/C及展开图标闪烁复验均USER PASS / CLOSED；本轮按授权本地集成impl/develop，不推送、不更新impl/main。结果归[收口记录](Docs/A_Project/40_Implementation/Architecture/C_HEAT_RUNTIME.md)与当前交接；下一项V3-06真实热度尚未开始。普通构建不含独立验收执行器；原自启登录/长测等未验继续携带，架构图仍为4ae822a基线，下方为历史。
+
 2026-10-16 当前：[开机自启动](Docs/A_Project/40_Implementation/V3-04/PREVIEW_INSTALLER_DELIVERY.md#2026-10-16-v3-09-03开机自启动前移计划)已完成定向自动验证；“关闭与卸载”人工通过，真实登录自启按用户要求暂缓、保留未验。本轮获授权提交/推送impl/09-03-startup并合入、同步impl/develop，不更新impl/main；结果见HANDOFF。下一主线V3-06真实热度，本轮不实施。下方为历史阶段。
 
 2026-10-16 最新：05-12余项＋09-07/08卸载归还四组集中人工USER PASS / 本批CLOSED；支持保留原位后重装，或先归还内容再卸载（原路径不可用/未知回系统桌面），冲突取消保留程序及剩余内容，无卡片受管文件也处理，映射目录和配置/位置清单保留。验收与样例收尾见[直接拖放§16.3](Docs/A_Project/40_Implementation/V3-05/DIRECT_TRANSFER_DELIVERY.md#163-人工通过与测试收尾2026-10-16)。当前仍`impl/05-12-content-lifecycle`，新批未提交/合入develop/推送，impl/main未更新；下一顺序见[系列计划](Docs/A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md#2026-10-16-卸载归还收口后的系列计划)。下方“最终在develop”等为历史阶段，未验环境不补PASS。

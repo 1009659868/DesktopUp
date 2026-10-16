@@ -1,0 +1,202 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "目标｜能力热替换走同一安全边界（建议）",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "legend": {
+      "mode": "auto",
+      "entries": {
+        "backend": {
+          "label": "应用逻辑"
+        },
+        "database": {
+          "label": "持久数据"
+        },
+        "messagebus": {
+          "label": "提案缓冲"
+        }
+      }
+    }
+  },
+  "lanes": [
+    {
+      "id": "apply",
+      "label": "受控更新"
+    },
+    {
+      "id": "defer",
+      "label": "延后与拒绝",
+      "variant": "exception"
+    }
+  ],
+  "mainPath": [
+    "propose",
+    "check",
+    "candidate",
+    "safepoint",
+    "activate",
+    "frame"
+  ],
+  "nodes": [
+    {
+      "id": "propose",
+      "lane": "apply",
+      "col": 0,
+      "type": "backend",
+      "label": "产出提案",
+      "sublabel": "热度／模板／AI"
+    },
+    {
+      "id": "check",
+      "lane": "apply",
+      "col": 1,
+      "type": "security",
+      "label": "验证契约",
+      "sublabel": "权限、版本、预算"
+    },
+    {
+      "id": "candidate",
+      "lane": "apply",
+      "col": 2,
+      "type": "backend",
+      "label": "准备候选",
+      "sublabel": "纯计算／影子预览"
+    },
+    {
+      "id": "safepoint",
+      "lane": "apply",
+      "col": 3,
+      "type": "security",
+      "label": "等待安全点",
+      "sublabel": "拖动／命名／菜单结束"
+    },
+    {
+      "id": "activate",
+      "lane": "apply",
+      "col": 4,
+      "type": "backend",
+      "label": "验版后切换",
+      "sublabel": "热度派生／配置事务"
+    },
+    {
+      "id": "frame",
+      "lane": "apply",
+      "col": 5,
+      "type": "frontend",
+      "label": "局部发布新帧",
+      "sublabel": "绘制与命中同一代"
+    },
+    {
+      "id": "reject",
+      "lane": "defer",
+      "col": 1,
+      "type": "security",
+      "label": "拒绝候选",
+      "sublabel": "保留当前有效版本"
+    },
+    {
+      "id": "pending",
+      "lane": "defer",
+      "col": 3,
+      "type": "messagebus",
+      "label": "仅留最新提案",
+      "sublabel": "有界，不积压重排"
+    },
+    {
+      "id": "rollback",
+      "lane": "defer",
+      "col": 4,
+      "type": "backend",
+      "label": "恢复有效快照",
+      "sublabel": "撤候选，不重放文件"
+    }
+  ],
+  "edges": [
+    {
+      "id": "submit",
+      "from": "propose",
+      "to": "check",
+      "label": "带来源与版本",
+      "role": "main"
+    },
+    {
+      "id": "checked",
+      "from": "check",
+      "to": "candidate",
+      "label": "获准",
+      "role": "main"
+    },
+    {
+      "id": "prepared",
+      "from": "candidate",
+      "to": "safepoint",
+      "label": "候选就绪",
+      "role": "main"
+    },
+    {
+      "id": "safe",
+      "from": "safepoint",
+      "to": "activate",
+      "label": "交互空闲",
+      "role": "main"
+    },
+    {
+      "id": "published",
+      "from": "activate",
+      "to": "frame",
+      "label": "原子激活",
+      "role": "main"
+    },
+    {
+      "id": "invalid",
+      "from": "check",
+      "to": "reject",
+      "label": "不合规",
+      "role": "error",
+      "variant": "security"
+    },
+    {
+      "id": "blocked",
+      "from": "safepoint",
+      "to": "pending",
+      "label": "正在交互",
+      "role": "branch"
+    },
+    {
+      "id": "wake",
+      "from": "pending",
+      "to": "safepoint",
+      "label": "结束后唤醒",
+      "role": "return",
+      "variant": "dashed"
+    },
+    {
+      "id": "fault",
+      "from": "activate",
+      "to": "rollback",
+      "label": "激活失败",
+      "role": "error",
+      "variant": "security"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "violet",
+      "title": "三种提案，共用约束而非万能执行器",
+      "items": [
+        "热度只产生派生布局，不能覆盖用户手工意图。",
+        "AI 按预授权范围执行；高风险变更须用户批准。"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "热替换不牺牲基础交互",
+      "items": [
+        "旧帧先保持可用；候选失败不留下半幅海报。",
+        "模板形状、可拖区与输入命中共享同一发布版本。"
+      ]
+    }
+  ]
+}

@@ -45,11 +45,11 @@ internal sealed partial class PosterVisualWindow
             _contentFeedbackCallout?.Visibility == Visibility.Visible, _footer?.Visibility == Visibility.Visible,
             ReadContentSurfaceForSmoke());
     }
-    internal ContentProposalProbe ReadContentProposalForSmoke() => new(_contentActiveHeat?.Version,
-        _contentHeatBuffer?.HasPending == true, ContentDocument, EffectiveContentDocument);
+    internal ContentProposalProbe ReadContentProposalForSmoke() => new(_contentHeatSession.ActiveVersion,
+        _contentHeatSession.HasPending, ContentDocument, EffectiveContentDocument);
     internal ContentThemeSmokeProbe ReadContentThemeForSmoke() => new(_presentation.Parameters,_contentThemeBuffer?.HasPending==true);
     internal ContentSuspensionSmokeProbe ReadContentSuspensionForSmoke() => new(
-        inputRouter.ReadSurface(inputSession) is not null,_contentHeatBuffer?.HasPending==true,_contentActiveHeat?.Version,
+        inputRouter.ReadSurface(inputSession) is not null,_contentHeatSession.HasPending,_contentHeatSession.ActiveVersion,
         _bounds,StateRequestFingerprint.Compute((_contentSnapshot??throw new InvalidOperationException("No presented content snapshot."))
             .Items.Select(p=>new{p.ItemId,p.Bounds,p.Clip}).ToArray()));
     internal bool RecoverContentForSmoke(DisplayTopologySnapshot topology) =>

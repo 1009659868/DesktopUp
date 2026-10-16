@@ -17,7 +17,7 @@ internal sealed partial class PosterVisualWindow
         if(_disposed || _contentPresentationSuspended || _contentReadOnly || IsEditing || HasContentGesture ||
             _geometry.IsLocked || _geometry.IsCollapsed || _transitionLayout is not null || _monitor is null ||
             _inputIsland is null || inputRouter.Capture is not null || spatial.HasCenterDraft(author.PosterId) ||
-            _contentActiveHeat is not null || _contentHeatBuffer?.HasPending==true ||
+            _contentHeatSession.ActiveVersion is not null || _contentHeatSession.HasPending ||
             author.SchemaVersion!=2 || author.Mode!=ContentLayoutMode.Automatic || !author.AllowHeatDrivenSize || author.LoopScroll ||
             author.FlowAxis!=ContentFlowAxis.Vertical || item is not { FixedPosition:true, ManualSize:false,
                 Column:0, Row:8, ColumnSpan:4, RowSpan:4 } ||
@@ -28,7 +28,7 @@ internal sealed partial class PosterVisualWindow
         if(!OfferContentHeat(new(author.PosterId,author.ItemSetVersion,1,[new(item.ItemId,0,1.5,"rejected-preview-probe")])))
             throw new InvalidOperationException("Production heat admission rejected the legal starting composition.");
         return new { Name="rejected-heat-prepared", Basis=_rejectedContentPreviewBasis, SourceAuthor=item, ReservedSpace=space,
-            HeatPending=_contentHeatBuffer?.HasPending==true, NativeMouse=false, NativeKeyboard=false };
+            HeatPending=_contentHeatSession.HasPending, NativeMouse=false, NativeKeyboard=false };
     }
 
     internal object RunRejectedContentPreviewProbe()
@@ -66,7 +66,7 @@ internal sealed partial class PosterVisualWindow
         try
         {
             Require(nativeBasis is null && Released() && !IsEditing && _monitor is not null &&
-                _contentActiveHeat?.Version==basis.HeatVersion && _contentHeatBuffer?.HasPending!=true,
+                _contentHeatSession.ActiveVersion==basis.HeatVersion && !_contentHeatSession.HasPending,
                 "The earlier queued heat reached its safe point before the real-region protocol begins.");
             Unchanged();
             var source=VisibleSource();

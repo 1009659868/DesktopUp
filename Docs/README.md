@@ -1,5 +1,9 @@
 # DesktopUp V2 文档入口
 
+2026-10-16 当前：架构A/B/C及展开图标闪烁复验均USER PASS / CLOSED；本轮按授权本地集成impl/develop，不推送、不更新impl/main。结果归[收口记录](A_Project/40_Implementation/Architecture/C_HEAT_RUNTIME.md)与当前交接；下一项V3-06真实热度尚未开始。普通构建不含独立验收执行器；原自启登录/长测等未验继续携带，架构图仍为4ae822a基线，下方为历史。
+
+2026-10-16 当前：[代码架构审查与增量演进建议](A_Project/20_Architecture/ARCHITECTURE_EVOLUTION_REVIEW_2026-10-16.md)及五张Archify图已完成，基线impl/develop@4ae822a。仅静态审查/设计提案，未重构源码、未建分支或提交；建议先收敛内容用例、会话/呈现边界，再接V3-06。方案待确认，不替代既有产品合同；自启真实登录仍暂缓未验。下方记录为既有里程碑。
+
 2026-10-16 最新：[自启动](A_Project/40_Implementation/V3-04/PREVIEW_INSTALLER_DELIVERY.md#2026-10-16-v3-09-03开机自启动前移计划)关闭/卸载USER PASS，真实登录暂缓未验，整体不记PASS。用户明确授权携带未验项同步功能分支并集成impl/develop；不更新impl/main，Git结果见HANDOFF。本轮仅记录与同步，复用定向及同包证据，不重测。下方为历史。
 
 2026-10-16 当前：05-12余项＋09-07/08卸载归还四组集中人工 **USER PASS / 本批CLOSED**；已按用户授权清理4个确认的桌面样例并保留可恢复副本，habits配置及真实文件不动。验收/收尾见[C§16.3](A_Project/40_Implementation/V3-05/DIRECT_TRANSFER_DELIVERY.md#163-人工通过与测试收尾2026-10-16)，下一顺序见[系列计划](A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md#2026-10-16-卸载归还收口后的系列计划)。当前功能分支不变，本轮无Git同步或新功能实现；下方待验与登记排障为历史，未验环境不补PASS。

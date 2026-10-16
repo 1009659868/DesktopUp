@@ -1,0 +1,498 @@
+{
+  "date": "2026-10-16",
+  "scope": "Static source review and proposed architecture; no product implementation, tests, branch mutations or Git publication.",
+  "baseline": {
+    "branch": "impl/develop",
+    "commit": "4ae822afe08c6064ae9ee1a4835fbbacaa94a473"
+  },
+  "generator": "Archify 2.17",
+  "browser_note": "First browser discovery found no Chrome; final exact-artifact runs used supported ARCHIFY_CHROME with installed Edge Chromium. Only latest complete artifact-bound receipts determine status.",
+  "diagrams": [
+    {
+      "name": "current.architecture",
+      "diagram_type": "architecture",
+      "specification": "G:\\A_\\Tools\\DesktopUp_V2\\Docs\\A_Project\\20_Architecture\\ArchitectureReview\\current.architecture.json",
+      "output": "G:\\A_\\Tools\\DesktopUp_V2\\out\\architecture-review-20261016\\current.architecture.html",
+      "specification_sha256": "c2e45231fe90ffc41ed115da49c05afa49448b45e8e2ba091c7ec8920332f0a6",
+      "specification_bytes": 6807,
+      "artifact_sha256": "69c5706ff5285b95bccde34ea0977d9287a3dbaaee0c9788d9acccce7fe3c033",
+      "artifact_bytes": 716377,
+      "validation": {
+        "checksPassed": 9,
+        "checkCount": 9,
+        "compositionProfile": "showcase",
+        "compositionStatus": "pass",
+        "errors": 0,
+        "warnings": 0
+      },
+      "repository_evidence": {
+        "verified": true,
+        "repository": "https://github.com/1009659868/DesktopUp",
+        "revision": "4ae822afe08c6064ae9ee1a4835fbbacaa94a473",
+        "references": 16
+      },
+      "browser_evidence": "passed",
+      "browser_receipt": "../../../../out/architecture-review-20261016/current.architecture.visual-check.json",
+      "browser": {
+        "executable": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+        "evidence_kind": "automated-browser",
+        "state": {
+          "detail": "read",
+          "motion": "still"
+        },
+        "viewports": [
+          {
+            "width": 1440,
+            "height": 900,
+            "theme": "light",
+            "overflowX": false,
+            "overflowY": false,
+            "ok": true
+          },
+          {
+            "width": 1600,
+            "height": 1000,
+            "theme": "light",
+            "overflowX": false,
+            "overflowY": false,
+            "ok": true
+          },
+          {
+            "width": 1920,
+            "height": 1080,
+            "theme": "light",
+            "overflowX": false,
+            "overflowY": false,
+            "ok": true
+          },
+          {
+            "width": 2048,
+            "height": 1320,
+            "theme": "light",
+            "overflowX": false,
+            "overflowY": false,
+            "ok": true
+          }
+        ],
+        "captures": [
+          {
+            "width": 1440,
+            "height": 900,
+            "theme": "light",
+            "file": "current.architecture.visual-check.1440x900.light.png"
+          },
+          {
+            "width": 1440,
+            "height": 900,
+            "theme": "dark",
+            "file": "current.architecture.visual-check.1440x900.dark.png"
+          },
+          {
+            "width": 2048,
+            "height": 1320,
+            "theme": "light",
+            "file": "current.architecture.visual-check.2048x1320.light.png"
+          },
+          {
+            "width": 2048,
+            "height": 1320,
+            "theme": "dark",
+            "file": "current.architecture.visual-check.2048x1320.dark.png"
+          }
+        ]
+      },
+      "visual_review": "passed",
+      "review_method": "Image-capable assistant inspected rendered PNGs; independent of automated browser status.",
+      "reviewed_images": [
+        "current.architecture.visual-check.1440x900.light.png",
+        "current.architecture.visual-check.2048x1320.dark.png"
+      ],
+      "observations": "Main path, exception branches, text fit, routes and both themes inspected; no clipping/overlap requiring repair remains. Large-desktop composition reviewed.",
+      "correction_rounds": 0
+    },
+    {
+      "name": "target.architecture",
+      "diagram_type": "architecture",
+      "specification": "G:\\A_\\Tools\\DesktopUp_V2\\Docs\\A_Project\\20_Architecture\\ArchitectureReview\\target.architecture.json",
+      "output": "G:\\A_\\Tools\\DesktopUp_V2\\out\\architecture-review-20261016\\target.architecture.html",
+      "specification_sha256": "e01b0f54c850ee124dd7089449948189bad65da1be9dbcc7d800aed8395bb36a",
+      "specification_bytes": 5354,
+      "artifact_sha256": "1493bcfa02069e78a7a18f5f3f687d41156b61a35c59ec95745351356ed99886",
+      "artifact_bytes": 716311,
+      "validation": {
+        "checksPassed": 9,
+        "checkCount": 9,
+        "compositionProfile": "showcase",
+        "compositionStatus": "pass",
+        "errors": 0,
+        "warnings": 0
+      },
+      "browser_evidence": "passed",
+      "browser_receipt": "../../../../out/architecture-review-20261016/target.architecture.visual-check.json",
+      "browser": {
+        "executable": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+        "evidence_kind": "automated-browser",
+        "state": {
+          "detail": "read",
+          "motion": "still"
+        },
+        "viewports": [
+          {
+            "width": 1440,
+            "height": 900,
+            "theme": "light",
+            "overflowX": false,
+            "overflowY": false,
+            "ok": true
+          },
+          {
+            "width": 1600,
+            "height": 1000,
+            "theme": "light",
+            "overflowX": false,
+            "overflowY": false,
+            "ok": true
+          },
+          {
+            "width": 1920,
+            "height": 1080,
+            "theme": "light",
+            "overflowX": false,
+            "overflowY": false,
+            "ok": true
+          },
+          {
+            "width": 2048,
+            "height": 1320,
+            "theme": "light",
+            "overflowX": false,
+            "overflowY": false,
+            "ok": true
+          }
+        ],
+        "captures": [
+          {
+            "width": 1440,
+            "height": 900,
+            "theme": "light",
+            "file": "target.architecture.visual-check.1440x900.light.png"
+          },
+          {
+            "width": 1440,
+            "height": 900,
+            "theme": "dark",
+            "file": "target.architecture.visual-check.1440x900.dark.png"
+          },
+          {
+            "width": 2048,
+            "height": 1320,
+            "theme": "light",
+            "file": "target.architecture.visual-check.2048x1320.light.png"
+          },
+          {
+            "width": 2048,
+            "height": 1320,
+            "theme": "dark",
+            "file": "target.architecture.visual-check.2048x1320.dark.png"
+          }
+        ]
+      },
+      "visual_review": "passed",
+      "review_method": "Image-capable assistant inspected rendered PNGs; independent of automated browser status.",
+      "reviewed_images": [
+        "target.architecture.visual-check.1440x900.light.png",
+        "target.architecture.visual-check.2048x1320.dark.png"
+      ],
+      "observations": "Main path, exception branches, text fit, routes and both themes inspected; no clipping/overlap requiring repair remains. Large-desktop composition reviewed.",
+      "correction_rounds": 0
+    },
+    {
+      "name": "current-open.workflow",
+      "diagram_type": "workflow",
+      "specification": "G:\\A_\\Tools\\DesktopUp_V2\\Docs\\A_Project\\20_Architecture\\ArchitectureReview\\current-open.workflow.json",
+      "output": "G:\\A_\\Tools\\DesktopUp_V2\\out\\architecture-review-20261016\\current-open.workflow.html",
+      "specification_sha256": "756cdf6d7fb2deef229ceb1ed3cfd23c8b54d294eb218b4aa3618ca3a21ee720",
+      "specification_bytes": 3703,
+      "artifact_sha256": "8341a54c04eff2b1a6ed210977ab22d9c300874e53d9b4ac1cb1d82e64430291",
+      "artifact_bytes": 711395,
+      "validation": {
+        "checksPassed": 9,
+        "checkCount": 9,
+        "compositionProfile": "showcase",
+        "compositionStatus": "pass",
+        "errors": 0,
+        "warnings": 0
+      },
+      "browser_evidence": "passed",
+      "browser_receipt": "../../../../out/architecture-review-20261016/current-open.workflow.visual-check.json",
+      "browser": {
+        "executable": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+        "evidence_kind": "automated-browser",
+        "state": {
+          "detail": "read",
+          "motion": "still"
+        },
+        "viewports": [
+          {
+            "width": 1440,
+            "height": 900,
+            "theme": "light",
+            "overflowX": false,
+            "overflowY": false,
+            "ok": true
+          },
+          {
+            "width": 1600,
+            "height": 1000,
+            "theme": "light",
+            "overflowX": false,
+            "overflowY": false,
+            "ok": true
+          },
+          {
+            "width": 1920,
+            "height": 1080,
+            "theme": "light",
+            "overflowX": false,
+            "overflowY": false,
+            "ok": true
+          },
+          {
+            "width": 2048,
+            "height": 1320,
+            "theme": "light",
+            "overflowX": false,
+            "overflowY": false,
+            "ok": true
+          }
+        ],
+        "captures": [
+          {
+            "width": 1440,
+            "height": 900,
+            "theme": "light",
+            "file": "current-open.workflow.visual-check.1440x900.light.png"
+          },
+          {
+            "width": 1440,
+            "height": 900,
+            "theme": "dark",
+            "file": "current-open.workflow.visual-check.1440x900.dark.png"
+          },
+          {
+            "width": 2048,
+            "height": 1320,
+            "theme": "light",
+            "file": "current-open.workflow.visual-check.2048x1320.light.png"
+          },
+          {
+            "width": 2048,
+            "height": 1320,
+            "theme": "dark",
+            "file": "current-open.workflow.visual-check.2048x1320.dark.png"
+          }
+        ]
+      },
+      "visual_review": "passed",
+      "review_method": "Image-capable assistant inspected rendered PNGs; independent of automated browser status.",
+      "reviewed_images": [
+        "current-open.workflow.visual-check.1440x900.light.png",
+        "current-open.workflow.visual-check.2048x1320.dark.png"
+      ],
+      "observations": "Main path, exception branches, text fit, routes and both themes inspected; no clipping/overlap requiring repair remains. Large-desktop composition reviewed.",
+      "correction_rounds": 1
+    },
+    {
+      "name": "target-extension.workflow",
+      "diagram_type": "workflow",
+      "specification": "G:\\A_\\Tools\\DesktopUp_V2\\Docs\\A_Project\\20_Architecture\\ArchitectureReview\\target-extension.workflow.json",
+      "output": "G:\\A_\\Tools\\DesktopUp_V2\\out\\architecture-review-20261016\\target-extension.workflow.html",
+      "specification_sha256": "477d87766d420de7e0825d93b9abf64ca404796a77567e49a15689b557fb5d86",
+      "specification_bytes": 4294,
+      "artifact_sha256": "ef6dde11877687a69629721dc48fb0be2580900473483df3bf6d87e127c549e0",
+      "artifact_bytes": 713790,
+      "validation": {
+        "checksPassed": 9,
+        "checkCount": 9,
+        "compositionProfile": "showcase",
+        "compositionStatus": "pass",
+        "errors": 0,
+        "warnings": 0
+      },
+      "browser_evidence": "passed",
+      "browser_receipt": "../../../../out/architecture-review-20261016/target-extension.workflow.visual-check.json",
+      "browser": {
+        "executable": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+        "evidence_kind": "automated-browser",
+        "state": {
+          "detail": "read",
+          "motion": "still"
+        },
+        "viewports": [
+          {
+            "width": 1440,
+            "height": 900,
+            "theme": "light",
+            "overflowX": false,
+            "overflowY": false,
+            "ok": true
+          },
+          {
+            "width": 1600,
+            "height": 1000,
+            "theme": "light",
+            "overflowX": false,
+            "overflowY": false,
+            "ok": true
+          },
+          {
+            "width": 1920,
+            "height": 1080,
+            "theme": "light",
+            "overflowX": false,
+            "overflowY": false,
+            "ok": true
+          },
+          {
+            "width": 2048,
+            "height": 1320,
+            "theme": "light",
+            "overflowX": false,
+            "overflowY": false,
+            "ok": true
+          }
+        ],
+        "captures": [
+          {
+            "width": 1440,
+            "height": 900,
+            "theme": "light",
+            "file": "target-extension.workflow.visual-check.1440x900.light.png"
+          },
+          {
+            "width": 1440,
+            "height": 900,
+            "theme": "dark",
+            "file": "target-extension.workflow.visual-check.1440x900.dark.png"
+          },
+          {
+            "width": 2048,
+            "height": 1320,
+            "theme": "light",
+            "file": "target-extension.workflow.visual-check.2048x1320.light.png"
+          },
+          {
+            "width": 2048,
+            "height": 1320,
+            "theme": "dark",
+            "file": "target-extension.workflow.visual-check.2048x1320.dark.png"
+          }
+        ]
+      },
+      "visual_review": "passed",
+      "review_method": "Image-capable assistant inspected rendered PNGs; independent of automated browser status.",
+      "reviewed_images": [
+        "target-extension.workflow.visual-check.1440x900.light.png",
+        "target-extension.workflow.visual-check.2048x1320.dark.png"
+      ],
+      "observations": "Main path, exception branches, text fit, routes and both themes inspected; no clipping/overlap requiring repair remains. Large-desktop composition reviewed.",
+      "correction_rounds": 1
+    },
+    {
+      "name": "target-release.workflow",
+      "diagram_type": "workflow",
+      "specification": "G:\\A_\\Tools\\DesktopUp_V2\\Docs\\A_Project\\20_Architecture\\ArchitectureReview\\target-release.workflow.json",
+      "output": "G:\\A_\\Tools\\DesktopUp_V2\\out\\architecture-review-20261016\\target-release.workflow.html",
+      "specification_sha256": "808ba06405cb2f4fa80df94db64a30b6d24d50dbf7da7d204fbf947a7e417477",
+      "specification_bytes": 3807,
+      "artifact_sha256": "049111485bdda82f5835bc53e8d9d4221da407f1ae9b1c2b602bece88145c635",
+      "artifact_bytes": 712185,
+      "validation": {
+        "checksPassed": 9,
+        "checkCount": 9,
+        "compositionProfile": "showcase",
+        "compositionStatus": "pass",
+        "errors": 0,
+        "warnings": 0
+      },
+      "browser_evidence": "passed",
+      "browser_receipt": "../../../../out/architecture-review-20261016/target-release.workflow.visual-check.json",
+      "browser": {
+        "executable": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+        "evidence_kind": "automated-browser",
+        "state": {
+          "detail": "read",
+          "motion": "still"
+        },
+        "viewports": [
+          {
+            "width": 1440,
+            "height": 900,
+            "theme": "light",
+            "overflowX": false,
+            "overflowY": false,
+            "ok": true
+          },
+          {
+            "width": 1600,
+            "height": 1000,
+            "theme": "light",
+            "overflowX": false,
+            "overflowY": false,
+            "ok": true
+          },
+          {
+            "width": 1920,
+            "height": 1080,
+            "theme": "light",
+            "overflowX": false,
+            "overflowY": false,
+            "ok": true
+          },
+          {
+            "width": 2048,
+            "height": 1320,
+            "theme": "light",
+            "overflowX": false,
+            "overflowY": false,
+            "ok": true
+          }
+        ],
+        "captures": [
+          {
+            "width": 1440,
+            "height": 900,
+            "theme": "light",
+            "file": "target-release.workflow.visual-check.1440x900.light.png"
+          },
+          {
+            "width": 1440,
+            "height": 900,
+            "theme": "dark",
+            "file": "target-release.workflow.visual-check.1440x900.dark.png"
+          },
+          {
+            "width": 2048,
+            "height": 1320,
+            "theme": "light",
+            "file": "target-release.workflow.visual-check.2048x1320.light.png"
+          },
+          {
+            "width": 2048,
+            "height": 1320,
+            "theme": "dark",
+            "file": "target-release.workflow.visual-check.2048x1320.dark.png"
+          }
+        ]
+      },
+      "visual_review": "passed",
+      "review_method": "Image-capable assistant inspected rendered PNGs; independent of automated browser status.",
+      "reviewed_images": [
+        "target-release.workflow.visual-check.1440x900.light.png",
+        "target-release.workflow.visual-check.2048x1320.dark.png"
+      ],
+      "observations": "Main path, exception branches, text fit, routes and both themes inspected; no clipping/overlap requiring repair remains. Large-desktop composition reviewed.",
+      "correction_rounds": 1
+    }
+  ]
+}

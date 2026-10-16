@@ -21,6 +21,68 @@ public sealed class ArchitectureTests
         Assert.DoesNotContain("Microsoft.UI.Xaml", text, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("DllImport", text, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("LibraryImport", text, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("DesktopUp.Infrastructure", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("Microsoft.Data.Sqlite", text, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("Domain", "")]
+    [InlineData("Application", "Domain")]
+    [InlineData("Infrastructure", "Application,Domain")]
+    [InlineData("Windows", "Application,Domain")]
+    [InlineData("ContentWorker", "Application")]
+    [InlineData("App", "Application,ContentWorker,Domain,Infrastructure,Windows")]
+    public void ProductionProjectReferencesFollowDeclaredLayers(string project, string allowed)
+    {
+        var document = System.Xml.Linq.XDocument.Load(Path.Combine(FindRepositoryRoot(),
+            "src", "DesktopUp." + project, "DesktopUp." + project + ".csproj"));
+        var references = document.Descendants("ProjectReference")
+            .Select(node => Path.GetFileNameWithoutExtension(((string)node.Attribute("Include")!)
+                .Replace('\\', '/')).Replace("DesktopUp.", "", StringComparison.Ordinal))
+            .Order(StringComparer.Ordinal).ToArray();
+        Assert.Equal(allowed.Split(',', StringSplitOptions.RemoveEmptyEntries), references);
+        if (project == "App")
+        {
+            var worker = document.Descendants("ProjectReference").Single(node =>
+                ((string)node.Attribute("Include")!).Contains("ContentWorker", StringComparison.Ordinal));
+            Assert.Equal("false", (string?)worker.Attribute("ReferenceOutputAssembly"));
+        }
+    }
+
+    [Fact]
+    public void ContentExecutionDoesNotOwnPresentationAndPosterDoesNotOwnOpenJournal()
+    {
+        string root = FindRepositoryRoot();
+        string service = File.ReadAllText(Path.Combine(root,
+            "src/DesktopUp.Application/Features/Content/Open/ContentActionService.cs"));
+        foreach (string forbidden in new[] { "ReferenceContentRuntime", "IContentAssetProvider",
+            "ContentSourcePorts", "Sqlite", "Microsoft.UI" })
+            Assert.DoesNotContain(forbidden, service, StringComparison.Ordinal);
+        string adapter = File.ReadAllText(Path.Combine(root,
+            "src/DesktopUp.Application/Features/Content/Open/ReferenceContentActions.cs"));
+        Assert.Contains("IContentActionService", adapter);
+        Assert.DoesNotContain("IContentOpenJournal", adapter);
+        Assert.DoesNotContain("ILocalContentWorker", adapter);
+        string poster = File.ReadAllText(Path.Combine(root, "src/DesktopUp.App/PosterSpatialRuntime.ContentSource.cs"));
+        Assert.DoesNotContain("IContentOpenJournal", poster);
+        Assert.Contains("IContentActionService", poster);
+    }
+
+    [Fact]
+    public void HeatRuntimeOwnsDerivedStateButNotWindowSchedulingOrPersistence()
+    {
+        string root = FindRepositoryRoot();
+        string session = File.ReadAllText(Path.Combine(root,
+            "src/DesktopUp.Application/Features/Content/Layout/ContentHeatSession.cs"));
+        foreach (string forbidden in new[] { "DispatcherQueue", "Sqlite", "IStateCommandService",
+            "PosterVisualWindow", "Timer", "IContentAssetProvider" })
+            Assert.DoesNotContain(forbidden, session, StringComparison.Ordinal);
+        string host = File.ReadAllText(Path.Combine(root, "src/DesktopUp.App/PosterVisualWindow.ContentProposals.cs"));
+        Assert.Contains("ContentHeatSession", host);
+        Assert.Contains("ContentProposalsProtected", host);
+        Assert.Contains("RefreshContentSurface()", host);
+        Assert.DoesNotContain("ContentLayoutProposals.ResolveHeat", host);
+        Assert.DoesNotContain("ContentHeatProposalBuffer", host);
     }
 
     [Fact]

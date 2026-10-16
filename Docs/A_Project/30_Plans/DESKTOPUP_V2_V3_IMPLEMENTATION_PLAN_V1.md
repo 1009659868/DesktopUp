@@ -1,5 +1,7 @@
 # DesktopUp V2 V3 制作计划 V1
 
+2026-10-16 当前：架构A/B/C及展开图标闪烁复验均USER PASS / CLOSED；本轮按授权本地集成impl/develop，不推送、不更新impl/main。结果归[收口记录](../40_Implementation/Architecture/C_HEAT_RUNTIME.md)与当前交接；下一项V3-06真实热度尚未开始。普通构建不含独立验收执行器；原自启登录/长测等未验继续携带，架构图仍为4ae822a基线，下方为历史。
+
 2026-10-16 最新：[前移V3-09-03自启动](../40_Implementation/V3-04/PREVIEW_INSTALLER_DELIVERY.md#2026-10-16-v3-09-03开机自启动前移计划)关闭/卸载人工通过，真实登录暂缓未验。用户授权携带该项同步并集成impl/develop，不更新impl/main，不补整体PASS；实际Git结果见HANDOFF。下一制作项V3-06真实热度，本轮不实施，升级能力及其他未验环境继续携带。
 
 2026-10-16 当前：05-12余项＋09-07/08卸载归还四组集中人工USER PASS / 本批CLOSED，已完成授权样例清理；不扩大为全环境认证。下一系列顺序统一见[细化工作流](V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md#2026-10-16-卸载归还收口后的系列计划)，当前仅记录与列计划，无新Git同步或功能实现。下方“卸载待验”为阶段历史。

@@ -34,13 +34,12 @@ internal sealed partial class PosterVisualWindow
             string? raw = _authoritativePoster?.ContentLayoutJson;
             if (_contentDocument is null || owner != _contentOwner || raw != _contentRaw)
             {
-                var previous=_contentDocument;
                 _contentOwner = owner; _contentRaw = raw;
                 _contentParseReadOnly = !ContentLayoutPolicy.TryRead(raw, owner, out _contentDocument, out var error);
                 _contentReadOnly = _contentParseReadOnly; _contentProjectionFault=false;
                 // Unknown raw bytes remain authoritative. Empty read-only fallback never overwrites them.
                 _contentDocument ??= ContentLayoutSamples.Equal(owner, 0);
-                ResetContentProposals(previous,_contentDocument);
+                ResetContentProposals(_contentDocument);
                 _contentSelection = _contentSelection.Prune(_contentDocument.Placements.Select(p => p.ItemId).ToArray());
                 _contentDraft = _contentDraftProjection = null; _solvedDocument = null;
                 if (_contentReadOnly) log.Write("warning", "content.layout_read_only", new { PosterId, error });

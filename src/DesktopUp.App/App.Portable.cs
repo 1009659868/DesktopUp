@@ -38,8 +38,10 @@ public partial class App
         _recoveryWindow.Closed += (_, _) => { _recoveryWindowLease?.Dispose(); _recoveryWindowLease = null; };
         _recoveryWindow.Activate();
         _log?.Write("info", "state_recovery.opened", new { reason, pending = _offlineRecovery!.HasPendingRecovery });
-        StartOfflineRecoverySmokeIfRequested();
+        StartOfflineRecoveryReview();
     }
+
+    partial void StartOfflineRecoveryReview();
 
     private void ConfigurePortableProfiles()
     {

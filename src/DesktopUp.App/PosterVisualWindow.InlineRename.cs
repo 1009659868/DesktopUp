@@ -12,7 +12,7 @@ internal sealed partial class PosterVisualWindow
 {
     private string? _inlineRenameItem;
     private Action? _cancelInlineRename;
-    private Action<TextBox, Popup, Action, Action>? _inlineRenameReadyForProbe;
+    private Action<TextBox, Popup, Action, Action>? _inlineRenameReadyForProbe = null;
 
     private async Task RenameContentInline(string itemId)
     {

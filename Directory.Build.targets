@@ -1,4 +1,23 @@
 <Project>
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'DesktopUp.App' and '$(DesktopUpReviewTools)' == 'true'">
+    <DefineConstants>$(DefineConstants);DESKTOPUP_REVIEW_TOOLS</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(MSBuildProjectName)' == 'DesktopUp.App' and '$(DesktopUpReviewTools)' == 'true'">
+    <Compile Include="$(MSBuildThisFileDirectory)tools/review/App/*.cs" Link="Review/%(Filename)%(Extension)" />
+    <Compile Include="$(MSBuildThisFileDirectory)tools/review/Modules/Lamp/App/*.cs"
+             Condition="Exists('$(MSBuildThisFileDirectory)Modules/Lamp/Domain/LampDeclaration.cs')"
+             Link="Review/Lamp/%(Filename)%(Extension)" />
+    <Compile Include="$(MSBuildThisFileDirectory)tools/review/Modules/Rain/App/*.cs"
+             Condition="Exists('$(MSBuildThisFileDirectory)Modules/Rain/Domain/RainDeclaration.cs')"
+             Link="Review/Rain/%(Filename)%(Extension)" />
+  </ItemGroup>
+  <Target Name="ValidateReviewBuildBoundary" BeforeTargets="PrepareForBuild"
+          Condition="'$(MSBuildProjectName)' == 'DesktopUp.App'">
+    <Error Condition="'$(DesktopUpPreview)' == 'true' and '$(DesktopUpReviewTools)' == 'true'"
+           Text="Preview packages must not include development review executors." />
+    <Error Condition="'$(DesktopUpReviewTools)' == 'true' and !Exists('$(MSBuildThisFileDirectory)tools/review/App/App.ReviewEntry.cs')"
+           Text="Review sources are unavailable. Use a full development checkout or disable DesktopUpReviewTools." />
+  </Target>
   <!-- Optional trusted sources are discovered at build evaluation, never loaded from user data. -->
   <ItemGroup Condition="'$(MSBuildProjectName)' == 'DesktopUp.Domain'">
     <Compile Include="$(MSBuildThisFileDirectory)Modules/*/Domain/*.cs" Link="Modules/%(RecursiveDir)%(Filename)%(Extension)" />

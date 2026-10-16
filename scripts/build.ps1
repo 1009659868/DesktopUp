@@ -3,7 +3,8 @@ param(
     [ValidateSet('Debug', 'Release')]
     [string]$Configuration = 'Release',
     [string]$OutputDirectory,
-    [switch]$Offline
+    [switch]$Offline,
+    [switch]$ReviewTools
 )
 
 $ErrorActionPreference = 'Stop'
@@ -13,6 +14,7 @@ $buildTools = Enter-DesktopUpToolchain -Offline:$Offline
 Push-Location $root
 try {
 $buildOptions = @('-p:Platform=x64', '-p:WindowsAppSDKSelfContained=true')
+$buildOptions += "-p:DesktopUpReviewTools=$($ReviewTools.IsPresent.ToString().ToLowerInvariant())"
 if ($Offline) { $buildOptions += @("-p:RestoreConfigFile=$($buildTools.OfflineConfig)", '-p:NuGetAudit=false') }
 if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {
     & $buildTools.DotNet restore (Join-Path $root 'DesktopUp.sln') @buildOptions

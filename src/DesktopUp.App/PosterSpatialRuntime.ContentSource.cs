@@ -9,10 +9,10 @@ internal sealed partial class PosterSpatialRuntime
     private readonly Dictionary<string, ContentSourcePorts> _contentSources = new(StringComparer.Ordinal);
     private readonly Dictionary<string, (long Version, ContentSourcePorts Ports)> _referenceSources = new(StringComparer.Ordinal);
     private ILocalContentWorker? _referenceWorker;
-    private IContentOpenJournal? _openJournal;
+    private IContentActionService? _contentActions;
     private IContentIconStore? _iconStore;
-    internal void ConfigureRealContent(ILocalContentWorker worker, IContentOpenJournal journal, IContentIconStore? icons = null)
-    { _referenceWorker = worker; _openJournal = journal; _iconStore = icons; }
+    internal void ConfigureRealContent(ILocalContentWorker worker, IContentActionService actions, IContentIconStore? icons = null)
+    { _referenceWorker = worker; _contentActions = actions; _iconStore = icons; }
     internal ContentSourcePorts ContentSourceFor(string id)
     {
         if (TryGetProjection(out var projection) && projection!.ContentCatalog.Bindings.Any(b => b.PosterId == id))
@@ -25,12 +25,10 @@ internal sealed partial class PosterSpatialRuntime
                     retained.Reconcile(projection.ContentCatalog);
                     ports = cached.Ports;
                 }
-                else if (_referenceWorker is not null && _openJournal is not null)
+                else if (_referenceWorker is not null && _contentActions is not null)
                 {
                     var source = new ReferenceContentRuntime(projection.ContentCatalog, id, projection.ContentVersion, _referenceWorker, _iconStore);
-                    ports = new(source, source, new ReferenceContentActions(
-                        () => TryGetProjection(out var live) ? live!.ContentCatalog : ContentCatalogSnapshot.Empty,
-                        source, _referenceWorker, _openJournal));
+                    ports = new(source, source, new ReferenceContentActions(_contentActions, source));
                 }
                 else ports = new(new ReferenceContentViewSource(projection.ContentCatalog, id, projection.ContentVersion),
                     NullContentAssetProvider.Instance, DemoContentOpenHandler.Instance)
