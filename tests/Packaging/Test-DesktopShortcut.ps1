@@ -33,8 +33,12 @@ function Write-OwnedLink([string]$Target) {
 function Uninstall-Owned([string]$Directory) {
     $registered = (Get-ItemProperty -LiteralPath $registry).InstallLocation
     Assert-Check ($registered -eq $Directory) 'Unexpected uninstall registry location; refuse cleanup.'
-    $process = Start-Process -FilePath (Join-Path $Directory 'Uninstall.exe') -ArgumentList '/S' -WindowStyle Hidden -PassThru -Wait
+    . (Join-Path $repo 'scripts/Start-DesktopUpFixtureProcess.ps1')
+    $process = Start-DesktopUpFixtureProcess -ExecutablePath (Join-Path $Directory 'Uninstall.exe') -DataRoot (Join-Path $OutputRoot 'profile') -Arguments '/S' -WindowStyle Hidden
+    if(!$process.WaitForExit(15000)){throw 'Fixture uninstall did not exit.'}
     Assert-Check ($process.ExitCode -eq 0) 'Fixture uninstaller failed.'
+    $deadline=[DateTime]::UtcNow.AddSeconds(15)
+    while((Test-Path -LiteralPath $registry) -and [DateTime]::UtcNow -lt $deadline){Start-Sleep -Milliseconds 100}
     Assert-Check (!(Test-Path -LiteralPath $registry)) 'Uninstall registration remains.'
     Assert-Check (!(Test-Path -LiteralPath (Join-Path $Directory 'DesktopUp.exe'))) 'Owned fixture payload remains.'
 }
@@ -49,7 +53,10 @@ try {
     $uninstallList = Join-Path $OutputRoot 'uninstall-files.nsh'
     $guards = Join-Path $OutputRoot 'uninstall-guards.nsh'
     $bom = New-Object Text.UTF8Encoding($true)
-    [IO.File]::WriteAllLines($installList, @('SetOutPath "$INSTDIR\app"', ('File /oname=DesktopUp.exe "' + $fixture + '"'), 'SetOutPath "$INSTDIR"', ('File /oname=DesktopUp.exe "' + $fixture + '"'), ('File /oname=PREVIEW-README.txt "' + $fixture + '"')), $bom)
+    $helper=Join-Path $OutputRoot 'uninstall-helper.exe'
+    & $shortcutTools.MakeNsis /V2 /WX "/DFIXTURE_OUTPUT=$helper" (Join-Path $PSScriptRoot 'Fixtures/uninstall-helper.nsi')
+    Assert-Check ($LASTEXITCODE -eq 0) 'Helper compile failed.'
+    [IO.File]::WriteAllLines($installList, @('SetOutPath "$INSTDIR\app"', ('File /oname=DesktopUp.exe "' + $helper + '"'), 'SetOutPath "$INSTDIR"', ('File /oname=DesktopUp.exe "' + $fixture + '"'), ('File /oname=PREVIEW-README.txt "' + $fixture + '"')), $bom)
     [IO.File]::WriteAllLines($uninstallList, @('Delete "$INSTDIR\DesktopUp.exe"', 'IfErrors uninstall_failed', 'Delete "$INSTDIR\app\DesktopUp.exe"', 'IfErrors uninstall_failed', 'Delete "$INSTDIR\PREVIEW-README.txt"', 'IfErrors uninstall_failed'), $bom)
     [IO.File]::WriteAllLines($guards, @('StrCpy $GuardPath "$INSTDIR\app"', 'Call un.RequireSafeDirectory'), $bom)
     $setup = Join-Path $OutputRoot 'installer-fixture.exe'

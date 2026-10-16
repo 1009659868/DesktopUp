@@ -10,7 +10,7 @@ internal sealed record ContentReturnReceipt(string Path, string Identity);
 
 // Shared with a future uninstall orchestrator. Never recursively deletes storage and never
 // replays a filesystem operation on restart. One explicit poster-deletion consent owns the batch.
-public sealed class PosterContentReturn(SqliteStateStore store, IShellDirectoryTransfer? shell = null, string? desktopDirectory = null)
+public sealed partial class PosterContentReturn(SqliteStateStore store, IShellDirectoryTransfer? shell = null, string? desktopDirectory = null)
 {
     internal Action<string>? Checkpoint { get; set; }
     private DesktopStateSnapshot State => new SqliteStateCommandRepository(store).Read();
@@ -38,8 +38,6 @@ public sealed class PosterContentReturn(SqliteStateStore store, IShellDirectoryT
         }
         foreach (var card in cards)
         {
-            ContentReturnIntent? intent = null;
-            bool recorded = false;
             try
             {
                 if (!Current()) throw new IOException("归还已停止或内容已变化；剩余文件仍在海报中。");
@@ -57,36 +55,13 @@ public sealed class PosterContentReturn(SqliteStateStore store, IShellDirectoryT
                 if (initial.ContentCatalog.PosterItems.Any(p => p.Id != card.Id && LocalTransferFiles.Contains(source.Path,
                     initial.ContentCatalog.Items.Single(i => i.Id == initial.ContentCatalog.Memberships.Single(m => m.Id == p.MembershipId).ContentItemId).Target.Locator)))
                     throw new IOException("此文件夹内另有独立卡片，请先归还这些卡片。文件保留：" + source.Path);
-                string desktop = desktopDirectory ?? Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
-                string? original = OriginalPath(item.Id);
-                string directory = Usable(original is null ? null : Path.GetDirectoryName(original), initial.ContentCatalog) ??
-                    Usable(desktop, initial.ContentCatalog) ?? throw new IOException("原目录和系统桌面均不可用；文件保留：" + source.Path);
-                intent = new(Guid.NewGuid(), command.PosterId, source, directory, LocalTransferFiles.Identity(directory));
-                Write(intent); Checkpoint?.Invoke("Prepared");
-                bool Valid() => Current() && SourceCurrent(intent) && LocalTransferFiles.Identity(directory) == intent.DirectoryIdentity;
-                if (!Valid()) throw new IOException("来源或目标已变化，未执行归还。");
-                var result = await (shell ?? new ShellDirectoryTransfer()).Run(source.Path, directory, false, owner, Valid, token).ConfigureAwait(false);
-                // Only definite access/path errors with an unchanged source may fall back.
-                if (result.Destination is null && !result.Cancelled && result.HResult is unchecked((int)0x80070005) or unchecked((int)0x80070003) or unchecked((int)0x80070002) &&
-                    !string.Equals(directory, desktop, StringComparison.OrdinalIgnoreCase) && Current() && SourceCurrent(intent))
-                {
-                    Close(intent.Id);
-                    directory = Usable(desktop, initial.ContentCatalog) ?? throw new IOException("系统桌面不可用，文件保留。");
-                    intent = intent with { Id = Guid.NewGuid(), Directory = directory, DirectoryIdentity = LocalTransferFiles.Identity(directory) };
-                    Write(intent);
-                    result = await (shell ?? new ShellDirectoryTransfer()).Run(source.Path, directory, false, owner, Valid, token).ConfigureAwait(false);
-                }
-                if (result.Destination is null)
-                    throw new IOException(result.Cancelled ? "已取消归还；剩余内容和海报保留。" : $"归还未完成；请核对 {source.Path} 与 {directory}。");
-                var receipt = new ContentReturnReceipt(result.Destination, LocalTransferFiles.Identity(result.Destination));
-                Record(intent.Id, receipt); recorded = true; Checkpoint?.Invoke("ResultRecorded");
-                expected = Commit(intent, receipt); destinations.Add(receipt.Path); Close(intent.Id);
-                if (result.Cancelled || token.IsCancellationRequested) { errors.Add("已停止；已完成项保留在返回位置，剩余文件仍在海报。"); break; }
+                var returned = await ReturnOne(command.PosterId, source, initial.ContentCatalog, Current, owner, token).ConfigureAwait(false);
+                expected = returned.State; destinations.Add(returned.Path);
+                if (returned.Stopped || token.IsCancellationRequested) { errors.Add("已停止；已完成项保留在返回位置，剩余文件仍在海报。"); break; }
             }
             catch (Exception e) when (e is IOException or UnauthorizedAccessException or OperationCanceledException)
             {
                 errors.Add(e.Message);
-                if (intent is not null && !recorded) Close(intent.Id);
                 break; // No blind retries, no advancing over a changed target or partial cancellation.
             }
         }
@@ -108,6 +83,44 @@ public sealed class PosterContentReturn(SqliteStateStore store, IShellDirectoryT
         return new(false, destinations.Count, destinations, errors);
     }
 
+    private async Task<(DesktopStateSnapshot State, string Path, bool Stopped)> ReturnOne(string posterId, ShellExitItem source,
+        ContentCatalogSnapshot catalog, Func<bool> current, nint owner, CancellationToken token)
+    {
+        ContentReturnIntent? intent = null; bool recorded = false;
+        try
+        {
+            string desktop = desktopDirectory ?? Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+            string? original = OriginalPath(source.ContentId);
+            string directory = Usable(original is null ? null : Path.GetDirectoryName(original), catalog) ??
+                Usable(desktop, catalog) ?? throw new IOException("原目录和系统桌面均不可用；文件保留：" + source.Path);
+            intent = new(Guid.NewGuid(), posterId, source, directory, LocalTransferFiles.Identity(directory));
+            Write(intent); Checkpoint?.Invoke("Prepared");
+            bool Valid() => !token.IsCancellationRequested && current() && SourceCurrent(intent) && LocalTransferFiles.Identity(directory) == intent.DirectoryIdentity;
+            if (!Valid()) throw new IOException("来源或目标已变化，未执行归还。");
+            var result = await (shell ?? new ShellDirectoryTransfer()).Run(source.Path, directory, false, owner, Valid, token).ConfigureAwait(false);
+            if (result.Destination is null && !result.Cancelled && result.HResult is unchecked((int)0x80070005) or unchecked((int)0x80070003) or unchecked((int)0x80070002) &&
+                !string.Equals(directory, desktop, StringComparison.OrdinalIgnoreCase) && Valid())
+            {
+                Close(intent.Id);
+                directory = Usable(desktop, catalog) ?? throw new IOException("系统桌面不可用，文件保留。");
+                intent = intent with { Id = Guid.NewGuid(), Directory = directory, DirectoryIdentity = LocalTransferFiles.Identity(directory) };
+                Write(intent);
+                result = await (shell ?? new ShellDirectoryTransfer()).Run(source.Path, directory, false, owner, Valid, token).ConfigureAwait(false);
+            }
+            if (result.Destination is null)
+                throw new IOException(result.Cancelled ? "已取消归还；剩余内容保留。" : $"归还未完成；请核对 {source.Path} 与 {directory}。");
+            var receipt = new ContentReturnReceipt(result.Destination, LocalTransferFiles.Identity(result.Destination));
+            Record(intent.Id, receipt); recorded = true; Checkpoint?.Invoke("ResultRecorded");
+            var state = Commit(intent, receipt); Close(intent.Id);
+            return (state, receipt.Path, result.Cancelled);
+        }
+        catch
+        {
+            if (intent is not null && !recorded) Close(intent.Id);
+            throw;
+        }
+    }
+
     private string? Usable(string? path, ContentCatalogSnapshot catalog)
     {
         try
@@ -124,6 +137,9 @@ public sealed class PosterContentReturn(SqliteStateStore store, IShellDirectoryT
     private bool SourceCurrent(ContentReturnIntent intent)
     {
         var source = intent.Source; var state = State;
+        if (intent.PosterId == UninstallScope)
+            return UninstallSourceCurrent(source, state) && LocalTransferFiles.Identity(Path.GetDirectoryName(source.Path)!) == source.ParentIdentity &&
+                LocalTransferFiles.Identity(source.Path) == source.Identity;
         return state.ContentCatalog.PosterItems.Any(p => p.Id == source.CardId && p.PosterId == intent.PosterId &&
             state.ContentCatalog.Memberships.Any(m => m.Id == p.MembershipId && m.ContentItemId == source.ContentId)) &&
             state.ContentCatalog.Items.Any(i => i.Id == source.ContentId && i.Version == source.Version && i.Target.Locator == source.Path) &&
@@ -140,6 +156,7 @@ public sealed class PosterContentReturn(SqliteStateStore store, IShellDirectoryT
         return store.ExecuteWrite((c, t) =>
         {
             var before = SqliteStateCommandRepository.ReadSnapshot(c, t);
+            if (intent.PosterId == UninstallScope) return CommitUninstall(c, t, before, intent, receipt);
             if (before.ContentCatalog.PosterItems.All(p => p.Id != source.CardId)) return before;
             if (!before.ContentCatalog.Items.Any(i => i.Id == source.ContentId && i.Version == source.Version && i.Target.Locator == source.Path))
                 throw new IOException("原卡片来源已变化，未覆盖配置；归还位置：" + receipt.Path);

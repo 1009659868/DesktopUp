@@ -1,5 +1,27 @@
 # V3-04 验证记录
 
+## 2026-10-16 卸载集中人工四组通过与样例清理
+
+用户明确确认保留/重装、冲突取消、继续归还、无卡片/映射/清单四组USER PASS，本批CLOSED；详细证据与限定边界见[直接拖放§16.3](../V3-05/DIRECT_TRANSFER_DELIVERY.md#163-人工通过与测试收尾2026-10-16)。本轮只清理4个经清单及SHA256核实的桌面样例，恢复副本已校验，habits JSON哈希不变；没有重跑安装/卸载或改生产源码，不将文档收口当成新自动测试。清理清单仅本机`out/cleanup/desktop-test-samples-20261016/manifest.json`保留。
+
+## 2026-10-16 用户终端证据与验收环境调整
+
+USER现场仍失败：NoProfile/64位PS5.1返回UnregisteredFiles；独立reg.exe /reg:64查询本版本InstallLocation也返回找不到。工具端同一SID的HKCU/HKU查询存在，说明此前工具内PASS没有覆盖用户执行上下文，不将其写为用户已修复。未修改注册表/卸载器或清理文件。原installed/profile保留，入口新目标installed-user事前不存在，用户需在本机终端Open安装并继续四组人工。修订脚本双宿主六项编码解析通过；只读状态测试仍通过，工具端Mismatch正确阻止使用旧登记对应新路径。Setup SHA256仍45E944C3774623FC1C8E5DA4275A04D42F9F4DB4AD74B4B5815BBE89B8B17BD3；新用户安装未执行/未验。
+
+## 2026-10-16 安装登记判定回归
+
+只读核对20261015.12登记在Registry32/64均存在、位置准确，安装标记/Launcher/App/Uninstall均完整；5.1.26100.9444、7.6.5的Status均Registered。用户原会话误判原因未复现，不写已定位为注册表位数或残留错误。入口改用显式Registry64后，两宿主 `Test-ReviewInstallationState.ps1`正常及HKCU drive局部错误映射场景一致通过；三脚本编码/Parser双宿主仍0错误。误开的诊断确认窗正常关闭，未执行归还/卸载，报告仍0。Setup SHA256仍45E944C3774623FC1C8E5DA4275A04D42F9F4DB4AD74B4B5815BBE89B8B17BD3；未重打包、不自动把人工问题补PASS。
+
+## 2026-10-16 卸载验收脚本编码回归
+
+原脚本首字节 `23-72-65`、无BOM，在Windows PowerShell 5.1.26100.9444/代码页936原生Parser复现9错误；toolchain及FixtureProcess两依赖0错误。修订后首字节 `EF-BB-BF`，`Test-ReviewScriptEncoding.ps1`在5.1.26100.9444和7.6.5均返回三脚本0错误/中文保护提示正确，共6项解析检查通过。仅编码及说明注释改变，程序/安装器未改，未执行卸载/搬文件或新增人工结论。继续原独立验收包与数据，不重跑无关合同；源指纹差异限定为该验收脚本。
+
+## 2026-10-15 卸载内容归还（AUTO完成／USER PENDING）
+
+定向64项PASS，candidate04应用五段连续卸载准备及删海报相邻首启/重启PASS；自包含20261015.12包构建0警告0错误，真实安装四组流程PASS（未启动卸载、带内容保留、重装/拒绝静默归还、安装后helper真实归还/精确卸载）。只移动自建样例，未知安装哨兵保留、旧配置/包保留。详细证据和修订前失败均归[C§16.1](../V3-05/DIRECT_TRANSFER_DELIVERY.md#161-实施与自动证据)，集中人工四组见§16.2；此处不将隔离脚本称为Windows设置人工点击、也不扩大环境认证。上批USER PASS和Git b639a4b/4517efb保持；本批新实现还未集成。
+
+最终补验：`uninstall-packaged-neighbor01`成品首启/重启均exit0/资源0；`shortcut-final01`五组PASS。安装/源指纹核对差异0。review01候选PID15052已打开，四海报启动正常；人工仍PENDING。
+
 ## 2026-10-15 05-12集中人工结果
 
 用户明确“集中测试已通过”：candidate04/review01的四组人工登记USER PASS，覆盖原路归还、原位置不可用/新建回桌面、Windows冲突取消/重试、映射不搬动及重启，见[C§15.3](../V3-05/DIRECT_TRANSFER_DELIVERY.md#153-人工通过与右键问题处置2026-10-15)。既有542项定向/最终49项和同包证据保持，本轮只改记录、不重复跑测试或生成新软件包。

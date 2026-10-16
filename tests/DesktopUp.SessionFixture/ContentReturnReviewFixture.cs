@@ -4,7 +4,7 @@ using DesktopUp.Infrastructure;
 
 internal static class ContentReturnReviewFixture
 {
-    internal static void Create(string requested)
+    internal static void Create(string requested, bool uninstall = false)
     {
         string profile=Path.GetFullPath(requested), root=Path.GetDirectoryName(profile)!;
         string repo=AppContext.BaseDirectory;
@@ -47,6 +47,8 @@ internal static class ContentReturnReviewFixture
             current.Catalog.Posters.Single(p=>p.Poster.PosterId==second).EntityVersion),NewContentKind.TextFile,unique+"-new.txt");
         string collision=Make("origin-C","C-collision.txt");Collect(third,collision);File.WriteAllText(collision,"existing unrelated owned sample; must not silently overwrite");
         Make("mapping-D","D-mapped.txt");Add("D · 映射不搬动",.98,Path.Combine(root,"mapping-D"));
+        if (uninstall)
+            File.WriteAllText(Path.Combine(storage.Collection.StorageLocator!, unique+"-no-card.txt"), "Owned sample without a visible card");
         Console.WriteLine(profile);
     }
 }

@@ -1,5 +1,18 @@
 # V3-04 代码锚点
 
+2026-10-16验收环境补充：卸载验收脚本目标改为review01/installed-user，复用原profile，旧installed不删除。由用户正常终端完成安装登记；工具环境仍有旧登记时Mismatch保持阻止，不绕过。Status补UserSid及RegistryKey帮助区分执行上下文；程序业务代码无变化。
+
+2026-10-16登记识别：同一验收脚本 `Get-ReviewInstallation`显式读取当前用户Registry64，并核对安装标记/位置/程序文件；`Status`在任何工具链或进程操作之前返回。`Test-ReviewInstallationState.ps1`仅运行Status，含函数局部HKCU PSDrive错误映射模拟，不改注册表、安装文件或用户数据。程序/安装器没有修改。
+
+2026-10-16：`scripts/start-uninstall-content-review.ps1`必须保留UTF-8 BOM，确保Windows PowerShell 5.1不按ANSI误解中文提示；`tests/Packaging/Test-ReviewScriptEncoding.ps1`仅检查编码、原生Parser及中文AST，不执行脚本或文件操作。本轮不改App/卸载器业务代码。
+
+## 2026-10-15 卸载归还增量
+
+- `PosterContentReturn.ReturnOne`：删海报与卸载共享归还执行/记录/结果提交；`PosterContentReturn.Uninstall.cs`负责全登记受管集合清点、无卡片内容、最终余项检查及卸载关系移除。归属元数据保留，不作为用户文件搬动。
+- `App.Uninstall.cs`：维护启动参数、简单进度/取消、本机位置清单、保留原位/原路归还；不启动普通海报会话。`ProfileLifecycleGate`与安装器共用维护锁；`SingleInstanceCoordinator`维护请求不转发给已运行应用。
+- `packaging/preview/installer.nsi`：内容处置页、先准备再精确卸载、取消/失败保留程序、显式保留重试标记绑定安装路径和配置路径；未修改用户收纳文件的清理范围。
+- `UninstallContentTests`、`Test-UninstallContent.ps1`、`smoke-uninstall-content.ps1`为本批直接影响面；`start-uninstall-content-review.ps1`为独立安装候选的集中人工入口。当前证据/未验见C§16，旧“卸载器尚未调用”仅对上一批成立。
+
 ## 2026-10-15 05-12来源与归还
 
 2026-10-15用户已确认本批四组人工通过；以下实现不变，卸载器尚未调用归还服务。右键相关 `PosterInputIslandManager.TryReadContentContextHit` / `NativeDesktopPointerPlatform.CoversPoint` 仅检查未修订，按用户决定停止Snipaste相关专项。
