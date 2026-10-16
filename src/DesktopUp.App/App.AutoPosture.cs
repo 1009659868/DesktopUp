@@ -122,7 +122,7 @@ public partial class App
 
     private void StopAutoPosture()
     {
-        _stopAutoSmoke?.Invoke();
+        StopReviewTools();
         _autoPosture?.Dispose(); _autoPosture = null;
         if (_spatialRuntime is not null)
         {

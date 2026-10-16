@@ -23,7 +23,7 @@ public enum ContentOpenRequestAdmission { Ready, Duplicate, Conflict, Busy }
 public sealed record ContentOpenRequestDecision(ContentOpenRequestAdmission Status, ContentOpenState? NewState = null);
 public static class ContentOpenRequestPolicy
 {
-    // Pure unique-request/admission decision. The future coordinator must read and insert
+    // Pure unique-request/admission decision. The journal must read and insert
     // atomically; a completed token stays a tombstone and is never used for a second dispatch.
     public static ContentOpenRequestDecision Prepare(IReadOnlyCollection<ContentOpenState> existing,
         ContentOpenRequest request, int maximumActive)
@@ -40,12 +40,6 @@ public static class ContentOpenRequestPolicy
             return new(ContentOpenRequestAdmission.Busy);
         return new(ContentOpenRequestAdmission.Ready, candidate);
     }
-}
-
-// Future trusted host boundary. No implementation/registration is added to the DEMO production path.
-public interface IContentOpenDispatcher
-{
-    ValueTask<ContentOpenCompletion> DispatchAsync(ContentOpenRequest request, CancellationToken cancellationToken);
 }
 
 public static class ContentOpenContract
@@ -149,8 +143,8 @@ public static class ContentOpenContract
 public enum ContentOpenFactAdmission { Added, Duplicate, Conflict, Invalid }
 public static class ContentOpenFactPolicy
 {
-    // Pure unique-key contract. The future single-authority transaction stores the fact and
-    // updates statistics together under UNIQUE(ActivationId), never using an evicting click cache.
+    // Pure unique-key contract. The journal stores completion and fact atomically under
+    // UNIQUE(ActivationId), never using an evicting click cache. Statistics consumption is separate.
     public static ContentOpenFactAdmission Admit(IReadOnlyCollection<ContentOpenFact> existing, ContentOpenFact fact)
     {
         if (fact is null || fact.ActivationId == Guid.Empty || fact.ContentItemId == Guid.Empty ||

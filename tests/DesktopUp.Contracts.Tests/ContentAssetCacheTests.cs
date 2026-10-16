@@ -18,6 +18,32 @@ public sealed class ContentAssetCacheTests
     }
 
     [Fact]
+    public async Task Compact_visibility_retains_warm_payload_without_reloading_and_disposal_releases_it()
+    {
+        var provider = new ControlledProvider();
+        using var cache = new ContentAssetCache(provider);
+        var key = Key(); cache.SetVisible([key]);
+        var request = cache.RequestAsync(key);
+        provider.Complete(new("image/png", new byte[] { 1, 2, 3 }));
+        Assert.Equal(ContentAssetStatus.Loaded, (await request).Status);
+        Assert.True(cache.TryGet(key, out var original));
+        for (int cycle = 0; cycle < 6; cycle++)
+        {
+            cache.SetVisible([]);
+            Assert.False(cache.TryGet(key, out _));
+            Assert.Equal(1, cache.Count);
+            Assert.Equal(ContentAssetStatus.Stale, (await cache.RequestAsync(key)).Status);
+            cache.SetVisible([key]);
+            Assert.Equal(ContentAssetStatus.Cached, (await cache.RequestAsync(key)).Status);
+            Assert.True(cache.TryGet(key, out var retained));
+            Assert.Same(original, retained);
+        }
+        Assert.Equal(1, provider.Calls);
+        cache.Dispose();
+        Assert.Equal(0, cache.Count); Assert.Equal(0, cache.CachedBytes);
+    }
+
+    [Fact]
     public async Task Identical_inflight_requests_coalesce_and_payload_is_copied_before_cache_ownership()
     {
         var provider = new ControlledProvider(); using var cache = new ContentAssetCache(provider);

@@ -25,7 +25,18 @@ internal sealed partial class PosterVisualWindow
         ContentLayoutViewport viewport,IReadOnlyList<ContentItemView> views,IncomingLayoutPreview? incoming = null)
     {
         if(_disposed || _window is null || _monitor is null) return;
-        if (_contentPresentationSuspended || _geometry.IsCollapsed) { ReleaseContentAssets(); return; }
+        if (_contentPresentationSuspended) { ReleaseContentAssets(); return; }
+        if (_geometry.IsCollapsed)
+        {
+            // Posture is not a source/window lifetime boundary. Keep the last bounded set
+            // of decoded images so the prepared expansion tree can paint them on frame one.
+            // Stop unseen work, but retain the same cache and real in-flight concurrency budget.
+            // Source notifications still prune obsolete keys while compact; destruction and
+            // source replacement still release everything through ReleaseContentAssets.
+            _contentAssets?.SetVisible([]);
+            _contentAssetAttempted.Clear();
+            return;
+        }
         if (_transitionLayout is not null) return;
         if (_contentAssets is null)
         {

@@ -1,0 +1,179 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "目标｜应用更新采用受控重启，不替换运行中程序",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "legend": {
+      "mode": "auto",
+      "entries": {
+        "backend": {
+          "label": "应用逻辑"
+        },
+        "database": {
+          "label": "持久数据"
+        },
+        "messagebus": {
+          "label": "提案缓冲"
+        }
+      }
+    }
+  },
+  "lanes": [
+    {
+      "id": "release",
+      "label": "建议的发布链"
+    },
+    {
+      "id": "fallback",
+      "label": "失败保护",
+      "variant": "exception"
+    }
+  ],
+  "mainPath": [
+    "discover",
+    "verify",
+    "stage",
+    "drain",
+    "switch",
+    "health"
+  ],
+  "nodes": [
+    {
+      "id": "discover",
+      "lane": "release",
+      "col": 0,
+      "type": "cloud",
+      "label": "发现新版本",
+      "sublabel": "可信清单／用户策略"
+    },
+    {
+      "id": "verify",
+      "lane": "release",
+      "col": 1,
+      "type": "security",
+      "label": "验证更新包",
+      "sublabel": "签名、版本、哈希"
+    },
+    {
+      "id": "stage",
+      "lane": "release",
+      "col": 2,
+      "type": "database",
+      "label": "旁路暂存",
+      "sublabel": "不覆盖运行目录"
+    },
+    {
+      "id": "drain",
+      "lane": "release",
+      "col": 3,
+      "type": "backend",
+      "label": "安全退出与备份",
+      "sublabel": "收尾文件任务／配置"
+    },
+    {
+      "id": "switch",
+      "lane": "release",
+      "col": 4,
+      "type": "external",
+      "label": "更新器切换",
+      "sublabel": "独立进程＋安装租约"
+    },
+    {
+      "id": "health",
+      "lane": "release",
+      "col": 5,
+      "type": "frontend",
+      "label": "启动健康检查",
+      "sublabel": "通过后开放业务写入"
+    },
+    {
+      "id": "stop",
+      "lane": "fallback",
+      "col": 1,
+      "type": "security",
+      "label": "丢弃无效候选",
+      "sublabel": "当前版本继续工作"
+    },
+    {
+      "id": "restore",
+      "lane": "fallback",
+      "col": 5,
+      "type": "backend",
+      "label": "回退已知有效版",
+      "sublabel": "不回滚用户真实文件"
+    }
+  ],
+  "edges": [
+    {
+      "id": "download",
+      "from": "discover",
+      "to": "verify",
+      "label": "下载到暂存",
+      "role": "main"
+    },
+    {
+      "id": "verified",
+      "from": "verify",
+      "to": "stage",
+      "label": "验证通过",
+      "role": "main"
+    },
+    {
+      "id": "ready",
+      "from": "stage",
+      "to": "drain",
+      "label": "批准更新",
+      "role": "main"
+    },
+    {
+      "id": "lease",
+      "from": "drain",
+      "to": "switch",
+      "label": "独占就绪",
+      "role": "main"
+    },
+    {
+      "id": "restart",
+      "from": "switch",
+      "to": "health",
+      "label": "启动新版本",
+      "role": "main"
+    },
+    {
+      "id": "bad",
+      "from": "verify",
+      "to": "stop",
+      "label": "验证失败",
+      "role": "error",
+      "variant": "security"
+    },
+    {
+      "id": "unhealthy",
+      "from": "health",
+      "to": "restore",
+      "label": "健康门失败",
+      "role": "error",
+      "variant": "security"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "amber",
+      "title": "当前还没有此更新器",
+      "items": [
+        "现安装器拒绝原地覆盖；此图全部为建议。",
+        "参数／模板热换与应用二进制更新分成两条链。"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "数据保护先于回滚便利",
+      "items": [
+        "破坏性迁移必须另定备份与降级兼容策略。",
+        "健康门期间不开放业务写入，不能盲目回退数据库。"
+      ]
+    }
+  ]
+}

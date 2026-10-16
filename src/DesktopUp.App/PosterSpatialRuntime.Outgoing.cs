@@ -61,7 +61,7 @@ internal sealed partial class PosterSpatialRuntime
         catch(Exception e){window.TransferFeedback("本次未移动，请重新拖动："+e.Message);log.Write("warning","transfer.egress_failed",new{e.Message});}
         finally{state.Refresh();_fileTransferBusy=false;_fileTransferPoster=null;ActivityChanged?.Invoke();}
     }
-    private string? _outgoingProbeDestination; // Assigned only by the guarded owned-data probe.
+    private string? _outgoingProbeDestination = null; // Assigned only by the guarded owned-data probe.
     private LocalTransferPreview PrepareOutgoingForRuntime(DesktopStateSnapshot state,string poster,string layoutId)
     {
         if(_outgoingProbeDestination is null)return DirectTransferPreparation.Outgoing(state,poster,[layoutId]);

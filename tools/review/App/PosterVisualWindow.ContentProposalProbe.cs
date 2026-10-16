@@ -17,9 +17,9 @@ internal sealed partial class PosterVisualWindow
     {
         var snapshot=_contentSnapshot ?? throw new InvalidOperationException("Content composition is unavailable.");
         return new(PosterId is { } id && spatial.HasCenterDraft(id), _contentAwaitingCenterRelease,
-            _contentHeatBuffer?.HasPending==true,
+            _contentHeatSession.HasPending,
             _contentThemeBuffer?.HasPending==true || _contentThemeBuffer is { } theme && theme.Current!=_presentation.Parameters,
-            _contentActiveHeat?.Version, _presentation.Parameters, ContentLayoutPolicy.Serialize(ContentDocument),
+            _contentHeatSession.ActiveVersion, _presentation.Parameters, ContentLayoutPolicy.Serialize(ContentDocument),
             StateRequestFingerprint.Compute(new { snapshot.ScrollXDip, snapshot.ScrollYDip,
                 items=snapshot.Items.Select(p=>new {p.ItemId,p.ReadOrder,p.Bounds,p.Clip}).ToArray() }),
             StateRequestFingerprint.Compute(snapshot.Items.Select(p=>new {p.ItemId,p.ReadOrder,p.Bounds}).ToArray()),

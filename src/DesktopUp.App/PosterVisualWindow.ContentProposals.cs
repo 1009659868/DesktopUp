@@ -1,13 +1,11 @@
+using DesktopUp.Application;
 using DesktopUp.Domain;
 
 namespace DesktopUp;
 
 internal sealed partial class PosterVisualWindow
 {
-    private ContentHeatProposalBuffer? _contentHeatBuffer;
-    private ContentHeatProposal? _contentActiveHeat;
-    private ContentLayoutDocument? _contentHeatProjection;
-    private IReadOnlyDictionary<string,int>? _contentHeatTiers;
+    private readonly ContentHeatSession _contentHeatSession = new();
     private ContentThemeProposalBuffer? _contentThemeBuffer;
     private bool _contentProposalDrainQueued;
     private bool _contentAwaitingCenterRelease;
@@ -20,8 +18,7 @@ internal sealed partial class PosterVisualWindow
     {
         var document=ContentDocument;
         if(_disposed || _contentParseReadOnly || _contentProjectionFault || (_contentReadOnly && !IsContentSpaceRestricted) || proposal.PosterId!=document.PosterId || proposal.ItemSetVersion!=document.ItemSetVersion) return false;
-        _contentHeatBuffer??=new(document.PosterId,document.ItemSetVersion);
-        if(!_contentHeatBuffer.Offer(proposal)) return false;
+        if(!_contentHeatSession.Offer(proposal)) return false;
         QueueContentProposalDrain(); return true;
     }
     internal bool OfferContentTheme(ContentThemeProposal proposal)
@@ -40,30 +37,12 @@ internal sealed partial class PosterVisualWindow
         if(accepted) {_contentHighestThemeVersion=proposal.Version;QueueContentProposalDrain();}
         return accepted;
     }
-    private ContentLayoutDocument EffectiveContentDocument => _contentDraftProjection ?? _contentDraft ?? _contentHeatProjection ?? ContentDocument;
+    private ContentLayoutDocument EffectiveContentDocument => _contentDraftProjection ?? _contentDraft ?? _contentHeatSession.Projection ?? ContentDocument;
     // A membership-changing intent is validated against its new author layout, never against
     // heat for the old set. Keep the old accepted heat untouched until the CAS actually commits.
-    private ContentLayoutDocument ProjectContentEdit(ContentLayoutDocument author) => _contentActiveHeat is { } heat &&
-        heat.PosterId == author.PosterId && heat.ItemSetVersion == author.ItemSetVersion
-        ? ContentLayoutProposals.ResolveHeat(author, heat, _contentHeatTiers).Document : author;
-    private void ResetContentProposals(ContentLayoutDocument? previous,ContentLayoutDocument current)
-    {
-        if(previous is null || previous.PosterId!=current.PosterId || previous.ItemSetVersion!=current.ItemSetVersion)
-        {
-            _contentHeatBuffer?.Invalidate();_contentHeatBuffer=new(current.PosterId,current.ItemSetVersion);
-            _contentActiveHeat=null;_contentHeatProjection=null;_contentHeatTiers=null;
-        }
-        else if(_contentActiveHeat is { } active)
-        {
-            try
-            {
-                var resolved=ContentLayoutProposals.ResolveHeat(current,active,_contentHeatTiers);
-                RequireWritableContentProjection(resolved.Document,ContentViewportFor(_bounds));
-                _contentHeatProjection=resolved.Document;_contentHeatTiers=resolved.Tiers;
-            }
-            catch(ArgumentException) {_contentHeatProjection=null;_contentHeatTiers=null;}
-        }
-    }
+    private ContentLayoutDocument ProjectContentEdit(ContentLayoutDocument author) => _contentHeatSession.ProjectEdit(author);
+    private void ResetContentProposals(ContentLayoutDocument current) =>
+        _contentHeatSession.Reconcile(current, ContentViewportFor(_bounds));
     // The current presenter applies even paint-only themes by rebuilding its XAML tree.
     // Therefore all theme presentation waits for this safe point, even when the pure buffer
     // can accept paint-only values immediately. No protected capture/layout is reconstructed.
@@ -72,7 +51,7 @@ internal sealed partial class PosterVisualWindow
         if (_contentSourceRefreshPending && _transitionLayout is null && _activeCommandRequestId is null &&
             !_disposed && !_contentPresentationSuspended) RefreshContentSource();
         if(_disposed || _contentPresentationSuspended || _window is null || _contentProposalDrainQueued ||
-            !(_contentHeatBuffer?.HasPending==true || _contentThemeBuffer?.HasPending==true ||
+            !(_contentHeatSession.HasPending || _contentThemeBuffer?.HasPending==true ||
                 _contentThemeBuffer is { } pendingTheme && pendingTheme.Current!=_presentation.Parameters)) return;
         long epoch=_contentProposalDrainEpoch;
         _contentProposalDrainQueued=true;
@@ -104,19 +83,12 @@ internal sealed partial class PosterVisualWindow
     private void DrainContentProposals()
     {
         if(ContentProposalsProtected) return;
-        bool changed=false;
-        if(_contentHeatBuffer?.Take(false) is { } heat)
-        {
-            try
-            {
-                var resolved=ContentLayoutProposals.ResolveHeat(ContentDocument,heat,_contentHeatTiers);
-                RequireWritableContentProjection(resolved.Document,ContentViewportFor(_bounds));
-                _contentActiveHeat=heat;_contentHeatProjection=resolved.Document;_contentHeatTiers=resolved.Tiers;
-                changed=true;
-            }
-            catch(ArgumentException error)
-            {log.Write("warning","content.heat_proposal_rejected",new{PosterId,heat.Version,error.Message});}
-        }
+        var heat = _contentHeatSession.HasPending
+            ? _contentHeatSession.ApplyPending(ContentDocument, ContentViewportFor(_bounds), interactionProtected: false)
+            : new ContentHeatApplication(false);
+        bool changed = heat.Applied;
+        if (heat.RejectedVersion is { } version)
+            log.Write("warning", "content.heat_proposal_rejected", new { PosterId, Version = version, Message = heat.Error });
         if(_contentThemeBuffer is { } theme)
         {
             theme.ApplyPending(false);
@@ -150,13 +122,9 @@ internal sealed partial class PosterVisualWindow
     {
         _contentProposalDrainEpoch=unchecked(_contentProposalDrainEpoch+1);_contentProposalDrainQueued=false;
         _contentAwaitingCenterRelease=false;
-        _contentHeatBuffer?.Invalidate();_contentHeatBuffer=null;_contentActiveHeat=null;
-        _contentHeatProjection=null;_contentHeatTiers=null;_contentThemeBuffer=null;
+        _contentHeatSession.Close();_contentThemeBuffer=null;
         _contentHighestThemeVersion=0;
     }
     private static void RequireWritableContentProjection(ContentLayoutDocument document, ContentLayoutViewport viewport)
-    {
-        var snapshot = ContentLayoutSolver.Resolve(document, viewport);
-        if (snapshot.IsLayoutReadOnly) throw new ContentLayoutException("当前内容空间不支持这次主动布局变化：" + snapshot.SpaceStatus);
-    }
+        => ContentProjectionValidation.RequireWritable(document, viewport);
 }

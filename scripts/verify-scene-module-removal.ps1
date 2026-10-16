@@ -39,7 +39,7 @@ if (Test-Path -LiteralPath (Join-Path $moduleSource ('Modules/' + $Module))) { t
 $moduleManifest | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $moduleOutput ('without-' + $Module.ToLowerInvariant() + '-source.json')) -Encoding utf8
 $moduleRemovedApp = Join-Path $moduleOutput ('without-' + $Module.ToLowerInvariant() + '-app')
 $moduleRemovedFixture = Join-Path $moduleOutput ('without-' + $Module.ToLowerInvariant() + '-fixture')
-& dotnet build (Join-Path $moduleSource 'src\DesktopUp.App\DesktopUp.App.csproj') -c Release -p:Platform=x64 -o ($moduleRemovedApp + '\')
+& dotnet build (Join-Path $moduleSource 'src\DesktopUp.App\DesktopUp.App.csproj') -c Release -p:Platform=x64 -p:DesktopUpReviewTools=true -o ($moduleRemovedApp + '\')
 if ($LASTEXITCODE -ne 0) { throw 'Physical-removal App build failed; source/evidence preserved.' }
 & dotnet build (Join-Path $moduleSource 'tests\DesktopUp.SceneModuleFixture\DesktopUp.SceneModuleFixture.csproj') -c Release -o ($moduleRemovedFixture + '\')
 if ($LASTEXITCODE -ne 0) { throw 'Physical-removal fixture build failed.' }

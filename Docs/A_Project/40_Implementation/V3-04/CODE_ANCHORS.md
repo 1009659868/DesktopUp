@@ -1,5 +1,28 @@
 # V3-04 代码锚点
 
+## 2026-10-16 架构C热度运行入口
+
+- 展开闪烁修订：App/PosterVisualWindow.ContentAssets.cs将收起暂停加载与真正释放分开；tools/review/App/PosterVisualWindow.IncrementalRenderProbe.cs逐合成回调检查保留图像；smoke-content-heat-runtime.ps1 -PostureOnly只跑收展路径。C及修订视觉复验均已确认通过，详见下方C记录。
+
+- Application/Features/Content/Layout/ContentHeatSession.cs：海报可视会话唯一热度状态所有者；ContentProjectionValidation.cs复用原主动布局校验。
+- App/PosterVisualWindow.ContentProposals.cs：安全点/排队失效/主题宿主适配；Content.cs的作者布局变更触发Session.Reconcile。原RefreshContentSurface/同帧输入与绘制路径不变。
+- tools/review/App/App.ContentHeatRuntimeProbe.cs与scripts/smoke-content-heat-runtime.ps1：仅隔离同帧/稳定卡片集成，不产生真实统计。
+- 当前状态和已验候选归[C记录](../Architecture/C_HEAT_RUNTIME.md)。A/B/C均USER PASS，本轮本地集成；其余窗口/具体存储耦合未宣称完成。
+
+## 2026-10-16 架构B真实打开/定位入口
+
+- Application/Features/Content/Open/ContentActionService.cs：请求/见证、执行、完成记录；ContentActionResult.cs：反馈和带来源见证的观察结果；ReferenceContentActions.cs：原UI动作接口的薄适配器。
+- Application/Ports/Content/IContentActionService.cs、IContentOpenJournal.cs：执行/事实边界；Infrastructure/Persistence/Content/SqliteContentOpenJournal.cs原实现不改。
+- App/Bootstrap/App.ContentServices.cs：按原启动顺序组装；PosterSpatialRuntime.ContentSource.cs仅保留服务端口，不持有打开账本。其他具体存储耦合尚未全部消除。
+- 结果和候选归[B批](../Architecture/B_CONTENT_USE_CASES.md)；A_MOVES.json仅是A批纯移动哈希基线，不用于宣称B修改后的源码字节未变。
+
+## 2026-10-16 架构A批目录与构建入口
+
+- src/README.md：当前源码职责、允许依赖与暂存例外；Application/Features/Content/Open、Application/Ports/Content、Domain/Content、Infrastructure/Persistence/Content是首批原样移动目的地。
+- App/Bootstrap/App.Services.cs：原服务组装；tools/review/App/App.ReviewEntry.cs：原验收分发及可选partial钩子，正常编译没有实现。
+- Directory.Build.props/targets、scripts/build.ps1 -ReviewTools：产品/验收编译边界；scripts/check-architecture.ps1：检查实际Compile集合和发布互斥，-VerifyMoveBytes仅用于本次纯移动核对。
+- 详细旧/新路径、验证、候选及未完成项见[架构A批](../Architecture/A_FOUNDATION.md)和A_MOVES.json。下方锚点是历史位置；类型/命名空间不变。
+
 ## 2026-10-16 V3-09-03自启动
 
 - Application/StartupRegistration.cs：纯登记状态、显式变更与读回；Windows/WindowsStartupRegistration.cs：实际安装身份、HKCU64 Run/DesktopUp适配、其他安装保护，无后台补登记或StartupApproved私有格式。

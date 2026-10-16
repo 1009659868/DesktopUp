@@ -147,18 +147,27 @@ public sealed class RealContentUsageTests
     [Theory] [InlineData(-1,1,4)] [InlineData(1,1,8)] [InlineData(1024,1024,4)]
     public void UntrustedRasterShapeIsRejected(int width,int height,int bytes) => Assert.False(LocalContentProtocol.ValidPixels(new byte[bytes],width,height));
 
-    [Fact] public async Task RealOpeningAndRevealHaveDifferentFactSemantics()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task RealOpeningAndRevealHaveDifferentFactSemantics(bool useViewAdapter)
     {
         using var f=new Fixture();var entry=Entry();entry=entry with {Item=entry.Item with {Capabilities=entry.Item.Capabilities|ContentCapability.Reveal}};
         f.Commit(f.AddCommand(f.Main,entry));int dispatches=0;
         var worker=new Worker((r,c)=>{dispatches++;return ValueTask.FromResult(new LocalContentResponse(r.RequestId,ContentAvailability.Available,"accepted",Evidence:ContentOpenEvidence.ShellAccepted));});
-        var source=new ReferenceContentRuntime(f.Current.ContentCatalog,f.Main,1,worker);
-        var actions=new ReferenceContentActions(()=>f.Current.ContentCatalog,source,worker,new SqliteContentOpenJournal(f.Store));
+        var service=new ContentActionService(()=>f.Current.ContentCatalog,worker,new SqliteContentOpenJournal(f.Store));
+        var actions=useViewAdapter ? new ReferenceContentActions(service,
+            new ReferenceContentRuntime(f.Current.ContentCatalog,f.Main,1,worker)) : null;
         var relation=f.Current.ContentCatalog.PosterItems.Single();var target=new ContentActivationTarget(f.Main,relation.LayoutItemId,1,1,"fixture");
         var intent=new ContentOpenIntent(target,Guid.NewGuid(),ContentOpenOrigin.Enter);
-        Assert.True((await actions.OpenAsync(intent,CancellationToken.None)).Succeeded);
-        Assert.False((await actions.OpenAsync(intent,CancellationToken.None)).Succeeded);Assert.Equal(1,dispatches);
-        Assert.True((await actions.RevealAsync(relation.LayoutItemId,CancellationToken.None)).Succeeded);
+        async ValueTask<ContentOperationFeedback> Open() => useViewAdapter
+            ? await actions!.OpenAsync(intent,CancellationToken.None)
+            : (await service.OpenAsync(intent,CancellationToken.None)).Feedback;
+        Assert.True((await Open()).Succeeded);
+        Assert.False((await Open()).Succeeded);Assert.Equal(1,dispatches);
+        var revealed=useViewAdapter ? await actions!.RevealAsync(relation.LayoutItemId,CancellationToken.None)
+            : (await service.RevealAsync(relation.LayoutItemId,CancellationToken.None)).Feedback;
+        Assert.True(revealed.Succeeded);
         Assert.Equal(1L,f.Sql("SELECT count(*) FROM content_open_facts"));Assert.Equal(2,dispatches);
     }
     private sealed class Worker(Func<LocalContentRequest,CancellationToken,ValueTask<LocalContentResponse>> run):ILocalContentWorker

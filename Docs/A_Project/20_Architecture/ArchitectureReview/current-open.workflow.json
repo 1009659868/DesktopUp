@@ -1,0 +1,179 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "现状｜打开成功事实已落库，热度消费尚未接入",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "legend": {
+      "mode": "auto",
+      "entries": {
+        "backend": {
+          "label": "应用逻辑"
+        },
+        "database": {
+          "label": "持久数据"
+        },
+        "messagebus": {
+          "label": "提案缓冲"
+        }
+      }
+    }
+  },
+  "lanes": [
+    {
+      "id": "open",
+      "label": "现有打开链"
+    },
+    {
+      "id": "stop",
+      "label": "已有保护",
+      "variant": "exception"
+    }
+  ],
+  "mainPath": [
+    "gesture",
+    "resolve",
+    "claim",
+    "dispatch",
+    "receipt",
+    "fact"
+  ],
+  "nodes": [
+    {
+      "id": "gesture",
+      "lane": "open",
+      "col": 0,
+      "type": "frontend",
+      "label": "激活卡片",
+      "sublabel": "视图发起 OpenAsync"
+    },
+    {
+      "id": "resolve",
+      "lane": "open",
+      "col": 1,
+      "type": "security",
+      "label": "核对关系",
+      "sublabel": "能力与版本见证"
+    },
+    {
+      "id": "claim",
+      "lane": "open",
+      "col": 2,
+      "type": "database",
+      "label": "登记请求",
+      "sublabel": "ActivationId 去重"
+    },
+    {
+      "id": "dispatch",
+      "lane": "open",
+      "col": 3,
+      "type": "external",
+      "label": "请求 Shell",
+      "sublabel": "Worker 有界执行"
+    },
+    {
+      "id": "receipt",
+      "lane": "open",
+      "col": 4,
+      "type": "security",
+      "label": "验证交接",
+      "sublabel": "提供方证据匹配"
+    },
+    {
+      "id": "fact",
+      "lane": "open",
+      "col": 5,
+      "type": "database",
+      "label": "记录成功事实",
+      "sublabel": "同事务结束请求"
+    },
+    {
+      "id": "duplicate",
+      "lane": "stop",
+      "col": 2,
+      "type": "security",
+      "label": "停止重复请求",
+      "sublabel": "不再调度外部打开"
+    },
+    {
+      "id": "failure",
+      "lane": "stop",
+      "col": 4,
+      "type": "backend",
+      "label": "保存非成功结果",
+      "sublabel": "不写成功事实"
+    }
+  ],
+  "edges": [
+    {
+      "id": "activate",
+      "from": "gesture",
+      "to": "resolve",
+      "label": "打开意图",
+      "role": "main"
+    },
+    {
+      "id": "prepare",
+      "from": "resolve",
+      "to": "claim",
+      "label": "准入通过",
+      "role": "main"
+    },
+    {
+      "id": "unique",
+      "from": "claim",
+      "to": "dispatch",
+      "label": "唯一请求",
+      "role": "main"
+    },
+    {
+      "id": "handoff",
+      "from": "dispatch",
+      "to": "receipt",
+      "label": "返回结果",
+      "role": "main"
+    },
+    {
+      "id": "success",
+      "from": "receipt",
+      "to": "fact",
+      "label": "成功证据",
+      "role": "main"
+    },
+    {
+      "id": "dedup",
+      "from": "claim",
+      "to": "duplicate",
+      "label": "重复／忙",
+      "role": "error",
+      "variant": "security"
+    },
+    {
+      "id": "failed",
+      "from": "receipt",
+      "to": "failure",
+      "label": "失败／取消",
+      "role": "error",
+      "variant": "security"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "已存在的事实边界",
+      "items": [
+        "成功交接才计一次；定位、排队与取消不算成功。",
+        "事实在 SQLite；Worker 不直接访问状态库。"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "实际缺口",
+      "items": [
+        "尚无生产热度消费者、评分器与模型切换。",
+        "布局已有提案缓冲与交互期延后机制，可复用。"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,327 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "现状｜已有分层，编排仍集中在宿主",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/1009659868/DesktopUp",
+      "revision": "4ae822afe08c6064ae9ee1a4835fbbacaa94a473"
+    }
+  },
+  "components": [
+    {
+      "id": "surfaces",
+      "type": "frontend",
+      "label": "海报／控制中心",
+      "sublabel": "WinUI 视图与交互",
+      "pos": [
+        40,
+        260
+      ],
+      "size": [
+        220,
+        80
+      ],
+      "sources": [
+        {
+          "path": "src/DesktopUp.App/PosterVisualWindow.cs",
+          "line": 1
+        },
+        {
+          "path": "src/DesktopUp.App/ControlCenterWindow.xaml",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "id": "host",
+      "type": "backend",
+      "label": "App 会话与编排",
+      "sublabel": "空间、恢复、内容与生命周期",
+      "tag": "热点：大 partial 类",
+      "pos": [
+        380,
+        260
+      ],
+      "size": [
+        230,
+        80
+      ],
+      "sources": [
+        {
+          "path": "src/DesktopUp.App/App.xaml.cs",
+          "line": 143
+        },
+        {
+          "path": "src/DesktopUp.App/PosterSpatialRuntime.Transfers.cs",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "id": "usecases",
+      "type": "backend",
+      "label": "Application",
+      "sublabel": "命令、投影、打开协议",
+      "pos": [
+        730,
+        260
+      ],
+      "size": [
+        220,
+        80
+      ],
+      "sources": [
+        {
+          "path": "src/DesktopUp.Application/StateProjectionCoordinator.cs",
+          "line": 1
+        },
+        {
+          "path": "src/DesktopUp.Application/ReferenceContentRuntime.cs",
+          "line": 159
+        }
+      ]
+    },
+    {
+      "id": "persistence",
+      "type": "backend",
+      "label": "Infrastructure",
+      "sublabel": "存储适配＋部分业务编排",
+      "pos": [
+        1080,
+        260
+      ],
+      "size": [
+        225,
+        80
+      ],
+      "sources": [
+        {
+          "path": "src/DesktopUp.Infrastructure/CrossPosterTransfer.cs",
+          "line": 13
+        },
+        {
+          "path": "src/DesktopUp.Infrastructure/SqliteStateStore.cs",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "id": "rules",
+      "type": "backend",
+      "label": "Domain",
+      "sublabel": "实体、布局与纯规则",
+      "pos": [
+        730,
+        65
+      ],
+      "size": [
+        220,
+        75
+      ],
+      "sources": [
+        {
+          "path": "src/DesktopUp.Domain/ContentLayoutProposals.cs",
+          "line": 3
+        }
+      ]
+    },
+    {
+      "id": "state",
+      "type": "database",
+      "label": "SQLite＋受管文件",
+      "sublabel": "配置、关系、事实与账本",
+      "pos": [
+        1080,
+        65
+      ],
+      "size": [
+        225,
+        75
+      ],
+      "sources": [
+        {
+          "path": "src/DesktopUp.Infrastructure/SqliteContentOpenJournal.cs",
+          "line": 9
+        },
+        {
+          "path": "src/DesktopUp.Infrastructure/LocalTransferFiles.cs",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "id": "modules",
+      "type": "frontend",
+      "label": "Lamp／Rain",
+      "sublabel": "编译期场景模块",
+      "pos": [
+        40,
+        65
+      ],
+      "size": [
+        220,
+        75
+      ],
+      "sources": [
+        {
+          "path": "Directory.Build.targets",
+          "line": 2
+        },
+        {
+          "path": "src/DesktopUp.App/Scenes/SceneModuleRegistry.cs",
+          "line": 4
+        }
+      ]
+    },
+    {
+      "id": "native",
+      "type": "external",
+      "label": "Windows 适配",
+      "sublabel": "HWND、OLE、桌面与输入",
+      "pos": [
+        380,
+        475
+      ],
+      "size": [
+        230,
+        80
+      ],
+      "sources": [
+        {
+          "path": "src/DesktopUp.Windows/PosterInputIslandManager.cs",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "id": "worker",
+      "type": "external",
+      "label": "ContentWorker",
+      "sublabel": "Shell／图标／原生菜单",
+      "tag": "独立进程；不访问状态库",
+      "pos": [
+        1080,
+        475
+      ],
+      "size": [
+        225,
+        80
+      ],
+      "sources": [
+        {
+          "path": "src/DesktopUp.Infrastructure/LocalContentWorkerClient.cs",
+          "line": 9
+        },
+        {
+          "path": "src/DesktopUp.ContentWorker/Program.cs",
+          "line": 16
+        }
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "intent",
+      "from": "surfaces",
+      "to": "host",
+      "label": "交互意图",
+      "variant": "emphasis"
+    },
+    {
+      "id": "commands",
+      "from": "host",
+      "to": "usecases",
+      "label": "命令与快照",
+      "variant": "emphasis"
+    },
+    {
+      "id": "repos",
+      "from": "usecases",
+      "to": "persistence",
+      "label": "存储端口",
+      "variant": "emphasis"
+    },
+    {
+      "id": "rulecall",
+      "from": "usecases",
+      "to": "rules",
+      "label": "纯计算",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "durable",
+      "from": "persistence",
+      "to": "state",
+      "label": "事务／文件",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "modulebuild",
+      "from": "modules",
+      "to": "surfaces",
+      "label": "编译后注册",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelAt": [
+        150,
+        154
+      ]
+    },
+    {
+      "id": "nativecall",
+      "from": "host",
+      "to": "native",
+      "label": "原生操作",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelAt": [
+        495,
+        354
+      ]
+    },
+    {
+      "id": "stdio",
+      "from": "persistence",
+      "to": "worker",
+      "label": "有界进程协议",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "variant": "dashed",
+      "labelAt": [
+        1193,
+        354
+      ]
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "应该保留",
+      "items": [
+        "状态版本校验、增量卡片与原生拖放已存在。",
+        "这是职责／运行图，完整程序集引用见审查报告。"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "主要耦合",
+      "items": [
+        "App 直接组织具体 SQLite 业务服务。",
+        "Infrastructure 混有用例，探针混入运行代码。"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "尚未具备",
+      "items": [
+        "真实热度生产链、动态模板包、AI 与升级器。",
+        "编译期模块不等于可热加载的插件。"
+      ]
+    }
+  ]
+}

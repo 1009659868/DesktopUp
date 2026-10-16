@@ -6,6 +6,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
     <Deterministic>true</Deterministic>
+    <!-- Development executors are opt-in; product builds never need tools/review. -->
+    <DesktopUpReviewTools Condition="'$(DesktopUpReviewTools)' == ''">false</DesktopUpReviewTools>
     <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
     <Platforms>x64</Platforms>
     <PlatformTarget>x64</PlatformTarget>

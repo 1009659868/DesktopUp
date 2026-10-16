@@ -70,7 +70,7 @@ $pkgTools = Enter-DesktopUpToolchain -ForPackaging -MakeNsis $pkgExplicitNsis -O
 try {
 $pkgResolved.SdkPresent = $true
 $pkgResolved.NsisPresent = $true
-$pkgBuildOptions = @()
+$pkgBuildOptions = @('-p:DesktopUpReviewTools=false')
 if ($Offline) { $pkgBuildOptions += @("-p:RestoreConfigFile=$($pkgTools.OfflineConfig)", '-p:NuGetAudit=false') }
 if ($StartupReview) { $pkgBuildOptions += '-p:DesktopUpStartupReview=true' }
 $pkgPayload = Join-Path $pkgOutput 'payload'

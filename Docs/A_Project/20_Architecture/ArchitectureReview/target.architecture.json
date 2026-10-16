@@ -1,0 +1,271 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "目标｜稳定内核承接可替换能力（建议）",
+    "locale": "zh-CN",
+    "quality_profile": "showcase"
+  },
+  "components": [
+    {
+      "id": "heat",
+      "type": "backend",
+      "label": "热度策略模块",
+      "sublabel": "事实 → 排序／尺寸提案",
+      "tag": "可替换策略，不改作者布局",
+      "pos": [
+        40,
+        65
+      ],
+      "size": [
+        220,
+        80
+      ]
+    },
+    {
+      "id": "templates",
+      "type": "frontend",
+      "label": "模板与形状模块",
+      "sublabel": "结构／素材／参数包",
+      "tag": "受限声明，不执行任意代码",
+      "pos": [
+        380,
+        65
+      ],
+      "size": [
+        230,
+        80
+      ]
+    },
+    {
+      "id": "ai",
+      "type": "cloud",
+      "label": "AI 计划生成",
+      "sublabel": "脱敏上下文 → 变更计划",
+      "tag": "无直接文件／窗口权限",
+      "pos": [
+        730,
+        65
+      ],
+      "size": [
+        220,
+        80
+      ]
+    },
+    {
+      "id": "admission",
+      "type": "security",
+      "label": "能力接入与验证",
+      "sublabel": "版本、权限、预算、类型路由",
+      "pos": [
+        380,
+        270
+      ],
+      "size": [
+        230,
+        80
+      ]
+    },
+    {
+      "id": "ui",
+      "type": "frontend",
+      "label": "薄界面层",
+      "sublabel": "海报／中心只发意图",
+      "pos": [
+        40,
+        475
+      ],
+      "size": [
+        220,
+        80
+      ]
+    },
+    {
+      "id": "usecases",
+      "type": "backend",
+      "label": "应用用例层",
+      "sublabel": "内容／配置／生命周期",
+      "pos": [
+        380,
+        475
+      ],
+      "size": [
+        230,
+        80
+      ]
+    },
+    {
+      "id": "kernel",
+      "type": "backend",
+      "label": "稳定海报内核",
+      "sublabel": "布局、输入、增量帧与安全点",
+      "tag": "同代绘制与命中",
+      "pos": [
+        730,
+        475
+      ],
+      "size": [
+        220,
+        80
+      ]
+    },
+    {
+      "id": "platform",
+      "type": "external",
+      "label": "平台与部署宿主",
+      "sublabel": "WinUI／Windows／Shell Worker",
+      "pos": [
+        1080,
+        475
+      ],
+      "size": [
+        230,
+        80
+      ]
+    },
+    {
+      "id": "storage",
+      "type": "database",
+      "label": "持久化适配",
+      "sublabel": "沿用 SQLite／账本／受管文件",
+      "pos": [
+        380,
+        685
+      ],
+      "size": [
+        230,
+        80
+      ]
+    },
+    {
+      "id": "updater",
+      "type": "external",
+      "label": "独立更新器",
+      "sublabel": "验证包、切换、回滚",
+      "tag": "应用更新允许受控重启",
+      "pos": [
+        1080,
+        65
+      ],
+      "size": [
+        230,
+        80
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "heatproposal",
+      "from": "heat",
+      "to": "admission",
+      "label": "热度提案",
+      "fromSide": "bottom",
+      "toSide": "left"
+    },
+    {
+      "id": "themeproposal",
+      "from": "templates",
+      "to": "admission",
+      "label": "模板描述",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelAt": [
+        495,
+        159
+      ]
+    },
+    {
+      "id": "aiproposal",
+      "from": "ai",
+      "to": "admission",
+      "label": "受限计划",
+      "fromSide": "bottom",
+      "toSide": "right"
+    },
+    {
+      "id": "validated",
+      "from": "admission",
+      "to": "usecases",
+      "label": "类型化请求",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "variant": "security",
+      "labelAt": [
+        495,
+        364
+      ]
+    },
+    {
+      "id": "uiintent",
+      "from": "ui",
+      "to": "usecases",
+      "label": "交互意图",
+      "variant": "emphasis"
+    },
+    {
+      "id": "bounded",
+      "from": "usecases",
+      "to": "kernel",
+      "label": "受控状态",
+      "variant": "emphasis"
+    },
+    {
+      "id": "hostports",
+      "from": "kernel",
+      "to": "platform",
+      "label": "宿主端口",
+      "variant": "emphasis"
+    },
+    {
+      "id": "commit",
+      "from": "usecases",
+      "to": "storage",
+      "label": "事务端口",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelAt": [
+        495,
+        569
+      ]
+    },
+    {
+      "id": "release",
+      "from": "updater",
+      "to": "platform",
+      "label": "停机后切换",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "variant": "dashed",
+      "labelAt": [
+        1195,
+        159
+      ]
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "复用已有基础",
+      "items": [
+        "保留布局求解、单一归属、账本与稳定卡片。",
+        "先抽取职责，不推翻已验业务。"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "增量开发边界",
+      "items": [
+        "模块只交付有版本的描述或提案。",
+        "分发按功能分治，不建立万能总线。"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "目标不是现状",
+      "items": [
+        "此图为建议，新增模块与更新器尚未制作。",
+        "逻辑模块不强制一一拆成程序集。"
+      ]
+    }
+  ]
+}
