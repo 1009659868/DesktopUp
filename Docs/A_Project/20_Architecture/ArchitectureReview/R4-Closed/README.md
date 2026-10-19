@@ -1,6 +1,6 @@
 # R4收口后的当前架构与目标对照
 
-2026-10-19，工作区为 `impl/architecture-foundation`。用户确认R4两组集中验证均通过，R1～R4 USER PASS / CLOSED。本次关闭的是**现有业务的基础职责整理**，不是原目标图中的全部未来能力。仍未提交、推送或合并。
+2026-10-19，分支为 `impl/architecture-foundation`。用户确认R4两组集中验证均通过，R1～R4 USER PASS / CLOSED。本次关闭的是**现有业务的基础职责整理**，不是原目标图中的全部未来能力。对应源码、测试和图源已随b90768b提交并推送，未合并；待用户确认整体架构优化完成后再考虑集成。
 
 ## 两张图如何阅读
 
@@ -29,7 +29,7 @@
 
 ## 代码入口与验证依据
 
-以下路径均指本工作区，不冒充已推送提交。完整候选指纹、清理记录与自动结果归[实施计划第19节](../../../40_Implementation/Architecture/FOUNDATION_REMAINDER_PLAN.md#r4-composition-boundary)。
+以下源码已纳入b90768b检查点；本次Git同步没有改变产品逻辑或图源字节。完整候选指纹、清理记录与自动结果归[实施计划第19节](../../../40_Implementation/Architecture/FOUNDATION_REMAINDER_PLAN.md#r4-composition-boundary)。
 
 | 边界 | 实际入口 | 对应证据 |
 | --- | --- | --- |
