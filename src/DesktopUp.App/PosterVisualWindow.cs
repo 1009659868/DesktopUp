@@ -18,11 +18,12 @@ internal sealed partial class PosterVisualWindow(
     IResourceLedger ledger,
     IStructuredLog log,
     PosterSpatialRuntime spatial,
-    PosterInputRouter inputRouter, PosterInputSessionKey inputSession,
+    PosterInputRouter inputRouter, PosterInputSessionKey inputSession, PosterContentSession contentSession,
     Action<PosterRemovalRequest> requestRemoval,
     Action? showControlCenter = null,
     Action<bool>? editingStateChanged = null, ContentSourcePorts? contentPorts = null) : IDisposable
 {
+    private readonly PosterContentSession _contentSession = contentSession;
     private const double SafeMarginDip = 24;
     private const double SurfaceCornerRadiusDip = 8;
     private double HeaderHeightDip => _presentation.HeaderHeightDip;
@@ -61,8 +62,6 @@ internal sealed partial class PosterVisualWindow(
     private long _stateRevision;
     private long _posterRevision;
     private long _posterEntityVersion;
-    private string? _activeCommandRequestId;
-    private PosterOperatingMode _mode = PosterOperatingMode.Using;
     private long _layoutRevision;
     private long _attachedDesktopGeneration;
     private long _appliedTopologyGeneration;
@@ -73,17 +72,21 @@ internal sealed partial class PosterVisualWindow(
     private bool _gestureFrameScheduled;
     private VisualRegionState? _appliedVisualRegion;
     private bool _disposed;
-    private bool _contentPresentationSuspended = true;
     private SpatialGestureSession? _spatialGesture;
 
     public nint WindowHandle => _windowHandle;
-    public bool IsEditing => _mode == PosterOperatingMode.Editing;
+    public bool IsEditing => _contentSession.Mode == PosterOperatingMode.Editing;
     public string? PosterId => _authoritativePoster?.PosterId;
-    public void RegisterSpatialSurface() => spatial.Register(this);
+    public void RegisterSpatialSurface()
+    {
+        spatial.Register(this);
+        NotifyCenterContentInteractionChanged();
+    }
     public void SuspendInput()
     {
-        _contentPresentationSuspended = true;
+        _contentSession.SetSuspended(true);
         _incomingPreview = null; _incomingLayout = null; _incomingBasis = null;
+        _contentSession.SetInteraction(PosterContentInteraction.Incoming | PosterContentInteraction.NativeHover, false);
         ReleaseContentAssets();
         UpdateScene();
         CancelContentGesture("input-suspended");
@@ -93,6 +96,7 @@ internal sealed partial class PosterVisualWindow(
         _menuInteraction?.Cancel();
         _posterMenu?.Hide();
         _posterMenu = null;
+        _contentSession.SetInteraction(PosterContentInteraction.Menu, false);
         _inputIsland?.SuspendRouting();
         inputRouter.Invalidate(inputSession);
     }
@@ -103,7 +107,7 @@ internal sealed partial class PosterVisualWindow(
         CancelContentGesture("posture-preview");
         CancelScheduledGestureFrame();
         _inputIsland?.CancelPointerGesture();
-        _activeCommandRequestId = requestId;
+        _contentSession.SetCommand(requestId);
         if (revealContents) _geometry = _geometry with { IsCollapsed = false };
         UpdateVisualState();
         BeginTransitionLayout(requestId, expandedBounds);
@@ -114,31 +118,39 @@ internal sealed partial class PosterVisualWindow(
         CancelContentGesture("geometry-preview");
         CancelScheduledGestureFrame();
         _inputIsland?.CancelPointerGesture();
-        _activeCommandRequestId = requestId;
+        _contentSession.SetCommand(requestId);
         UpdateVisualState();
         BeginTransitionLayout(requestId, capacity, responsiveGeometry: true);
     }
     internal sealed record PreparedSpatialFrame(PosterVisualWindow Owner, DesktopPixelRect Bounds, PosterInputLayoutSnapshot Input,
-        ContentLayoutSnapshot Content, ContentLayoutViewport ContentViewport, ContentSpaceDecision? Space = null);
+        ContentPresentationFrame Presentation)
+    {
+        public ContentLayoutSnapshot Content => Presentation.Snapshot;
+        public ContentLayoutViewport ContentViewport => Presentation.Viewport;
+        public ContentSpaceDecision? Space => Presentation.Space;
+    }
     public PreparedSpatialFrame? PrepareSpatialFrame(DesktopPixelRect frame)
     {
         if (_disposed || _window is null || _inputIsland is null || !frame.IsUsable) return null;
         var input = BuildInputLayout(frame);
         // Preparation must not clip or resize a live surface before its peers move.
-        return new(this, frame, input, _contentSnapshot ?? EnsureContentSnapshot(frame), _contentViewport!, _contentSpaceCandidate);
+        return new(this, frame, input, _contentLayout.Current!);
     }
     public bool CommitSpatialFrames(IReadOnlyList<PreparedSpatialFrame> frames, DesktopFramePhase phase = DesktopFramePhase.Regular,
         Action? afterNativeBatchForProbe = null)
     {
         var layouts = new List<(FrameworkElement Root, double Width, double Height)>();
+        var previousPaint = frames.Select(f => (f.Owner, f.Owner.Presenter.Frame)).ToArray();
+        bool complete = false;
         try
         {
         var windows = new Dictionary<nint, DesktopPixelRect>();
         foreach (var frame in frames)
         {
             var owner = frame.Owner;
-            if (owner._disposed || owner._inputIsland is null) return false;
-            if (frame.Space is { } space && (space != owner._contentSpaceCandidate ||
+            if (owner._disposed || owner._inputIsland is null ||
+                frame.Input.ContentSnapshotGeneration != frame.Content.ViewportGeneration) return false;
+            if (frame.Space is { } space && (space != owner._contentLayout.Candidate ||
                 space.Witness.Environment != owner._contentSpaceEnvironment)) return false;
             windows.Add(owner._windowHandle, phase is DesktopFramePhase.Animation or DesktopFramePhase.SurfacePreparation
                 ? owner.PreparedSurfaceBounds(frame.Bounds) : frame.Bounds);
@@ -162,7 +174,7 @@ internal sealed partial class PosterVisualWindow(
                     {
                         log.Write("warning", "spatial.surface_preparation_baseline_rejected", new
                         {
-                            owner.PosterId, requestId = owner._activeCommandRequestId,
+                            owner.PosterId, requestId = owner._contentSession.ActiveCommand,
                             expectedSurface = previousSurface, expectedVisible = owner._bounds,
                             requestedSurface = owner.PreparedSurfaceBounds(frame.Bounds)
                         });
@@ -173,14 +185,14 @@ internal sealed partial class PosterVisualWindow(
                 {
                     // Use the exact solver result that supplied this frame's input regions.
                     // The allocation stays fixed, but the logical composition follows both axes.
-                    owner._contentSnapshot = frame.Content; owner._contentViewport = frame.ContentViewport;
+                    owner._contentLayout.Adopt(frame.Presentation);
                     owner.DrawContentSnapshot(frame.Content, frame.ContentViewport);
                 }
                 if (!owner.ApplyTransitionViewport(frame.Bounds)) return false;
                 continue;
             }
             layouts.Add((root, root.Width, root.Height));
-            owner._contentSnapshot = frame.Content; owner._contentViewport = frame.ContentViewport;
+            owner._contentLayout.Adopt(frame.Presentation);
             owner.DrawContentSnapshot(frame.Content, frame.ContentViewport);
             double width = frame.Bounds.Width / owner._monitor.ScaleX, height = frame.Bounds.Height / owner._monitor.ScaleY;
             root.Width = width; root.Height = height;
@@ -233,7 +245,7 @@ internal sealed partial class PosterVisualWindow(
             {
                 owner.PosterId, nativeApplied, matches, inputApplied, regionApplied, surfaceApplied, backgroundApplied, expected = frame.Bounds,
                 expectedSurface = windows[owner._windowHandle],
-                phase = phase.ToString(), requestId = owner._activeCommandRequestId,
+                phase = phase.ToString(), requestId = owner._contentSession.ActiveCommand,
                 surfaceReadback, regionSizeUnchanged = regionBefore == owner._appliedVisualRegion,
                 cachedRegionWidth = regionBefore?.Width, cachedRegionHeight = regionBefore?.Height,
                 cachedCornerRadius = regionBefore?.CornerRadius,
@@ -247,10 +259,21 @@ internal sealed partial class PosterVisualWindow(
         // R4 allocation/animation frame. Restoration uses the previous verified publication.
         if (applied && phase is DesktopFramePhase.Regular or DesktopFramePhase.FinalRestore)
             foreach (var frame in frames) frame.Owner.PublishContentSpace(frame.Space);
+        complete = applied;
         return applied;
         }
         finally
         {
+            if (!complete)
+                foreach (var (owner, previous) in previousPaint)
+                {
+                    // Native failure may be partial. Retain the last paint and disable routing
+                    // until the existing outer owner restores a verified frame; never pair generations.
+                    owner._inputIsland?.SuspendRouting();
+                    if (previous is not null && owner._itemsGrid is not null)
+                        owner.Presenter.Present(owner._itemsGrid, previous);
+                    owner._contentLayout.Invalidate();
+                }
             // Return to normal stretch layout; drag/resize and later theme projections must not
             // inherit a fixed root size from an animation. Native bounds now match this layout.
             foreach (var layout in layouts) { layout.Root.Width = layout.Width; layout.Root.Height = layout.Height; }
@@ -259,7 +282,7 @@ internal sealed partial class PosterVisualWindow(
     public PreparedSpatialFrame? PreparePostureRestore()
     {
         RestoreTransitionLayout();
-        _activeCommandRequestId = null;
+        _contentSession.SetCommand(null);
         QueueContentProposalDrain();
         if (_disposed || _monitor is null || !spatial.TryGetProjection(out var current) ||
             current?.PostersById.GetValueOrDefault(PosterId ?? "") is not { } target || !AdoptPosterProjection(target, _monitor, applyFrame: false)) return null;
@@ -308,7 +331,7 @@ internal sealed partial class PosterVisualWindow(
         PosterSurfaceProjection state)
     {
         if (_disposed) return false;
-        _contentPresentationSuspended = true;
+        _contentSession.SetSuspended(true);
         if (_window is not null)
         {
             return Recover(desktopHost, displayTopology, request: 0);
@@ -425,9 +448,9 @@ internal sealed partial class PosterVisualWindow(
             inputRegionCount = inputLayout.Regions.Count,
             bounds = _bounds
         });
-        _contentPresentationSuspended = false;
+        _contentSession.SetSuspended(false);
         if (_contentSourceChanged is null && _contentPorts.Views is IObservableContentItemViewSource) BindContentSource(_contentPorts);
-        PublishContentSpace(_contentSpaceCandidate);
+        PublishContentSpace(_contentLayout.Candidate);
         RefreshContentAssetDemand();
         UpdateScene();
         RenderContentFeedback();
@@ -474,7 +497,7 @@ internal sealed partial class PosterVisualWindow(
         DisplayTopologySnapshot displayTopology,
         long request)
     {
-        _contentPresentationSuspended = true;
+        _contentSession.SetSuspended(true);
         _contentEnvironmentPublishing = true;
         try
         {
@@ -584,9 +607,9 @@ internal sealed partial class PosterVisualWindow(
             HasExpectedBounds(_window, expectedBounds);
         if (ready)
         {
-            _contentPresentationSuspended = false;
+            _contentSession.SetSuspended(false);
             _contentEnvironmentPublishing = false;
-            PublishContentSpace(_contentSpaceCandidate);
+            PublishContentSpace(_contentLayout.Candidate);
             RefreshContentAssetDemand();
             UpdateScene();
             RenderContentFeedback();
@@ -602,22 +625,19 @@ internal sealed partial class PosterVisualWindow(
         PosterOperatingMode target = editing
             ? PosterOperatingMode.Editing
             : PosterOperatingMode.Using;
-        if (_mode == target)
+        if (_contentSession.Mode == target)
         {
             return true;
         }
 
         if (_spatialGesture is not null) CancelSpatialGesture("mode-changed");
         CancelContentGesture("mode-changed");
-        _mode = target;
+        _contentSession.SetInteraction(PosterContentInteraction.Editing, target == PosterOperatingMode.Editing);
         UpdateVisualState();
-        UpdateItemScrollState(_bounds);
-        bool applied = _inputIsland?.ApplyLayout(
-            _bounds,
-            BuildInputLayout(_bounds)) == true;
+        bool applied = ApplyContentFrame(_bounds);
         log.Write(applied ? "info" : "warning", "poster.mode_changed", new
         {
-            mode = _mode.ToString(),
+            mode = _contentSession.Mode.ToString(),
             _geometry.IsLocked,
             _geometry.IsCollapsed,
             layoutRevision = _layoutRevision,
@@ -657,7 +677,7 @@ internal sealed partial class PosterVisualWindow(
 
     internal bool OwnsTitleCapture(PosterInputCapture capture) => _inputIsland?.OwnsTitleCapture(capture) == true;
     internal bool IsTitleSessionCurrent(PosterInputSessionKey session) => session == inputSession &&
-        !_disposed && _mode == PosterOperatingMode.Using && _authoritativePoster?.AutoCollapseEnabled == true &&
+        !_disposed && _contentSession.Mode == PosterOperatingMode.Using && _authoritativePoster?.AutoCollapseEnabled == true &&
         inputRouter.ReadSurface(inputSession) is not null;
     internal void CancelTitleCapture() => _inputIsland?.CancelPointerGesture();
     private void OnTitleInput(object? sender, TitleNativeInputEventArgs args)
@@ -666,7 +686,7 @@ internal sealed partial class PosterVisualWindow(
         if (_disposed || !ReferenceEquals(sender, _inputIsland) || args.Capture.Press.Session != inputSession) return;
         if (args.Kind == TitleNativeInputKind.Press)
         {
-            if (_mode != PosterOperatingMode.Using || _authoritativePoster?.AutoCollapseEnabled != true) return;
+            if (_contentSession.Mode != PosterOperatingMode.Using || _authoritativePoster?.AutoCollapseEnabled != true) return;
             args.Handled = true; // Failed/busy title intent cannot fall through into old drag or Item invoke.
             spatial.BeginTitle(this, args);
         }
@@ -712,7 +732,7 @@ internal sealed partial class PosterVisualWindow(
         }
 
         if (!TryResolveGesture(args.TargetKind, out PosterGestureKind gesture) ||
-            !LockPermissionPolicy.CanBeginGesture(_mode, _geometry, gesture))
+            !LockPermissionPolicy.CanBeginGesture(_contentSession.Mode, _geometry, gesture))
         {
             return;
         }
@@ -726,7 +746,7 @@ internal sealed partial class PosterVisualWindow(
                 CancelSpatialGesture("content-minimum-unavailable");
                 return;
             }
-            _spatialGesture = spatial.Begin(this, args.InitialFrame, gesture, _mode,
+            _spatialGesture = spatial.Begin(this, args.InitialFrame, gesture, _contentSession.Mode,
                 minWidth, minHeight);
             if (_spatialGesture is null)
             {
@@ -879,7 +899,7 @@ internal sealed partial class PosterVisualWindow(
                     {
                         index = args.TargetIndex,
                         item = Items[args.TargetIndex].Name,
-                        mode = _mode.ToString()
+                        mode = _contentSession.Mode.ToString()
                     });
                 }
                 break;
@@ -1056,7 +1076,7 @@ internal sealed partial class PosterVisualWindow(
         }
         if (string.Equals(
                 change.RequestId,
-                _activeCommandRequestId,
+                _contentSession.ActiveCommand,
                 StringComparison.Ordinal))
         {
             return true;
@@ -1128,7 +1148,7 @@ internal sealed partial class PosterVisualWindow(
                 commandKind == PosterStateCommandKind.Resize ? appliedBounds.Height / (_monitor.DpiY / 96d) : _authoritativePoster.ExpandedHeightDip);
         }
         string requestId = gesture?.OperationId ?? $"poster-{commandName}-{Guid.NewGuid():N}";
-        _activeCommandRequestId = requestId;
+        _contentSession.SetCommand(requestId);
         StateCommandResult result;
         try
         {
@@ -1146,7 +1166,7 @@ internal sealed partial class PosterVisualWindow(
         }
         finally
         {
-            _activeCommandRequestId = null;
+            _contentSession.SetCommand(null);
             QueueContentProposalDrain();
         }
 
@@ -1224,8 +1244,6 @@ internal sealed partial class PosterVisualWindow(
             return false;
         }
 
-        RebuildItemGrid(FrameWidthDip(frame));
-        UpdateItemScrollState(frame);
         PosterInputLayoutSnapshot inputLayout = BuildInputLayout(frame);
         var regionBefore = _appliedVisualRegion;
         if (!ApplyVisualRegion(_windowHandle, frame))
@@ -1244,9 +1262,7 @@ internal sealed partial class PosterVisualWindow(
         if (!ClearExposedVisualBackground(regionBefore)) return false;
 
         _bounds = frame;
-        bool inputApplied = _inputIsland.ApplyLayout(frame, inputLayout);
-        if (inputApplied) PublishContentSpace(_contentSpaceCandidate);
-        return inputApplied;
+        return ApplyContentFrame(frame, inputLayout);
     }
 
     private bool ClearExposedVisualBackground(VisualRegionState? previous)
@@ -1264,113 +1280,11 @@ internal sealed partial class PosterVisualWindow(
 
     private PosterInputLayoutSnapshot BuildInputLayout(DesktopPixelRect frame)
     {
-        if (_monitor is null)
-        {
-            throw new InvalidOperationException("A monitor snapshot is required for input layout.");
-        }
-
-        long revision = checked(++_layoutRevision);
-        double scaleX = _monitor.ScaleX;
-        var titleBar = PosterTitleChromePolicy.Resolve(frame.Width / scaleX, _geometry.IsCollapsed, _presentation.TitleChrome);
-        DesktopPixelRect ToTitlePixels(TitleChromeRect rect) => new(checked((int)Math.Round(rect.X * _monitor.ScaleX)), checked((int)Math.Round(rect.Y * _monitor.ScaleY)),
-            Math.Max(1, ToPhysicalX(rect.Width, _monitor)), Math.Max(1, ToPhysicalY(rect.Height, _monitor)));
-        DesktopPixelRect collapseBounds = ToTitlePixels(titleBar.Collapse);
-        DesktopPixelRect moreBounds = ToTitlePixels(titleBar.More);
-        var regions = new List<PosterInputRegion>
-        {
-            new(PosterInputTargetKind.CollapseButton, -1,
-                collapseBounds),
-            new(PosterInputTargetKind.MoreButton, -1,
-                moreBounds)
-        };
-
-        AddContentInputRegions(frame, regions);
-        AddContentSpaceNavigationRegions(frame, regions);
-
-
-        if (_mode == PosterOperatingMode.Editing &&
-            !_geometry.IsLocked &&
-            !_geometry.IsCollapsed)
-        {
-            int edgeX = Math.Max(6, ToPhysicalX(8, _monitor));
-            int edgeY = Math.Max(6, ToPhysicalY(8, _monitor));
-            int cornerX = Math.Max(16, ToPhysicalX(20, _monitor));
-            int cornerY = Math.Max(16, ToPhysicalY(20, _monitor));
-            regions.Add(new PosterInputRegion(
-                PosterInputTargetKind.ResizeTopLeft,
-                -1,
-                new DesktopPixelRect(0, 0, cornerX, cornerY)));
-            regions.Add(new PosterInputRegion(
-                PosterInputTargetKind.ResizeTopRight,
-                -1,
-                new DesktopPixelRect(
-                    frame.Width - cornerX,
-                    0,
-                    cornerX,
-                    cornerY)));
-            regions.Add(new PosterInputRegion(
-                PosterInputTargetKind.ResizeBottomLeft,
-                -1,
-                new DesktopPixelRect(
-                    0,
-                    frame.Height - cornerY,
-                    cornerX,
-                    cornerY)));
-            regions.Add(new PosterInputRegion(
-                PosterInputTargetKind.ResizeBottomRight,
-                -1,
-                new DesktopPixelRect(
-                    frame.Width - cornerX,
-                    frame.Height - cornerY,
-                    cornerX,
-                    cornerY)));
-            regions.Add(new PosterInputRegion(
-                PosterInputTargetKind.ResizeLeft,
-                -1,
-                new DesktopPixelRect(
-                    0,
-                    cornerY,
-                    edgeX,
-                    Math.Max(1, frame.Height - (cornerY * 2)))));
-            regions.Add(new PosterInputRegion(
-                PosterInputTargetKind.ResizeRight,
-                -1,
-                new DesktopPixelRect(
-                    frame.Width - edgeX,
-                    cornerY,
-                    edgeX,
-                    Math.Max(1, frame.Height - (cornerY * 2)))));
-            regions.Add(new PosterInputRegion(
-                PosterInputTargetKind.ResizeTop,
-                -1,
-                new DesktopPixelRect(
-                    cornerX,
-                    0,
-                    Math.Max(1, frame.Width - (cornerX * 2)),
-                    edgeY)));
-            regions.Add(new PosterInputRegion(
-                PosterInputTargetKind.ResizeBottom,
-                -1,
-                new DesktopPixelRect(
-                    cornerX,
-                    frame.Height - edgeY,
-                    Math.Max(1, frame.Width - (cornerX * 2)),
-                    edgeY)));
-        }
-
-        if (titleBar.Kind == PosterTitleChromeKind.Cloud)
-            foreach (var band in TitleCloudInputGeometry.Resolve(frame.Width / scaleX, _geometry.IsCollapsed,
-                _titlePose, scaleX, _monitor.ScaleY))
-                regions.Add(new PosterInputRegion(PosterInputTargetKind.TitleBar, -1, band));
-        else foreach (var band in titleBar.GripBands)
-            regions.Add(new PosterInputRegion(PosterInputTargetKind.TitleBar, -1, ToTitlePixels(band)));
-
-        return new PosterInputLayoutSnapshot(
-            revision,
-            frame.Width,
-            frame.Height,
-            PosterInputRegionClipPolicy.Clip(frame.Width, frame.Height, regions),
-            ResolveOuterCornerRadiusPixels());
+        if (_monitor is null) throw new InvalidOperationException("A monitor snapshot is required for input layout.");
+        if (!_geometry.IsCollapsed) EnsureContentSnapshot(frame);
+        return ContentInputGeometry.Resolve(checked(++_layoutRevision), frame,
+            new(_monitor, _geometry, _presentation, _titlePose, IsEditing, _contentReadOnly, _selectedContentItem,
+                _contentLayout.Current, ContentLeftDip, ContentTopDip, _transitionLayout is not null, ResolveOuterCornerRadiusPixels()));
     }
 
     private Window CreateWindow()
@@ -1511,10 +1425,10 @@ internal sealed partial class PosterVisualWindow(
 
         var editItem = StyleMenuItem(new MenuFlyoutItem
         {
-            Text = _mode == PosterOperatingMode.Editing ? "结束外框调整" : "调整海报外框",
+            Text = _contentSession.Mode == PosterOperatingMode.Editing ? "结束外框调整" : "调整海报外框",
             Icon = new FontIcon { Glyph = "\uE70F" }
         });
-        editItem.Click += (_, _) => { if (MenuCurrent("edit")) _ = SetEditing(_mode != PosterOperatingMode.Editing); };
+        editItem.Click += (_, _) => { if (MenuCurrent("edit")) _ = SetEditing(_contentSession.Mode != PosterOperatingMode.Editing); };
         flyout.Items.Add(editItem);
         flyout.Items.Add(new MenuFlyoutSeparator());
         var controlCenterItem = StyleMenuItem(new MenuFlyoutItem
@@ -1543,9 +1457,10 @@ internal sealed partial class PosterVisualWindow(
         }
 
         _posterMenu = flyout;
+        _contentSession.SetInteraction(PosterContentInteraction.Menu, true);
         _menuDiagnostic?.Dispose();
         _menuDiagnostic = MenuInputDiagnostics.Enabled ? MenuInputDiagnostic.TryCreate(flyout, _window.DispatcherQueue, log,
-            () => new { PosterId, inputSession.Epoch, mode = _mode.ToString(), _posterEntityVersion,
+            () => new { PosterId, inputSession.Epoch, mode = _contentSession.Mode.ToString(), _posterEntityVersion,
                 menuEntity, menuLayout, appliedLayout = _inputIsland?.AppliedLayoutRevision,
                 current = !_disposed && _posterEntityVersion == menuEntity && inputRouter.IsCurrent(inputSession, menuLayout),
                 frame = _bounds, visual = $"0x{_windowHandle:X}", island = $"0x{_inputIsland?.WindowHandle:X}" }) : null;
@@ -1565,6 +1480,7 @@ internal sealed partial class PosterVisualWindow(
             if (ReferenceEquals(_posterMenu, flyout))
             {
                 _posterMenu = null;
+                _contentSession.SetInteraction(PosterContentInteraction.Menu, false);
                 QueueContentProposalDrain();
             }
             if (!_disposed)
@@ -1594,7 +1510,7 @@ internal sealed partial class PosterVisualWindow(
             {
                 _geometry.IsLocked,
                 contentItemId,
-                mode = _mode.ToString()
+                mode = _contentSession.Mode.ToString()
             });
         }
         catch (Exception exception)
@@ -1605,6 +1521,7 @@ internal sealed partial class PosterVisualWindow(
             diagnostic?.Dispose();
             if (ReferenceEquals(_menuDiagnostic, diagnostic)) _menuDiagnostic = null;
             _posterMenu = null;
+            _contentSession.SetInteraction(PosterContentInteraction.Menu, false);
             if (contentItemId is not null) ReportContentFailure("项目菜单未能打开，请重试。原布局未改。");
             _ = ReassertCurrentClusterBottom();
             log.Write("warning", "poster.more_menu_failed", new
@@ -1698,10 +1615,10 @@ internal sealed partial class PosterVisualWindow(
             _collapseGlyph.Text = _geometry.IsCollapsed ? "⌃" : "⌄";
         }
         RenderContentFeedback();
-        _surface.BorderBrush = _mode == PosterOperatingMode.Editing
+        _surface.BorderBrush = _contentSession.Mode == PosterOperatingMode.Editing
             ? ColorBrush(_presentation.Parameters.Theme.Accent, 230)
             : Brush(0, 0, 0, 0);
-        _surface.BorderThickness = _mode == PosterOperatingMode.Editing
+        _surface.BorderThickness = _contentSession.Mode == PosterOperatingMode.Editing
             ? new Thickness(1)
             : new Thickness(0);
     }
@@ -1937,6 +1854,7 @@ internal sealed partial class PosterVisualWindow(
         _menuInteraction = null;
         MenuFlyout? menu = _posterMenu;
         _posterMenu = null;
+        _contentSession.SetInteraction(PosterContentInteraction.Menu, false);
         menu?.Hide();
         _surface = null;
         _itemsScrollViewer = null;
@@ -1954,8 +1872,7 @@ internal sealed partial class PosterVisualWindow(
         ReleaseScene();
         CancelContentGesture("dispose");
         StopContentFeedbackTimer();
-        ReleaseContentProposals();
-        _contentHistory.Clear();
+        _contentSession.Dispose();
         _menuInteraction?.Cancel();
         _menuInteraction = null;
         _menuDiagnostic?.Dispose();

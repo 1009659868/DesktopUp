@@ -13,10 +13,6 @@ public sealed class NativeShellExitJournal(SqliteStateStore store) : INativeShel
     public bool HasRemainingPresentCards(ShellExitIntent intent) =>
         new SqliteStateCommandRepository(store).Read().ContentCatalog.PosterItems.Any(p =>
             intent.Items.Any(i => !i.Missing && i.CardId == p.Id));
-    internal const string MigrationSql = """
-        CREATE TABLE native_shell_exits(operation_id TEXT PRIMARY KEY, body_json TEXT NOT NULL,
-            released INTEGER, closed INTEGER NOT NULL DEFAULT 0 CHECK(closed IN(0,1))) STRICT;
-        """;
     internal static void Verify(SqliteConnection c, SqliteTransaction? t)
     { using var q = c.CreateCommand(); q.Transaction = t; q.CommandText = "SELECT operation_id,body_json,released,closed FROM native_shell_exits LIMIT 0"; using var r = q.ExecuteReader(); }
 

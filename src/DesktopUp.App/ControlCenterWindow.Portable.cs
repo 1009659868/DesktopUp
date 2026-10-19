@@ -7,7 +7,19 @@ namespace DesktopUp;
 
 public sealed partial class ControlCenterWindow
 {
-    private PortableProfileController? _portable;
+    private static string DescribePortable(PortableImportPlan plan)
+    {
+        var all = plan.Creates.Concat(plan.Updates).ToDictionary(p => p.PosterId);
+        var pending = plan.PendingPosterIds.Select(id => all.TryGetValue(id, out var p) ? p.Title : id);
+        return (plan.IsRetry ? $"可安置 {plan.Updates.Count} 张。" :
+            $"{(plan.Mode == PortableImportMode.Append ? "追加" : "替换")}：导入 {plan.Creates.Count} 张，移除本机 {plan.Removes.Count} 张海报配置。\n" +
+            $"全局偏好：{(plan.ImportSettings ? "应用文件中的中心主题/动效/性能偏好（旧包未包含的设置保持本机）" : "保持本机")}。模板册及海报专属参数独立导入；替换海报不会清空本机模板册。不会移动或删除真实文件。") +
+            $"\n等待安置 {plan.PendingPosterIds.Count} 张（保留原尺寸与状态，暂不显示）：\n" +
+            string.Join("\n", pending.Select(n => "• " + n)) + "\n" + string.Join("\n", plan.Warnings.Distinct());
+    }
+
+    private PortableProfileUseCase? _portable;
+    private Action? _requestRecovery;
     private bool _portableBusy;
     private bool _portableStopping;
     private TaskCompletionSource<bool>? _portableCompletion;
@@ -27,9 +39,9 @@ public sealed partial class ControlCenterWindow
     private ContentDialog? _portableDialog;
     private IResourceLedger? _portableLedger;
     internal bool IsPortableInteractionActive => _portableBusy;
-    internal void ConfigurePortable(PortableProfileController controller, IResourceLedger ledger, IStructuredLog log)
+    internal void ConfigurePortable(PortableProfileUseCase controller, IResourceLedger ledger, IStructuredLog log, Action requestRecovery)
     {
-        _portable = controller; _portableLedger = ledger; _portableLog = log;
+        _portable = controller; _requestRecovery = requestRecovery; _portableLedger = ledger; _portableLog = log;
         AppWindow.Closing += async (_, args) =>
         {
             if (!_portableBusy) return;
@@ -127,7 +139,7 @@ public sealed partial class ControlCenterWindow
         finally { _portableDialog = null; }
         var ticket = _portable!.Preview(file, mode.SelectedIndex == 1 ? PortableImportMode.Replace : PortableImportMode.Append, settings.IsChecked == true);
         string label = ticket.Plan.Mode == PortableImportMode.Replace ? "确认替换海报配置" : "确认追加";
-        if (!await PortableDialog("确认导入影响", PortableProfileController.Describe(ticket.Plan) +
+        if (!await PortableDialog("确认导入影响", DescribePortable(ticket.Plan) +
             "\n应用前将备份本机数据库；任何变化或失败均不半应用。", label)) return;
         var result = _portable.Apply(ticket);
         if (!_editingClosed) await PortableDialog(result.Succeeded ? "导入完成" : "未应用", result.Message);
@@ -139,7 +151,7 @@ public sealed partial class ControlCenterWindow
         if (names.Count == 0) { await PortableDialog("等待安置", "当前没有等待安置的海报。"); return; }
         var ticket = _portable.PreviewPending();
         string message = "当前等待安置：\n" + string.Join("\n", names.Select(n => "• " + n)) + "\n\n" +
-            PortableProfileController.Describe(ticket.Plan);
+            DescribePortable(ticket.Plan);
         if (ticket.Plan.Updates.Count == 0) { await PortableDialog("空间仍不足", message + "\n请先腾出空间或连接更大的屏幕，再重试。原配置不变。"); return; }
         if (!await PortableDialog("重新安置预览", message, "安置可容纳的海报")) return;
         var result = _portable.Apply(ticket);
@@ -162,6 +174,6 @@ public sealed partial class ControlCenterWindow
                 "将正常退出当前海报、控制中心和托盘，再打开离线恢复窗口。\n恢复会回退本机数据库，请在恢复窗口选择备份并再次确认；当前尚未执行恢复。", "退出并打开恢复");
         });
         // Release dialog/protection leases before application shutdown.
-        if (confirmed && !_editingClosed) _portable!.RequestRecovery();
+        if (confirmed && !_editingClosed) _requestRecovery?.Invoke();
     }
 }

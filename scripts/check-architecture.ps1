@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 # Read-only evaluated build checks. Does not build, launch, install, or touch user data.
 param([switch]$Offline, [switch]$VerifyMoveBytes)
 $ErrorActionPreference = 'Stop'
@@ -21,6 +21,18 @@ try {
         if ($enabled -eq 'false') {
             if ($review.Count -ne 0) { throw 'Product build includes review executors.' }
             $product = $sources
+            # Inspect the evaluated production set, including module partials, not just App.xaml.cs.
+            $composition = @('ApplicationComposition.cs','App.Startup.cs','App.Configuration.cs',
+                'App.ContentServices.cs','App.ContentLifecycle.cs','App.ContentObservation.cs') |
+                ForEach-Object {[IO.Path]::GetFullPath((Join-Path $archRoot ("src/DesktopUp.App/Bootstrap/"+$_)))}
+            foreach($source in $product) {
+                $text=[IO.File]::ReadAllText($source)
+                if($text -match 'GetRequiredService|IServiceProvider|ServiceProvider') {throw "Runtime service locator: $source"}
+                if($source -notin $composition -and $text -cmatch 'DesktopUp\.Infrastructure|Sqlite|new ShellUiClient|new ShellDirectoryTransfer|new WindowsStartupRegistration') {
+                    throw "Concrete business dependency outside composition: $source"
+                }
+            }
+            $archRows += [pscustomobject]@{Check='ProductionComposition';Count=$product.Count;Result='PASS'}
         } else {
             $expected = @(Get-ChildItem -LiteralPath (Join-Path $archReviewRoot 'App') -Filter '*.cs' -File | ForEach-Object FullName)
             foreach($module in @('Lamp','Rain')) {

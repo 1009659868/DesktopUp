@@ -4,7 +4,7 @@ using DesktopUp.Infrastructure;
 
 internal static class ContentReturnReviewFixture
 {
-    internal static void Create(string requested, bool uninstall = false)
+    internal static void Create(string requested, bool uninstall = false, bool architecture = false)
     {
         string profile=Path.GetFullPath(requested), root=Path.GetDirectoryName(profile)!;
         string repo=AppContext.BaseDirectory;
@@ -27,7 +27,7 @@ internal static class ContentReturnReviewFixture
             {var result=new MappedDirectoryService(store).Create(command,directory);if(result.Status!=StateCommandStatus.Committed)throw new IOException(result.Error);return result.ResultPosterId!;}
             coordinator.Refresh();var added=coordinator.Execute(command);if(!added.Succeeded)throw new IOException(added.Error);return added.ResultPosterId!;
         }
-        string second=Add("B · 返回桌面",.34), third=Add("C · 冲突取消",.66);
+        string second=Add(architecture ? "B · 原路径保留" : "B · 返回桌面",.34), third=Add("C · 冲突取消",.66);
         foreach(var name in new[]{"storage","origin-A","origin-B","origin-C","mapping-D"})Directory.CreateDirectory(Path.Combine(root,name));
         var provisioner=new ManagedStorageProvisioner(store);var preview=provisioner.Preview(Path.Combine(root,"storage"));var storage=provisioner.Confirm(preview,preview.Fingerprint);
         void Collect(string poster,string source)
@@ -42,9 +42,12 @@ internal static class ContentReturnReviewFixture
         string folder=Path.Combine(root,"origin-A","A-folder");Directory.CreateDirectory(folder);File.WriteAllText(Path.Combine(folder,"child.txt"),"owned child");Collect(first.PosterId,folder);
         string unique="DesktopUp-05-12-"+Guid.NewGuid().ToString("N")[..8];
         Collect(second,Make("origin-B",unique+"-fallback.txt"));
-        Directory.Delete(Path.Combine(root,"origin-B")); // Known-empty, fixture-only original directory.
-        var current=repository.Read();new ContentCreationService(store).Create(second,new(storage,current.ContentVersion,
-            current.Catalog.Posters.Single(p=>p.Poster.PosterId==second).EntityVersion),NewContentKind.TextFile,unique+"-new.txt");
+        if (!architecture)
+        {
+            Directory.Delete(Path.Combine(root,"origin-B")); // Known-empty, fixture-only original directory.
+            var current=repository.Read();new ContentCreationService(store).Create(second,new(storage,current.ContentVersion,
+                current.Catalog.Posters.Single(p=>p.Poster.PosterId==second).EntityVersion),NewContentKind.TextFile,unique+"-new.txt");
+        } // Architecture review uses known origins only; never leaves fallback samples on the real desktop.
         string collision=Make("origin-C","C-collision.txt");Collect(third,collision);File.WriteAllText(collision,"existing unrelated owned sample; must not silently overwrite");
         Make("mapping-D","D-mapped.txt");Add("D · 映射不搬动",.98,Path.Combine(root,"mapping-D"));
         if (uninstall)

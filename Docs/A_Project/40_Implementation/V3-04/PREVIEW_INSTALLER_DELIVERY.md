@@ -1,5 +1,41 @@
 # Windows 11 x64 独立预览安装包
 
+## 2026-10-19 迁移指纹与统一编码修复
+
+**CODE / 定向验证完成；发布同步仍 PAUSED，真实登录自启仍未验。** 用户随后授权按补全方案处理，本轮仅在 impl/architecture-foundation 修复并验证，不恢复发布合并、安装或自启操作。下方“暂停修复/问题未修”是此前现场快照。
+
+### 根因与实现
+
+- 旧迁移在多个 C# raw string 中声明，SHA256 包含编译时换行。单独锁定 SqliteStateStore.cs 的 LF，不能约束其他声明文件。除最先阻断的 schema13 外，保留库 schema17 也具有已核实的 CRLF 指纹差异。
+- 迁移1～25全部抽到 src/DesktopUp.Infrastructure/Persistence/Migrations/001.sql～025.sql，UTF-8无BOM、LF、不追加末尾换行；catalog.xml 固定版本、名称、文件、SHA256及每项历史指纹证据。删除原业务类中的重复SQL声明，由 SqliteMigrationCatalog 读取嵌入资源，严格解码、检查原始字节哈希后，把同一文本交给SQLite执行。schema仍为25，不增加表结构或改写旧账本。
+- 修订前架构 product01 和失败发布包20261016.101的25项编译SQL逐项相同。当前资源仅把已核实的CRLF转为LF，除此之外逐字不变。保留这两个产物实际生成的历史指纹；另加入原schema21库实际记录且能仅以换行差异精确复现的v13/v17指纹。**不是运行时生成/接受任意LF、CRLF、空白变体**；未知指纹、错误名称、跨版本挪用指纹及实际schema破坏仍拒绝。旧记录只读不重写，新记录只写固定资源的指纹。
+- .editorconfig 给出编辑规则，.gitattributes 固定检出换行：普通源码/SQL/构建配置为UTF-8无BOM+LF；PowerShell 5.1为UTF-8 BOM+CRLF；cmd为UTF-8无BOM+CRLF。scripts/validate-source-text.ps1 使用严格UTF-8解码、字节级BOM检查、NUL/EOL检查及固定SQL哈希检查；只报错，不自动修文件。
+- Directory.Build.targets 把检查接入普通dotnet/VS构建和Publish入口，package-preview.ps1也在CheckOnly/打包前检查，并把文本规则加入源码绑定。无需依赖开发者全局core.autocrlf。UTF-8校验不能判断本来已是合法UTF-8的文字是否“语义乱码”，但拒绝不合法字节、UTF-16、错误BOM及换行，避免默认编码静默替换。
+- 机械格式整理与逻辑修改分开核对：108份已有PowerShell脚本只有BOM/换行变化，解码后的文本与HEAD一致；已有打包脚本另有上述入口接线。C#业务差异仅迁移声明提取及迁移身份检查，没有改动海报、手势、文件搬移或热度逻辑。未使用git renormalize/提交/分支切换。
+
+### 精简验证与证据
+
+影响面是迁移身份、旧库升级/备份及构建文本来源，不重跑UI/拖放人工或全量合同。
+
+- 正常产品 Release 构建：out/migration-identity-20261019/product01，0警告/0错误，不含Review执行器；Infrastructure SHA256为 A013FE98CEDCA0F6B3FFC5CA9F1FFD768A92D8F159FAF732C5D1D3794581C4D1。
+- 选用 MigrationFingerprintTests、SqliteStateStoreTests、StateBackupRecoveryTests、ContentReferencePersistenceTests，共58个唯一测试最终通过。初轮57通过、1项新测试误用只校验当前schema的ValidateBackup接口；改为正式旧备份候选验证路径后，新增组9/9通过，49个未改的既有通过结果复用。构建时发现的XML注释/PS宿主模块依赖错误亦已修正，失败日志保留，不补写初轮PASS。
+- 新增覆盖：25资源与预修订指纹、schema21/25旧账本逐项保留、升级/重开/备份、全新库固定指纹、错误名称/指纹/真实schema及SQL字节损坏拒绝。证据 out/migration-identity-20261019/tests 与 out/migration-identity-tests-build*.log。
+- 当时保留的真实旧库仅复制到 out/migration-identity-20261019/retained-copy01，使用新产品Infrastructure实际初始化：21→25成功，再次Ready；原21条账本及升级前备份全部保持。源备份与真实Preview库SHA256仍是 72A5B4ECC0B35ABA9E2526A688784E8F2BC19261E10501C30DFD8E8F08E09DA3。结果 retained-copy-result.json；未启动App、未搬动收纳文件。
+- 文本门通过891份源码/构建相关文件及25份SQL；9组编码/换行/SQL反例均拒绝且不改写输入，直接MSBuild的构建与不重编译发布入口也拒绝非法字节。证据 text-gate02；Windows PowerShell 5.1下原卸载/工具链/启动辅助三脚本解析通过；core.autocrlf=true/false得到相同Git eol规则。
+- package-preview.ps1 -CheckOnly -Offline通过，未创建新安装包。完整安装/运行/真实登录自启没有在本轮复验，不将“库初始化成功”写成“安装版自启通过”。
+
+### 后续边界
+
+当前修复尚未提交/推送/合入develop或main。main仍f80765e，发布草稿stash及旧安装包/配置全部保留。后续获准继续发布时，应把本次修复作为独立变更同步到发布来源，不顺带合入未完成R1；impl/main必须保留.editorconfig、.gitattributes、共同构建目标、validate-source-text.ps1和嵌入迁移资源，它们是发布构建必需文件，不是可删除的测试资料。随后重新构建独立安装候选并继续尚未通过的登录自启验收。
+
+这是向新修订版升级的兼容，不承诺旧候选能反读新版本创建/新增迁移的规范指纹。回退使用保留的旧配置/迁移前备份，不让旧验收包直接打开已升级的同一数据库。旧记录未被改写不等于所有历史二进制具有双向兼容能力。
+
+本次属于持久化/构建一致性修复，不关闭R1，也不提前进入真实热度。架构现状和下一步仍以[基础架构余项](../Architecture/FOUNDATION_REMAINDER_PLAN.md)为准。
+
+### 之前的暂停决定（保留历史）
+
+2026-10-19 用户明确决定：**发布同步 PAUSED，保留现场**。不实施下方提出的迁移换行兼容修复，不继续打包/安装/自启动验证，待用户重新要求继续。问题保持 OPEN，草稿/失败包/原配置备份不动；本次仅本地登记决定，未额外提交或推送。
+
 ## 2026-10-16 发布同步阻断与现场保全
 
 **状态：发布同步未完成；构建/安装载荷校验通过，启动与真实登录未验通过；兼容问题未修。** 本轮用户转为要求同步架构进度，未授权或实施此修复。历史自启动“关闭/卸载”人工通过仍保留，但不覆盖此次新包失败。

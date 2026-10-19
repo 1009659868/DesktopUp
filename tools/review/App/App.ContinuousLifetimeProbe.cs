@@ -174,12 +174,12 @@ internal sealed partial class PosterVisualWindow
         backdrop = VerifyWindowBackdrop(),
         metaHeight = (_surface?.Child as Microsoft.UI.Xaml.Controls.Grid)?.RowDefinitions[1].Height.Value,
         expectedMetaHeight = target.Poster.IsCollapsed ? 0 : target.Presentation.MetaHeightDip,
-        hasCanvas = _contentCanvas is not null, canvasAttached = _itemsGrid?.Children.Contains(_contentCanvas!) == true,
-        snapshotOwner = _contentSnapshot?.PosterId, snapshotVersion = _contentSnapshot?.DocumentVersion,
+        hasCanvas = Presenter.Surface is not null, canvasAttached = _itemsGrid?.Children.Contains(Presenter.Surface!) == true,
+        snapshotOwner = _contentLayout.Snapshot?.PosterId, snapshotVersion = _contentLayout.Snapshot?.DocumentVersion,
         documentVersion = ContentDocument.DocumentVersion,
-        cards = _contentCards.Select(pair => new { pair.Key, pair.Value.Width, pair.Value.Height,
+        cards = Presenter.Cards.Select(pair => new { pair.Key, pair.Value.Width, pair.Value.Height,
             x = Microsoft.UI.Xaml.Controls.Canvas.GetLeft(pair.Value), y = Microsoft.UI.Xaml.Controls.Canvas.GetTop(pair.Value),
-            slot = _contentSnapshot?.Items.FirstOrDefault(x => x.ItemId == pair.Key)?.Bounds,
-            _contentSnapshot?.ScrollXDip, _contentSnapshot?.ScrollYDip }).ToArray()
+            slot = _contentLayout.Snapshot?.Items.FirstOrDefault(x => x.ItemId == pair.Key)?.Bounds,
+            _contentLayout.Snapshot?.ScrollXDip, _contentLayout.Snapshot?.ScrollYDip }).ToArray()
     };
 }

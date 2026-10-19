@@ -31,26 +31,26 @@ internal sealed partial class PosterVisualWindow
     internal ContentAdornmentProbe ReadContentAdornmentsForProbe()
     {
         (_window?.Content as FrameworkElement)?.UpdateLayout();
-        var selected = _selectedContentItem is { } id && _contentCards.TryGetValue(id, out var item)
+        var selected = _selectedContentItem is { } id && Presenter.Cards.TryGetValue(id, out var item)
             ? item as Grid : null;
         var card = selected?.Children.OfType<Border>().FirstOrDefault();
-        int visualHandles = _contentCards.Values.OfType<Grid>().Sum(cell => cell.Children.OfType<Border>().Count(child =>
+        int visualHandles = Presenter.Cards.Values.OfType<Grid>().Sum(cell => cell.Children.OfType<Border>().Count(child =>
             child.Width == 14 && child.Height == 14 && Grid.GetRowSpan(child) == 2 && !child.IsHitTestVisible));
         var regions = inputRouter.ReadSurface(inputSession)?.Layout.Regions
             ?? throw new InvalidOperationException("The actual poster has no published input regions.");
-        return new(_selectedContentItem, IsEditing, selected is not null && _contentCanvas?.Children.Contains(selected) == true,
+        return new(_selectedContentItem, IsEditing, selected is not null && Presenter.Surface?.Children.Contains(selected) == true,
             card?.BorderThickness.Left, visualHandles, regions.Count(r => r.Kind == PosterInputTargetKind.ContentSpanHandle),
             regions.Count(r => r.Kind == PosterInputTargetKind.ContentItem), TestContentFeedbackEnabled,
             _contentFeedbackCallout is not null || _contentFeedbackText is not null,
             _contentFeedbackCallout?.Visibility == Visibility.Visible, _footer?.Visibility == Visibility.Visible,
             ReadContentSurfaceForSmoke());
     }
-    internal ContentProposalProbe ReadContentProposalForSmoke() => new(_contentHeatSession.ActiveVersion,
-        _contentHeatSession.HasPending, ContentDocument, EffectiveContentDocument);
-    internal ContentThemeSmokeProbe ReadContentThemeForSmoke() => new(_presentation.Parameters,_contentThemeBuffer?.HasPending==true);
+    internal ContentProposalProbe ReadContentProposalForSmoke() => new(_contentSession.ActiveHeatVersion,
+        _contentSession.HasPendingHeat, ContentDocument, EffectiveContentDocument);
+    internal ContentThemeSmokeProbe ReadContentThemeForSmoke() => new(_presentation.Parameters,_contentSession.HasBufferedTheme);
     internal ContentSuspensionSmokeProbe ReadContentSuspensionForSmoke() => new(
-        inputRouter.ReadSurface(inputSession) is not null,_contentHeatSession.HasPending,_contentHeatSession.ActiveVersion,
-        _bounds,StateRequestFingerprint.Compute((_contentSnapshot??throw new InvalidOperationException("No presented content snapshot."))
+        inputRouter.ReadSurface(inputSession) is not null,_contentSession.HasPendingHeat,_contentSession.ActiveHeatVersion,
+        _bounds,StateRequestFingerprint.Compute((_contentLayout.Snapshot??throw new InvalidOperationException("No presented content snapshot."))
             .Items.Select(p=>new{p.ItemId,p.Bounds,p.Clip}).ToArray()));
     internal bool RecoverContentForSmoke(DisplayTopologySnapshot topology) =>
         Recover(_desktopHost??throw new InvalidOperationException("No actual desktop host."),topology,999);
@@ -64,7 +64,7 @@ internal sealed partial class PosterVisualWindow
         Check(scenario is "latest-release" or "reverse-origin" or "cancel-draft" or "edge-release","Unknown synthetic content case.");
         Check(IsEditing && !HasContentGesture && _monitor is not null && _transitionLayout is null,"Content input basis not ready.");
         ScrollContentForSmoke(0,0);
-        var id=_contentSnapshot!.Items.First(p=>!p.Clip.IsEmpty).ItemId;
+        var id=_contentLayout.Snapshot!.Items.First(p=>!p.Clip.IsEmpty).ItemId;
         Check(SelectContentItem(id) is null,"Unable to select a real visible item.");
         var adornments = ReadContentAdornmentsForProbe();
         Check(adornments.IsEditing && adornments.SelectedBorderThickness == 2 && adornments.VisualResizeHandles == 1 &&
@@ -72,7 +72,7 @@ internal sealed partial class PosterVisualWindow
         var surface=inputRouter.ReadSurface(inputSession)!;
         var targetKind=scenario=="edge-release"?PosterInputTargetKind.ContentItem:PosterInputTargetKind.ContentSpanHandle;
         var region=surface.Layout.Regions.Single(p=>p.Kind==targetKind && p.ContentItemId==id);
-        Check(region.ContentSnapshotGeneration==_contentSnapshot!.ViewportGeneration,"Stale source generation.");
+        Check(region.ContentSnapshotGeneration==_contentLayout.Snapshot!.ViewportGeneration,"Stale source generation.");
         var capture=new PosterInputCapture(Guid.NewGuid(),new(inputSession,surface.Layout.Revision,surface.Frame,region));
         var nativeBasis=inputRouter.Capture;
         var press=new PointerScreenPoint(surface.Frame.X+region.Bounds.X+region.Bounds.Width/2,
@@ -97,8 +97,8 @@ internal sealed partial class PosterVisualWindow
             PointerScreenPoint Offset(int x,int y=0)=>new(press.X+x,press.Y+y);
             if(scenario=="edge-release")
             {
-                var view=_contentViewport!;
-                Check(_contentSnapshot!.ExtentHeightDip>view.HeightDip+32,"Edge scroll fixture needs vertical overflow.");
+                var view=_contentLayout.Viewport!;
+                Check(_contentLayout.Snapshot!.ExtentHeightDip>view.HeightDip+32,"Edge scroll fixture needs vertical overflow.");
                 var latest=new PointerScreenPoint(press.X,_bounds.Y+(int)Math.Round((ContentTopDip+view.HeightDip-2)*_monitor.ScaleY));
                 Send(PosterInputEventKind.GesturePreview,latest);
                 latestPending=_contentMotionPending && _contentLatestMotion?.LatestPoint==latest && _contentMotionTimer is not null;
@@ -120,12 +120,12 @@ internal sealed partial class PosterVisualWindow
                 var latest=scenario=="reverse-origin"?press:Offset(one);
                 var last=Send(PosterInputEventKind.GesturePreview,latest);
                 latestPending=_contentMotionPending && ReferenceEquals(_contentLatestMotion,last) &&
-                    _contentMotionTimer is not null && _contentGesture!.Proposal is null && _contentDraft is null;
+                    _contentMotionTimer is not null && _contentSession.Draft is null && _contentSession.Draft is null;
                 Check(latestPending && _stateRevision==before,"Preview batch was flushed early or lost the latest event.");
                 if(scenario=="cancel-draft")
                 {
                     FlushContentMotion(false);
-                    Check(_contentDraft is not null && _contentGesture!.Proposal is not null,"Cancellation did not exercise an actual draft.");
+                    Check(_contentSession.Draft is not null && _contentSession.Draft is not null,"Cancellation did not exercise an actual draft.");
                     Send(PosterInputEventKind.GestureCancelled,latest,TitleNativeEndReason.CancelMode);
                     Check(_stateRevision==before && ContentLayoutPolicy.Serialize(ContentDocument)==raw,"Cancellation persisted the preview.");
                 }
@@ -140,7 +140,7 @@ internal sealed partial class PosterVisualWindow
                 }
             }
             bool released=_contentMotionTimer is null && _contentMotionLease is null && !_contentMotionPending &&
-                _contentLatestMotion is null && _contentGesture is null && _contentDraft is null;
+                _contentLatestMotion is null && _contentGesture is null && _contentSession.Draft is null;
             Check(released,"Content timer/gesture/draft outlived completion or cancellation.");
             Check(inputRouter.Capture==nativeBasis,"Synthetic content gate changed the native router owner.");
             return new(scenario,before,_stateRevision,previews,latestPending,released,expectedRow,actualRow);
@@ -149,19 +149,19 @@ internal sealed partial class PosterVisualWindow
     }
     internal ContentSurfaceProbe ReadContentSurfaceForSmoke()
     {
-        var snapshot = _contentSnapshot ?? throw new InvalidOperationException("Content snapshot is not ready.");
-        var viewport = _contentViewport ?? throw new InvalidOperationException("Content viewport is not ready.");
+        var snapshot = _contentLayout.Snapshot ?? throw new InvalidOperationException("Content snapshot is not ready.");
+        var viewport = _contentLayout.Viewport ?? throw new InvalidOperationException("Content viewport is not ready.");
         var published = inputRouter.ReadSurface(inputSession) ?? throw new InvalidOperationException("Input surface is not published.");
         var hits = published.Layout.Regions.Where(r => r.Kind == PosterInputTargetKind.ContentItem).ToArray();
-        bool canvasMatches = _contentCanvas is not null && _contentCards.All(pair =>
+        bool canvasMatches = Presenter.Surface is not null && Presenter.Cards.All(pair =>
         {
             var slot = snapshot.Items.Single(p => p.ItemId == pair.Key);
-            return _contentCanvas.Children.Contains(pair.Value) &&
+            return Presenter.Surface.Children.Contains(pair.Value) &&
                 Math.Abs(Canvas.GetLeft(pair.Value) - (slot.Bounds.X - snapshot.ScrollXDip)) < .01 &&
                 Math.Abs(Canvas.GetTop(pair.Value) - (slot.Bounds.Y - snapshot.ScrollYDip)) < .01 &&
                 Math.Abs(pair.Value.Width - slot.Bounds.Width) < .01 && Math.Abs(pair.Value.Height - slot.Bounds.Height) < .01;
         });
-        canvasMatches &= snapshot.Items.Where(p => !p.Clip.IsEmpty).All(p => _contentCards.ContainsKey(p.ItemId));
+        canvasMatches &= snapshot.Items.Where(p => !p.Clip.IsEmpty).All(p => Presenter.Cards.ContainsKey(p.ItemId));
         bool inputMatches = _monitor is not null && hits.All(hit =>
         {
             var slot = snapshot.Items.FirstOrDefault(p => p.ItemId == hit.ContentItemId);
@@ -174,7 +174,7 @@ internal sealed partial class PosterVisualWindow
         });
         if (!_geometry.IsCollapsed && _transitionLayout is null)
             inputMatches &= hits.Length == snapshot.Items.Count(p => !p.Clip.IsEmpty);
-        var clip = (_contentCanvas?.Clip as RectangleGeometry)?.Rect;
+        var clip = (Presenter.Surface?.Clip as RectangleGeometry)?.Rect;
         bool clipped = clip.HasValue && Math.Abs(clip.Value.Width - viewport.WidthDip) < .01 &&
             Math.Abs(clip.Value.Height - viewport.HeightDip) < .01;
         if (_transitionLayout is { } transition && _monitor is not null && _surface is not null)
@@ -191,14 +191,14 @@ internal sealed partial class PosterVisualWindow
                 body.Value.Height>=0 && body.Value.Height<=height+.01;
         }
         var last = snapshot.Items.OrderBy(p => p.ReadOrder).LastOrDefault();
-        return new(PosterId!, _windowHandle.ToInt64(), snapshot.Items.Count, _contentCards.Count,
-            _contentCanvas?.Children.Count ?? 0, hits.Length, canvasMatches, inputMatches, clipped,
+        return new(PosterId!, _windowHandle.ToInt64(), snapshot.Items.Count, Presenter.Cards.Count,
+            Presenter.Surface?.Children.Count ?? 0, hits.Length, canvasMatches, inputMatches, clipped,
             snapshot.Items.Any(p => !p.Clip.IsEmpty && (p.Clip.Width < p.Bounds.Width - .01 || p.Clip.Height < p.Bounds.Height - .01)),
             last is not null && !last.Clip.IsEmpty, snapshot.ScrollXDip, snapshot.ScrollYDip,
             snapshot.ExtentWidthDip, snapshot.ExtentHeightDip, viewport.WidthDip, viewport.HeightDip,
             StateRequestFingerprint.Compute(snapshot.Items.Select(p => new { p.ItemId, p.Bounds, p.Clip }).ToArray()),
             StateRequestFingerprint.Compute(hits.Select(p => new { p.ContentItemId, p.Bounds }).ToArray()),
-            _transitionLayout is not null, _transitionLayout is { } lease && lease.RequestId==_activeCommandRequestId &&
+            _transitionLayout is not null, _transitionLayout is { } lease && lease.RequestId==_contentSession.ActiveCommand &&
                 Math.Abs(lease.Structure.ActualHeight-lease.StableHeight)<.5 &&
                 Math.Abs(lease.Structure.ActualWidth-lease.StableWidth)<.5,
             VerifyTransitionLayout(_transitionLayout is not null));
@@ -210,8 +210,8 @@ internal sealed partial class PosterVisualWindow
     {
         if (_transitionLayout is not null || HasContentGesture || _geometry.IsCollapsed)
             throw new InvalidOperationException("Cannot probe scroll during a production gesture/transition.");
-        var snapshot = _contentSnapshot ?? throw new InvalidOperationException("No scroll basis.");
-        var viewport = _contentViewport ?? throw new InvalidOperationException("No scroll viewport.");
+        var snapshot = _contentLayout.Snapshot ?? throw new InvalidOperationException("No scroll basis.");
+        var viewport = _contentLayout.Viewport ?? throw new InvalidOperationException("No scroll viewport.");
         _contentScrollX = Math.Clamp(x, 0, Math.Max(0, snapshot.ExtentWidthDip - viewport.WidthDip));
         _itemScrollOffsetDip = Math.Clamp(y, 0, Math.Max(0, snapshot.ExtentHeightDip - viewport.HeightDip));
         RefreshContentSurface();

@@ -15,8 +15,8 @@ internal sealed partial class PosterVisualWindow
             if(_contentDragImage is null)
             {
                 byte[] pixels=[];int w=0,h=0;
-                if(_contentVisibleAssetKeys.TryGetValue(gesture.Slot.ItemId,out var key) &&
-                    _contentAssets?.TryGet(key,out var payload)==true && payload is not null && payload.MediaType=="image/bgra32")
+                if(Rasters.VisibleKeys.TryGetValue(gesture.Slot.ItemId,out var key) &&
+                    Rasters.Cache?.TryGet(key,out var payload)==true && payload is not null && payload.MediaType=="image/bgra32")
                 {pixels=payload.Bytes.ToArray();w=payload.PixelWidth;h=payload.PixelHeight;}
                 int size=Math.Clamp((int)Math.Round(Math.Min(gesture.Tile.Bounds.Width,gesture.Tile.Bounds.Height)*gesture.ScaleX),32,160);
                 var image=ContentDragPixels.Build(pixels,w,h,size,gesture.TransferSelection.Length);

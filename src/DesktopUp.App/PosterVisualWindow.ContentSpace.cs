@@ -8,62 +8,52 @@ namespace DesktopUp;
 internal sealed partial class PosterVisualWindow
 {
     private readonly Guid _contentSurfaceSession = Guid.NewGuid();
-    private readonly ContentSpacePublication _contentSpacePublication = new();
     private SpatialEnvironment? _contentSpaceEnvironment;
-    private ContentSpaceDecision? _contentSpaceCandidate;
     private long _contentSpaceLayoutGeneration, _contentSpaceEpoch;
     private bool _contentEnvironmentPublishing;
-    private ContentBrowseMode _contentBrowseMode = ContentBrowseMode.SingleAxis;
-    private bool IsContentSpaceRestricted => _contentBrowseMode == ContentBrowseMode.ReadOnlyOverflow;
+    private bool IsContentSpaceRestricted => _contentLayout.BrowseMode == ContentBrowseMode.ReadOnlyOverflow;
     private Grid? _contentSpaceNavigation;
 
     private void SetContentEnvironment(DisplayMonitorSnapshot monitor, long display, long shell)
     {
         var next = spatial.ContentEnvironment(monitor, display, shell);
         if (_contentSpaceEnvironment == next) return;
-        if (_contentSnapshot is not null && _contentViewport is not null && !_contentProjectionFault)
-            _contentEndAnchor = ContentLayoutFlow.CaptureAnchor(_contentSnapshot, _contentViewport, _contentBrowseMode);
+        if (_contentLayout.Snapshot is not null && _contentLayout.Viewport is not null && !_contentLayout.HasFault)
+            _contentLayout.EndAnchor = ContentLayoutFlow.CaptureAnchor(_contentLayout.Snapshot, _contentLayout.Viewport, _contentLayout.BrowseMode);
         CancelContentGesture("physical-environment-changed");
         _contentActivation.Reset();
         _contentSpaceEpoch = checked(_contentSpaceEpoch + 1);
         _contentSpaceEnvironment = next;
-        _contentSpaceCandidate = null;
-        _solvedDocument = null;
+        _contentLayout.Invalidate();
         spatial.NotifyContentEditorChanged(PosterId);
     }
 
-    private ContentSpaceWitness? ContentWitness(ContentLayoutSnapshot snapshot, ContentLayoutViewport viewport, DesktopPixelRect frame)
+    private ResolvedPosterPresentation? _contentMetricsSource;
+    private string _contentMetricsFingerprint = "";
+    private ContentLayoutSurface? ContentSurface(DesktopPixelRect frame)
     {
-        if (_contentSpaceEnvironment is not { } environment || _authoritativePoster is null) return null;
-        return new(snapshot.PosterId, _contentSurfaceSession, snapshot.DocumentVersion, snapshot.ItemSetVersion,
-            _contentSpaceLayoutGeneration, environment, PosterSpatialRuntime.Rect(frame),
-            StateRequestFingerprint.Compute(new { _presentation.Metrics, viewport.Scale, viewport.Spacing, _presentation.EffectiveContent }),
-            viewport.ThemeMetricsVersion, viewport.Generation, viewport.WidthDip, viewport.HeightDip,
-            _authoritativePoster.IsVisible, !_disposed && frame.IsUsable);
+        if (_contentSpaceEnvironment is not { } environment || _authoritativePoster is not { } poster) return null;
+        if (!ReferenceEquals(_contentMetricsSource, _presentation))
+        {
+            var preferences = _presentation.Parameters.Preferences ?? new();
+            _contentMetricsFingerprint = StateRequestFingerprint.Compute(new
+            { _presentation.Metrics, preferences.Scale, preferences.Spacing, _presentation.EffectiveContent });
+            _contentMetricsSource = _presentation;
+        }
+        return new(_contentSurfaceSession, _contentSpaceLayoutGeneration, environment, PosterSpatialRuntime.Rect(frame),
+            _contentMetricsFingerprint, poster.IsVisible, !_disposed && frame.IsUsable, poster.WidthDip, poster.ExpandedHeightDip);
     }
 
-    private ContentSpaceDecision? EvaluateContentSpace(ContentLayoutSnapshot snapshot, ContentLayoutViewport viewport,
-        DesktopPixelRect frame, ContentBrowseAnchor? anchor)
-    {
-        // R4 owns the complete animation interval. Intermediate viewport clips and a collapsed
-        // title are not physical shortages, nor are they new continuity/recovery publications.
-        if (_transitionLayout is not null || _geometry.IsCollapsed || ContentWitness(snapshot, viewport, frame) is not { } witness)
-            return null;
-        var previous = _contentSpacePublication.Published;
-        bool vertical = snapshot.FlowAxis == ContentFlowAxis.Vertical;
-        var cause = ContentSpaceOwnerAdmission.Classify(witness, snapshot, previous,
-            vertical ? _authoritativePoster!.WidthDip : _authoritativePoster!.ExpandedHeightDip);
-        return ContentSpacePolicy.Evaluate(new(witness, snapshot, viewport, cause,
-            AtSafePoint: !HasContentGesture && _posterMenu is null, Anchor: anchor), witness, previous);
-    }
+    private ContentSpaceWitness? ContentWitness(ContentLayoutSnapshot snapshot, ContentLayoutViewport viewport, DesktopPixelRect frame) =>
+        ContentSurface(frame)?.Witness(snapshot, viewport);
 
     private void PublishContentSpace(ContentSpaceDecision? candidate)
     {
         if (candidate is null || _contentEnvironmentPublishing || HasContentGesture || _transitionLayout is not null || _geometry.IsCollapsed ||
-            _contentSnapshot is not { } snapshot || _contentViewport is not { } viewport ||
+            _contentLayout.Snapshot is not { } snapshot || _contentLayout.Viewport is not { } viewport ||
             _window is null || !HasExpectedBounds(_window, _bounds)) return;
-        var old = _contentSpacePublication.Published;
-        if (!_contentSpacePublication.TryPublish(candidate, ContentWitness(snapshot, viewport, _bounds), true)) return;
+        var old = _contentLayout.Space.Published;
+        if (!_contentLayout.Space.TryPublish(candidate, ContentWitness(snapshot, viewport, _bounds), true)) return;
         if (old is null || old.IsRestricted != candidate!.IsRestricted || old.Witness.Environment != candidate.Witness.Environment)
         {
             log.Write("info", "content.space_published", new { PosterId, reason = candidate.Reason.ToString(),
@@ -75,13 +65,13 @@ internal sealed partial class PosterVisualWindow
 
     private void BrowseRestrictedContent(int direction)
     {
-        if (!IsContentSpaceRestricted || direction is < 0 or > 3 || _contentPresentationSuspended ||
+        if (!IsContentSpaceRestricted || direction is < 0 or > 3 || _contentSession.IsSuspended ||
             HasContentGesture || _transitionLayout is not null || _geometry.IsCollapsed) return;
         _contentActivation.Reset();
         var snapshot = EnsureContentSnapshot(_bounds);
         bool horizontal = direction < 2;
         int wheel = direction is 0 or 2 ? 120 : -120;
-        var offsets = ContentWheelScrollPolicy.Advance(snapshot, _contentViewport!, wheel, _contentBrowseMode,
+        var offsets = ContentWheelScrollPolicy.Advance(snapshot, _contentLayout.Viewport!, wheel, _contentLayout.BrowseMode,
             crossAxis: horizontal == (snapshot.FlowAxis == ContentFlowAxis.Vertical));
         _contentScrollX = offsets.ScrollXDip; _itemScrollOffsetDip = offsets.ScrollYDip;
         RefreshContentSurface();
@@ -119,20 +109,8 @@ internal sealed partial class PosterVisualWindow
     private void RenderContentSpaceNavigation()
     {
         if (_contentSpaceNavigation is not null) _contentSpaceNavigation.Visibility = IsContentSpaceRestricted &&
-            !_disposed && !_contentPresentationSuspended && !_geometry.IsCollapsed && _transitionLayout is null
+            !_disposed && !_contentSession.IsSuspended && !_geometry.IsCollapsed && _transitionLayout is null
             ? Visibility.Visible : Visibility.Collapsed;
-    }
-
-    private void AddContentSpaceNavigationRegions(DesktopPixelRect frame, List<PosterInputRegion> regions)
-    {
-        if (!IsContentSpaceRestricted || _geometry.IsCollapsed || _monitor is null || _transitionLayout is not null) return;
-        for (int i = 0; i < 4; i++)
-        {
-            var r = ContentNavigationRect(frame, i);
-            int left = (int)Math.Round(r.X * _monitor.ScaleX), top = (int)Math.Round(r.Y * _monitor.ScaleY);
-            int right = (int)Math.Round(r.Right * _monitor.ScaleX), bottom = (int)Math.Round(r.Bottom * _monitor.ScaleY);
-            regions.Add(new(PosterInputTargetKind.ContentBrowseNavigation, i, new(left, top, right - left, bottom - top)));
-        }
     }
 
     private void AddContentSpaceNavigationMenu(MenuFlyout flyout, Func<string, bool> current)

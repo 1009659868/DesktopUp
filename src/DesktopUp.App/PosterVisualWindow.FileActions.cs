@@ -5,11 +5,10 @@ namespace DesktopUp;
 
 internal sealed partial class PosterVisualWindow
 {
-    private bool _shellUiBusy;
     private PointerScreenPoint _contentMenuPoint;
-    internal bool HasFileAction => _shellUiBusy;
+    internal bool HasFileAction => _contentSession.HasFileAction;
     private void SetFileActionBusy(bool busy)
-    { _shellUiBusy=busy;spatial.NotifyFileActionState(PosterId); }
+    { _contentSession.SetInteraction(PosterContentInteraction.FileAction, busy);spatial.NotifyFileActionState(PosterId); }
     private string? BeginContentDelete()
     {
         if (_disposed || HasFileAction || HasContentGesture || !spatial.TransfersAvailable || spatial.HasCenterDraft(PosterId!))
@@ -31,7 +30,7 @@ internal sealed partial class PosterVisualWindow
     }
     private string? BeginShellUi(string? itemId, ShellUiAction action)
     {
-        if (_shellUiBusy || _disposed || HasContentGesture || spatial.IsPosterSpatialBusy(PosterId!)) return "请先完成当前操作。";
+        if (_contentSession.HasFileAction || _disposed || HasContentGesture || spatial.IsPosterSpatialBusy(PosterId!)) return "请先完成当前操作。";
         var target = itemId is null ? null : spatial.ContentActionRelation(PosterId!,itemId);
         if (itemId is not null && target is null) return "当前项目没有可用的本机路径。";
         var point = _contentMenuPoint;
@@ -85,7 +84,7 @@ internal sealed partial class PosterVisualWindow
             status.Click+=(_,_)=>{flyout.Hide();spatial.TrackContentOperation(ShowFileActionError(mapped+"\n\n"+detail));};
             flyout.Items.Add(status);
         }
-        var create = new MenuFlyoutSubItem { Text = "新建", IsEnabled = !_shellUiBusy && spatial.TransfersAvailable && spatial.MappingAvailable(PosterId!) };
+        var create = new MenuFlyoutSubItem { Text = "新建", IsEnabled = !_contentSession.HasFileAction && spatial.TransfersAvailable && spatial.MappingAvailable(PosterId!) };
         foreach (var (label, kind) in new[] { ("文件夹", NewContentKind.Folder), ("文本文档", NewContentKind.TextFile), ("快捷方式…", NewContentKind.Shortcut) })
         {
             var entry = StyleMenuItem(new MenuFlyoutItem { Text = label });
@@ -101,7 +100,7 @@ internal sealed partial class PosterVisualWindow
         flyout.Items.Add(new MenuFlyoutSeparator());
         void Add(string text, string command, ShellUiAction action)
         {
-            var item = StyleMenuItem(new MenuFlyoutItem { Text = text, IsEnabled = !_shellUiBusy });
+            var item = StyleMenuItem(new MenuFlyoutItem { Text = text, IsEnabled = !_contentSession.HasFileAction });
             item.Click += (_, _) =>
             {
                 if (!current(command)) return;

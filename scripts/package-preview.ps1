@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 param(
     [ValidatePattern('^\d{8}\.\d+$')][string]$ReleaseId,
     [string]$OutputRoot,
@@ -42,6 +42,7 @@ $pkgAllowed = Join-Path $pkgRepo 'out'
 if (!$pkgOutput.StartsWith($pkgAllowed+'\', [StringComparison]::OrdinalIgnoreCase)) { throw 'OutputRoot must be a new directory below repository/out.' }
 if (Test-Path -LiteralPath $pkgOutput) { throw 'Preserve old builds: choose a new OutputRoot.' }
 . (Join-Path $PSScriptRoot 'toolchain.ps1')
+& (Join-Path $PSScriptRoot 'validate-source-text.ps1') -RepositoryRoot $pkgRepo
 $pkgToolInfo = Get-DesktopUpToolchain -MakeNsis $MakeNsis
 $pkgExplicitNsis = $MakeNsis
 $MakeNsis = $pkgToolInfo.MakeNsis
@@ -61,7 +62,7 @@ function Get-SourceBinding {
         Get-ChildItem -LiteralPath (Join-Path $pkgRepo $pkgArea) -Recurse -File |
             Where-Object { $_.FullName -notmatch '\\(bin|obj)\\' } |
             ForEach-Object { [ordered]@{ Path=$_.FullName.Substring($pkgRepo.Length+1).Replace('\','/'); SHA256=(Get-FileHash -LiteralPath $_.FullName).Hash } }
-    }; foreach ($pkgName in @('Directory.Build.props','Directory.Build.targets','Directory.Packages.props','DesktopUp.sln','global.json','NuGet.Config','Package-Preview.cmd','LICENSE','THIRD_PARTY_NOTICES.md')) {
+    }; foreach ($pkgName in @('.editorconfig','.gitattributes','Directory.Build.props','Directory.Build.targets','Directory.Packages.props','DesktopUp.sln','global.json','NuGet.Config','Package-Preview.cmd','LICENSE','THIRD_PARTY_NOTICES.md')) {
         [ordered]@{ Path=$pkgName; SHA256=(Get-FileHash -LiteralPath (Join-Path $pkgRepo $pkgName)).Hash }
     }) | Sort-Object { $_.Path }
 }

@@ -7,7 +7,7 @@ internal sealed partial class PosterSpatialRuntime
 {
     internal async Task ContentReturnProbe(string root, bool restart)
     {
-        var repository = new SqliteStateCommandRepository(_transferStore!);
+        var repository = new SqliteStateCommandRepository(_reviewTransferStore!);
         string sources = Path.Combine(root, "return-sources"), file = Path.Combine(sources, "return.txt");
         if (!restart)
         {
@@ -18,7 +18,7 @@ internal sealed partial class PosterSpatialRuntime
             await IncomingProbe([file], frame:true);
             var before = repository.Read(); var poster = before.Catalog.Posters.Single();
             var item = before.ContentCatalog.Items.Single();
-            if(File.Exists(file) || new PosterContentReturn(_transferStore!).OriginalPath(item.Id)!=file)throw new IOException("Original source not recorded at native ingress.");
+            if(File.Exists(file) || new PosterContentReturn(_reviewTransferStore!).OriginalPath(item.Id)!=file)throw new IOException("Original source not recorded at native ingress.");
             var command = new RemovePosterCommand("return-probe-"+Guid.NewGuid(),StateCommandSource.ControlCenter,before.Revision,
                 StateReadSet.ForPoster(poster.Poster.PosterId,poster.EntityVersion) with {CatalogVersion=before.Catalog.CatalogVersion,ContentVersion=before.ContentVersion},poster.Poster.PosterId,true);
             var result = await ReturnAndRemovePoster(command,0);

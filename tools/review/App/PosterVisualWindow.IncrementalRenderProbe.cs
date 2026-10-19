@@ -11,37 +11,68 @@ internal sealed record ContentRenderIdentity(object Source, object Cache, long R
 
 internal sealed partial class PosterVisualWindow
 {
+    internal void VerifyContentPublicationForProbe()
+    {
+        RefreshContentSurface();
+        var previous = Presenter.Frame ?? throw new IOException("No published paint.");
+        var continuity = _contentLayout.Space.Published;
+        var prepared = PrepareSpatialFrame(_bounds) ?? throw new IOException("No prepared frame.");
+        // A stale pair is rejected before native writes; a mismatched native size is rejected by
+        // the actual input adapter after preparation. Both must retain the previous paint.
+        if (CommitSpatialFrames([prepared with { Input = prepared.Input with
+            { ContentSnapshotGeneration = prepared.Input.ContentSnapshotGeneration + 1 } }]) ||
+            !ReferenceEquals(previous, Presenter.Frame) || !ReferenceEquals(continuity, _contentLayout.Space.Published))
+            throw new IOException("Stale presentation pair advanced paint/continuity.");
+        RefreshContentSurface();
+        previous = Presenter.Frame;
+        prepared = PrepareSpatialFrame(_bounds)!;
+        if (ApplyContentFrame(_bounds, prepared.Input with { FrameWidth = prepared.Input.FrameWidth + 1 }) ||
+            !ReferenceEquals(previous, Presenter.Frame))
+            throw new IOException("Native input rejection advanced paint.");
+        RefreshContentSurface();
+        previous = Presenter.Frame;
+        prepared = PrepareSpatialFrame(_bounds)!;
+        if (CommitSpatialFrames([prepared with { Input = prepared.Input with
+            { FrameWidth = prepared.Input.FrameWidth + 1 } }]) || !ReferenceEquals(previous, Presenter.Frame))
+            throw new IOException("Partial batch failed to restore paint.");
+        RefreshContentSurface();
+        var surface = inputRouter.ReadSurface(inputSession);
+        if (surface is null || surface.Layout.ContentSnapshotGeneration != Presenter.Frame!.Snapshot.ViewportGeneration)
+            throw new IOException("Recovery did not publish the same generation.");
+        log.Write("info", "contract.r3_frame_publication_passed", new { stale = true, nativeReject = true, batchReject = true });
+    }
+
     internal async Task<ContentRenderIdentity> CaptureRenderIdentityForProbe()
     {
         var timeout = System.Diagnostics.Stopwatch.StartNew();
-        while (_contentAssets is null || _contentAssets.RunningLoads != 0 || _contentAssetRequests.Count != 0 ||
-            _contentPorts.Views.Version != _contentSourceVersion || ContentDocument.Placements.Any(p =>
-                !_contentVisibleAssetKeys.TryGetValue(p.ItemId, out var key) || !_contentBitmaps.ContainsKey(key)))
+        while (Rasters.Cache is null || Rasters.Cache.RunningLoads != 0 || Rasters.Requests != 0 ||
+            _contentPorts.Views.Version != _contentSession.SourceVersion || ContentDocument.Placements.Any(p =>
+                !Rasters.VisibleKeys.TryGetValue(p.ItemId, out var key) || !Presenter.Bitmaps.ContainsKey(key)))
         {
             if (timeout.Elapsed.TotalSeconds > 20) throw new IOException("Incremental raster fixture did not finish loading: " +
-                System.Text.Json.JsonSerializer.Serialize(new { cache = _contentAssets is not null, running = _contentAssets?.RunningLoads,
-                    requests = _contentAssetRequests.Count, totalRequests = _contentAssetRequestCount, accepted = _contentAssetAcceptedCount,
-                    sourceVersion = _contentPorts.Views.Version, observedVersion = _contentSourceVersion, pending = _contentSourceRefreshPending,
-                    transition = _transitionLayout is not null, command = _activeCommandRequestId, suspended = _contentPresentationSuspended,
-                    placements = ContentDocument.Placements.Count, demand = _contentVisibleAssetKeys.Count, bitmaps = _contentBitmaps.Count,
-                    attempted = _contentAssetAttempted.Count, views = ReadContentViews().Select(v => new { v.ItemId, v.AssetKey, v.IsAvailable }) }));
+                System.Text.Json.JsonSerializer.Serialize(new { cache = Rasters.Cache is not null, running = Rasters.Cache?.RunningLoads,
+                    requests = Rasters.Requests, totalRequests = Rasters.RequestedCount, accepted = Rasters.AcceptedCount,
+                    sourceVersion = _contentPorts.Views.Version, observedVersion = _contentSession.SourceVersion, pending = _contentSession.SourceRefreshPending,
+                    transition = _transitionLayout is not null, command = _contentSession.ActiveCommand, suspended = _contentSession.IsSuspended,
+                    placements = ContentDocument.Placements.Count, demand = Rasters.VisibleKeys.Count, bitmaps = Presenter.Bitmaps.Count,
+                    attempted = Rasters.Attempted, views = ReadContentViews().Select(v => new { v.ItemId, v.AssetKey, v.IsAvailable }) }));
             await Task.Delay(50);
         }
         return RenderIdentity();
     }
     private ContentRenderIdentity RenderIdentity()
     {
-        foreach (var (tile, card) in _contentCards)
+        foreach (var (tile, card) in Presenter.Cards)
         {
-            string item = _contentCardPaint[tile].View.ItemId;
-            if (_contentVisibleAssetKeys.TryGetValue(item, out var key) && _contentBitmaps.TryGetValue(key, out var bitmap) &&
+            string item = Presenter.ItemForTile(tile);
+            if (Rasters.VisibleKeys.TryGetValue(item, out var key) && Presenter.Bitmaps.TryGetValue(key, out var bitmap) &&
                 (card is not Grid cell || cell.Children.OfType<Border>().FirstOrDefault()?.Child is not Grid host ||
                  !host.Children.OfType<Image>().Any(image => ReferenceEquals(image.Source, bitmap))))
                 throw new IOException("Cached raster is not displayed by its actual card: " + item);
         }
-        return new(_contentPorts, _contentAssets!, _contentAssetRequestCount,
-            _contentCards.ToDictionary(p => p.Key, p => p.Value),
-            _contentVisibleAssetKeys.Where(p => _contentBitmaps.ContainsKey(p.Value)).ToDictionary(p => p.Key, p => _contentBitmaps[p.Value]));
+        return new(_contentPorts, Rasters.Cache!, Rasters.RequestedCount,
+            Presenter.Cards.ToDictionary(p => p.Key, p => p.Value),
+            Rasters.VisibleKeys.Where(p => Presenter.Bitmaps.ContainsKey(p.Value)).ToDictionary(p => p.Key, p => Presenter.Bitmaps[p.Value]));
     }
 
     internal void RequireRetainedRenderForProbe(ContentRenderIdentity before, int addedRequests = 0)
@@ -89,7 +120,7 @@ internal sealed partial class PosterVisualWindow
             }
             if (frames == 0 || transitionFrames == 0) throw new IOException("No composed transition frames observed.");
             log.Write("info", "contract.posture_rasters_passed", new { cycles = 6, frames, transitionFrames,
-                retainedImages = before.Images.Count, requestsDuringPosture = _contentAssetRequestCount - before.Requests,
+                retainedImages = before.Images.Count, requestsDuringPosture = Rasters.RequestedCount - before.Requests,
                 nativeMouse = false, nativeKeyboard = false });
         }
         finally { Microsoft.UI.Xaml.Media.CompositionTarget.Rendering -= Frame; }
@@ -146,7 +177,7 @@ internal sealed partial class PosterVisualWindow
         string raw = ContentLayoutPolicy.Serialize(ContentDocument);
         long entity = _posterEntityVersion;
         var surface = IncomingSurface();
-        var first = _contentSnapshot!.Items.OrderBy(i => i.ReadOrder).First();
+        var first = _contentLayout.Snapshot!.Items.OrderBy(i => i.ReadOrder).First();
         var point = new PointerScreenPoint(surface.Frame.X + (int)((surface.ContentViewport.X + first.Bounds.X + 1) * surface.ScaleX),
             surface.Frame.Y + (int)((surface.ContentViewport.Y + first.Bounds.Y + 1) * surface.ScaleY));
         void Unchanged()
@@ -179,7 +210,7 @@ internal sealed partial class PosterVisualWindow
                     if (!ReferenceEquals(plan, _incomingLayout)) throw new IOException("Repeated same landing recalculated or drifted.");
                     Unchanged();
                 }
-                if (_contentCards.Keys.Any(plan.Placeholders.Contains) || _contentVisibleAssetKeys.Keys.Any(plan.Placeholders.Contains))
+                if (Presenter.Cards.Keys.Any(plan.Placeholders.Contains) || Rasters.VisibleKeys.Keys.Any(plan.Placeholders.Contains))
                     throw new IOException("A hover placeholder became a real card or asset request.");
                 session.Leave(); ShowIncomingPreview(null); Restored();
                 ShowIncomingPreview(session.Enter(paths, surface, point, 0, 2));

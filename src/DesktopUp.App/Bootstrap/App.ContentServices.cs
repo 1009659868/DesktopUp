@@ -1,7 +1,6 @@
 using DesktopUp.Application;
 using DesktopUp.Domain;
 using DesktopUp.Infrastructure;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace DesktopUp;
 
@@ -11,18 +10,20 @@ public partial class App
     // App retains worker ownership and its existing StopAsync / operation-drain order.
     private void ConfigureRealContentServices(PosterSpatialRuntime runtime)
     {
-        var services = _services!;
-        var store = services.GetRequiredService<SqliteStateStore>();
-        var coordinator = services.GetRequiredService<IStateProjectionCoordinator>();
+        var services = _composition!;
+        var store = services.Store;
+        var coordinator = services.Projection;
         var journal = new SqliteContentOpenJournal(store);
         journal.RetireInterruptedRequests();
-        _realContentWorker = new LocalContentWorkerClient(
-            ContentWorkerLocation.InApplication(AppContext.BaseDirectory), _ledger);
+        var worker = _composition!.StartWorker();
         var actions = new ContentActionService(
             () => coordinator.TryGetCurrent(out var current) ? current!.ContentCatalog : ContentCatalogSnapshot.Empty,
-            _realContentWorker, journal);
+            worker, journal);
         var files = new LocalContentActionFiles();
         var shellFiles = new ShellDirectoryTransfer();
+        runtime.ConfigureContentReturns(ContentReturns);
+        runtime.ConfigureMappingUseCase(new MappedDirectoryUseCase(
+            new SqliteMappedDirectoryStorage(store), new LocalContentObservationFiles()));
         runtime.ConfigureTransferUseCases(
             new ManagedIngressUseCase(new SqliteManagedIngressStorage(store), files),
             new MappedIngressUseCase(new MappedDirectoryIngress(store), shellFiles),
@@ -34,6 +35,6 @@ public partial class App
             new ContentRenameUseCase(new SqliteContentRenameJournal(store), files),
             new ContentDeletionUseCase(new SqliteContentDeletionStorage(store), files, new ShellDirectoryTransfer()),
             new ShellUiClient(ContentWorkerLocation.InApplication(AppContext.BaseDirectory), _ledger!)));
-        runtime.ConfigureRealContent(_realContentWorker, actions, new SqliteContentIconStore(store));
+        runtime.ConfigureRealContent(worker, actions, new SqliteContentIconStore(store));
     }
 }

@@ -6,10 +6,7 @@ namespace DesktopUp;
 internal sealed partial class PosterVisualWindow
 {
     private ContentSourcePorts _contentPorts = contentPorts ?? ContentSourcePorts.Demo;
-    private long _contentSourceVersion = contentPorts?.Views.Version ?? 1;
     private EventHandler? _contentSourceChanged;
-    private int _contentSourceRefreshQueued;
-    private bool _contentSourceRefreshPending;
 
     // Host-owned adapter binding, not a template/script/plugin execution entry point.
     internal void BindContentSource(ContentSourcePorts ports)
@@ -22,18 +19,18 @@ internal sealed partial class PosterVisualWindow
         ReleaseContentSourceSubscription();
         _contentOpenLifetime++;
         ReleaseContentAssets();
-        _contentPorts = ports; _contentSourceVersion = 0;
+        _contentPorts = ports;
+        var binding = _contentSession.BindSource();
         if (ports.Views is IObservableContentItemViewSource observable)
         {
             var dispatcher = _window?.DispatcherQueue ?? throw new InvalidOperationException("Source binding requires a live dispatcher.");
             _contentSourceChanged = (_, _) =>
             {
-                if (Interlocked.Exchange(ref _contentSourceRefreshQueued, 1) != 0) return;
+                if (!binding.TryQueue()) return;
                 if (!dispatcher.TryEnqueue(() =>
                 {
-                    Interlocked.Exchange(ref _contentSourceRefreshQueued, 0);
-                    if (!_disposed && ReferenceEquals(_contentPorts, ports)) RefreshContentSource();
-                })) Interlocked.Exchange(ref _contentSourceRefreshQueued, 0);
+                    if (binding.Complete() && !_disposed && ReferenceEquals(_contentPorts, ports)) RefreshContentSource();
+                })) binding.Complete();
             };
             observable.Changed += _contentSourceChanged;
         }
@@ -42,35 +39,29 @@ internal sealed partial class PosterVisualWindow
 
     private void RefreshContentSource()
     {
-        if (_disposed || _contentPorts.Views.Version == _contentSourceVersion) return;
-        // Reject a regressing source; never re-author layout on a metadata notification.
-        if (_contentPorts.Views.Version < _contentSourceVersion || _contentPorts.Views.Version < 1) return;
-        if (_transitionLayout is not null || _activeCommandRequestId is not null || _inlineRenameItem is not null)
+        if (_disposed || _contentPorts.Views.Version <= _contentSession.SourceVersion || _contentPorts.Views.Version < 1) return;
+        if (!_contentSession.TryAcceptSource(_contentPorts.Views.Version))
         {
             // Invalidate result admission immediately, but retain the R4 prepared tree until
             // its existing end/recovery safe point. No new timer or parallel layout owner.
-            _contentSourceRefreshPending = true;
-            if (_contentPorts.Assets is IContentRasterIdentity) PruneChangedRasterDemand();
-            else { _contentAssets?.SetVisible([]); _contentVisibleAssetKeys.Clear(); _contentAssetAttempted.Clear(); }
+            if (_contentPorts.Assets is IContentRasterIdentity) Rasters.PruneChangedDemand();
+            else { Rasters.ClearDemand(); }
             return;
         }
-        _contentSourceRefreshPending = false;
-        _contentSourceVersion = _contentPorts.Views.Version;
         // Keep the same cache's real in-flight budget across metadata churn. A source which
         // ignores cancellation cannot gain four more slots on every version notification.
         bool invalidated;
-        if (_contentPorts.Assets is IContentRasterIdentity) invalidated = PruneChangedRasterDemand();
+        if (_contentPorts.Assets is IContentRasterIdentity) invalidated = Rasters.PruneChangedDemand();
         else
         {
-            _contentAssets?.SetVisible([]);
-            _contentVisibleAssetKeys.Clear(); _contentAssetAttempted.Clear(); invalidated = true;
+            Rasters.ClearDemand(); invalidated = true;
         }
         if (invalidated)
         {
             _contentSpaceEpoch = checked(_contentSpaceEpoch + 1);
             CancelContentGesture("source-version-changed"); _contentActivation.Reset();
         }
-        if (!_contentPresentationSuspended && _window is not null) RefreshContentSurface();
+        if (!_contentSession.IsSuspended && _window is not null) RefreshContentSurface();
         spatial.NotifyContentEditorChanged(PosterId);
     }
 
@@ -80,9 +71,9 @@ internal sealed partial class PosterVisualWindow
         if (_contentSourceChanged is not null && _contentPorts.Views is IObservableContentItemViewSource previous)
             previous.Changed -= _contentSourceChanged;
         _contentSourceChanged = null;
-        Interlocked.Exchange(ref _contentSourceRefreshQueued, 0);
+        _contentSession.SourceRefresh.Close();
     }
 
     private IReadOnlyList<ContentItemView> ReadContentViews() =>
-        ContentSourceProjection.Read(_contentPorts.Views, ContentDocument, _contentSourceVersion);
+        ContentSourceProjection.Read(_contentPorts.Views, ContentDocument, _contentSession.SourceVersion);
 }

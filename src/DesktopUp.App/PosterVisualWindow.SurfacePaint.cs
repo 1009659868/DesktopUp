@@ -28,12 +28,7 @@ internal sealed partial class PosterVisualWindow
         PaintSceneCards();
     }
 
-    private void PaintSceneCards()
-    {
-        foreach (var cell in _contentCards.Values.OfType<Grid>())
-            if (cell.Children.OfType<Border>().FirstOrDefault() is { } card)
-                ApplyTemplateCardPaint(card, card.BorderThickness.Left > 1, cell);
-    }
+    private void PaintSceneCards() => Presenter.PaintScene();
 
     private void ApplyTemplateCardPaint(Border card, bool selected, Grid? cell = null)
     {

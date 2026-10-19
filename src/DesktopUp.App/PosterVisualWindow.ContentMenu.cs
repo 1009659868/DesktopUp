@@ -11,10 +11,10 @@ internal sealed partial class PosterVisualWindow
     {
         if(HasFileAction){args.Handled=true;return;}
         var request = args.Request;
-        if (_disposed || _contentPresentationSuspended || _geometry.IsCollapsed || _inputIsland is null ||
+        if (_disposed || _contentSession.IsSuspended || _geometry.IsCollapsed || _inputIsland is null ||
             request.Session != inputSession || request.Hit.LayoutRevision != _inputIsland.AppliedLayoutRevision ||
             request.Frame != _bounds || inputRouter.ResolveContext(request.Hit, request.ScreenPoint, [inputSession], request.PressScreenPoint) is null ||
-            request.ContentSnapshotGeneration != _contentSnapshot?.ViewportGeneration ||
+            request.ContentSnapshotGeneration != _contentLayout.Snapshot?.ViewportGeneration ||
             !inputRouter.IsCurrent(inputSession, request.Hit.LayoutRevision)) return;
         if (request.IsBackground)
         {
@@ -41,14 +41,14 @@ internal sealed partial class PosterVisualWindow
 
     private ContentPinContextAction ResolveContentPinContext(PosterContentContextRequest request)
     {
-        if (request.PressScreenPoint is not { } press || _monitor is null || _contentSnapshot is null || _contentViewport is null)
+        if (request.PressScreenPoint is not { } press || _monitor is null || _contentLayout.Snapshot is null || _contentLayout.Viewport is null)
             return ContentPinContextAction.ItemMenu;
         var placement = ContentDocument.Placements.FirstOrDefault(p => p.ItemId == request.ContentItemId);
         if (placement is null || ContentPinPresentationPolicy.Adornment(ContentDocument, placement) != ContentPinAdornment.OrderPin)
             return ContentPinContextAction.ItemMenu;
         (double X, double Y) Local(PointerScreenPoint point) =>
             ((point.X-_bounds.X)/_monitor.ScaleX-ContentLeftDip, (point.Y-_bounds.Y)/_monitor.ScaleY-ContentTopDip);
-        var pins = ContentLayoutFlow.ProjectTiles(_contentSnapshot, _contentViewport, _contentBrowseMode)
+        var pins = ContentLayoutFlow.ProjectTiles(_contentLayout.Snapshot, _contentLayout.Viewport, _contentLayout.BrowseMode)
             .Where(tile => tile.ItemId == request.ContentItemId).Select(ContentPinPresentationPolicy.VisibleBounds);
         return ContentPinPresentationPolicy.ResolveContext(pins, Local(press), Local(request.ScreenPoint));
     }
@@ -99,6 +99,6 @@ internal sealed partial class PosterVisualWindow
                 writable && placement.ManualSize && placement.AutomaticSizeBasis is not null);
             flyout.Items.Add(new MenuFlyoutSeparator());
         }
-        Add("撤销上次调整", "undo", () => UndoContent(false), writable && _contentHistory.CanUndo(doc));
+        Add("撤销上次调整", "undo", () => UndoContent(false), writable && _contentSession.History.CanUndo(doc));
     }
 }

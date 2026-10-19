@@ -25,11 +25,11 @@ internal sealed partial class PosterVisualWindow
         string initial = Path.GetFileName(path);
         var snapshot = EnsureContentSnapshot(_bounds);
         var slot = snapshot.Items.FirstOrDefault(p => p.ItemId == itemId);
-        if (slot is null || _contentViewport is not { } viewport) return;
+        if (slot is null || _contentLayout.Viewport is not { } viewport) return;
 
         // New content can be below the fold. Bring its complete label into view before
         // opening the editor; never change the saved arrangement or rebuild all cards.
-        var tiles = ContentLayoutFlow.ProjectTiles(snapshot, viewport, _contentBrowseMode);
+        var tiles = ContentLayoutFlow.ProjectTiles(snapshot, viewport, _contentLayout.BrowseMode);
         var tile = tiles.FirstOrDefault(t => t.ItemId == itemId && t.Bounds.Y >= 0 &&
             t.Bounds.Bottom <= viewport.HeightDip && t.Bounds.X >= 0 && t.Bounds.Right <= viewport.WidthDip);
         if (tile is null)
@@ -38,8 +38,8 @@ internal sealed partial class PosterVisualWindow
             _itemScrollOffsetDip = Math.Clamp(slot.Bounds.Y, 0, Math.Max(0, snapshot.ExtentHeightDip - viewport.HeightDip));
             RefreshContentSurface();
             snapshot = EnsureContentSnapshot(_bounds);
-            viewport = _contentViewport!;
-            tile = ContentLayoutFlow.ProjectTiles(snapshot, viewport, _contentBrowseMode).FirstOrDefault(t => t.ItemId == itemId);
+            viewport = _contentLayout.Viewport!;
+            tile = ContentLayoutFlow.ProjectTiles(snapshot, viewport, _contentLayout.BrowseMode).FirstOrDefault(t => t.ItemId == itemId);
         }
         if (tile is null) throw new IOException("当前空间无法显示该项的名称，请扩大海报后重试。");
         var done = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -89,6 +89,7 @@ internal sealed partial class PosterVisualWindow
             finally { saving = false; name.IsReadOnly = false; }
         }
         _inlineRenameItem = itemId; _cancelInlineRename = Cancel;
+        _contentSession.SetInteraction(PosterContentInteraction.Naming, true);
         SetInlineNameVisibility(itemId, false);
         using var lease = ledger.Acquire("content.inline-rename", PosterId!);
         using var cancellation = _contentOpenCancellation.Token.Register(() => root.DispatcherQueue.TryEnqueue(Cancel));
@@ -126,16 +127,11 @@ internal sealed partial class PosterVisualWindow
             finished = true; popup.IsOpen = false; interaction?.Dispose(); popup.Child = null;
             await saveOperation; // Shutdown waits for an already accepted rename/rollback.
             _inlineRenameItem = null; _cancelInlineRename = null;
+            _contentSession.SetInteraction(PosterContentInteraction.Naming, false);
             SetInlineNameVisibility(itemId, true);
             if (!_disposed) _ = ReassertCurrentClusterBottom();
         }
     }
 
-    private void SetInlineNameVisibility(string itemId, bool visible)
-    {
-        foreach (var entry in _contentCards)
-            if (_contentCardPaint.TryGetValue(entry.Key, out var paint) && paint.View.ItemId == itemId && entry.Value is Grid cell)
-                foreach (var text in cell.Children.OfType<TextBlock>().Where(t => Grid.GetRow(t) == 1))
-                    text.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
-    }
+    private void SetInlineNameVisibility(string itemId, bool visible) => Presenter.SetNameVisible(itemId, visible);
 }

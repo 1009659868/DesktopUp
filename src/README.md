@@ -1,27 +1,28 @@
-# 源码职责与首批整理入口
+# 源码职责与架构入口
 
-当前仍是六个生产程序集，命名空间未全库改名。A完成目录整理；B抽出打开/定位服务；C抽出热度派生运行状态，不意味着所有内容事务或窗口已解耦。
+当前六个生产程序集。R1～R4 USER PASS / CLOSED，现有业务基础架构出口通过；真实热度尚未开工，动态模板/AI/独立更新器未实现。状态见[基础架构记录](../Docs/A_Project/40_Implementation/Architecture/FOUNDATION_REMAINDER_PLAN.md#r4-composition-boundary)，[当前图与目标对照](../Docs/A_Project/20_Architecture/ArchitectureReview/R4-Closed/README.md)给出实际职责和未来差距。
 
-当前继续impl/architecture-foundation，按[基础架构余项](../Docs/A_Project/40_Implementation/Architecture/FOUNDATION_REMAINDER_PLAN.md)补齐已有业务的用例、会话、呈现/命中及组装边界后再审查真实热度准入。下表是当前已实现职责，不是余项目标已完成。
-
-| 位置 | 当前职责与约束 |
+| 位置 | 职责与边界 |
 | --- | --- |
-| DesktopUp.Domain/Content | 内容实体、能力、图标资产规则；无外部I/O或UI依赖 |
-| DesktopUp.Application/Features/Content/Open | ContentActionService负责打开/定位执行与事实完成；ReferenceContentActions只观察结果，ReferenceContentRuntime负责每海报视图/图标缓存 |
-| DesktopUp.Application/Features/Content/FileActions | R1新建/改名/删除/Win菜单编排、结果登记与索引策略；通过Ports访问事务与文件/Shell适配，不引用SQLite/WinUI |
-| DesktopUp.Application/Features/Content/Transfers | 普通/映射拖入、跨海报交接、原生拖出观察的执行次序、取消与结果发布；不含OLE实现、具体数据库或窗口 |
-| DesktopUp.Application/Features/Content/Layout | ContentHeatSession持有缓冲/已接受热度/派生文档/档位；不含UI、调度器或存储，原Domain提案/求解规则不改 |
-| DesktopUp.Application/Ports/Content | 来源/Worker/Shell UI请求结果协议；不依赖具体数据库/WinUI |
-| DesktopUp.Infrastructure/Persistence/Content | 打开成功事实与图标存储的SQLite实现 |
-| DesktopUp.Infrastructure/ContentActions | 文件动作原子准备/提交/观察、执行租约与本机文件身份；原三个Service兼容入口转向Application用例 |
-| DesktopUp.Infrastructure/ContentTransfers与原拖放账本 | 普通准备端口及原安全执行器；CrossPosterTransfer/MappedDirectoryIngress的attempt保留原事务/身份锁，Execute兼容入口转向同一Application用例 |
-| DesktopUp.App/Bootstrap | 服务注册和真实内容组装；按原启动次序创建应用级执行服务，原Worker仍由App管理 |
-| DesktopUp.App其余根目录/Scenes | 现有窗口、空间会话和呈现；C只将热度状态抽出，交互保护与同帧发布继续归窗口，不假称已全部拆成独立组件 |
-| DesktopUp.Windows | 原生窗口、输入、拖放和桌面适配；本批未搬动 |
-| DesktopUp.ContentWorker | 独立Shell/图标执行进程；本批未改变协议和路径 |
+| Domain/Content | 实体、能力、作者数据、纯布局/提案规则，无外部I/O或UI |
+| Application/Features/Content/Open | 成功交接事实、打开/定位用例；每海报视图/资源适配不另造事实库 |
+| Application/Features/Content/FileActions、Transfers | 新建、命名、删除、Win菜单、拖入/出及跨海报的应用编排；平台/事务经窄端口 |
+| Application/Features/Content/Observation、Lifecycle、Storage | 映射/最小外部同步、启动观察、归还/卸载、位置迁移的业务顺序 |
+| Application/Features/Content/Layout | PosterContentSession保护/草稿/提案；ContentPresentationLayout准备帧；ContentInputGeometry同代区域；无窗口或SQLite |
+| Application/Ports | 请求、结果、版本/取消及原子操作端口，不暴露任意SQL或窗口私有状态 |
+| Infrastructure/Persistence | SQLite原子事务、打开事实、图标资产、CAS和账本；25份迁移资源冻结，旧记录不重写 |
+| Infrastructure各Content/Storage适配 | 文件身份、租约、原子提交及系统执行；复用Windows只读探测；不回调视图私有状态 |
+| Infrastructure/ManagedContentMonitor | 既有监听/兜底定时器；规模化议题OPT-CONTENT-SYNC-01待实测，不在R4改策略 |
+| App/Bootstrap | ApplicationComposition显式构造端口、唯一store/Worker；App.Startup按原顺序分流/接线；其余组装文件负责对应应用用例 |
+| App/WinUiPosterSession、PosterVisualWindow | 每代会话与原生窗口寿命；控件、Dispatcher、输入采集、同代提交/回滚、场景材质适配 |
+| App/Presentation | PosterContentPresenter稳定卡片/暖位图；ContentRasterBinding有界需求、订阅及迟到准入 |
+| App/App.Lifetime、App.DesktopEnvironment | 停止顺序；原生环境监听/恢复与时钟适配，不含单文件业务 |
+| Windows/Content/LocalContentReferenceProbe | 本机元数据探测的单一实现，不执行目标或跟随重解析路径 |
+| ContentWorker | 独立Shell/图标进程；只引用Application/Windows，不链接Infrastructure源码、不打开配置库 |
+| Modules | 已有Lamp/Rain的声明、场景和适配；不是动态模板平台 |
 
-六个工程的依赖门在现有ArchitectureTests中。正常App构建不包含独立验收执行器，开发验收源在[tools/review](../tools/review/README.md)，显式编译开关为DesktopUpReviewTools=true。原始生产诊断、来源探测、安全账本继续保留。
+六程序集的实际方向与合法宿主例外见[本轮边界表及现状图](../Docs/A_Project/20_Architecture/ArchitectureReview/R4/README.md)。运行时ServiceProvider查询、DI包、两个无用仓储注册、旧Worker源码链接及旧所有者已删除，不保留兼容影子字段。
 
-暂存例外：文件动作首片与本批拖放生产入口已退出具体存储接线，但映射创建/同步、归还/配置等仍持有SqliteStateStore，旧确定性Transfers/Outgoing仅Review调用但尚在产品编译集合，留待R4；Infrastructure启动收尾及Worker链接LocalContentReferenceProbe也待整理。MappedPosterCreation只是原方法独立移动，并未完成解耦。新功能不可扩大这些例外；整体R1～R4未关闭，不引入空接口或插件框架。
+正常构建不包含独立验收执行器；[tools/review](../tools/review/README.md)仅由DesktopUpReviewTools=true增加同一生产接线外的探针。check-architecture.ps1检查实际生产编译集合（含模块partial）和精确Bootstrap例外，ArchitectureTests检查工程方向与主要调用链。
 
-目录移动与结构接线分别记录在[A批](../Docs/A_Project/40_Implementation/Architecture/A_FOUNDATION.md)和[A_MOVES.json](../Docs/A_Project/40_Implementation/Architecture/A_MOVES.json)。后续服务/运行状态抽取见[B批](../Docs/A_Project/40_Implementation/Architecture/B_CONTENT_USE_CASES.md)与[C批](../Docs/A_Project/40_Implementation/Architecture/C_HEAT_RUNTIME.md)，不混作纯文件移动；其余目录按实际用例逐步归组，不做一次性全库改名。
+目录移动和结构变更分开记录：历史纯移动见[A_MOVES.json](../Docs/A_Project/40_Implementation/Architecture/A_MOVES.json)，R4探测文件先字节一致移动再改依赖。源码入口/清理/验证见实施计划，不以代码行数、接口数量或图表通过代替行为证据。

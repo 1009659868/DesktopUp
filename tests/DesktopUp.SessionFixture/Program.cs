@@ -15,9 +15,29 @@ if (args.Length == 2 && args[1] == "--uninstall-content")
     UninstallContentFixture.Create(args[0]);
     return;
 }
+if (args.Length == 2 && args[1] == "--architecture-references")
+{
+    ReferenceRepairReviewFixture.Create(args[0]);
+    return;
+}
+if (args.Length == 2 && args[1] == "--architecture-icons")
+{
+    UninstallContentFixture.Create(args[0], title: "图标 · 自建样例");
+    return;
+}
+if (args.Length == 2 && args[1] == "--architecture-storage")
+{
+    UninstallContentFixture.Create(args[0], title: "收纳位置 · 自建样例");
+    return;
+}
 if (args.Length == 2 && args[1] == "--uninstall-content-review")
 {
     ContentReturnReviewFixture.Create(args[0], uninstall: true);
+    return;
+}
+if (args.Length == 2 && args[1] == "--architecture-lifecycle")
+{
+    ContentReturnReviewFixture.Create(args[0], architecture: true);
     return;
 }
 if (args.Length == 2 && args[1] == "--content-return")

@@ -8,6 +8,90 @@ namespace DesktopUp.Contracts.Tests;
 
 public sealed class UninstallContentTests
 {
+    private sealed class ReportProfile : IUninstallProfile
+    {
+        public string? Outcome;
+        public string[] Returned = [], Retained = [], Errors = [];
+        public bool OpenExisting() => true;
+        public void SaveReport(string outcome, IEnumerable<string> returned, IEnumerable<string> retained, IEnumerable<string> errors)
+        { Outcome = outcome; Returned = returned.ToArray(); Retained = retained.ToArray(); Errors = errors.ToArray(); }
+    }
+
+    private static UninstallPreparation Prepare(F f, IShellDirectoryTransfer shell, ReportProfile profile)
+    {
+        var storage = new SqliteContentReturnStorage(f.Store);
+        var returns = new ContentReturnUseCase(storage, new LocalContentReturnFiles(f.Store, Desktop(f)), shell);
+        return new(profile, returns, new UninstallContentUseCase(storage, returns));
+    }
+
+    [Fact]
+    public async Task PreparationKeepDoesNotInspectOfflineContentOrReconcilePendingMoves()
+    {
+        using var f = new F();
+        Collect(f, "keep.txt");
+        f.Stage(f.File("pending.txt"));
+        string path = f.Collection.StorageLocator!;
+        Directory.Move(path, path + "-offline");
+        var profile = new ReportProfile();
+        var shell = new Shell(Move);
+        var preparation = Prepare(f, shell, profile);
+
+        await preparation.Execute(keep: true, silent: true, 0, CancellationToken.None);
+
+        Assert.Equal("保留原位", profile.Outcome);
+        Assert.Contains(path, profile.Retained);
+        Assert.Empty(profile.Returned);
+        Assert.Equal(0, shell.Calls);
+        Assert.Contains(f.Journal.Read(), x => !x.IsFinished);
+    }
+
+    [Fact]
+    public async Task PreparationSilentReturnRefusesFilesBeforeShellAndReportsRetainedLocations()
+    {
+        using var f = new F();
+        Collect(f, "kept.txt");
+        var profile = new ReportProfile();
+        var shell = new Shell(Move);
+        var preparation = Prepare(f, shell, profile);
+
+        var error = await Assert.ThrowsAsync<IOException>(() =>
+            preparation.Execute(keep: false, silent: true, 0, CancellationToken.None));
+        preparation.SaveFailureReport(error.Message);
+
+        Assert.Contains("静默卸载", error.Message);
+        Assert.Equal(0, shell.Calls);
+        Assert.Single(f.State.ContentCatalog.PosterItems);
+        Assert.Contains(f.Collection.StorageLocator!, profile.Retained);
+        Assert.Empty(profile.Returned);
+        Assert.Single(profile.Errors);
+    }
+
+    [Fact]
+    public async Task PreparationFailureReportKeepsCompletedItemsAndRetryOnlyMovesRemainder()
+    {
+        using var f = new F();
+        Collect(f, "a.txt");
+        Collect(f, "b.txt");
+        int calls = 0;
+        var shell = new Shell((source, destination) => ++calls == 1 ? Move(source, destination) : new(null, true, 0));
+        var profile = new ReportProfile();
+        var preparation = Prepare(f, shell, profile);
+
+        var error = await Assert.ThrowsAsync<IOException>(() =>
+            preparation.Execute(keep: false, silent: false, 0, CancellationToken.None));
+        preparation.SaveFailureReport(error.Message);
+        Assert.Single(profile.Returned);
+        Assert.Single(f.State.ContentCatalog.PosterItems);
+        Assert.Equal(1, preparation.ReturnedCount);
+
+        var retryShell = new Shell(Move);
+        var retryProfile = new ReportProfile();
+        await Prepare(f, retryShell, retryProfile).Execute(keep: false, silent: false, 0, CancellationToken.None);
+        Assert.Equal(1, retryShell.Calls);
+        Assert.Equal("归还完成", retryProfile.Outcome);
+        Assert.Empty(f.State.ContentCatalog.PosterItems);
+    }
+
     private sealed class Shell(Func<string,string,ShellDirectoryResult> run):IShellDirectoryTransfer
     {
         public int Calls;

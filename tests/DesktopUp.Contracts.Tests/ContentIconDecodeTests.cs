@@ -1,3 +1,4 @@
+using DesktopUp.Windows;
 using System.Buffers.Binary;
 using System.IO.Compression;
 using DesktopUp.Application;
@@ -27,7 +28,8 @@ public sealed class ContentIconDecodeTests
     {
         using var f = new Files(); byte[] source = Png(w,h); var item = f.Write("透明图标.PNG",source);
         using var worker = Worker();
-        var asset = await ContentIconImport.DecodeAsync(worker,item,CancellationToken.None);
+        var asset = await ContentIconImport.LoadAsync(new LocalContentIconSource(), worker,
+            item.Target.Locator, CancellationToken.None);
         Assert.Equal(expectedW,asset.Width); Assert.Equal(expectedH,asset.Height);
         var pixels = asset.Pixels;
         Assert.InRange(pixels[0],39,41); Assert.InRange(pixels[1],19,21);
@@ -93,6 +95,41 @@ public sealed class ContentIconDecodeTests
         Assert.True(error is OperationCanceledException or InvalidDataException);
         await worker.StopAsync();Assert.True(File.Exists(item.Target.Locator));
     }
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task CancelledOrRejectedInspectionNeverStartsDecode(bool cancel)
+    {
+        using var f = new Files();
+        var item = f.Write("image.png", Png(2, 2));
+        using var stopping = new CancellationTokenSource();
+        var source = new InspectSource(() =>
+        {
+            if (!cancel) throw new InvalidDataException("Rejected source");
+            stopping.Cancel();
+            return item;
+        });
+        var worker = new NoDecodeWorker();
+        var error = await Record.ExceptionAsync(() =>
+            ContentIconImport.LoadAsync(source, worker, item.Target.Locator, stopping.Token).AsTask());
+        Assert.True(cancel ? error is OperationCanceledException : error is InvalidDataException);
+        Assert.Equal(0, worker.Calls);
+        Assert.True(File.Exists(item.Target.Locator));
+    }
+    private sealed class InspectSource(Func<ContentItem> inspect) : IContentIconSource
+    {
+        public ContentItem Inspect(string path) => inspect();
+    }
+    private sealed class NoDecodeWorker : ILocalContentWorker
+    {
+        public int Calls { get; private set; }
+        public ValueTask<LocalContentResponse> RunAsync(LocalContentRequest request, CancellationToken token)
+        {
+            Calls++;
+            throw new InvalidOperationException("Decode must not start.");
+        }
+    }
+
     // Owned test fixtures: minimal static RGBA PNG and grayscale baseline JPEG; no external assets.
     internal static byte[] Png(int w,int h,byte blue=80)
     {

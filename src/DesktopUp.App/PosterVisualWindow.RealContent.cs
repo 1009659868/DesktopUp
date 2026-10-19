@@ -1,11 +1,9 @@
 using DesktopUp.Application;
-using Microsoft.UI.Xaml.Media.Imaging;
 
 namespace DesktopUp;
 
 internal sealed partial class PosterVisualWindow
 {
-    private readonly Dictionary<ContentAssetKey, WriteableBitmap> _contentBitmaps = new();
     private readonly CancellationTokenSource _contentOpenCancellation = new();
     private long _contentOpenLifetime;
     private bool IsRealContent => _contentPorts.Open is IAsyncContentActions;

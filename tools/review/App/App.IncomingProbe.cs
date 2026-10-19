@@ -1,12 +1,13 @@
 using DesktopUp.Application;
 using DesktopUp.Domain;
 using DesktopUp.Infrastructure;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace DesktopUp;
 
 public partial class App
 {
+    partial void ConfigureTransferReview(PosterSpatialRuntime runtime) =>
+        runtime.ConfigureTransferReview(_composition!.Store);
     private async void RunIncomingProbe(string dataRoot)
     {
         IDisposable? lease=null;
@@ -28,7 +29,12 @@ public partial class App
             var watch=System.Diagnostics.Stopwatch.StartNew();
             while(!_spatialRuntime!.IncomingProbeReady)
             {if(watch.Elapsed.TotalSeconds>20)throw new IOException("Incoming surface not ready.");await Task.Delay(100);}
-            var repository=new SqliteStateCommandRepository(_services!.GetRequiredService<SqliteStateStore>());
+            var repository=new SqliteStateCommandRepository(_composition!.Store);
+            if (_startupIntent.Arguments.Contains("--r1-observation-probe"))
+            {
+                await RunContentObservationProbe(repository, root, _startupIntent.Arguments.Contains("--incoming-restart"));
+                return; // This slice only; no cumulative native interaction suite.
+            }
             if (_startupIntent.Arguments.Contains("--r1-transfers-probe"))
             {
                 await _spatialRuntime.R1TransfersProbe(root);
@@ -224,8 +230,8 @@ internal sealed partial class PosterSpatialRuntime
         try
         {
             var window=_windows.Values.Single();
-            var catalog=new SqliteStateCommandRepository(_transferStore!).Read().ContentCatalog;
-            TransferFiles(window,null,catalog.PosterItems.Where(c=>c.PosterId==window.PosterId).Select(c=>c.LayoutItemId).ToArray());
+            var catalog=new SqliteStateCommandRepository(_reviewTransferStore!).Read().ContentCatalog;
+            StartLegacyOutgoingProbe(window,catalog.PosterItems.Where(c=>c.PosterId==window.PosterId).Select(c=>c.LayoutItemId).ToArray());
             await _fileTransferTask;
         }
         finally{_outgoingProbeDestination=null;}
@@ -262,7 +268,7 @@ internal sealed partial class PosterVisualWindow
 {
     internal void SelectManagedItemForProbe(string itemId){SetContentSelection(itemId,control:true);RefreshContentSurface();}
     internal bool ManagedItemAbsentForProbe(string itemId)=>!ContentDocument.Placements.Any(p=>p.ItemId==itemId) &&
-        !_contentCards.ContainsKey(itemId) && !SelectedContentIds().Contains(itemId) && _selectedContentItem!=itemId;
+        !Presenter.Cards.ContainsKey(itemId) && !SelectedContentIds().Contains(itemId) && _selectedContentItem!=itemId;
     internal bool IncomingProbeReady=>CanTransferFiles&&_fileDrop?.IsReady==true;
     internal IncomingDropTicket IncomingProbeTicket(string[] paths,bool frame)
     {
@@ -274,5 +280,5 @@ internal sealed partial class PosterVisualWindow
         ShowIncomingPreview(preview);var ticket=session.Drop(paths,surface,point,0,2)!;ShowIncomingPreview(null);return ticket;
     }
     internal IncomingContentPlacement? IncomingProbeLanding(IncomingDropTicket ticket)=>
-        IncomingContentPlacement.From(EnsureContentSnapshot(_bounds),_contentViewport!,ticket.Preview.Location);
+        IncomingContentPlacement.From(EnsureContentSnapshot(_bounds),_contentLayout.Viewport!,ticket.Preview.Location);
 }

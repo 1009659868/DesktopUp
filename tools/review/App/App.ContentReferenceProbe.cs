@@ -1,3 +1,4 @@
+using DesktopUp.Windows;
 using System.Text.Json;
 using System.Runtime.InteropServices.WindowsRuntime;
 using DesktopUp.Application;
@@ -10,20 +11,20 @@ internal sealed partial class PosterVisualWindow
 {
     internal bool ContentHeadingSurfaceForProbe(bool visible)
     {
-        if (_window?.Content is not Microsoft.UI.Xaml.FrameworkElement root || _metaPanel is null || _contentCanvas is null || _surface is null || _contentStructure is null) return false;
+        if (_window?.Content is not Microsoft.UI.Xaml.FrameworkElement root || _metaPanel is null || Presenter.Surface is null || _surface is null || _contentStructure is null) return false;
         root.UpdateLayout();
         var content = ReadContentSurfaceForSmoke();
-        var origin = _contentCanvas.TransformToVisual(_surface).TransformPoint(new(0, 0));
+        var origin = Presenter.Surface.TransformToVisual(_surface).TransformPoint(new(0, 0));
         return _presentation.IsContentHeadingVisible == visible &&
             _metaPanel.Visibility == (visible ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed) &&
             _contentStructure.RowDefinitions[1].Height.Value == MetaHeightDip &&
             (visible ? MetaHeightDip > 0 : MetaHeightDip == 0 && _contentStructure.RowDefinitions[1].ActualHeight == 0) &&
             Math.Abs(origin.Y - ContentTopDip) < .51 && content.CanvasMatches && content.InputMatches && content.Clipped;
     }
-    internal bool RealIconReadyForProbe => _contentBitmaps.Count > 0;
+    internal bool RealIconReadyForProbe => Presenter.Bitmaps.Count > 0;
     internal bool CustomIconForProbe(ContentIconAsset asset)
     {
-        var bitmap = _contentBitmaps.FirstOrDefault(p => p.Key.SourceKey == "custom:" + asset.Id).Value;
+        var bitmap = Presenter.Bitmaps.FirstOrDefault(p => p.Key.SourceKey == "custom:" + asset.Id).Value;
         if (bitmap is not Microsoft.UI.Xaml.Media.Imaging.WriteableBitmap raster ||
             raster.PixelWidth != asset.Width || raster.PixelHeight != asset.Height) return false;
         using var stream = raster.PixelBuffer.AsStream();
@@ -36,7 +37,7 @@ internal sealed partial class PosterVisualWindow
         if (!modifier) return SelectContentItem(id);
         SetContentSelection(id, control: true); RefreshContentSurface(); return null;
     }
-    internal object RealCardReadbackForProbe() => _contentCards.Select(pair =>
+    internal object RealCardReadbackForProbe() => Presenter.Cards.Select(pair =>
     {
         var cell = (Microsoft.UI.Xaml.Controls.Grid)pair.Value;
         var card = (Microsoft.UI.Xaml.Controls.Border)cell.Children[0];
@@ -50,7 +51,7 @@ internal sealed partial class PosterVisualWindow
     internal bool RealCardPresentationForProbe(bool selected)
     {
         string id = ReadContentViews().First().ItemId;
-        if (!_contentCards.TryGetValue(id, out var element) || element is not Microsoft.UI.Xaml.Controls.Grid cell ||
+        if (!Presenter.Cards.TryGetValue(id, out var element) || element is not Microsoft.UI.Xaml.Controls.Grid cell ||
             cell.Children[0] is not Microsoft.UI.Xaml.Controls.Border card ||
             card.Child is not Microsoft.UI.Xaml.Controls.Grid host ||
             host.Children[0] is not Microsoft.UI.Xaml.Controls.Image image ||

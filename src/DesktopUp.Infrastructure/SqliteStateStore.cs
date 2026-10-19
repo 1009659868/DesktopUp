@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Security.Cryptography;
 using System.Text;
 using DesktopUp.Application;
 using Microsoft.Data.Sqlite;
@@ -10,237 +9,10 @@ public sealed class SqliteStateStore : IStateStore
 {
     private const int ApplicationId = 0x44555033; // "DUP3"
     private const int BusyTimeoutMilliseconds = 5_000;
-    // 14 adds durable opening receipts/facts. Earlier migration text/checksums stay frozen.
+    // Historical SQL and approved ledger identities are frozen in Persistence/Migrations.
     private const int CurrentSchemaVersion = 25;
     private const string DatabaseFileName = "desktopup.sqlite3";
-    private static readonly Migration[] Migrations =
-    [
-        new(
-            1,
-            "state-foundation",
-            """
-            CREATE TABLE schema_migrations (
-                version INTEGER PRIMARY KEY NOT NULL,
-                name TEXT NOT NULL,
-                checksum_sha256 TEXT NOT NULL,
-                applied_utc TEXT NOT NULL
-            ) STRICT;
-
-            CREATE TABLE state_head (
-                singleton_id INTEGER PRIMARY KEY NOT NULL CHECK (singleton_id = 1),
-                schema_version INTEGER NOT NULL,
-                revision INTEGER NOT NULL CHECK (revision >= 0),
-                last_operation_id TEXT NULL,
-                updated_utc TEXT NOT NULL
-            ) STRICT;
-
-            CREATE TABLE state_operations (
-                operation_id TEXT PRIMARY KEY NOT NULL,
-                expected_revision INTEGER NOT NULL CHECK (expected_revision >= 0),
-                committed_revision INTEGER NOT NULL UNIQUE,
-                committed_utc TEXT NOT NULL,
-                CHECK (committed_revision = expected_revision + 1)
-            ) STRICT;
-            """),
-        new(
-            2,
-            "poster-and-settings-repositories",
-            """
-            CREATE TABLE posters (
-                poster_id TEXT PRIMARY KEY NOT NULL,
-                title TEXT NOT NULL,
-                subtitle TEXT NOT NULL,
-                monitor_device_name TEXT NOT NULL,
-                fallback_x_dip REAL NOT NULL,
-                fallback_y_dip REAL NOT NULL,
-                width_dip REAL NOT NULL CHECK (width_dip >= 240.0),
-                expanded_height_dip REAL NOT NULL CHECK (expanded_height_dip >= 240.0),
-                horizontal_anchor REAL NOT NULL CHECK (horizontal_anchor >= 0.0 AND horizontal_anchor <= 1.0),
-                vertical_anchor REAL NOT NULL CHECK (vertical_anchor >= 0.0 AND vertical_anchor <= 1.0),
-                normalized_width REAL NOT NULL CHECK (normalized_width > 0.0 AND normalized_width <= 1.0),
-                normalized_expanded_height REAL NOT NULL CHECK (normalized_expanded_height > 0.0 AND normalized_expanded_height <= 1.0),
-                is_locked INTEGER NOT NULL CHECK (is_locked IN (0, 1)),
-                is_collapsed INTEGER NOT NULL CHECK (is_collapsed IN (0, 1)),
-                auto_collapse_enabled INTEGER NOT NULL CHECK (auto_collapse_enabled IN (0, 1)),
-                layout_kind TEXT NOT NULL,
-                layout_parameters_json TEXT NOT NULL CHECK (json_valid(layout_parameters_json)),
-                template_key TEXT NOT NULL,
-                state_revision INTEGER NOT NULL CHECK (state_revision >= 0),
-                created_utc TEXT NOT NULL,
-                updated_utc TEXT NOT NULL
-            ) STRICT;
-
-            CREATE TABLE app_settings (
-                singleton_id INTEGER PRIMARY KEY NOT NULL CHECK (singleton_id = 1),
-                dynamic_effects_paused INTEGER NOT NULL CHECK (dynamic_effects_paused IN (0, 1)),
-                performance_mode TEXT NOT NULL CHECK (performance_mode IN ('automatic', 'static', '30fps')),
-                launch_at_startup_requested INTEGER NOT NULL CHECK (launch_at_startup_requested IN (0, 1)),
-                state_revision INTEGER NOT NULL CHECK (state_revision >= 0),
-                updated_utc TEXT NOT NULL
-            ) STRICT;
-
-            INSERT INTO app_settings (
-                singleton_id,
-                dynamic_effects_paused,
-                performance_mode,
-                launch_at_startup_requested,
-                state_revision,
-                updated_utc)
-            VALUES (
-                1,
-                0,
-                'automatic',
-                0,
-                0,
-                strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));
-            """),
-        new(
-            3,
-            "multi-poster-catalog",
-            """
-            ALTER TABLE posters ADD COLUMN purpose TEXT NOT NULL DEFAULT 'general';
-            ALTER TABLE posters ADD COLUMN is_visible INTEGER NOT NULL DEFAULT 1 CHECK (is_visible IN (0, 1));
-            ALTER TABLE posters ADD COLUMN stack_order INTEGER NOT NULL DEFAULT 0 CHECK (stack_order >= 0);
-            ALTER TABLE posters ADD COLUMN entity_version INTEGER NOT NULL DEFAULT 1 CHECK (entity_version >= 1);
-            ALTER TABLE posters ADD COLUMN collection_id TEXT NULL;
-            ALTER TABLE posters ADD COLUMN theme_instance_id TEXT NOT NULL DEFAULT '';
-            UPDATE posters SET theme_instance_id = 'theme-' || poster_id;
-            UPDATE posters SET stack_order = (
-                SELECT COUNT(*) FROM posters p WHERE p.poster_id < posters.poster_id);
-            CREATE UNIQUE INDEX posters_theme_instance_id ON posters(theme_instance_id);
-            CREATE INDEX posters_stack_order ON posters(stack_order, poster_id);
-
-            CREATE TABLE poster_profile (
-                singleton_id INTEGER PRIMARY KEY NOT NULL CHECK (singleton_id = 1),
-                profile_initialized INTEGER NOT NULL CHECK (profile_initialized IN (0, 1)),
-                catalog_version INTEGER NOT NULL CHECK (catalog_version >= 0),
-                state_revision INTEGER NOT NULL CHECK (state_revision >= 0)
-            ) STRICT;
-            INSERT INTO poster_profile
-            SELECT 1, EXISTS(SELECT 1 FROM posters),
-                CASE WHEN EXISTS(SELECT 1 FROM posters) THEN 1 ELSE 0 END, revision
-            FROM state_head WHERE singleton_id = 1;
-
-            CREATE TABLE poster_catalog_operations (
-                operation_id TEXT PRIMARY KEY NOT NULL,
-                request_sha256 TEXT NOT NULL,
-                result_poster_id TEXT NULL,
-                FOREIGN KEY (operation_id) REFERENCES state_operations(operation_id)
-                    DEFERRABLE INITIALLY DEFERRED
-            ) STRICT;
-            """),
-        new(
-            4,
-            "scoped-command-receipts",
-            """
-            ALTER TABLE app_settings ADD COLUMN entity_version INTEGER NOT NULL DEFAULT 1 CHECK (entity_version >= 1);
-            CREATE TABLE state_command_receipts (
-                request_id TEXT PRIMARY KEY NOT NULL,
-                request_sha256 TEXT NOT NULL,
-                outcome TEXT NOT NULL CHECK (outcome IN ('committed', 'no_change')),
-                observed_revision INTEGER NOT NULL CHECK (observed_revision >= 0),
-                committed_revision INTEGER NULL,
-                result_poster_id TEXT NULL,
-                CHECK ((outcome = 'committed' AND committed_revision IS NOT NULL) OR
-                    (outcome = 'no_change' AND committed_revision IS NULL)),
-                FOREIGN KEY (committed_revision) REFERENCES state_operations(committed_revision)
-                    DEFERRABLE INITIALLY DEFERRED
-            ) STRICT;
-            """),
-        new(5, "spatial-layout-causality", """
-            ALTER TABLE posters ADD COLUMN layout_generation INTEGER NOT NULL DEFAULT 0 CHECK (layout_generation >= 0);
-            ALTER TABLE posters ADD COLUMN last_layout_operation_id TEXT NULL;
-            CREATE TABLE spatial_operations (
-                operation_id TEXT PRIMARY KEY NOT NULL,
-                source_poster_id TEXT NOT NULL REFERENCES posters(poster_id) ON DELETE CASCADE,
-                schema_version INTEGER NOT NULL CHECK (schema_version = 1),
-                status TEXT NOT NULL CHECK (status IN ('active', 'consumed', 'invalidated')),
-                body_json TEXT NOT NULL CHECK (json_valid(body_json)),
-                committed_revision INTEGER NOT NULL REFERENCES state_operations(committed_revision) DEFERRABLE INITIALLY DEFERRED
-            ) STRICT;
-            CREATE INDEX spatial_source ON spatial_operations(source_poster_id, status);
-            CREATE TABLE spatial_participants (
-                operation_id TEXT NOT NULL REFERENCES spatial_operations(operation_id) ON DELETE CASCADE,
-                poster_id TEXT NOT NULL,
-                expected_layout_generation INTEGER NOT NULL CHECK (expected_layout_generation >= 1),
-                proof_json TEXT NOT NULL CHECK (json_valid(proof_json)),
-                invalidated_reason TEXT NULL,
-                PRIMARY KEY(operation_id, poster_id)
-            ) STRICT;
-            """),
-        new(
-            6,
-            "spatial-continuity",
-            """
-            CREATE TABLE spatial_continuity (
-                workspace_id TEXT PRIMARY KEY NOT NULL,
-                schema_version INTEGER NOT NULL CHECK (schema_version = 1),
-                body_json TEXT NOT NULL CHECK (json_valid(body_json)),
-                committed_revision INTEGER NOT NULL REFERENCES state_operations(committed_revision) DEFERRABLE INITIALLY DEFERRED
-            ) STRICT;
-            """),
-        new(
-            7,
-            "poster-auto-posture-settings",
-            """
-            ALTER TABLE posters ADD COLUMN auto_collapse_delay_seconds INTEGER NOT NULL DEFAULT 3
-                CHECK (auto_collapse_delay_seconds BETWEEN 1 AND 300);
-            """),
-        new(8, "canonical-created-poster-layout", """
-            -- BUG-005: only the exact shipped basic-box payload AND a committed UI catalog receipt.
-            -- Never interpret arbitrary grid/custom/future/edited JSON as this historical mistake.
-            CREATE TEMP TABLE canonical_layout_repair_ids (poster_id TEXT PRIMARY KEY NOT NULL);
-            INSERT INTO canonical_layout_repair_ids
-            SELECT p.poster_id FROM posters p
-            WHERE p.layout_kind = 'grid' AND p.template_key = 'basic-box'
-              AND p.layout_parameters_json = '{"schemaVersion":1,"content":{"itemWidthDip":100,"itemHeightDip":72,"iconSizeDip":40,"gapDip":12,"labelFontSizeDip":12,"titleFontSizeDip":24},"theme":{"background":"#282B30","foreground":"#F2F2F2","accent":"#68BDFF"}}'
-              AND EXISTS (SELECT 1 FROM state_command_receipts r
-                  WHERE r.result_poster_id = p.poster_id AND r.outcome = 'committed'
-                    AND (r.request_id GLOB 'controlcenter-catalog-*' OR r.request_id GLOB 'tray-create-*'));
-            INSERT INTO state_operations (operation_id,expected_revision,committed_revision,committed_utc)
-            SELECT 'migration-v8-canonical-created-layout',revision,revision+1,strftime('%Y-%m-%dT%H:%M:%fZ','now')
-            FROM state_head WHERE singleton_id=1 AND EXISTS(SELECT 1 FROM canonical_layout_repair_ids);
-            UPDATE posters SET layout_kind='adaptive-grid',entity_version=entity_version+1,
-                state_revision=(SELECT revision+1 FROM state_head WHERE singleton_id=1),
-                updated_utc=strftime('%Y-%m-%dT%H:%M:%fZ','now')
-            WHERE poster_id IN (SELECT poster_id FROM canonical_layout_repair_ids);
-            UPDATE state_head SET revision=revision+1,last_operation_id='migration-v8-canonical-created-layout'
-            WHERE singleton_id=1 AND EXISTS(SELECT 1 FROM canonical_layout_repair_ids);
-            DROP TABLE canonical_layout_repair_ids;
-            """),
-        new(9, "poster-placement-pending", """
-            ALTER TABLE posters ADD COLUMN placement_pending INTEGER NOT NULL DEFAULT 0
-                CHECK (placement_pending IN (0, 1));
-            """),
-        new(10, "poster-content-layout-document", """
-            ALTER TABLE posters ADD COLUMN content_layout_json TEXT NULL;
-            """),
-        new(11, "poster-content-layout-v2-axis", """
-            -- Registration only. The single scroll axis and the optional heat-driven size switch are
-            -- carried inside content_layout_json and validated on read by ContentLayoutPolicy, so no
-            -- column is added and no existing document is rewritten by this migration.
-            SELECT 1;
-            """),
-        new(12, "declarative-template-catalog-and-center-theme", """
-            ALTER TABLE app_settings ADD COLUMN center_theme TEXT NOT NULL DEFAULT 'light'
-                CHECK (center_theme IN ('light', 'ink', 'blue', 'system'));
-            ALTER TABLE app_settings ADD COLUMN template_catalog_json TEXT NOT NULL DEFAULT '[]'
-                CHECK (json_valid(template_catalog_json));
-            """),
-        new(13, "non-destructive-content-references", SqliteContentRepository.MigrationSql),
-        new(14, "content-opening-receipts", SqliteContentOpenJournal.MigrationSql),
-        new(15, "card-icon-assets", SqliteContentIconStore.MigrationSql),
-        new(16, "managed-transfer-journal", SqliteTransferJournal.MigrationSql),
-        new(17, "preserved-transfer-closures", SqliteTransferJournal.ClosureMigrationSql),
-        new(18, "explicit-legacy-storage-adoption", ManagedStorageAdoption.MigrationSql),
-        new(19, "storage-location-relocation", SqliteStorageRelocationJournal.MigrationSql),
-        new(20, "managed-content-observations", ManagedContentObservationStore.MigrationSql),
-        new(21, "native-shell-exit-observation", NativeShellExitJournal.MigrationSql),
-        new(22, "content-rename-receipts", ContentRenameService.MigrationSql),
-        new(23, "mapped-directory-observations", MappedDirectoryStore.MigrationSql),
-        new(24, "mapped-directory-ingress", MappedDirectoryIngress.MigrationSql),
-        new(25, "content-return-provenance", ContentReturnStore.MigrationSql)
-    ];
+    private static readonly SqliteMigration[] Migrations = SqliteMigrationCatalog.Load(CurrentSchemaVersion);
 
     private readonly object _gate = new();
     internal object TransferObservationGate { get; } = new();
@@ -629,7 +401,7 @@ public sealed class SqliteStateStore : IStateStore
 
     private static void ApplyMigrations(SqliteConnection connection, int previousVersion)
     {
-        foreach (Migration migration in Migrations.Where(item => item.Version > previousVersion))
+        foreach (SqliteMigration migration in Migrations.Where(item => item.Version > previousVersion))
         {
             using SqliteTransaction transaction = connection.BeginTransaction(deferred: false);
             using (SqliteCommand schema = connection.CreateCommand())
@@ -747,7 +519,7 @@ public sealed class SqliteStateStore : IStateStore
                 $"State identity mismatch (schema={version}, application_id={applicationId}).");
         }
 
-        foreach (Migration migration in Migrations.Where(item => item.Version <= expectedVersion))
+        foreach (SqliteMigration migration in Migrations.Where(item => item.Version <= expectedVersion))
         {
             using SqliteCommand command = connection.CreateCommand();
             command.CommandText =
@@ -760,7 +532,7 @@ public sealed class SqliteStateStore : IStateStore
             using SqliteDataReader reader = command.ExecuteReader();
             if (!reader.Read() ||
                 reader.GetString(0) != migration.Name ||
-                reader.GetString(1) != migration.Checksum)
+                !migration.MatchesChecksum(reader.GetString(1)))
             {
                 throw new InvalidDataException(
                     $"Migration ledger mismatch at schema version {migration.Version}.");
@@ -1140,9 +912,4 @@ public sealed class SqliteStateStore : IStateStore
     private void ThrowIfDisposed() =>
         ObjectDisposedException.ThrowIf(_disposed, this);
 
-    private sealed record Migration(int Version, string Name, string Sql)
-    {
-        public string Checksum { get; } = Convert.ToHexString(
-            SHA256.HashData(Encoding.UTF8.GetBytes(Sql)));
-    }
 }

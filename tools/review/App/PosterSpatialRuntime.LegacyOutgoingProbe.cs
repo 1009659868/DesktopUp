@@ -5,6 +5,18 @@ using DesktopUp.Infrastructure;
 namespace DesktopUp;
 internal sealed partial class PosterSpatialRuntime
 {
+    // Historical deterministic fixture executor only; never compiled into the normal product.
+    private SqliteStateStore? _reviewTransferStore;
+    internal void ConfigureTransferReview(SqliteStateStore store) => _reviewTransferStore = store;
+    private void StartLegacyOutgoingProbe(PosterVisualWindow window, string[] selection)
+    {
+        if (_outgoingProbeDestination is null || !TransfersAvailable || !window.CanTransferFiles) return;
+        _fileTransferBusy = true;
+        _fileTransferPoster = window.PosterId;
+        ActivityChanged?.Invoke();
+        _fileTransferTask = RunOutgoing(window, selection);
+    }
+
     private async Task RunOutgoing(PosterVisualWindow window,string[] selection)
     {
         string id=window.PosterId!;long entity=window.TransferEntityVersion;
@@ -13,10 +25,10 @@ internal sealed partial class PosterSpatialRuntime
             window.TransferEntityVersion==entity&&_windows.GetValueOrDefault(id)==window&&!HasCenterDraft(id);
         try
         {
-            var repository=new SqliteStateCommandRepository(_transferStore!);
+            var repository=new SqliteStateCommandRepository(_reviewTransferStore!);
             var initial=repository.Read();
             var sources=DirectTransferPreparation.OutgoingSources(initial,id,selection);
-            var journal=new SqliteTransferJournal(_transferStore!);
+            var journal=new SqliteTransferJournal(_reviewTransferStore!);
             foreach(var source in sources)
             {
                 if(!Current()){errors.Add("环境已变化，剩余项未移动。");break;}
@@ -33,11 +45,8 @@ internal sealed partial class PosterSpatialRuntime
                     if(!Current()){errors.Add("海报已变化，剩余项未移动。");break;}
                     if(preview.Plan.RequiresConfirmation)
                     {
-                        string message=$"原位置（将移出）：\n{preview.Files[0].Source}\n\n目标：\n{preview.Files[0].Destination}\n\n影响海报："+
-                            string.Join("、",preview.Plan.Entries.SelectMany(e=>e.AffectedPosterIds).Append(id).Distinct())+
-                            "\n只移动对象本身；仅移除当前卡片，其他引用更新位置。";
-                        if(!await window.ConfirmOutgoingAsync(message,_fileTransferStopping.Token)||!Current())
-                        {errors.Add("已取消，剩余项未移动。");break;}
+                        // The retired confirmation endpoint always rejected this case.
+                        errors.Add("已取消，剩余项未移动。");break;
                     }
                     var result=await Task.Run(()=>
                     {

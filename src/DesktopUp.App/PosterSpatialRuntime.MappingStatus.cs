@@ -1,4 +1,4 @@
-using DesktopUp.Infrastructure;
+using DesktopUp.Application;
 
 namespace DesktopUp;
 

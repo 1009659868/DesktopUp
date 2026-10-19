@@ -1,6 +1,6 @@
 # DesktopUp V2 — Poster Redesign V3
 
-2026-10-16 当前：**基础架构整改 IN PROGRESS，真实热度准入 HOLD**。工作分支 `impl/architecture-foundation`；R1 文件动作及拖放两片均 USER PASS，源码检查点 `b3bfdc6` 已推送，本次同步验收与接续记录，不合入 develop。下一片为映射创建／同步，再收清 R1 生命周期及配置入口，之后 R2 会话 → R3 呈现与同代命中 → R4 组装／平台依赖；详见[余项计划及拉取接续入口](Docs/A_Project/40_Implementation/Architecture/FOUNDATION_REMAINDER_PLAN.md#10-拉取后的接续入口)。此前 main 发布草稿因迁移 SQL 换行哈希兼容问题暂存，未发布、未修复，自启真实登录仍未验；详见当前 HANDOFF。下方为阶段历史，不覆盖本段。
+2026-10-19 当前：**R1～R4 USER PASS / CLOSED；现有业务基础架构出口通过**。R4两组人工均已确认，验收和准入依据见[第19～20节](Docs/A_Project/40_Implementation/Architecture/FOUNDATION_REMAINDER_PLAN.md#r4-composition-boundary)。真实热度可进入下一批规划，尚未开工；通用能力平台、动态模板/AI/更新器未实现。当前仍impl/architecture-foundation，本次只登记与制图，不提交/推送/合并；发布及真实登录自启继续暂停。以下为阶段历史。
 
 2026-10-16 当前：[开机自启动](Docs/A_Project/40_Implementation/V3-04/PREVIEW_INSTALLER_DELIVERY.md#2026-10-16-v3-09-03开机自启动前移计划)已完成定向自动验证；“关闭与卸载”人工通过，真实登录自启按用户要求暂缓、保留未验。本轮获授权提交/推送impl/09-03-startup并合入、同步impl/develop，不更新impl/main；结果见HANDOFF。下一主线V3-06真实热度，本轮不实施。下方为历史阶段。
 

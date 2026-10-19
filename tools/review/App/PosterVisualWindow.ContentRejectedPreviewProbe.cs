@@ -14,10 +14,10 @@ internal sealed partial class PosterVisualWindow
         var author=ContentDocument;
         var item=author.Placements.Single();
         var space=author.ReservedSpaces.Single();
-        if(_disposed || _contentPresentationSuspended || _contentReadOnly || IsEditing || HasContentGesture ||
+        if(_disposed || _contentSession.IsSuspended || _contentReadOnly || IsEditing || HasContentGesture ||
             _geometry.IsLocked || _geometry.IsCollapsed || _transitionLayout is not null || _monitor is null ||
             _inputIsland is null || inputRouter.Capture is not null || spatial.HasCenterDraft(author.PosterId) ||
-            _contentHeatSession.ActiveVersion is not null || _contentHeatSession.HasPending ||
+            _contentSession.ActiveHeatVersion is not null || _contentSession.HasPendingHeat ||
             author.SchemaVersion!=2 || author.Mode!=ContentLayoutMode.Automatic || !author.AllowHeatDrivenSize || author.LoopScroll ||
             author.FlowAxis!=ContentFlowAxis.Vertical || item is not { FixedPosition:true, ManualSize:false,
                 Column:0, Row:8, ColumnSpan:4, RowSpan:4 } ||
@@ -28,7 +28,7 @@ internal sealed partial class PosterVisualWindow
         if(!OfferContentHeat(new(author.PosterId,author.ItemSetVersion,1,[new(item.ItemId,0,1.5,"rejected-preview-probe")])))
             throw new InvalidOperationException("Production heat admission rejected the legal starting composition.");
         return new { Name="rejected-heat-prepared", Basis=_rejectedContentPreviewBasis, SourceAuthor=item, ReservedSpace=space,
-            HeatPending=_contentHeatSession.HasPending, NativeMouse=false, NativeKeyboard=false };
+            HeatPending=_contentSession.HasPendingHeat, NativeMouse=false, NativeKeyboard=false };
     }
 
     internal object RunRejectedContentPreviewProbe()
@@ -43,7 +43,7 @@ internal sealed partial class PosterVisualWindow
             if(!value) throw new InvalidOperationException("rejected-heat: "+message);
             assertions.Add(message);
         }
-        bool Released()=>_contentGesture is null && _contentDraft is null && _contentDraftProjection is null &&
+        bool Released()=>_contentGesture is null && _contentSession.Draft is null && _contentSession.DraftProjection is null &&
             _contentMotionTimer is null && _contentMotionLease is null && _contentLatestMotion is null && !_contentMotionPending;
         void Unchanged()
         {
@@ -55,7 +55,7 @@ internal sealed partial class PosterVisualWindow
         }
         ContentSurfaceProbe VisibleSource()
         {
-            Require(!_contentReadOnly && !_contentProjectionFault && _contentSnapshot is { IsLayoutReadOnly:false } snapshot &&
+            Require(!_contentReadOnly && !_contentLayout.HasFault && _contentLayout.Snapshot is { IsLayoutReadOnly:false } snapshot &&
                 snapshot.Items.SingleOrDefault() is { Column:0, Row:8, ColumnSpan:6, RowSpan:6 } slot && !slot.Clip.IsEmpty,
                 "The last-good 6x6 source remains visible, normal and editable instead of an empty read-only fallback.");
             var surface=ReadContentSurfaceForSmoke();
@@ -66,12 +66,12 @@ internal sealed partial class PosterVisualWindow
         try
         {
             Require(nativeBasis is null && Released() && !IsEditing && _monitor is not null &&
-                _contentHeatSession.ActiveVersion==basis.HeatVersion && !_contentHeatSession.HasPending,
+                _contentSession.ActiveHeatVersion==basis.HeatVersion && !_contentSession.HasPendingHeat,
                 "The earlier queued heat reached its safe point before the real-region protocol begins.");
             Unchanged();
             var source=VisibleSource();
-            var snapshot=_contentSnapshot!;
-            var viewport=_contentViewport!;
+            var snapshot=_contentLayout.Snapshot!;
+            var viewport=_contentLayout.Viewport!;
             var tile=ContentLayoutFlow.ProjectTiles(snapshot,viewport).Single(t=>t.ItemId==basis.ItemId && !t.Clip.IsEmpty);
             Require(tile.Clip==tile.Bounds,"The actual source tile is fully visible and does not depend on synthetic offscreen coordinates.");
             var published=inputRouter.ReadSurface(inputSession) ?? throw new InvalidOperationException("No published input surface.");
@@ -109,7 +109,7 @@ internal sealed partial class PosterVisualWindow
             var authorMove=ContentLayoutEditing.Apply(gesture.Document,gesture.LastEdit!,gesture.Viewport,gesture.Snapshot);
             Require(authorMove.Accepted && authorMove.Document.Placements.Single() is { Column:0, Row:0, ColumnSpan:4, RowSpan:4 },
                 "The existing author editor accepts the 4x4 destination while preserving authored size.");
-            Require(gesture.Proposal is null && _contentDraft is null && _contentDraftProjection is null &&
+            Require(_contentSession.Draft is null && _contentSession.Draft is null && _contentSession.DraftProjection is null &&
                 _contentNotice?.Contains("Authored position conflicts with content, reserved space or region:",StringComparison.Ordinal)==true,
                 "Effective heat collision reports its reason and publishes no author/effective draft.");
             Unchanged();

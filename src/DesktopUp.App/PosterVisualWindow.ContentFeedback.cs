@@ -54,7 +54,7 @@ internal sealed partial class PosterVisualWindow
     {
         RenderContentFeedback();
         if (_footer?.Visibility == Visibility.Visible || _contentFeedbackCallout?.Visibility == Visibility.Visible ||
-            _contentCanvas?.Children.OfType<TextBlock>().Any(t => t.Text == "暂无内容") == true ||
+            Presenter.Surface?.Children.OfType<TextBlock>().Any(t => t.Text == "暂无内容") == true ||
             MetaHeightDip != 0 || !VerifyWindowBackdrop() || BackdropColor().A != 64)
             throw new IOException("Ordinary basic poster retained diagnostic UI, intro, or incorrect background.");
     }
@@ -78,7 +78,7 @@ internal sealed partial class PosterVisualWindow
             ? _contentFeedbackBrief : ContentFeedbackForDisplay(_contentNotice);
         _contentFeedbackText.Text = visible ?? "";
         _contentFeedbackCallout.Visibility = !_disposed && !_geometry.IsCollapsed &&
-            !_contentPresentationSuspended && visible is not null ? Visibility.Visible : Visibility.Collapsed;
+            !_contentSession.IsSuspended && visible is not null ? Visibility.Visible : Visibility.Collapsed;
         if (_footer is not null)
             _footer.Visibility = IsRealContent || _geometry.IsCollapsed || _contentFeedbackCallout.Visibility == Visibility.Visible
                 ? Visibility.Collapsed : Visibility.Visible;
@@ -113,7 +113,7 @@ internal sealed partial class PosterVisualWindow
         _contentTimedFeedback = transient ? message : null;
         RenderContentFeedback();
         spatial.NotifyContentEditorChanged(PosterId);
-        if (!transient || message is null || _disposed || _contentPresentationSuspended || _window is null) return;
+        if (!transient || message is null || _disposed || _contentSession.IsSuspended || _window is null) return;
         _contentFeedbackLease = ledger.Acquire("timer.content-feedback", PosterId ?? inputSession.PosterId);
         _contentFeedbackTimer = _window.DispatcherQueue.CreateTimer();
         _contentFeedbackTimer.Interval = TimeSpan.FromSeconds(5);

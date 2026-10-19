@@ -15,11 +15,11 @@ internal sealed partial class PosterVisualWindow
 {
     internal ContentCenterProposalWakeReadback ReadCenterProposalWakeForProbe()
     {
-        var snapshot=_contentSnapshot ?? throw new InvalidOperationException("Content composition is unavailable.");
-        return new(PosterId is { } id && spatial.HasCenterDraft(id), _contentAwaitingCenterRelease,
-            _contentHeatSession.HasPending,
-            _contentThemeBuffer?.HasPending==true || _contentThemeBuffer is { } theme && theme.Current!=_presentation.Parameters,
-            _contentHeatSession.ActiveVersion, _presentation.Parameters, ContentLayoutPolicy.Serialize(ContentDocument),
+        var snapshot=_contentLayout.Snapshot ?? throw new InvalidOperationException("Content composition is unavailable.");
+        return new(PosterId is { } id && spatial.HasCenterDraft(id), _contentSession.AwaitingCenterRelease,
+            _contentSession.HasPendingHeat,
+            _contentSession.HasPendingTheme(_presentation.Parameters),
+            _contentSession.ActiveHeatVersion, _presentation.Parameters, ContentLayoutPolicy.Serialize(ContentDocument),
             StateRequestFingerprint.Compute(new { snapshot.ScrollXDip, snapshot.ScrollYDip,
                 items=snapshot.Items.Select(p=>new {p.ItemId,p.ReadOrder,p.Bounds,p.Clip}).ToArray() }),
             StateRequestFingerprint.Compute(snapshot.Items.Select(p=>new {p.ItemId,p.ReadOrder,p.Bounds}).ToArray()),
@@ -43,7 +43,7 @@ internal sealed partial class PosterVisualWindow
             ? preferences.Scale-.1 : preferences.Scale+.1;
         var firstTheme=baseline.ThemeParameters with { Preferences=preferences with { Scale=(preferences.Scale+latestScale)/2 } };
         var latestTheme=baseline.ThemeParameters with { Preferences=preferences with { Scale=latestScale } };
-        long firstVersion=checked(_contentHighestThemeVersion+1), latestVersion=checked(firstVersion+1);
+        long firstVersion=checked(_contentSession.HighestThemeVersion+1), latestVersion=checked(firstVersion+1);
         ContentHeatProposal Heat(long version,bool latest)=>new(document.PosterId,document.ItemSetVersion,version,
             document.Placements.Select((p,i)=>new ContentHeatItem(p.ItemId,
                 latest ? document.Placements.Count-i-1 : i, latest ? .5 : 1)).ToArray());

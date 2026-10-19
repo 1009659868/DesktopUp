@@ -12,12 +12,12 @@ internal static class StorageCopyCrashFixture
         using var store=new SqliteStateStore(new UserDataPaths(Path.Combine(root,"profile")));if(!store.Initialize().Succeeded)return 61;
         if(new SqliteTransferJournal(store).StorageLocations().Any(x=>!LocalTransferFiles.Contains(root,x.Root.Locator)))return 63;
         string destination=Path.Combine(root,"copy-crash-destination");Directory.CreateDirectory(destination);
-        var journal=new SqliteStorageRelocationJournal(store);var plan=journal.Preview(destination);var files=new StorageRelocationFiles(store);
+        var journal=new SqliteStorageRelocationJournal(store);var plan=journal.Preview(destination);
         using var cancel=new CancellationTokenSource();
-        files.Execute(plan,plan.Fingerprint,cancel.Token,checkpoint:p=>
+        new StorageRelocationUseCase(new LocalStorageRelocationExecution(store,copyCheckpoint:p=>
         {
             if(boundary=="TargetDeleted"&&p==StorageCopyCheckpoint.Prepared)cancel.Cancel();
             if(p.ToString()==boundary)Environment.Exit(76);
-        },transactionCheckpoint:p=>{if(p.ToString()==boundary)Environment.Exit(76);});return 64;
+        },transactionCheckpoint:p=>{if(p.ToString()==boundary)Environment.Exit(76);})).Execute(plan,plan.Fingerprint,cancel.Token);return 64;
     }
 }

@@ -12,6 +12,8 @@
 
 本地候选、配置、故障日志和 `.workbuddy` 不上传、不清空。发布精简只作用于分支跟踪文件；被移除文件仍可从开发分支和 Git 历史恢复。文件校验、收纳账本、恢复安全保护、运行诊断和必要合法归属信息属于产品，不以“校验文件”为名删除。
 
+2026-10-19补充：.editorconfig、.gitattributes、Directory.Build.targets的文本门、scripts/validate-source-text.ps1以及Infrastructure的Persistence/Migrations资源/清单都是必要发布构建输入；不得在impl/main精简时删掉。它们不依赖Docs/tests/tools目录，开发线的反例测试仍不进入发布源码。
+
 ## 里程碑同步流程
 
 后续默认流向：`impl/develop` 派生功能分支 → 开发/定向验证/集中验收 → 合回 `impl/develop` → 已确认的发布里程碑同步 `impl/main`。开工及合入前 fetch 核对来源；遇到新集成提交先审查和整合，不能覆盖。集成用 `--no-ff` 保留功能边界和可回退来源；未通过人工门不合入。只在用户授权或已约定的里程碑范围内提交/推送，不自动汇总无关分支，不把未验结论写成 PASS。当前功能期间留在其分支，不自动返回旧 V3 线。

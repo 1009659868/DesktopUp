@@ -1,18 +1,13 @@
 using DesktopUp.Domain;
+using DesktopUp.Application;
 using Microsoft.Data.Sqlite;
 
 namespace DesktopUp.Infrastructure;
 
-internal sealed record ManagedContentObservation(Guid MembershipId, string Locator, string Identity);
 
 // Local operational evidence, never portable configuration. Membership deletion cascades it.
 internal static class ManagedContentObservationStore
 {
-    internal const string MigrationSql = """
-        CREATE TABLE managed_content_observations(
-            membership_id TEXT PRIMARY KEY REFERENCES content_memberships(membership_id) ON DELETE CASCADE,
-            locator TEXT NOT NULL, object_identity TEXT NOT NULL) STRICT;
-        """;
     internal static void Verify(SqliteConnection c, SqliteTransaction? t)
     {
         using var q = c.CreateCommand(); q.Transaction = t;

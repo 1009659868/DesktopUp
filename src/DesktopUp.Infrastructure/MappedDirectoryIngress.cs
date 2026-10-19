@@ -1,3 +1,4 @@
+using DesktopUp.Windows;
 using System.Text.Json;
 using DesktopUp.Application;
 using DesktopUp.Domain;
@@ -10,10 +11,6 @@ public sealed record MappedIngressIntent(Guid Id, string PosterId, MappedNewCont
 // Write-ahead intent and observed Shell results. Restart never replays a file operation.
 public sealed class MappedDirectoryIngress(SqliteStateStore store, IShellDirectoryTransfer? executor = null) : IMappedIngressStorage
 {
-    internal const string MigrationSql = """
-        CREATE TABLE mapped_directory_ingress(operation_id TEXT PRIMARY KEY, body_json TEXT NOT NULL CHECK(json_valid(body_json)),
-            results_json TEXT NOT NULL DEFAULT '[]' CHECK(json_valid(results_json)), closed INTEGER NOT NULL DEFAULT 0 CHECK(closed IN(0,1))) STRICT;
-        """;
     internal static void Verify(SqliteConnection c, SqliteTransaction? t)
     { using var q=c.CreateCommand();q.Transaction=t;q.CommandText="SELECT operation_id,body_json,results_json,closed FROM mapped_directory_ingress LIMIT 0";using var r=q.ExecuteReader(); }
     internal static bool Pending(SqliteStateStore store) => store.ExecuteRead((c,t) =>

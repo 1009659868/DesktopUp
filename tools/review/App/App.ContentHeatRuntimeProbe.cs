@@ -40,7 +40,15 @@ public partial class App
             var spatial = _spatialRuntime!;
             var window = spatial.BackdropWindowForProbe(id);
             await window.CaptureRenderIdentityForProbe();
-            if (postureOnly)
+            bool presentationProbe = _startupIntent.Arguments.Contains("--r3-presentation-probe");
+            if (presentationProbe)
+            {
+                window.VerifyContentPublicationForProbe();
+                if (window.EditContent(new(ContentLayoutEditKind.Mode) { Mode = ContentLayoutMode.Manual }) is { } error)
+                    throw new IOException(error);
+                await window.VerifyIncrementalRenderForProbe();
+            }
+            if (postureOnly || presentationProbe)
             {
                 await window.VerifyPostureRastersForProbe(async collapsed =>
                 {
@@ -101,6 +109,36 @@ public partial class App
             surface = spatial.ReadContentSurfaceForSmoke(id);
             Require(surface.CanvasMatches && surface.InputMatches, "Neutral restoration did not publish coherently.");
             window.RequireRetainedRenderForProbe(render);
+            if (_startupIntent!.Arguments.Contains("--r2-session-probe", StringComparer.Ordinal))
+            {
+                _controlCenter!.Show();
+                await Until(() => _controlCenter.SettingsWindowForContractProbe?.Content.XamlRoot is not null);
+                var center = _controlCenter.SettingsWindowForContractProbe!;
+                center.SelectSettingsTargetForProbe(id);
+                center.SelectContentItemForProbe(author.Placements[0].ItemId);
+                center.PrepareContentFieldsForProbe(980, 1040);
+                center.SetContentFieldsForProbe("span", "bad");
+                Require(spatial.HasCenterDraft(id), "The invalid raw center draft did not acquire protection.");
+                var baseline = window.ReadCenterProposalWakeForProbe();
+                var latestTheme = baseline.ThemeParameters with
+                { Theme = baseline.ThemeParameters.Theme with { Accent = "#AABBCC" } };
+                Require(window.OfferContentHeat(Heat(4, false)) && window.OfferContentHeat(Heat(5, true)) &&
+                    window.OfferContentTheme(new(1, latestTheme)), "Center-protected proposals were refused.");
+                await Until(() => window.ReadCenterProposalWakeForProbe().WaitingForCenterRelease);
+                var waiting = window.ReadCenterProposalWakeForProbe();
+                Require(waiting.ActiveHeatVersion == 3 && waiting.ThemeParameters == baseline.ThemeParameters &&
+                    waiting.GeometryFingerprint == baseline.GeometryFingerprint, "Center draft did not protect publication.");
+                center.CancelContentFieldsForProbe("span");
+                await Until(() => window.ReadCenterProposalWakeForProbe().ActiveHeatVersion == 5 &&
+                    window.ReadCenterProposalWakeForProbe().ThemeParameters == latestTheme);
+                Require(!spatial.HasCenterDraft(id) && _stateCoordinator.Refresh().Revision == revision,
+                    "Release wrote author state or retained center ownership.");
+                var settled = window.ReadCenterProposalWakeForProbe();
+                await Task.Delay(100, cancellation.Token);
+                Require(window.ReadCenterProposalWakeForProbe().ViewportGeneration == settled.ViewportGeneration,
+                    "Settled session kept scheduling reflows.");
+                _log!.Write("info", "contract.r2_center_release_passed", new { latest = 5, persisted = false, polling = false });
+            }
             _log!.Write("info", "contract.heat_runtime_passed", new
             {
                 nativeMouse = false, nativeKeyboard = false, latest = 2, restored = 3,

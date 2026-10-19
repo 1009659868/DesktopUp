@@ -13,14 +13,16 @@ internal sealed class WinUiPosterSessionFactory(
     {
         var scopedLedger = new PosterSessionLedger(ledger, posterId, epoch);
         var scopedLog = new PosterSessionLog(log, posterId, epoch);
-        return new WinUiPosterSession(posterId,
+        var ports = spatial.ContentSourceFor(posterId);
+        var contentSession = new PosterContentSession(new(posterId, epoch), ports.Views.Version);
+        return new WinUiPosterSession(posterId, contentSession,
             new PosterVisualWindow(attachment, commands, scopedLedger, scopedLog, spatial,
-                inputRouter, new(posterId, epoch), requestRemoval, showControlCenter,
-                editing => editingChanged(posterId, editing), spatial.ContentSourceFor(posterId)), scopedLedger, scopedLog, environmentChanged);
+                inputRouter, new(posterId, epoch), contentSession, requestRemoval, showControlCenter,
+                editing => editingChanged(posterId, editing), ports), scopedLedger, scopedLog, environmentChanged);
     }
 }
 
-internal sealed class WinUiPosterSession(string posterId, PosterVisualWindow visual, IResourceLedger ledger,
+internal sealed class WinUiPosterSession(string posterId, PosterContentSession contentSession, PosterVisualWindow visual, IResourceLedger ledger,
     IStructuredLog log, Action<DesktopEnvironmentChangedEventArgs> environmentChanged) : IPosterSession
 {
     private DesktopEnvironmentWatcher? _watcher;
@@ -85,6 +87,7 @@ internal sealed class WinUiPosterSession(string posterId, PosterVisualWindow vis
     public void Dispose()
     {
         _disposed = true;
+        contentSession.Dispose(); // Stop pending publication before releasing native resources.
         _watcher?.Dispose();
         _watcher = null;
         _watcherLease?.Dispose();

@@ -31,7 +31,8 @@ internal sealed partial class PosterVisualWindow
             structure.Width, structure.Height, structure.Clip, footer.Width, footer.Height, footer.Clip,
             responsiveGeometry ? null : PosterTransitionSurface.Create(_bounds, expandedBounds),
             responsiveGeometry ? PosterGeometryTransitionSurface.Create(_bounds, expandedBounds) : null, previousNativeBounds);
-        _transitionLayout = lease; // Every partial preparation can be unwound by the same path.
+        _transitionLayout = lease;
+        _contentSession.SetInteraction(PosterContentInteraction.Transition, true); // Every partial preparation can be unwound by the same path.
         _surface.Child = null;
         structure.Children.Remove(footer);
         canvas.Children.Add(structure);
@@ -45,7 +46,6 @@ internal sealed partial class PosterVisualWindow
         double height = logicalBounds.Height / _monitor.ScaleY - border.Top - border.Bottom;
         structure.Width = width; structure.Height = height;
         footer.Width = width; footer.Height = FooterHeightDip;
-        RebuildItemGrid(FrameWidthDip(logicalBounds));
         UpdateItemScrollState(logicalBounds);
         structure.Measure(new Size(width, height));
         structure.Arrange(new Rect(0, 0, width, height));
@@ -61,7 +61,7 @@ internal sealed partial class PosterVisualWindow
     internal void BeginTitlePreview(string requestId, DesktopPixelRect capacity, bool source)
     {
         CancelScheduledGestureFrame();
-        _activeCommandRequestId = requestId;
+        _contentSession.SetCommand(requestId);
         if (_transitionLayout is { IsResponsiveGeometry: false, Surface: { } surface } existing &&
             surface.Width == capacity.Width && surface.Height >= capacity.Height)
         {
@@ -79,7 +79,7 @@ internal sealed partial class PosterVisualWindow
 
     private bool ApplyTransitionViewport(DesktopPixelRect frame)
     {
-        if (_transitionLayout is not { } lease || lease.RequestId != _activeCommandRequestId || _monitor is null || _surface is null)
+        if (_transitionLayout is not { } lease || lease.RequestId != _contentSession.ActiveCommand || _monitor is null || _surface is null)
             return false;
         var border = _surface.BorderThickness;
         double width = frame.Width / _monitor.ScaleX - border.Left - border.Right;
@@ -127,9 +127,9 @@ internal sealed partial class PosterVisualWindow
         var tiles = ContentLayoutFlow.ProjectTiles(snapshot, viewport);
         double pitch = snapshot.CellDip + snapshot.GapDip;
         var painted = tiles.Where(t => t.Bounds.Bottom >= -pitch && t.Bounds.Y <= viewport.HeightDip + pitch).ToArray();
-        bool content = ReferenceEquals(_contentSnapshot, snapshot) && _contentViewport == viewport &&
-            _contentCanvas is not null && _contentCards.Count == painted.Length && painted.All(tile =>
-                _contentCards.TryGetValue(TileKey(tile), out var card) && _contentCanvas.Children.Contains(card) &&
+        bool content = ReferenceEquals(_contentLayout.Snapshot, snapshot) && _contentLayout.Viewport == viewport &&
+            Presenter.Surface is not null && Presenter.Cards.Count == painted.Length && painted.All(tile =>
+                Presenter.Cards.TryGetValue(TileKey(tile), out var card) && Presenter.Surface.Children.Contains(card) &&
                 Near(Canvas.GetLeft(card), tile.Bounds.X) && Near(Canvas.GetTop(card), tile.Bounds.Y) &&
                 Near(card.Width, tile.Bounds.Width) && Near(card.Height, tile.Bounds.Height));
         var published = inputRouter.ReadSurface(inputSession);
@@ -154,7 +154,7 @@ internal sealed partial class PosterVisualWindow
         var transition = PosterTransitionViewport.Resolve(height,
             PosterFrameGeometryPolicy.CollapsedHeightDip - _surface.BorderThickness.Top - _surface.BorderThickness.Bottom,
             FooterHeightDip, _geometry.IsCollapsed);
-        bool clip = _contentCanvas?.Clip is RectangleGeometry contentClip &&
+        bool clip = Presenter.Surface?.Clip is RectangleGeometry contentClip &&
             Near(contentClip.Rect.Width, viewport.WidthDip) && Near(contentClip.Rect.Height, viewport.HeightDip) &&
             lease.Canvas.Clip is RectangleGeometry outer && Near(outer.Rect.Width, width) && Near(outer.Rect.Height, height) &&
             lease.Structure.Clip is RectangleGeometry body && Near(body.Rect.Width, width) && Near(body.Rect.Height, transition.BodyBottom) &&
@@ -164,7 +164,7 @@ internal sealed partial class PosterVisualWindow
         bool verified = nativeVerified && content && input && clip;
         log.Write(verified ? "info" : "warning", "content.geometry_frame", new
         {
-            PosterId, requestId = _activeCommandRequestId, phase = phase.ToString(), frame.Bounds,
+            PosterId, requestId = _contentSession.ActiveCommand, phase = phase.ToString(), frame.Bounds,
             snapshot.ViewportGeneration, snapshot.DocumentVersion, viewport.WidthDip, viewport.HeightDip,
             nativeVerified, content, input, clip, verified, items = snapshot.Items.Count, visibleTiles = visibleTiles.Length
         });
@@ -199,8 +199,8 @@ internal sealed partial class PosterVisualWindow
         footerTop = _footer is null ? 0 : Canvas.GetTop(_footer), footerHeight = _footer?.ActualHeight,
         responsive = _transitionLayout?.IsResponsiveGeometry,
         nativePrepared = _transitionLayout?.NativePrepared,
-        contentIdentity = _contentCanvas is null ? 0 : System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(_contentCanvas),
-        cardIdentities = _contentCards.ToDictionary(p => p.Key, p => System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(p.Value)),
+        contentIdentity = Presenter.Surface is null ? 0 : System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(Presenter.Surface),
+        cardIdentities = Presenter.Cards.ToDictionary(p => p.Key, p => System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(p.Value)),
         scaleX = _monitor?.ScaleX, scaleY = _monitor?.ScaleY
     };
 
@@ -208,8 +208,9 @@ internal sealed partial class PosterVisualWindow
     {
         if (_transitionLayout is not { } lease) return;
         _transitionLayout = null;
-        _solvedDocument = null;
-        _contentSpaceCandidate = null;
+        _contentSession.SetInteraction(PosterContentInteraction.Transition, false);
+        _contentLayout.Invalidate();
+        _contentLayout.DiscardCandidate();
         if (_surface?.Child == lease.Canvas) _surface.Child = null;
         lease.Canvas.Children.Clear();
         lease.Structure.Width = lease.StructureWidth; lease.Structure.Height = lease.StructureHeight;
@@ -223,7 +224,7 @@ internal sealed partial class PosterVisualWindow
     }
 
     internal bool VerifyTransitionLayout(bool active) => active
-        ? _transitionLayout is { } lease && lease.RequestId == _activeCommandRequestId &&
+        ? _transitionLayout is { } lease && lease.RequestId == _contentSession.ActiveCommand &&
             Math.Abs(lease.Structure.ActualWidth - lease.StableWidth) < .5 &&
             Math.Abs(lease.Structure.ActualHeight - lease.StableHeight) < .5 && VerifyTransitionSurfaceReady()
         : _transitionLayout is null && _contentStructure is { } structure && double.IsNaN(structure.Width) &&

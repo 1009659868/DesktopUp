@@ -1,3 +1,19 @@
-# Migration SHA-256 includes raw-string line endings. Match the released v1/v2
-# LF payloads even when a Windows checkout has core.autocrlf enabled.
-src/DesktopUp.Infrastructure/SqliteStateStore.cs text eol=lf
+# Repository text policy; independent of each developer's core.autocrlf.
+# Charset/BOM are checked by validate-source-text.ps1, not by Git.
+*.cs text eol=lf
+*.sql text eol=lf
+*.xml text eol=lf
+*.xaml text eol=lf
+*.csproj text eol=lf
+*.props text eol=lf
+*.targets text eol=lf
+*.json text eol=lf
+*.config text eol=lf
+*.Config text eol=lf
+*.nsi text eol=lf
+*.nsh text eol=lf
+*.sln text eol=lf
+*.ps1 text eol=crlf
+*.cmd text eol=crlf
+.editorconfig text eol=lf
+.gitattributes text eol=lf

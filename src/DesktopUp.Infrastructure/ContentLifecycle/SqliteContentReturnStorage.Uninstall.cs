@@ -4,25 +4,14 @@ using Microsoft.Data.Sqlite;
 
 namespace DesktopUp.Infrastructure;
 
-public sealed record UninstallContentInventory(long Revision, IReadOnlyList<ShellExitItem> Files, IReadOnlyList<string> Locations);
-public sealed record UninstallContentResult(bool Completed, IReadOnlyList<string> Returned, IReadOnlyList<string> Retained, IReadOnlyList<string> Errors);
-
-public sealed partial class PosterContentReturn
+public sealed partial class SqliteContentReturnStorage
 {
-    private const string UninstallScope = "@uninstall";
-
     // Explicit preservation never needs the content disk online and never settles/replays
     // a pending move. The database and all recorded directories are retained for reinstall.
     public IReadOnlyList<string> RetainedLocations() => new SqliteTransferJournal(store).StorageLocations()
         .SelectMany(r=>new[]{r.Root.Locator,r.Collection.StorageLocator!}).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
 
-    public UninstallContentInventory InspectUninstall()
-    {
-        using var lease = new SqliteTransferJournal(store).AcquireExecutor();
-        return Inventory();
-    }
-
-    private UninstallContentInventory Inventory()
+    public UninstallContentInventory Inventory()
     {
         var state = State; var journal = new SqliteTransferJournal(store);
         store.ExecuteRead((c,t) => { SqliteStorageRelocationJournal.RequireNoPending(c,t); return 0; });
@@ -52,41 +41,6 @@ public sealed partial class PosterContentReturn
             }
         }
         return new(state.Revision,files,locations);
-    }
-
-    // Invoked only by an explicit uninstall choice under the application's primary-instance
-    // lease. Keeps poster definitions and mapped/external content for a possible reinstall.
-    public async Task<UninstallContentResult> ReturnForUninstall(UninstallContentInventory preview, nint owner,
-        CancellationToken token = default, Action<string>? progress = null)
-    {
-        using var lease = new SqliteTransferJournal(store).AcquireExecutor();
-        ContentReturnStore.Backfill(store);
-        var initial=Inventory();
-        if (StateRequestFingerprint.Compute(initial)!=StateRequestFingerprint.Compute(preview))
-            return new(false,[],initial.Locations,["内容已变化，请重新卸载；文件未移动。"]);
-        var returned=new List<string>(); var errors=new List<string>(); var expected=State;
-        bool Current()=>!token.IsCancellationRequested && State.Revision==expected.Revision;
-        foreach (var source in initial.Files)
-        {
-            try
-            {
-                if(!Current())throw new IOException("已停止归还或配置变化；程序与剩余文件保留。");
-                progress?.Invoke(source.Path);
-                var result=await ReturnOne(UninstallScope,source,expected.ContentCatalog,Current,owner,token).ConfigureAwait(false);
-                expected=result.State; returned.Add(result.Path);
-                if(result.Stopped || token.IsCancellationRequested)throw new IOException("已取消；已归还文件保持原位，剩余文件保留。");
-            }
-            catch(Exception e) when(e is IOException or UnauthorizedAccessException or OperationCanceledException)
-            {errors.Add(e.Message);break;}
-        }
-        try
-        {
-            var remaining=Inventory();
-            if(remaining.Files.Count>0 && errors.Count==0)errors.Add("收纳目录仍有内容；停止卸载，未删除任何剩余文件。");
-            if(!Current() && errors.Count==0)errors.Add("配置变化或操作已取消，停止卸载。");
-        }
-        catch(Exception e) when(e is IOException or UnauthorizedAccessException){errors.Add(e.Message);}
-        return new(errors.Count==0,returned,initial.Locations,errors);
     }
 
     private bool UninstallSourceCurrent(ShellExitItem source, DesktopStateSnapshot state)

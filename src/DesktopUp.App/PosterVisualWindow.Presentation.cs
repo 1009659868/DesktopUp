@@ -43,7 +43,7 @@ internal sealed partial class PosterVisualWindow
         _posterMenu?.Hide();
         StopExpansionFeedback();
         _itemColumnCount = -1;
-        _contentCanvas = null; _contentCards.Clear(); _contentCardPaint.Clear();
+        Presenter.ClearVisuals();
         // Replace only this instance's XAML tree on an explicit presentation revision.
         // No window/host replacement, no global Application.Resources, no outer geometry write.
         ApplyWindowBackdrop(_window);
@@ -70,9 +70,9 @@ internal sealed partial class PosterVisualWindow
         if(!PresentationReadbackEquality.Same(_presentation,expected) || _renderedTitle!=target.Poster.Title || _window?.Title!="DesktopUp V3 · "+target.Poster.Title ||
             !VerifyWindowBackdrop() || _surface?.Child is not Grid structure ||
             !XamlNumber(structure.RowDefinitions[1].Height.Value,target.Poster.IsCollapsed?0:expected.MetaHeightDip) ||
-            _contentCanvas is null || _itemsGrid?.Children.Contains(_contentCanvas)!=true || _contentSnapshot is not { } snapshot ||
+            Presenter.Surface is null || _itemsGrid?.Children.Contains(Presenter.Surface)!=true || _contentLayout.Snapshot is not { } snapshot ||
             snapshot.PosterId!=target.Poster.PosterId || snapshot.DocumentVersion!=ContentDocument.DocumentVersion) return false;
-        foreach(var pair in _contentCards)
+        foreach(var pair in Presenter.Cards)
         {
             var slot=snapshot.Items.FirstOrDefault(p=>p.ItemId==pair.Key);
             if(slot is null || !XamlNumber(pair.Value.Width,slot.Bounds.Width) || !XamlNumber(pair.Value.Height,slot.Bounds.Height) ||

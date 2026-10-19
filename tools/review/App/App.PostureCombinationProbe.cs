@@ -28,7 +28,7 @@ internal sealed partial class PosterVisualWindow
             throw new InvalidOperationException("Independent Item is unavailable.");
         (_window!.Content as FrameworkElement)!.UpdateLayout();
         var before = ReadCompositionForProbe();
-        var tiles = ContentLayoutFlow.ProjectTiles(_contentSnapshot!, _contentViewport!).Where(t =>
+        var tiles = ContentLayoutFlow.ProjectTiles(_contentLayout.Snapshot!, _contentLayout.Viewport!).Where(t =>
             !t.Clip.IsEmpty && Math.Abs(t.Clip.Width - t.Bounds.Width) < .01 &&
             Math.Abs(t.Clip.Height - t.Bounds.Height) < .01).OrderBy(t => t.ReadOrder).Take(2).ToArray();
         if (tiles.Length != 2) throw new InvalidOperationException("Two whole visible cards required.");
@@ -50,7 +50,7 @@ internal sealed partial class PosterVisualWindow
         Send(PosterInputEventKind.Pressed, start);
         Send(PosterInputEventKind.GesturePreview, end);
         FlushContentMotion(false);
-        if (_contentGesture?.Proposal is not { } proposal || ContentLayoutEditing.SameState(before.Document, proposal) ||
+        if (_contentSession.Draft is not { } proposal || ContentLayoutEditing.SameState(before.Document, proposal) ||
             ReadCompositionForProbe().StoredJson != before.StoredJson)
             throw new InvalidOperationException("Independent drag failed to produce a RAM-only change.");
         return () =>

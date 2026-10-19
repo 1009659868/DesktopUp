@@ -4,8 +4,6 @@ using Microsoft.UI.Xaml.Controls;
 namespace DesktopUp;
 internal sealed partial class PosterVisualWindow
 {
-    internal Task<bool> ConfirmOutgoingAsync(string message,CancellationToken stopping)
-        => Task.FromResult(false); // Retired legacy executor; production exits only through Shell.
     // Shown only AFTER release for truly missing references; never interrupts held drag.
     internal async Task<bool> ConfirmMissingReferenceAsync(string message,CancellationToken stopping)
     {

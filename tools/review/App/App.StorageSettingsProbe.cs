@@ -1,6 +1,5 @@
 using DesktopUp.Application;
 using DesktopUp.Infrastructure;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace DesktopUp;
 
@@ -23,7 +22,7 @@ public partial class App
                 mode is not ("verify" or "cancel" or "close" or "early-close" or "exit" or "seed" or "restart" or "zero"))throw new IOException("Isolated storage settings fixture required.");
             lease=_ledger!.Acquire("fixture.storage-settings","same-package");
             await _transferDiscovery;
-            var service=_storageLocation!;var store=_services!.GetRequiredService<SqliteStateStore>();
+            var service=_storageLocation!;var store=_composition!.Store;
             var repository=new SqliteStateCommandRepository(store);
             var readyWatch=System.Diagnostics.Stopwatch.StartNew();
             while(_controlCenterEnvironmentPending)

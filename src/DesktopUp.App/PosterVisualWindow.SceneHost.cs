@@ -40,7 +40,7 @@ internal sealed partial class PosterVisualWindow
         // A content repaint/press is not a leave event. Reuse only the last shared sample
         // until the next tick (33ms), in screen coordinates so movement cannot shift the aim.
         PaintSceneMotion(_lastSceneSeconds, _lastScenePointer, _lastSceneCanAnimate);
-        bool visible = !_disposed && _window is not null && !_geometry.IsCollapsed && !_contentPresentationSuspended;
+        bool visible = !_disposed && _window is not null && !_geometry.IsCollapsed && !_contentSession.IsSuspended;
         bool requested = false;
         RunScene(() => requested = _sceneInstance?.WantsMotion == true);
         spatial.SetSceneMotionDemand(this, visible && !IsEditing && requested &&
@@ -51,7 +51,7 @@ internal sealed partial class PosterVisualWindow
     {
         if (_sceneInstance is null) return;
         _lastSceneSeconds = seconds; _lastScenePointer = pointer; _lastSceneCanAnimate = canAnimate;
-        bool visible = !_disposed && !_geometry.IsCollapsed && !_contentPresentationSuspended;
+        bool visible = !_disposed && !_geometry.IsCollapsed && !_contentSession.IsSuspended;
         var reasons = (!visible ? ScenePauseReason.Unavailable : ScenePauseReason.None) |
             (IsEditing ? ScenePauseReason.Editing : ScenePauseReason.None) |
             (!canAnimate || spatial.SceneGlobalMotionPaused ? ScenePauseReason.SharedPolicy : ScenePauseReason.None);

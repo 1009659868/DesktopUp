@@ -1,5 +1,9 @@
 # DesktopUp V2 文档入口
 
+2026-10-19 当前：**R1～R4 USER PASS / CLOSED；现有业务基础架构出口通过**。R4两组人工均已确认，验收和准入依据见[第19～20节](A_Project/40_Implementation/Architecture/FOUNDATION_REMAINDER_PLAN.md#r4-composition-boundary)。真实热度可进入下一批规划，尚未开工；通用能力平台、动态模板/AI/更新器未实现。当前仍impl/architecture-foundation，本次只登记与制图，不提交/推送/合并；发布及真实登录自启继续暂停。以下为阶段历史。
+
+2026-10-19 当前：迁移指纹与统一编码修复已在impl/architecture-foundation完成定向验证，未提交/推送；[实现、旧库副本与构建证据](A_Project/40_Implementation/V3-04/PREVIEW_INSTALLER_DELIVERY.md#2026-10-19-迁移指纹与统一编码修复)。发布同步仍暂停，安装与真实登录自启未复验。基础架构仍IN PROGRESS、真实热度HOLD，R1下一片仍映射创建/同步；下方“问题未修”是此前快照。
+
 2026-10-16 当前：**基础架构整改 IN PROGRESS，真实热度准入 HOLD**。工作分支 `impl/architecture-foundation`；R1 文件动作及拖放两片均 USER PASS，源码检查点 `b3bfdc6` 已推送，本次同步验收与接续记录，不合入 develop。下一片为映射创建／同步，再收清 R1 生命周期及配置入口，之后 R2 会话 → R3 呈现与同代命中 → R4 组装／平台依赖；详见[余项计划及拉取接续入口](A_Project/40_Implementation/Architecture/FOUNDATION_REMAINDER_PLAN.md#10-拉取后的接续入口)。此前 main 发布草稿因迁移 SQL 换行哈希兼容问题暂存，未发布、未修复，自启真实登录仍未验；详见当前 HANDOFF。下方为阶段历史，不覆盖本段。
 
 2026-10-16 当前：[代码架构审查与增量演进建议](A_Project/20_Architecture/ARCHITECTURE_EVOLUTION_REVIEW_2026-10-16.md)及五张Archify图已完成，基线impl/develop@4ae822a。仅静态审查/设计提案，未重构源码、未建分支或提交；建议先收敛内容用例、会话/呈现边界，再接V3-06。方案待确认，不替代既有产品合同；自启真实登录仍暂缓未验。下方记录为既有里程碑。

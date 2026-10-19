@@ -11,7 +11,7 @@ public sealed partial class StorageRelocationFilesTests
     public void CancellationAfterCommitOrDuringCleanupKeepsNewIndexAndRemainingOldCopies(bool duringCleanup)
     {
         using var f=new F();Seed(f);var p=Preview(f);using var cancel=new CancellationTokenSource();int removed=0;
-        var result=new StorageRelocationFiles(f.Store).Execute(p,p.Fingerprint,cancel.Token,
+        var result=Execute(f.Store,p,p.Fingerprint,cancel.Token,
             checkpoint:at=>{if(at==StorageCopyCheckpoint.SourceDeleted){removed++;if(duringCleanup)cancel.Cancel();}},
             transactionCheckpoint:at=>{if(at==StorageRelocationCheckpoint.Committed&&!duringCleanup)cancel.Cancel();});
         Assert.True(result.Committed,result.Reason);Assert.False(result.Cleaned);Assert.NotEmpty(result.RetainedPaths);
@@ -21,21 +21,21 @@ public sealed partial class StorageRelocationFilesTests
     [Fact] public void MissingReferencedObjectCannotBePublishedAsAVerifiedMigration()
     {
         using var f=new F();string source=Seed(f);File.Delete(source);var p=Preview(f);long revision=f.State.Revision;
-        var result=new StorageRelocationFiles(f.Store).Execute(p,p.Fingerprint);Assert.False(result.Committed);Assert.True(result.Cleaned,result.Reason);
+        var result=Execute(f.Store,p,p.Fingerprint);Assert.False(result.Committed);Assert.True(result.Cleaned,result.Reason);
         Assert.Equal(revision,f.State.Revision);Assert.Empty(Directory.EnumerateFileSystemEntries(p.Request.Destination.Locator));
     }
     [Fact] public void LockedSourceCannotBeCopiedAndDoesNotAcquireTheDestination()
     {
         using var f=new F();string source=Seed(f);var p=Preview(f);
         using var locked=new FileStream(source,FileMode.Open,FileAccess.ReadWrite,FileShare.None);
-        Assert.Throws<IOException>(()=>new StorageRelocationFiles(f.Store).Execute(p,p.Fingerprint));
+        Assert.Throws<IOException>(()=>Execute(f.Store,p,p.Fingerprint));
         Assert.Empty(new SqliteStorageRelocationJournal(f.Store).Read());Assert.Empty(Directory.EnumerateFileSystemEntries(p.Request.Destination.Locator));
     }
     [Fact] public void EmptyCollectionsAndMultipleRootsUseTheSameRealCopyProtocol()
     {
         using var f=new F();Seed(f);string second=Path.Combine(f.DirectoryRoot,"empty-root");Directory.CreateDirectory(second);
         var provisioner=new ManagedStorageProvisioner(f.Store);var preview=provisioner.Preview(second);var registered=provisioner.Confirm(preview,preview.Fingerprint);
-        var p=Preview(f);var result=new StorageRelocationFiles(f.Store).Execute(p,p.Fingerprint);
+        var p=Preview(f);var result=Execute(f.Store,p,p.Fingerprint);
         Assert.True(result.Committed,result.Reason);Assert.True(result.Cleaned,result.Reason);
         var locations=new SqliteTransferJournal(f.Store).StorageLocations();Assert.Equal(2,locations.Count);Assert.Single(locations.Select(x=>x.Root.Id).Distinct());
         Assert.Contains(locations,x=>x.Collection.Id==registered.Collection.Id);
@@ -43,7 +43,7 @@ public sealed partial class StorageRelocationFilesTests
     [Fact] public void UnexpectedTargetChildrenNeverGetSweptOnAnOrdinaryCopyFailure()
     {
         using var f=new F();Seed(f);var p=Preview(f);string foreign=Path.Combine(p.Request.Destination.Locator,"keep.txt");
-        var result=new StorageRelocationFiles(f.Store).Execute(p,p.Fingerprint,checkpoint:at=>
+        var result=Execute(f.Store,p,p.Fingerprint,checkpoint:at=>
         {if(at==StorageCopyCheckpoint.ManifestWritten)File.WriteAllText(foreign,"external");});
         Assert.False(result.Committed);Assert.False(result.Cleaned);Assert.Equal("external",File.ReadAllText(foreign));
     }
@@ -80,7 +80,7 @@ public sealed partial class StorageRelocationFilesTests
             Assert.NotEqual(LocalTransferFiles.Identity(f.Root.Locator)[..16],LocalTransferFiles.Identity(target)[..16]);
             byte[] link=File.ReadAllBytes(Path.Combine(f.Collection.StorageLocator!,"folder","shortcut.lnk"));DateTime time=File.GetLastWriteTimeUtc(source);
             using var cancel=new CancellationTokenSource();long revision=f.State.Revision;
-            var result=new StorageRelocationFiles(f.Store).Execute(p,p.Fingerprint,cancel.Token,
+            var result=Execute(f.Store,p,p.Fingerprint,cancel.Token,
                 checkpoint:at=>{if(mode=="cancel"&&at==StorageCopyCheckpoint.CopyProgress)cancel.Cancel();},
                 transactionCheckpoint:at=>{if(mode=="index-failure"&&at==StorageRelocationCheckpoint.ReceiptWritten)throw new IOException("isolated cross-volume SQL failure");});
             Assert.True(result.Cleaned,result.Reason);
@@ -109,7 +109,7 @@ public sealed partial class StorageRelocationFilesTests
             try{shortcut.TargetPath=target;shortcut.Description="D2-03 isolated shortcut";shortcut.Save();}
             finally{System.Runtime.InteropServices.Marshal.FinalReleaseComObject(shortcut);}
             byte[] bytes=File.ReadAllBytes(link);var incoming=f.Stage(link);f.Executor.Execute(incoming.Plan.Request.OperationId);
-            var p=Preview(f);var result=new StorageRelocationFiles(f.Store).Execute(p,p.Fingerprint);Assert.True(result.Committed,result.Reason);Assert.True(result.Cleaned,result.Reason);
+            var p=Preview(f);var result=Execute(f.Store,p,p.Fingerprint);Assert.True(result.Committed,result.Reason);Assert.True(result.Cleaned,result.Reason);
             Assert.Equal(bytes,File.ReadAllBytes(Target(f,p,"launch.lnk")));Assert.Equal("owned-content",File.ReadAllText(target));
             dynamic copied=shell.CreateShortcut(Target(f,p,"launch.lnk"));
             try{Assert.Equal(target,(string)copied.TargetPath);}finally{System.Runtime.InteropServices.Marshal.FinalReleaseComObject(copied);}
@@ -149,8 +149,8 @@ public sealed partial class StorageRelocationFilesTests
     }
     [Fact] public void NewBundleCanBeMigratedAgainWithoutCopyingOldOwnershipMetadata()
     {
-        using var f=new F();Seed(f);var files=new StorageRelocationFiles(f.Store);var p=Preview(f);var first=files.Execute(p,p.Fingerprint);Assert.True(first.Cleaned,first.Reason);
-        var second=Preview(f);var result=files.Execute(second,second.Fingerprint);Assert.True(result.Committed,result.Reason);Assert.True(result.Cleaned,result.Reason);
+        using var f=new F();Seed(f);var p=Preview(f);var first=Execute(f.Store,p,p.Fingerprint);Assert.True(first.Cleaned,first.Reason);
+        var second=Preview(f);var result=Execute(f.Store,second,second.Fingerprint);Assert.True(result.Committed,result.Reason);Assert.True(result.Cleaned,result.Reason);
         Assert.Equal("owned-content",File.ReadAllText(Target(f,second,"real.txt")));Assert.True(File.Exists(Target(f,second,StorageBundleOwnership.ChildMarker)));
     }
 }

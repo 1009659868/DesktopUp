@@ -9,7 +9,7 @@ internal sealed partial class PosterSpatialRuntime
 {
     internal async Task R1TransfersProbe(string root)
     {
-        var repository = new SqliteStateCommandRepository(_transferStore!);
+        var repository = new SqliteStateCommandRepository(_reviewTransferStore!);
         if (repository.Read().ContentCatalog.PosterItems.Count != 0) throw new IOException("Fresh owned fixture required.");
         string sourceDirectory = Path.Combine(root, "sources"); Directory.CreateDirectory(sourceDirectory);
         string Make(string name)
@@ -56,7 +56,7 @@ internal sealed partial class PosterSpatialRuntime
     // receiver and renderer; does not synthesize OS mouse input or claim OLE pointer coverage.
     internal async Task CrossPosterProbe(bool restart)
     {
-        var repository = new SqliteStateCommandRepository(_transferStore!);
+        var repository = new SqliteStateCommandRepository(_reviewTransferStore!);
         var before = repository.Read();
         if (restart)
         {

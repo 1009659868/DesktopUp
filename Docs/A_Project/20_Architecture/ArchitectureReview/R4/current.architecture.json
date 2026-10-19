@@ -1,0 +1,242 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "R4现状｜显式组装与现有业务边界",
+    "locale": "zh-CN",
+    "quality_profile": "showcase"
+  },
+  "components": [
+    {
+      "id": "root",
+      "type": "backend",
+      "label": "启动组合根",
+      "sublabel": "单一数据库与Worker所有者",
+      "pos": [
+        40,
+        60
+      ],
+      "size": [
+        240,
+        82
+      ]
+    },
+    {
+      "id": "adapters",
+      "type": "external",
+      "label": "文件／Shell 适配",
+      "sublabel": "原子执行、类型化端口",
+      "pos": [
+        400,
+        60
+      ],
+      "size": [
+        240,
+        82
+      ]
+    },
+    {
+      "id": "worker",
+      "type": "external",
+      "label": "独立 ContentWorker",
+      "sublabel": "有界请求／返回，不读数据库",
+      "pos": [
+        760,
+        60
+      ],
+      "size": [
+        240,
+        82
+      ]
+    },
+    {
+      "id": "probe",
+      "type": "external",
+      "label": "Windows 平台库",
+      "sublabel": "共享本机元数据探测",
+      "pos": [
+        1105,
+        60
+      ],
+      "size": [
+        240,
+        82
+      ]
+    },
+    {
+      "id": "ui",
+      "type": "frontend",
+      "label": "海报／控制中心",
+      "sublabel": "原生输入、控件与反馈",
+      "pos": [
+        40,
+        330
+      ],
+      "size": [
+        240,
+        82
+      ]
+    },
+    {
+      "id": "cases",
+      "type": "backend",
+      "label": "应用用例",
+      "sublabel": "文件、拖放、配置、生命周期",
+      "pos": [
+        400,
+        330
+      ],
+      "size": [
+        240,
+        82
+      ]
+    },
+    {
+      "id": "kernel",
+      "type": "backend",
+      "label": "会话与纯布局",
+      "sublabel": "草稿／提案保护、帧与代次",
+      "pos": [
+        760,
+        330
+      ],
+      "size": [
+        240,
+        82
+      ]
+    },
+    {
+      "id": "presenter",
+      "type": "frontend",
+      "label": "增量 Presenter",
+      "sublabel": "稳定卡片与有界暖图",
+      "pos": [
+        1105,
+        330
+      ],
+      "size": [
+        240,
+        82
+      ]
+    },
+    {
+      "id": "state",
+      "type": "database",
+      "label": "持久化适配",
+      "sublabel": "沿用 SQLite、CAS 和账本",
+      "pos": [
+        400,
+        600
+      ],
+      "size": [
+        240,
+        82
+      ]
+    },
+    {
+      "id": "native",
+      "type": "external",
+      "label": "原生帧提交",
+      "sublabel": "同代命中、失败停路由",
+      "pos": [
+        1105,
+        600
+      ],
+      "size": [
+        240,
+        82
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "assemble",
+      "from": "root",
+      "to": "adapters",
+      "label": "显式组装"
+    },
+    {
+      "id": "views",
+      "from": "root",
+      "to": "ui",
+      "label": "创建宿主",
+      "labelDy": 70
+    },
+    {
+      "id": "ipc",
+      "from": "adapters",
+      "to": "worker",
+      "label": "进程协议"
+    },
+    {
+      "id": "metadata",
+      "from": "worker",
+      "to": "probe",
+      "label": "只读探测"
+    },
+    {
+      "id": "intent",
+      "from": "ui",
+      "to": "cases",
+      "label": "类型化意图"
+    },
+    {
+      "id": "projection",
+      "from": "cases",
+      "to": "kernel",
+      "label": "状态投影"
+    },
+    {
+      "id": "frame",
+      "from": "kernel",
+      "to": "presenter",
+      "label": "同代帧"
+    },
+    {
+      "id": "commit",
+      "from": "presenter",
+      "to": "native",
+      "label": "绘制／命中发布",
+      "labelDy": 70
+    },
+    {
+      "id": "persist",
+      "from": "cases",
+      "to": "state",
+      "label": "事务端口",
+      "labelDy": 70
+    },
+    {
+      "id": "execute",
+      "from": "cases",
+      "to": "adapters",
+      "label": "执行端口"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "本轮不改业务",
+      "items": [
+        "R1～R3人工已通过；R4集中人工待验。",
+        "启动与退出顺序保留，不新增轮询。"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "可增量接入",
+      "items": [
+        "新热度策略经现有提案与安全点发布。",
+        "窗口不查库、不持有评分或执行文件。"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "仍不是整个平台",
+      "items": [
+        "真实评分、动态模板、AI与更新器未实现。",
+        "扫描规模化策略待评估，暂不调整。"
+      ]
+    }
+  ]
+}

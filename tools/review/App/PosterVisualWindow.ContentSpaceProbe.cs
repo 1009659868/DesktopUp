@@ -27,19 +27,19 @@ internal sealed partial class PosterVisualWindow
             spatial.SetEffectiveTopology(topology);
             SuspendInput();
             Require(RecoverContentForSmoke(topology), "Owner recovery failed.");
-            Require(!HasContentGesture && _contentMotionTimer is null && _contentDraft is null, "Old draft/capture survived recovery.");
+            Require(!HasContentGesture && _contentMotionTimer is null && _contentSession.Draft is null, "Old draft/capture survived recovery.");
             Require(inputRouter.Capture == nativeCapture, "Managed probe acquired native capture.");
             var read = ReadBrowseForProbe();
             Require(read.CanvasMatches && read.InputMatches && read.Clipped, "Actual XAML and hit regions disagree.");
             observations.Add(new { target.WorkArea, target.DpiX, target.DpiY, read,
-                decision = _contentSpacePublication.Published, candidate = _contentSpaceCandidate });
+                decision = _contentLayout.Space.Published, candidate = _contentLayout.Candidate });
         }
         try
         {
             bool vertical = original.FlowAxis == ContentFlowAxis.Vertical;
             var first = original.Placements[0];
-            double pitch = _contentSnapshot!.CellDip + _contentSnapshot.GapDip;
-            int span = Math.Min(12, (int)Math.Floor(((vertical ? _contentViewport!.WidthDip : _contentViewport!.HeightDip) + _contentSnapshot.GapDip) / pitch));
+            double pitch = _contentLayout.Snapshot!.CellDip + _contentLayout.Snapshot.GapDip;
+            int span = Math.Min(12, (int)Math.Floor(((vertical ? _contentLayout.Viewport!.WidthDip : _contentLayout.Viewport!.HeightDip) + _contentLayout.Snapshot.GapDip) / pitch));
             Require(span >= 8, "Large-item fixture unavailable.");
             Require(EditContent(new(ContentLayoutEditKind.Resize, first.ItemId) {
                 ColumnSpan = vertical ? span : first.ColumnSpan, RowSpan = vertical ? first.RowSpan : span }) is null, "Fixture resize failed.");
@@ -47,16 +47,16 @@ internal sealed partial class PosterVisualWindow
             {
                 Require(EditContent(new(ContentLayoutEditKind.Mode) { Mode = mode }) is null, "Fixture mode failed.");
                 ScrollContentForSmoke(0, 0); ScrollItems(120);
-                var published = _contentSpacePublication.Published;
+                var published = _contentLayout.Space.Published;
                 Require(published is { IsReadOnly: false }, "Initial normal publication missing.");
-                var viewport = _contentViewport!;
+                var viewport = _contentLayout.Viewport!;
                 double chrome = vertical ? _bounds.Width / monitor.ScaleX - viewport.WidthDip : _bounds.Height / monitor.ScaleY - viewport.HeightDip;
-                double minimum = _contentSnapshot!.MinimumCrossAxisDip;
-                var sizes = _contentSnapshot.Items.ToDictionary(i => i.ItemId, i => (i.Bounds.Width, i.Bounds.Height));
+                double minimum = _contentLayout.Snapshot!.MinimumCrossAxisDip;
+                var sizes = _contentLayout.Snapshot.Items.ToDictionary(i => i.ItemId, i => (i.Bounds.Width, i.Bounds.Height));
                 long revision = _stateRevision; string? raw = _authoritativePoster!.ContentLayoutJson;
                 // Prepare-only is not evidence. No native mutation is requested for this candidate.
                 var prepared = PrepareSpatialFrame(_bounds);
-                Require(prepared is not null && ReferenceEquals(published, _contentSpacePublication.Published), "Prepare advanced publication.");
+                Require(prepared is not null && ReferenceEquals(published, _contentLayout.Space.Published), "Prepare advanced publication.");
                 var surface = inputRouter.ReadSurface(inputSession)!;
                 var region = surface.Layout.Regions.First(r => r.Kind == PosterInputTargetKind.ContentItem);
                 var press = new PointerScreenPoint(surface.Frame.X + region.Bounds.X + region.Bounds.Width / 2,
@@ -71,12 +71,12 @@ internal sealed partial class PosterVisualWindow
                 var small = monitor with { WorkArea = vertical ? monitor.WorkArea with { Width = crossPixels }
                     : monitor.WorkArea with { Height = crossPixels } };
                 RecoverMonitor(small);
-                Require(IsContentSpaceRestricted && _contentSpacePublication.Published?.IsRestricted == true && !ReadContentEditor().CanEdit,
+                Require(IsContentSpaceRestricted && _contentLayout.Space.Published?.IsRestricted == true && !ReadContentEditor().CanEdit,
                     "Physical shortage did not publish finite read-only overflow.");
                 Require(_contentSpaceNavigation?.Visibility == Visibility.Visible &&
                     inputRouter.ReadSurface(inputSession)!.Layout.Regions.Count(r => r.Kind == PosterInputTargetKind.ContentBrowseNavigation) == 4,
                     "Restricted navigation is not visible or clickable.");
-                Require(_contentSnapshot!.Items.All(i => sizes[i.ItemId] == (i.Bounds.Width, i.Bounds.Height)), "Item sizes changed.");
+                Require(_contentLayout.Snapshot!.Items.All(i => sizes[i.ItemId] == (i.Bounds.Width, i.Bounds.Height)), "Item sizes changed.");
                 HandleContentInput(Input(PosterInputEventKind.GestureCompleted, new(press.X + 90, press.Y + 90), 3));
                 Require(!HasContentGesture && _stateRevision == revision && _authoritativePoster.ContentLayoutJson == raw, "Late release persisted an old draft.");
                 Require(SetContentLoopScroll(false) is not null && EditContent(new(ContentLayoutEditKind.Mode) { Mode = ContentLayoutMode.Automatic }) is not null,
@@ -91,8 +91,8 @@ internal sealed partial class PosterVisualWindow
                     Require(read.CanvasMatches && read.InputMatches && read.Clipped && read.Tiles.All(t => t.LoopIndex == 0), "Navigation used stale/cyclic tiles.");
                 }
                 ScrollItems(-120000, true); ScrollItems(-120000);
-                Require(_contentSnapshot.ScrollXDip == Math.Max(0, _contentSnapshot.ExtentWidthDip - _contentViewport!.WidthDip) &&
-                    _contentSnapshot.ScrollYDip == Math.Max(0, _contentSnapshot.ExtentHeightDip - _contentViewport.HeightDip), "Two-axis tail is unreachable.");
+                Require(_contentLayout.Snapshot.ScrollXDip == Math.Max(0, _contentLayout.Snapshot.ExtentWidthDip - _contentLayout.Viewport!.WidthDip) &&
+                    _contentLayout.Snapshot.ScrollYDip == Math.Max(0, _contentLayout.Snapshot.ExtentHeightDip - _contentLayout.Viewport.HeightDip), "Two-axis tail is unreachable.");
                 // Selecting/opening still works at a cross-axis offset; dragging must not write.
                 var tail = inputRouter.ReadSurface(inputSession)!;
                 var tailRegion = tail.Layout.Regions.First(r => r.Kind == PosterInputTargetKind.ContentItem);
@@ -104,10 +104,10 @@ internal sealed partial class PosterVisualWindow
                 // A further per-axis DPI change must retain DIP card size and the restricted
                 // capability; these are provider facts, not an OS DPI or raster-quality claim.
                 RecoverMonitor(small with { DpiX = 120, DpiY = 144 });
-                Require(IsContentSpaceRestricted && _contentSnapshot!.Items.All(i => sizes[i.ItemId] == (i.Bounds.Width, i.Bounds.Height)),
+                Require(IsContentSpaceRestricted && _contentLayout.Snapshot!.Items.All(i => sizes[i.ItemId] == (i.Bounds.Width, i.Bounds.Height)),
                     "A second DPI observation scaled Items or lost restriction.");
                 RecoverMonitor(small);
-                var anchor = ContentLayoutFlow.CaptureAnchor(_contentSnapshot, _contentViewport!, _contentBrowseMode);
+                var anchor = ContentLayoutFlow.CaptureAnchor(_contentLayout.Snapshot, _contentLayout.Viewport!, _contentLayout.BrowseMode);
                 if (mode == ContentLayoutMode.Automatic)
                 {
                     // Explicit isolated external-source fixture change via the real authority.
@@ -123,19 +123,19 @@ internal sealed partial class PosterVisualWindow
                     // The external member commit is an earlier completed event. Its finite
                     // boundary may already require minimal clamping; restore the CURRENT
                     // identity/internal point, not the deleted tail's old physical coordinate.
-                    anchor = ContentLayoutFlow.CaptureAnchor(_contentSnapshot!, _contentViewport!, _contentBrowseMode);
+                    anchor = ContentLayoutFlow.CaptureAnchor(_contentLayout.Snapshot!, _contentLayout.Viewport!, _contentLayout.BrowseMode);
                 }
                 RecoverMonitor(monitor);
-                Require(!IsContentSpaceRestricted && ReadContentEditor().CanEdit && _contentSpacePublication.Published?.IsRestricted == false,
+                Require(!IsContentSpaceRestricted && ReadContentEditor().CanEdit && _contentLayout.Space.Published?.IsRestricted == false,
                     "Recovered physical environment did not restore editing.");
-                var offsets = ContentLayoutFlow.RestoreAnchor(_contentSnapshot!, _contentViewport!, anchor);
+                var offsets = ContentLayoutFlow.RestoreAnchor(_contentLayout.Snapshot!, _contentLayout.Viewport!, anchor);
                 Require(Math.Abs(offsets.ScrollXDip - _contentScrollX) < .001 && Math.Abs(offsets.ScrollYDip - _itemScrollOffsetDip) < .001,
                     "Recovery lost the identity/internal browse anchor.");
-                Require(_stateRevision == revision && _authoritativePoster.ContentLayoutJson == raw && ContentLayoutFlow.IsLooping(_contentSnapshot!, _contentViewport!),
+                Require(_stateRevision == revision && _authoritativePoster.ContentLayoutJson == raw && ContentLayoutFlow.IsLooping(_contentLayout.Snapshot!, _contentLayout.Viewport!),
                     "Recovery overwrote author intent or lost loop eligibility.");
-                Require(_contentSnapshot!.ItemSetVersion == ContentDocument.ItemSetVersion && _contentSnapshot.Items.Count == ContentDocument.Placements.Count,
+                Require(_contentLayout.Snapshot!.ItemSetVersion == ContentDocument.ItemSetVersion && _contentLayout.Snapshot.Items.Count == ContentDocument.Placements.Count,
                     "Recovery replayed an old member set.");
-                Require(SelectContentItem(_contentSnapshot.Items.First(i => !i.Clip.IsEmpty).ItemId) is null &&
+                Require(SelectContentItem(_contentLayout.Snapshot.Items.First(i => !i.Clip.IsEmpty).ItemId) is null &&
                     ControlCenterWindow.VerifyContentSpaceDraftForProbe(ReadContentEditor()), "An old center draft became valid again.");
                 if (mode == ContentLayoutMode.Automatic)
                     await CapturePosterXamlForProbeAsync(Path.Combine(dataRoot, "content-browse-" + (vertical ? "vertical" : "horizontal") + "-space-recovered.png"));

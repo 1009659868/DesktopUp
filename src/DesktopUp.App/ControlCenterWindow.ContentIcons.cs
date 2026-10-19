@@ -1,7 +1,6 @@
 using System.Runtime.InteropServices.WindowsRuntime;
 using DesktopUp.Application;
 using DesktopUp.Domain;
-using DesktopUp.Infrastructure;
 using DesktopUp.Windows;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -12,12 +11,13 @@ namespace DesktopUp;
 
 public sealed partial class ControlCenterWindow
 {
+    private IContentIconSource? _iconSource;
     private Func<ILocalContentWorker?>? _iconWorker;
     private Func<ContentIconCommand, CancellationToken, StateCommandResult>? _applyIcon;
     private CancellationTokenSource? _iconCancellation;
-    internal void ConfigureContentIcons(Func<ILocalContentWorker?> worker,
+    internal void ConfigureContentIcons(IContentIconSource source, Func<ILocalContentWorker?> worker,
         Func<ContentIconCommand, CancellationToken, StateCommandResult> apply)
-    { _iconWorker = worker; _applyIcon = apply; }
+    { _iconSource = source; _iconWorker = worker; _applyIcon = apply; }
 
     private ContentIconPreview? CaptureIconPreview()
     {
@@ -51,10 +51,7 @@ public sealed partial class ControlCenterWindow
                 try { path = await picker.Completion; }
                 finally { if (ReferenceEquals(_portablePicker, picker)) _portablePicker = null; }
                 if (path is null || !IconPreviewIsCurrent(preview)) return;
-                var image = await Task.Run(() => LocalContentReferenceProbe.Inspect(path), cancellation.Token);
-                cancellation.Token.ThrowIfCancellationRequested();
-                if (image.Item is null) throw new InvalidDataException(image.Message);
-                asset = await ContentIconImport.DecodeAsync(worker, image.Item, cancellation.Token);
+                asset = await ContentIconImport.LoadAsync(_iconSource!, worker, path, cancellation.Token);
                 if (!IconPreviewIsCurrent(preview)) return;
             }
             await ConfirmCardIcon(preview, asset, cancellation.Token);

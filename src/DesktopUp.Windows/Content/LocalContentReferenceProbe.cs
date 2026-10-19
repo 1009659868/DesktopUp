@@ -1,10 +1,7 @@
 using DesktopUp.Domain;
 using DesktopUp.Application;
 
-namespace DesktopUp.Infrastructure;
-
-public sealed record LocalReferencePreview(string Input, ContentItem? Item, string Message,
-    long? Length = null, long? LastWriteTicks = null);
+namespace DesktopUp.Windows;
 
 // Metadata only; never opens/executes targets, follows shortcuts, enumerates directories or moves files.
 // The GUID is durable identity. Path equality is a conservative reuse hint, NOT file-ID equivalence.

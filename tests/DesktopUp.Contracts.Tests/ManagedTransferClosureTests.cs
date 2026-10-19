@@ -1,3 +1,4 @@
+using DesktopUp.Windows;
 using DesktopUp.Application;
 using DesktopUp.Infrastructure;
 using F=DesktopUp.Contracts.Tests.ManagedTransferPersistenceTests.Fixture;

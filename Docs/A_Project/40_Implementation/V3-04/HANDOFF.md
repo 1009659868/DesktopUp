@@ -1,5 +1,101 @@
 # V3-04 当前交接
 
+## 2026-10-19 R4人工通过并收口（当前）
+
+用户确认R4两组集中验证均通过，R1～R4 USER PASS / CLOSED。本次仅登记、静态核对与制图，复用最终候选/自动证据，不重跑矩阵、不改产品源码。详细结果见[第19～20节](../Architecture/FOUNDATION_REMAINDER_PLAN.md#r4-composition-boundary)。
+
+[当前架构与原目标对照](../../20_Architecture/ArchitectureReview/R4-Closed/README.md)区分基础职责已落地、能力接点部分具备和未来功能未实现；两张HTML在out/architecture-r4-closed。原目标不改，R4待验图留作历史。
+
+现有业务基础架构出口通过，可进入真实热度下一批规划；真实评分、策略热替换、模板平台/异形海报、AI与独立更新器尚未实现。等待用户下一步指示；保持impl/architecture-foundation，不提交/推送/合并。OPT-CONTENT-SYNC-01、暂停中的发布/真实登录自启及既有未验项继续携带，不补PASS。
+
+## 2026-10-19 R3已收口；R4 CODE/AUTO PASS、集中人工待验（历史候选记录）
+
+用户确认R3两组通过，R1～R3均USER PASS / CLOSED。R4改为显式组合根、单一数据库/Worker所有权；启动/退出/环境职责拆分，删除DI查询、无用注册/包与Worker源码链接。只读元数据探测归Windows，业务、源身份和观察周期保持。Archify现状图及目标差异已同步，未声称整个能力平台完成。
+
+58个不同定向通过；正常/Review/夹具Release和Worker publish通过。108个生产编译源完整边界检查、额外68个Review源隔离通过。Source与Offline两个隔离进程PASS/退出资源0，普通候选与Review共用生产接线。实现/清理/失败修正和证据唯一入口：[第19节](../Architecture/FOUNDATION_REMAINDER_PLAN.md#r4-composition-boundary)。
+
+候选out/architecture-r4-composition/candidate01/app，独立数据out/drop-d3/architecture-r4-composition-review01。正常产品烟测PID24400四海报Ready、退出0/资源0；同包已启动PID18480供人工。复用scripts/start-architecture-presentation-review.ps1 -Batch R4 -Action Open重开，Status查看；仅验“新建/命名/跨海报连续使用”和“中心/隐藏重显/退出重开”两组。未安装、不写桌面、不覆盖旧包或配置；脚本与样例同批哈希锁定。
+
+继续impl/architecture-foundation，未提交/推送/合并；R4人工后再复核真实热度准入。OPT-CONTENT-SYNC-01只记录，发布/真实登录自启仍暂停；下方仅为阶段历史。
+
+## 2026-10-19 R2已收口；R3 CODE/AUTO PASS、集中人工待验（阶段记录）
+
+用户确认R2两组验证通过，R1/R2均USER PASS / CLOSED。R3已迁出纯布局准备/输入几何、稳定卡片Presenter及资源绑定，窗口旧所有者清理；普通内容先接纳命中再绘制，批次失败保留旧画面并停不可信路由，沿原恢复机制续接。未改文件业务、动效协议或轮询策略。
+
+75个不同定向最终通过，正常/Review/夹具Release及编译隔离通过；最终两个隔离进程验证增量/暖图/同代失败与来源重建，均PASS、退出资源0。原生鼠标仍由本轮人工确认。实现/清理/失败修正/证据唯一入口为[第18节](../Architecture/FOUNDATION_REMAINDER_PLAN.md#r3-presentation-boundary)。
+
+正常候选PID26812已打开：out/architecture-r3-presentation/candidate01/app；数据out/drop-d3/architecture-r3-presentation-review01。用scripts/start-architecture-presentation-review.ps1的Open重开、Status查看。仅验两组：连续编排/跨海报悬停取消/收展；宽度或缩放改变后的点选框选/标题命中及退出重开。旧候选/配置不覆盖，自建样例全在out，不操作真实桌面文件。
+
+继续impl/architecture-foundation，未提交/推送/合并；R3人工通过后再收口，下一批R4组装/Worker。整体架构IN PROGRESS，真实热度HOLD；扫描策略OPT-CONTENT-SYNC-01仅记录，发布同步/真实登录自启继续暂停。下方为阶段历史，不覆盖本段。
+
+## 2026-10-19 R1已收口；R2 CODE/AUTO PASS、集中人工待验（阶段记录）
+
+用户明确确认来源修复验收通过并要求收口R1，结合既有七片结果与出口审计，R1 USER PASS / CLOSED。收纳位置灰显只因该独立引用夹具尚未首次收纳，已只读核实，未改行为。
+
+R2会话边界已实现：WinUi会话拥有PosterContentSession，统一草稿/历史、热度/主题、交互保护与发布票据；窗口旧字段与重复gesture.Proposal删除。来源通知按绑定独立合并，原扫描/图片并发/原生资源机制不变。67个不同定向最终通过，正常/Review/夹具构建及两个限定进程通过、退出资源均0。详细职责、失败修正、证据和两组人工统一见[第17节](../Architecture/FOUNDATION_REMAINDER_PLAN.md#r2-session-boundary)。
+
+正常候选out/architecture-r2-session/candidate01/app已打开PID43380、四海报Ready；独立数据out/drop-d3/architecture-r2-session-review01，样例哈希在sample-manifest.json。入口scripts/start-architecture-session-review.ps1，默认Open；仅验连续交互和中心/隐藏重建两组，不重复R1清单。当前候选高完整性，不要求跨权限Explorer拖入。
+
+仍impl/architecture-foundation@548486f加工作区修改，未提交/推送/合并。R2人工待验；之后R3呈现/同代命中→R4组装/Worker→基础架构准入。整体IN PROGRESS、真实热度HOLD；发布、自启真实登录及扫描风险继续携带，旧包/配置/发布stash均保持。
+
+## 2026-10-19 R1来源修复/遗留入口 USER PASS / R1 CLOSED（历史）
+
+用户已确认本组通过；下方候选与“待人工”为原交付快照，当前状态以上段及计划第17节为准。
+
+用户已确认第15节配置/恢复与图标两组USER PASS，本片收口。本轮完成来源修复用例、无调用添加分支清理及旧拖出探针的产品隔离；44项定向、正常/Review/夹具构建与一个R1传输接线进程通过，R1出口代码审计完成。细节统一归[第16节](../Architecture/FOUNDATION_REMAINDER_PLAN.md#r1-reference-cleanup)。
+
+正常候选out/architecture-r1-references/candidate01/app已启动PID48172且Ready；PID仅代表交付时状态。数据out/drop-d3/architecture-r1-references-review01，三个自建文件及哈希见sample-manifest.json。scripts/start-architecture-reference-review.ps1提供Open/Prepare/Status，Probe另用隔离目录。人工仅“修复预览取消→确认换源→重启保留”一组，不重复前六片。候选继承当前高完整性，不扩展为普通权限原生鼠标认证。
+
+产品运行器已不持有SQLite；旧RunTransfer/确认回调及无调用添加UI删除，旧模拟拖出只编入Review，失效引用确认与Delete键活跃入口保留。App宿主组装/Worker依赖及会话/呈现仍归R2～R4，扫描策略不变。待本组人工后登记R1收口，再确认R2范围；整体架构仍IN PROGRESS、真实热度HOLD。未提交/推送/合并，发布暂停，旧包和用户文件保持。
+
+## 2026-10-19 R1配置/图标 USER PASS / 本切片CLOSED（历史）
+
+用户本轮回复“验证通过，请继续”，确认本节两组通过；下文候选及下一片描述为交付时快照，后续进度以顶部及第16节为准。
+
+仍在impl/architecture-foundation@548486f加工作区修改，未提交/推送/合并。配置编排迁入Application并删除旧控制器，图标窗口使用应用端口/命令；离线恢复内部原子安全步骤保持完整。118项定向、正常/Review/夹具构建与5个限定进程通过。精确范围和证据统一见[第15节](../Architecture/FOUNDATION_REMAINDER_PLAN.md#r1-configuration-icons)。
+
+正常候选out/architecture-r1-configuration/candidate01/app已启动PID13764且Ready；该PID只代表交付时状态。入口scripts/start-architecture-configuration-review.ps1默认Configuration，正常退出后-Scenario Icons切换；两份自建配置位于out/drop-d3/architecture-r1-configuration-review01，哈希绑定见脚本。人工仅配置/恢复与图标两组，当前均待用户反馈。真实引用不允许便携导出的边界保持，因此使用两个场景；不安装、不写桌面样例、不动真实配置。
+
+下一片：来源修复视图仍直接检查文件；旧添加分支需核清调用者后退役。键盘移除入口仍在使用，不能按菜单消失直接删；收清后做R1整体出口审计，再R2～R4。整体架构IN PROGRESS、真实热度HOLD，扫描/计时器风险仅记录，发布同步与真实登录自启仍暂停。旧包/数据及发布stash保留。
+
+## 2026-10-19 R1收纳位置迁移 USER PASS / 本切片CLOSED（历史）
+
+用户确认位置迁移两组均符合预期，记录USER PASS并关闭第13节本切片；R1整体不因此关闭。当前impl/architecture-foundation@548486f加工作区修改，未提交/推送/合并，旧包/配置及发布stash不动。本轮仅更新验收/计划，未改业务源码、未重跑构建或测试。
+
+新入口Application/Features/Content/Storage、Ports/Storage与Infrastructure/StorageLocation；Bootstrap共享组装，控制中心不读账本。原ManagedStorageService整文件、StorageRelocationFiles.Execute及失效辅助/参数删除，安全收尾主体不变。74定向、正常/Review/夹具构建及迁移/关中心/重启三个进程通过。职责/删除清单/证据/两组人工唯一归[第13节](../Architecture/FOUNDATION_REMAINDER_PLAN.md#r1-storage-location)。
+
+已验候选为独立正常candidate01/app（上轮交付PID41000，不作为当前进程断言），数据out/drop-d3/architecture-r1-storage-review01；scripts/start-architecture-storage-review.ps1提供Open/Prepare/Status并绑定三程序集。迁移/重开保持、取消/非空目标保护/再迁移两组均USER PASS；全部自建内容在out，未用真实桌面文件，不实际安装/卸载。本轮保留配置与隔离证据，不关闭程序或清空目录。
+
+下一步收清R1配置/布局/图标与海报管理入口并审查R1出口，再R2会话→R3呈现/同代命中→R4组装/Worker→热度准入审查；范围/退出标准见[第14节](../Architecture/FOUNDATION_REMAINDER_PLAN.md#next-series-after-storage)，尚未开始下一批实现。每批同步清理被替代旧入口，不增加无用兼容壳；继续影响内测试和1～2组集中人工。发布同步暂停、真实登录自启/长测/DPI/满盘未验继续携带，观察性能仅记录。整体架构及真实热度仍HOLD。
+
+## 2026-10-19 R1归还／卸载自动交付（历史，人工已通过）
+
+继续impl/architecture-foundation@548486f加工作区修改；本轮不提交/推送/合并或切换，保留此前迁移身份/编码修复、旧候选/数据及发布stash。发布同步/安装/真实登录自启仍暂停或未验。
+
+用户确认上一片映射/外部变化/失联恢复及普通收纳外部修改/移出/重启两组USER PASS，第11节收口。本片迁出归还/卸载批次、共用单项流程及维护准备，用例在Application，身份/归属/原子提交留Infrastructure，窗口只留交互和生命周期；关键安全主体比对保持。39/39定向、正常/Review/夹具构建、维护五进程及归还/重启两进程通过。详细职责、证据与集中人工唯一归[第12节](../Architecture/FOUNDATION_REMAINDER_PLAN.md#r1-lifecycle)，不复述历史全量矩阵。
+
+正常候选已启动PID18424：out/architecture-r1-lifecycle/candidate01/app；配置与自建样例out/drop-d3/architecture-r1-lifecycle-review01。入口scripts/start-architecture-lifecycle-review.ps1（Open/Prepare/Status/Keep/Return），绑定三个程序集哈希。两组人工待反馈：删A归还/删D映射不动；退出后维护Return冲突取消、重开保留、改名本批冲突占位再Return及重启。Return不是实际卸载；不运行安装器、不修改登记，不创建桌面样例。旧观察候选PID31028本轮起始已不在运行，不强制结束用户程序。
+
+质量目标以可读性、性能和增量开发便利为准，不为画图堆接口。已核实后台观察为每配置单worker/2秒timer而非每海报timer，空闲仍查目标、全局dirty整批扫描/约30秒兜底存在规模化成本风险；[OPT-CONTENT-SYNC-01](../../30_Plans/ON_DEMAND_OPTIMIZATIONS.md)记录静态证据和后续测量条件，当前不调整、不宣称性能问题已复现。
+
+本片人工通过后继续R1位置迁移、配置/海报管理，再R2会话→R3呈现/同代命中→R4组装/Worker。整体架构IN PROGRESS、真实热度HOLD，不将本批收口等同于目标架构完成。
+
+## 2026-10-19 迁移指纹修复完成，发布仍暂停（当前）
+
+用户授权按补全方案实施。当前仍impl/architecture-foundation@548486f加本轮未提交修改，没有Git同步、合并或切换分支。已固定25个迁移SQL资源、逐版本历史指纹与来源证据，加入UTF-8/BOM/EOL共同构建门；旧库只接受核实过的身份，不重写历史账本、不重置配置。详细实现和证据唯一归[迁移指纹与统一编码修复](PREVIEW_INSTALLER_DELIVERY.md#2026-10-19-迁移指纹与统一编码修复)。
+
+正常产品Release零警告/错误；58个唯一相关测试最终通过；9组文本反例及直接构建/发布门通过。保留schema21库的隔离副本已升级25并再次Ready，旧21条记录/迁移前备份不变；原库哈希仍72A5B4…E09DA3。候选与证据在out/migration-identity-20261019；未启动App或安装，未修改真实文件、自启项、原Preview数据。
+
+**架构仍IN PROGRESS，真实热度HOLD**：A/B/C已验切片及R1文件动作/拖放USER PASS保持；R1下一片映射创建/周期扫描/最小外部同步及启动接线，其后生命周期/配置入口，再R2会话→R3呈现/同代命中→R4组装/Worker。本轮没有推进这些余项，不重画目标图冒充完成。
+
+**发布同步仍PAUSED**：main=f80765e，develop=53b6bec，本地发布stash 0d082b90…不动；尚未重新打包安装或验真实登录自启。未来发布应单独携带本修复，不顺带合入未完成R1，且保留文本校验/冻结迁移等必要构建文件。下方“问题未修/暂停修复”为前一决定，不覆盖本段。
+
+## 2026-10-19 用户决定：暂停发布同步，保留现场
+
+用户明确选择“先暂停发布同步，保留现场”。暂停 impl/main 同步、迁移 SQL 的 LF/CRLF 兼容修复及安装环境自启动验证，待用户重新要求继续；不是问题已解决，也不是自启动验收通过。本轮只核对和记录，不构建/安装、不改配置或迁移账本、不提交/推送分支。
+
+现场核对：当前 impl/architecture-foundation@548486f；impl/main 与本地 origin/impl/main 仍 f80765e。发布草稿 stash 0d082b90b9ef500b519162444bce869a28b49757、20261016.101 失败候选、原 Preview 数据库备份与 BLOCKER 记录均保留；不应用/删除 stash，不清理旧包或数据。架构两片 USER PASS 和下方接续顺序保持，本轮不开始下一片。
+
 ## 2026-10-16 架构进度同步与拉取接续（当前）
 
 用户明确确认 R1 拖放两组验收通过，要求整理架构进度并同步远端供后续拉取续作。本次仅文档/交接与 Git 同步；未实施下一片、未修发布阻断、未合入 develop。

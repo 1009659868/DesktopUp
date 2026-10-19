@@ -42,7 +42,7 @@ internal sealed partial class PosterVisualWindow
     }
     internal string? ValidateCenterPresentation(PosterSettingEdit edit)
     {
-        if (_disposed || _window is null || _activeCommandRequestId is not null || edit.Basis.EntityVersion != _posterEntityVersion ||
+        if (_disposed || _window is null || _contentSession.ActiveCommand is not null || edit.Basis.EntityVersion != _posterEntityVersion ||
             edit.PosterId != PosterId) return "海报版本或宿主已变化，请重新开始这次调节。";
         try
         {

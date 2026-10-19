@@ -8,10 +8,6 @@ namespace DesktopUp.Infrastructure;
 // Compatibility entry for startup/fixtures; all sequencing lives in Application.
 public sealed class ContentRenameService(SqliteStateStore store)
 {
-    internal const string MigrationSql = """
-        CREATE TABLE content_renames(operation_id TEXT PRIMARY KEY,body_json TEXT NOT NULL,
-            closed INTEGER NOT NULL DEFAULT 0 CHECK(closed IN(0,1))) STRICT;
-        """;
     internal static void Verify(SqliteConnection c, SqliteTransaction? t)
     { using var q=c.CreateCommand(); q.Transaction=t; q.CommandText="SELECT operation_id,body_json,closed FROM content_renames LIMIT 0"; using var r=q.ExecuteReader(); }
     internal Action<string>? Checkpoint { get; set; }

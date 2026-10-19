@@ -4,14 +4,8 @@ using Microsoft.Data.Sqlite;
 
 namespace DesktopUp.Infrastructure;
 
-internal sealed record MappedDirectoryEvidence(string Identity, IReadOnlyList<MappedContentObservation> Items);
 internal static class MappedDirectoryStore
 {
-    internal const string MigrationSql = """
-        CREATE TABLE mapped_directory_observations(
-            collection_id TEXT PRIMARY KEY REFERENCES content_collections(collection_id) ON DELETE CASCADE,
-            root_identity TEXT NOT NULL, observations_json TEXT NOT NULL CHECK(json_valid(observations_json))) STRICT;
-        """;
     internal static void Verify(SqliteConnection c, SqliteTransaction? t)
     { using var q = c.CreateCommand(); q.Transaction = t; q.CommandText = "SELECT collection_id,root_identity,observations_json FROM mapped_directory_observations LIMIT 0"; using var r = q.ExecuteReader(); }
     internal static MappedDirectoryEvidence? Read(SqliteConnection c, SqliteTransaction t, Guid collection)

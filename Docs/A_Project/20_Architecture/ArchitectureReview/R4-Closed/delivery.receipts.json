@@ -1,0 +1,65 @@
+{
+  "date": "2026-10-19",
+  "branch": "impl/architecture-foundation",
+  "productChange": false,
+  "diagrams": [
+    {
+      "schemaVersion": 1,
+      "ok": true,
+      "command": "deliver",
+      "type": "architecture",
+      "input": "G:\\A_\\Tools\\DesktopUp_V2\\Docs\\A_Project\\20_Architecture\\ArchitectureReview\\R4-Closed\\current.architecture.json",
+      "output": "G:\\A_\\Tools\\DesktopUp_V2\\out\\architecture-r4-closed\\current.architecture.html",
+      "specification": {
+        "sha256": "3a39f90c8df82a8ed7f5540e1d6c7e49f3a684561d12ff9aaffcd948f8fee1f5",
+        "bytes": 4917
+      },
+      "artifact": {
+        "sha256": "323f94eb387efe4ba7f2748474f7008bc3fbea4e77336cf03e2e867c89bcbee8",
+        "bytes": 715371
+      },
+      "validation": {
+        "checksPassed": 9,
+        "checkCount": 9,
+        "compositionProfile": "showcase",
+        "compositionStatus": "pass",
+        "errors": 0,
+        "warnings": 0
+      },
+      "browser_evidence": "passed",
+      "browser_receipt": "../../../../../out/architecture-r4-closed/current.architecture.visual-check.json",
+      "visual_review": "passed",
+      "visual_review_scope": "2048x1320 light/dark screenshots; layout, node/card fit and label/route clarity; exports not exercised",
+      "correction_rounds": 1
+    },
+    {
+      "schemaVersion": 1,
+      "ok": true,
+      "command": "deliver",
+      "type": "architecture",
+      "input": "G:\\A_\\Tools\\DesktopUp_V2\\Docs\\A_Project\\20_Architecture\\ArchitectureReview\\target.architecture.json",
+      "output": "G:\\A_\\Tools\\DesktopUp_V2\\out\\architecture-r4-closed\\target.architecture.html",
+      "specification": {
+        "sha256": "ef59a9dc054b9c509776102b38f6c8baa902a30326fdac631093418cd2c80c3a",
+        "bytes": 5625
+      },
+      "artifact": {
+        "sha256": "1493bcfa02069e78a7a18f5f3f687d41156b61a35c59ec95745351356ed99886",
+        "bytes": 716311
+      },
+      "validation": {
+        "checksPassed": 9,
+        "checkCount": 9,
+        "compositionProfile": "showcase",
+        "compositionStatus": "pass",
+        "errors": 0,
+        "warnings": 0
+      },
+      "browser_evidence": "passed",
+      "browser_receipt": "../../../../../out/architecture-r4-closed/target.architecture.visual-check.json",
+      "visual_review": "passed",
+      "visual_review_scope": "2048x1320 light/dark screenshots; layout, node/card fit and label/route clarity; exports not exercised",
+      "correction_rounds": 0
+    }
+  ]
+}

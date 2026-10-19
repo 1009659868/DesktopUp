@@ -1,19 +1,19 @@
+using DesktopUp.Application;
+
 namespace DesktopUp.Infrastructure;
 
 // One worker per profile. Watcher events only invalidate; they never remove individual paths.
 // A bounded periodic full pass covers startup, missed events, watcher failure and root reappearance.
-public sealed class ManagedContentMonitor : IAsyncDisposable
+public sealed class ManagedContentMonitor : IContentMonitor
 {
-    private readonly SqliteTransferJournal _journal;
-    private readonly ManagedContentSynchronizer _sync;
-    private readonly MappedDirectoryService _mapped;
+    private readonly IContentObservation _observation;
     private readonly Action<ManagedContentSyncResult> _completed;
     private readonly CancellationTokenSource _stop = new();
     private readonly Dictionary<string, FileSystemWatcher> _watchers = new(StringComparer.OrdinalIgnoreCase);
     private readonly Task _worker;
     private int _dirty = 1;
-    public ManagedContentMonitor(SqliteStateStore store, Action<ManagedContentSyncResult> completed)
-    { _journal = new(store); _sync = new(store); _mapped = new(store); _completed = completed; _worker = Task.Run(Run); }
+    public ManagedContentMonitor(IContentObservation observation, Action<ManagedContentSyncResult> completed)
+    { _observation = observation; _completed = completed; _worker = Task.Run(Run); }
     public void Invalidate() => Interlocked.Exchange(ref _dirty, 1);
     private async Task Run()
     {
@@ -29,10 +29,7 @@ public sealed class ManagedContentMonitor : IAsyncDisposable
                     RefreshWatchers();
                     if (Interlocked.Exchange(ref _dirty, 0) == 0 && ++fallback < 15) continue;
                     fallback = 0;
-                    var result = _sync.Reconcile(_stop.Token);
-                    var mapped = _mapped.Reconcile(_stop.Token);
-                    result = result with { IndexChanged = result.IndexChanged || mapped.Changed, MappingStates=mapped.States,
-                        Pending = result.Pending || mapped.Pending, Notices = result.Notices.Concat(mapped.Notices.Select(n => "目录映射：" + n)).ToArray() };
+                    var result = _observation.Reconcile(_stop.Token);
                     if (result.Pending) Invalidate();
                     _completed(result);
                 }
@@ -45,15 +42,15 @@ public sealed class ManagedContentMonitor : IAsyncDisposable
     }
     private void RefreshWatchers()
     {
-        var managed = _journal.StorageLocations().Select(l => l.Collection.StorageLocator!).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var paths = managed.Concat(_mapped.ActivePaths()).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var targets = _observation.WatchTargets();
+        var paths = targets.Select(t => t.Path).ToHashSet(StringComparer.OrdinalIgnoreCase);
         foreach (var removed in _watchers.Keys.Except(paths, StringComparer.OrdinalIgnoreCase).ToArray())
         { _watchers[removed].Dispose(); _watchers.Remove(removed); Invalidate(); }
         foreach (var path in paths.Where(p => !_watchers.ContainsKey(p)))
         {
             try
             {
-                var watcher = new FileSystemWatcher(path) { IncludeSubdirectories = managed.Contains(path),
+                var watcher = new FileSystemWatcher(path) { IncludeSubdirectories = targets.Single(t => string.Equals(t.Path, path, StringComparison.OrdinalIgnoreCase)).Recursive,
                     NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName | NotifyFilters.LastWrite | NotifyFilters.Size };
                 watcher.Created += Changed; watcher.Deleted += Changed; watcher.Renamed += Changed;
                 watcher.Changed += Changed;

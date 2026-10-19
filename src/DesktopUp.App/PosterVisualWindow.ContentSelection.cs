@@ -4,7 +4,7 @@ namespace DesktopUp;
 internal sealed partial class PosterVisualWindow
 {
     private ContentSelection _contentSelection = ContentSelection.Empty;
-    private string[] ContentSelectionOrder() => _contentSnapshot is { } snapshot
+    private string[] ContentSelectionOrder() => _contentLayout.Snapshot is { } snapshot
         ? snapshot.Items.OrderBy(p => p.ReadOrder).Select(p => p.ItemId).Distinct().ToArray()
         : ContentDocument.Placements.Select(p => p.ItemId).ToArray();
     private string[] SelectedContentIds() => IsRealContent
@@ -18,7 +18,7 @@ internal sealed partial class PosterVisualWindow
     internal string? SelectAllRealContent(bool clear = false)
     {
         if (!IsRealContent) return "当前仍为 DEMO。";
-        if (_disposed || _contentPresentationSuspended || HasContentGesture || spatial.IsPosterSpatialBusy(PosterId!) || spatial.HasCenterDraft(PosterId!))
+        if (_disposed || _contentSession.IsSuspended || HasContentGesture || spatial.IsPosterSpatialBusy(PosterId!) || spatial.HasCenterDraft(PosterId!))
             return "请先完成当前操作。";
         var order = ContentSelectionOrder();
         _contentSelection = clear ? ContentSelection.Empty : new(order, order.FirstOrDefault(), order.LastOrDefault()) { ShowHighlight = order.Length > 0 };

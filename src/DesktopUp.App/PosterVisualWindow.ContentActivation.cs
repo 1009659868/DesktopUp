@@ -11,17 +11,17 @@ internal sealed partial class PosterVisualWindow
 
     private ContentActivationTarget? ContentActivationTargetFor(string? id)
     {
-        if (id is null || _disposed || _contentPresentationSuspended || _geometry.IsCollapsed ||
-            _contentParseReadOnly || _contentProjectionFault || _transitionLayout is not null ||
-            _monitor is null || _contentSnapshot is not { } snapshot || _contentViewport is not { } viewport ||
+        if (id is null || _disposed || _contentSession.IsSuspended || _geometry.IsCollapsed ||
+            _contentParseReadOnly || _contentLayout.HasFault || _transitionLayout is not null ||
+            _monitor is null || _contentLayout.Snapshot is not { } snapshot || _contentLayout.Viewport is not { } viewport ||
             !ContentDocument.Placements.Any(p => p.ItemId == id) ||
-            _contentPorts.Views.Version != _contentSourceVersion ||
+            _contentPorts.Views.Version != _contentSession.SourceVersion ||
             ReadContentViews().FirstOrDefault(p => p.ItemId == id)?.IsAvailable != true) return null;
         // Selection paint and input-table revisions may change between clicks. Bind to actual
         // identity, author version, environment and presented geometry instead of paint churn.
         string witness = StateRequestFingerprint.Compute(new
         {
-            inputSession, _posterEntityVersion, _contentSourceVersion, _bounds, _monitor.ScaleX, _monitor.ScaleY,
+            inputSession, _posterEntityVersion, _contentSession.SourceVersion, _bounds, _monitor.ScaleX, _monitor.ScaleY,
             viewport.WidthDip, viewport.HeightDip, viewport.ThemeMetricsVersion,
             snapshot.ScrollXDip, snapshot.ScrollYDip, snapshot.FlowAxis, snapshot.SpaceStatus,
             items = snapshot.Items.Select(p => new { p.ItemId, p.ReadOrder, p.Bounds }).ToArray()

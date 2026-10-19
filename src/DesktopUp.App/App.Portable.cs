@@ -1,14 +1,12 @@
 using System.Diagnostics;
 using DesktopUp.Application;
-using DesktopUp.Infrastructure;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace DesktopUp;
 
 public partial class App
 {
-    private PortableProfileController? _portableController;
-    private StateBackupRecovery? _offlineRecovery;
+    private PortableProfileUseCase? _portableController;
+    private IStateBackupRecovery? _offlineRecovery;
     private StateRecoveryWindow? _recoveryWindow;
     private IDisposable? _recoveryWindowLease;
     private bool _storageInitialized;
@@ -17,8 +15,8 @@ public partial class App
 
     private bool TryEnterOfflineRecovery()
     {
-        var paths = _services!.GetRequiredService<IUserDataPaths>();
-        _offlineRecovery = new(paths, () => _isPrimary && !_storageInitialized);
+        var paths = _composition!.Paths;
+        _offlineRecovery = CreateOfflineRecovery(paths);
         if (_offlineRecovery.HasPendingRecovery)
         {
             OpenOfflineRecovery("检测到上次未收尾的恢复记录。已阻止打开状态库；请明确处理该记录。");
@@ -42,18 +40,6 @@ public partial class App
     }
 
     partial void StartOfflineRecoveryReview();
-
-    private void ConfigurePortableProfiles()
-    {
-        var services = _services ?? throw new InvalidOperationException("Application services are not ready.");
-        var coordinator = services.GetRequiredService<StateProjectionCoordinator>();
-        bool Guard(PortableImportPlan plan) => Volatile.Read(ref _exiting) == 0 &&
-            _spatialRuntime?.CanApplyPortable(plan) == true;
-        coordinator.BindPortableRuntime(Guard);
-        _portableController = new(services.GetRequiredService<IStateCommandRepository>(), coordinator,
-            services.GetRequiredService<IStateStore>(), services.GetRequiredService<IUserDataPaths>(),
-            () => _spatialRuntime?.PortableTopology(), Guard, () => RequestReplacement(true));
-    }
 
     private void RequestReplacement(bool recovery)
     {

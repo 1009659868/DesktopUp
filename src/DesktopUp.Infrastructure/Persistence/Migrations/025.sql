@@ -1,0 +1,2 @@
+CREATE TABLE content_return_origins(item_id TEXT PRIMARY KEY REFERENCES content_items(item_id), original_path TEXT NOT NULL) STRICT;
+CREATE TABLE content_returns(operation_id TEXT PRIMARY KEY, body_json TEXT NOT NULL, result_json TEXT, closed INTEGER NOT NULL DEFAULT 0 CHECK(closed IN(0,1))) STRICT;

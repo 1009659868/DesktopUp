@@ -1,3 +1,4 @@
+using DesktopUp.Windows;
 using DesktopUp.Application;
 using DesktopUp.Domain;
 using DesktopUp.Infrastructure;
@@ -180,7 +181,11 @@ public sealed class ManagedContentSyncTests
     [Fact] public async Task BackgroundWatcherEventuallyUpdatesWithoutControlCenterAndDisposesCleanly()
     {
         using var f = new F(); string path=Collect(f); var completed=new TaskCompletionSource<ManagedContentSyncResult>(TaskCreationOptions.RunContinuationsAsynchronously);
-        await using(var monitor=new ManagedContentMonitor(f.Store,r=>{if(r.Changed)completed.TrySetResult(r);}))
+        var files = new LocalContentObservationFiles();
+        var observation = new ContentObservationService(
+            new ManagedContentSyncUseCase(new SqliteManagedContentObservationStorage(f.Store), files),
+            new MappedDirectoryUseCase(new SqliteMappedDirectoryStorage(f.Store), files));
+        await using(var monitor=new ManagedContentMonitor(observation,r=>{if(r.Changed)completed.TrySetResult(r);}))
         { File.Move(path,Path.Combine(f.Source,"outside.txt")); Assert.Equal(1,(await completed.Task.WaitAsync(TimeSpan.FromSeconds(15))).RemovedCards); }
         Assert.Empty(f.State.ContentCatalog.PosterItems);
     }

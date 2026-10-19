@@ -3,7 +3,7 @@ using DesktopUp.Application;
 namespace DesktopUp.Infrastructure;
 
 /// <summary>Bounded, local, data-only portable profile IO. Parsing and overwrite consent belong to the caller.</summary>
-public sealed class PortableProfileFile
+public sealed class PortableProfileFile : IPortableProfileFiles
 {
     public const int DefaultMaxBytes = 4 * 1024 * 1024;
     private readonly IUserDataPaths _paths;
@@ -15,7 +15,9 @@ public sealed class PortableProfileFile
         _fault = fault;
     }
 
-    public byte[] Read(string path, int maxBytes = DefaultMaxBytes)
+    public byte[] Read(string path) => Read(path, DefaultMaxBytes);
+
+    public byte[] Read(string path, int maxBytes)
     {
         if (maxBytes is < 1 or > DefaultMaxBytes)
             throw new ArgumentOutOfRangeException(nameof(maxBytes));

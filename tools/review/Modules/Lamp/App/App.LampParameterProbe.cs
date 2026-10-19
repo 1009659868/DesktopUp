@@ -46,14 +46,14 @@ internal sealed partial class PosterVisualWindow
         var color = _windowBackdrop?.TintColor;
         return new(ReadLampSceneForProbe(), ReadContentSurfaceForSmoke(), _presentation.TemplateParameters, VerifyWindowBackdrop(),
             color is { } c ? $"#{c.A:X2}{c.R:X2}{c.G:X2}{c.B:X2}" : "", _window?.Content.Opacity ?? 0,
-            _contentCards.Count > 0 && _contentCards.Values.All(cell => cell.Opacity == 1 &&
-                cell is Grid grid && grid.Children.All(child => child.Opacity == 1)), _contentCanvas,
-            _contentCards.ToDictionary(pair => pair.Key, pair => (object)pair.Value, StringComparer.Ordinal));
+            Presenter.Cards.Count > 0 && Presenter.Cards.Values.All(cell => cell.Opacity == 1 &&
+                cell is Grid grid && grid.Children.All(child => child.Opacity == 1)), Presenter.Surface,
+            Presenter.Cards.ToDictionary(pair => pair.Key, pair => (object)pair.Value, StringComparer.Ordinal));
     }
 
     internal LampSceneObservation ReadLampSceneForProbe()
     {
-        var cards = _contentCards.Values.OfType<Grid>().Select(cell =>
+        var cards = Presenter.Cards.Values.OfType<Grid>().Select(cell =>
             cell.Children.OfType<Border>().FirstOrDefault()?.Background)
             .OfType<Microsoft.UI.Xaml.Media.RadialGradientBrush>();
         var observation = _sceneInstance is LampSceneInstance lamp ? lamp.ReadObservation(cards) :
