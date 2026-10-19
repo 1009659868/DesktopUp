@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 param([ValidateNotNullOrEmpty()][ValidateSet(1,3,6)][int[]]$Counts=@(1,3,6), [ValidateRange(1,3)][int]$Repeats=2,
  [ValidateNotNullOrEmpty()][ValidateSet('expanded','collapsed','trigger')][string[]]$Workloads=@('expanded','collapsed','trigger'),
  [string]$OutputRoot, [switch]$CheckOnly)

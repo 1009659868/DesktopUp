@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 param([ValidateSet('three','one','empty','constrained')][string]$Scenario='three', [switch]$CheckOnly)
 $ErrorActionPreference='Stop'
 . (Join-Path $PSScriptRoot 'Start-DesktopUpFixtureProcess.ps1')

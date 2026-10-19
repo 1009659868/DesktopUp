@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 param([ValidateSet('interaction','chain','return-sync','removal','blocked')][string]$Scenario='interaction', [switch]$CheckOnly,
  [ValidateRange(0,60000)][int]$ExitAfterMs=0)
 $ErrorActionPreference='Stop'

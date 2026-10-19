@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 # Compile the exact uninstall registration block against a private, non-startup
 # registry key. This never registers anything in Windows Run/StartupApproved.
 $ErrorActionPreference='Stop'

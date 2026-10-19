@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 # One isolated product candidate; no installation, startup registration or desktop samples.
 param([ValidateSet('Open','Prepare','Status')][string]$Action='Open')
 $ErrorActionPreference='Stop'

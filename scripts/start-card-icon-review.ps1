@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 param([string]$CandidateDirectory, [string]$ReviewDirectory)
 $ErrorActionPreference='Stop'
 $iconRepo=Split-Path -Parent $PSScriptRoot

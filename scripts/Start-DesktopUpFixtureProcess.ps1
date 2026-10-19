@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 
 # Per-child environment works on both Windows PowerShell 5.1 and PowerShell 7.
 # Arguments is the native command-line string; callers supply only fixed probe flags.

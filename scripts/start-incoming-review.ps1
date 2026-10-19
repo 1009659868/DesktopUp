@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 param([switch]$PrepareOnly,[switch]$ComponentRevision,[switch]$FullFrameRevision,[switch]$ManagedSyncRevision,[switch]$CombinedD5,[switch]$NativeShellExit)
 $ErrorActionPreference='Stop'
 $incomingRepo=Split-Path -Parent $PSScriptRoot

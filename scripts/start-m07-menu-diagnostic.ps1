@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 param([switch]$CheckOnly, [ValidateRange(0,60000)][int]$ExitAfterMs=0)
 $ErrorActionPreference='Stop'
 . (Join-Path $PSScriptRoot 'Start-DesktopUpFixtureProcess.ps1')

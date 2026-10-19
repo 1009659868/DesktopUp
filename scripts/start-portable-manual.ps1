@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 param([ValidateSet('three','one','empty','pending','backup','lifecycle')][string]$Scenario='three', [switch]$CheckOnly, [switch]$Recovery,
     [ValidateSet('stable','picker')][string]$Candidate='stable')
 $ErrorActionPreference = 'Stop'

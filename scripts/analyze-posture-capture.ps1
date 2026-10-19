@@ -1,4 +1,4 @@
-#requires -Version 7
+﻿#requires -Version 7
 param([Parameter(Mandatory)][string]$DataDirectory)
 $ErrorActionPreference='Stop'
 $rrData=(Resolve-Path -LiteralPath $DataDirectory).Path

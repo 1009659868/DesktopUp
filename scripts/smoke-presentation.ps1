@@ -1,4 +1,4 @@
-#requires -Version 7.4
+﻿#requires -Version 7.4
 param([Parameter(Mandatory)][string]$ExecutablePath, [Parameter(Mandatory)][string]$DataRoot)
 $ErrorActionPreference = 'Stop'
 $taskExe = (Resolve-Path -LiteralPath $ExecutablePath).Path

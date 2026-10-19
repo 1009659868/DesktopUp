@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 param([Parameter(Mandatory)][string]$ExecutablePath, [Parameter(Mandatory)][string]$DataRoot,
     [ValidateSet('exercise','enabled-exit','restart','continuous')][string]$Mode = 'exercise')
 $ErrorActionPreference = 'Stop'

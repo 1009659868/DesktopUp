@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 param([string]$AppDirectory,[string]$FixtureDirectory,[string]$OutputRoot,
     [ValidateSet('three','empty','hundred','thousand','resource-one','resource-three','resource-six')]
     [string[]]$Scenarios=@('three','empty','hundred','thousand','resource-one','resource-three','resource-six'),[switch]$CheckOnly)

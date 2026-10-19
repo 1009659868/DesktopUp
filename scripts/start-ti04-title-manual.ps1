@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 param([ValidateSet('basic','chain','constrained','blocked')][string]$Scenario='chain',
     [switch]$CheckOnly, [ValidateRange(0,60000)][int]$ExitAfterMs=0)
 $ErrorActionPreference='Stop'

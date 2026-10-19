@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 param([Parameter(Mandatory)][string]$AppDirectory,[Parameter(Mandatory)][string]$FixtureDirectory,
  [Parameter(Mandatory)][string]$EvidenceDirectory,[switch]$ManagedSync,[switch]$CombinedD5,[switch]$ContentEntry,[switch]$AppearanceCleanup,[switch]$IncrementalRender,[switch]$MappingCenter,[switch]$AppearanceLayout,[switch]$CrossPoster,[switch]$ContentReturn)
 $ErrorActionPreference='Stop'

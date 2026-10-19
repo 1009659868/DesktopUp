@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 param([ValidateSet('three','one','empty')][string]$Scenario='three', [switch]$CheckOnly,
     [ValidateSet('global','layout')][string]$Candidate='global')
 $ErrorActionPreference='Stop'

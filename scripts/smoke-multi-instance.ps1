@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 param([Parameter(Mandatory)][string]$ExecutablePath, [Parameter(Mandatory)][string]$DataRoot,
     [ValidateSet('Exercise','Restart')][string]$Phase = 'Exercise')
 $ErrorActionPreference = 'Stop'

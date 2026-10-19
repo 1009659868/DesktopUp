@@ -1,4 +1,4 @@
-#requires -Version 7
+﻿#requires -Version 7
 $ErrorActionPreference='Stop'
 . (Join-Path $PSScriptRoot 'Start-DesktopUpFixtureProcess.ps1')
 $reviewRepo=Split-Path -Parent $PSScriptRoot

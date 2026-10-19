@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 # Parse only. Never executes the review scripts, installer or file-return operations.
 $ErrorActionPreference='Stop'
 $repo=Split-Path -Parent (Split-Path -Parent $PSScriptRoot)

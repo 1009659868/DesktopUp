@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 param()
 $ErrorActionPreference = 'Stop'
 $hoverRepo = Split-Path -Parent $PSScriptRoot

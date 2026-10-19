@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 # Status only: no installer, application, registry write or fixture creation.
 $ErrorActionPreference='Stop'
 $repo=Split-Path -Parent (Split-Path -Parent $PSScriptRoot)

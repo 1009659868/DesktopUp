@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 # R1 isolated transfer review. No installation, startup changes or desktop samples.
 param(
     [ValidateSet('Open','Prepare','Probe','Status')][string]$Action='Open',

@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 # One read-only binding for current M07 animation, manual, safety and resource gates.
 $ErrorActionPreference='Stop'
 $taskRepo=Split-Path -Parent $PSScriptRoot

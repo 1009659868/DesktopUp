@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 # ASCII so both Windows PowerShell 5.1 and PowerShell 7 parse this entry point.
 param([ValidateSet('Open','Install','Status','Uninstall')][string]$Action='Open')
 $ErrorActionPreference='Stop'

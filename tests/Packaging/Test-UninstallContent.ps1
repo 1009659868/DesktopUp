@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 param([Parameter(Mandatory)][string]$PackageDirectory,[Parameter(Mandatory)][string]$FixtureDirectory,[string]$Name='uninstall-package01')
 $ErrorActionPreference='Stop'
 $repo=Split-Path -Parent (Split-Path -Parent $PSScriptRoot)

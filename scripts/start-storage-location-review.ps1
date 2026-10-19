@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 param([switch]$PrepareOnly)
 $ErrorActionPreference='Stop'
 $storageRepo=Split-Path -Parent $PSScriptRoot
