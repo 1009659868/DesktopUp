@@ -19,7 +19,7 @@ DesktopUp Preview — Windows 11 x64 独立预览版
 - 默认收纳：%LOCALAPPDATA%\DesktopUp\Storage\preview\<配置身份>；通常位于C盘，遵循系统用户数据目录，不硬编码盘符。
 - 安装与用户数据相互独立，避免目录权限、升级或卸载影响收纳原文件。可在“控制中心 → 全局 → 收纳位置”修改并迁移已有收纳；原有配置中已选的位置不会被重装改写。
 - 不读取、迁移或覆盖日常版 %LOCALAPPDATA%\DesktopUp\V3。
-- 不设置开机启动。各预览版本共享 Preview 配置和单实例，不应同时运行。
+- 安装默认不启用开机自启动，可在“控制中心 → 全局 → 开机自启动”主动设置。当前用户登录启动时仅后台运行，不主动弹出控制中心；Windows 设置中的启动禁用优先。关闭/卸载已验，真实登录自启仍保留未验。各预览版本共享 Preview 配置和单实例，不应同时运行。
 - 不包含本机测试数据库、个人配置或开发 SDK。
 - 自带 .NET 与 Windows App SDK 运行库；Windows 系统组件仍由操作系统提供。
 - 新建海报的默认模板/参数由此包的 app\config\preview-defaults.json 决定，具体值见 app\preview-build.json。
