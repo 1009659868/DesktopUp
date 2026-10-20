@@ -8,20 +8,20 @@ internal sealed partial class PosterSpatialRuntime
     private CancellationTokenSource? _incomingCancellation;
     internal void ReceiveFiles(PosterVisualWindow window,IncomingDropTicket ticket,IncomingContentPlacement? landing,ShellExitIntent? origin=null)
     {
-        if(origin is not null && _nativeExitLifetime is { } source)
+        if(origin is not null && _nativeExitOperation is { } source)
         {
             TrackContentOperation(AfterSource());return;
-            async Task AfterSource(){await source.Task;ReceiveFiles(window,ticket,landing,origin);}
+            async Task AfterSource(){await source.Completion;ReceiveFiles(window,ticket,landing,origin);}
         }
         if(!TransfersAvailable || !window.CanReceiveFiles || !window.IncomingGeometryCurrent(ticket.Preview.Surface))return;
-        _fileTransferBusy=true;_fileTransferPoster=window.PosterId;
-        _crossPosterSource=origin?.PosterId;
-        _incomingCancellation=CancellationTokenSource.CreateLinkedTokenSource(_fileTransferStopping.Token);
-        ActivityChanged?.Invoke();
-        _fileTransferTask=RunIncoming(window,ticket,landing,_incomingCancellation,origin);
+        var operation = BeginFileOperation(window.PosterId!, origin?.PosterId);
+        TrackContentOperation(RunIncoming(window, ticket, landing, operation, origin));
     }
-    private async Task RunIncoming(PosterVisualWindow window,IncomingDropTicket ticket,IncomingContentPlacement? landing,CancellationTokenSource lifetime,ShellExitIntent? origin=null)
+    private async Task RunIncoming(PosterVisualWindow window,IncomingDropTicket ticket,IncomingContentPlacement? landing,ContentOperationLifetime.FileOperation operation,ShellExitIntent? origin=null)
     {
+        using var active = operation;
+        using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(_contentOperations.Stopping);
+        _incomingCancellation = lifetime;
         string id=window.PosterId!;long entity=window.TransferEntityVersion;
         bool Current()=>!lifetime.IsCancellationRequested && !_suspended && _windows.GetValueOrDefault(id)==window &&
             window.IncomingGeometryCurrent(ticket.Preview.Surface) && window.TransferEntityVersion==entity && !HasCenterDraft(id);
@@ -68,12 +68,8 @@ internal sealed partial class PosterSpatialRuntime
         }
         finally
         {
-            try { state.Refresh(); }
-            finally
-            {
-                _fileTransferBusy=false;_fileTransferPoster=null;_crossPosterSource=null;
-                _incomingCancellation=null;lifetime.Dispose();ActivityChanged?.Invoke();
-            }
+            _incomingCancellation = null;
+            FinishFileOperation(active);
         }
     }
 }

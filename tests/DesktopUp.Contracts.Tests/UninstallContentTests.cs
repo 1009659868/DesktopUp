@@ -106,7 +106,7 @@ public sealed class UninstallContentTests
     public async Task ReturnsAllAndKeepsPosterDefinitions(bool realShell)
     {
         using var f=new F();string origin=Collect(f,"origin.txt");var fake=new Shell(Move);
-        var service=new PosterContentReturn(f.Store,realShell?null:fake,Desktop(f));var preview=service.InspectUninstall();
+        var service=new ContentReturnFixture(f.Store,realShell?null:fake,Desktop(f));var preview=service.InspectUninstall();
         var result=await service.ReturnForUninstall(preview,0);
         Assert.True(result.Completed,string.Join(";",result.Errors));Assert.True(File.Exists(origin));Assert.Empty(f.State.ContentCatalog.PosterItems);
         Assert.Single(f.State.Catalog.Posters);Assert.Empty(service.InspectUninstall().Files);
@@ -118,7 +118,7 @@ public sealed class UninstallContentTests
         using var f=new F();string origin=Collect(f,"orphan.txt");var state=f.State;
         var plan=ContentRelationRemoval.Prepare(state,state.ContentCatalog.PosterItems.Select(p=>p.Id).ToArray());
         Assert.Equal(StateCommandStatus.Committed,f.Repository.Execute(new("detach","detach",state.Revision,StateReadSet.ForPoster(f.Main,state.Catalog.Posters.Single().EntityVersion) with{ContentVersion=state.ContentVersion}),_=>plan).Status);
-        var service=new PosterContentReturn(f.Store,new Shell(Move),Desktop(f));
+        var service=new ContentReturnFixture(f.Store,new Shell(Move),Desktop(f));
         Assert.Empty(f.State.ContentCatalog.PosterItems);Assert.Single(service.InspectUninstall().Files);
         var result=await service.ReturnForUninstall(service.InspectUninstall(),0);
         Assert.True(result.Completed,string.Join(";",result.Errors));Assert.True(File.Exists(origin));
@@ -127,7 +127,7 @@ public sealed class UninstallContentTests
     {
         using var f=new F();string storage=f.Collection.StorageLocator!,desktop=Desktop(f);
         File.WriteAllText(Path.Combine(storage,"unindexed.txt"),"owned");Directory.CreateDirectory(Path.Combine(storage,"orphan-folder"));File.WriteAllText(Path.Combine(storage,"orphan-folder","child.txt"),"child");
-        var service=new PosterContentReturn(f.Store,new Shell(Move),desktop);var result=await service.ReturnForUninstall(service.InspectUninstall(),0);
+        var service=new ContentReturnFixture(f.Store,new Shell(Move),desktop);var result=await service.ReturnForUninstall(service.InspectUninstall(),0);
         Assert.True(result.Completed,string.Join(";",result.Errors));Assert.Equal("owned",File.ReadAllText(Path.Combine(desktop,"unindexed.txt")));
         Assert.Equal("child",File.ReadAllText(Path.Combine(desktop,"orphan-folder","child.txt")));Assert.Empty(f.State.ContentCatalog.PosterItems);
     }
@@ -136,49 +136,49 @@ public sealed class UninstallContentTests
         using var f=new F();Collect(f,"gone-origin.txt");Directory.Delete(f.Source);
         string map=Path.Combine(f.DirectoryRoot,"mapped");Directory.CreateDirectory(map);File.WriteAllText(Path.Combine(map,"borrowed.txt"),"borrowed");
         CrossPosterTransferTests.AddPoster(f,"map",map);
-        string desktop=Desktop(f);var service=new PosterContentReturn(f.Store,new Shell(Move),desktop);
+        string desktop=Desktop(f);var service=new ContentReturnFixture(f.Store,new Shell(Move),desktop);
         Assert.True((await service.ReturnForUninstall(service.InspectUninstall(),0)).Completed);
         Assert.True(File.Exists(Path.Combine(desktop,"gone-origin.txt")));Assert.True(File.Exists(Path.Combine(map,"borrowed.txt")));
     }
     [Fact] public async Task PartialCancellationKeepsRemainderAndRetryDoesNotReplaySuccess()
     {
         using var f=new F();Collect(f,"a.txt");Collect(f,"b.txt");int calls=0;
-        var service=new PosterContentReturn(f.Store,new Shell((s,d)=>++calls==1?Move(s,d):new(null,true,0)),Desktop(f));
+        var service=new ContentReturnFixture(f.Store,new Shell((s,d)=>++calls==1?Move(s,d):new(null,true,0)),Desktop(f));
         var first=await service.ReturnForUninstall(service.InspectUninstall(),0);
         Assert.False(first.Completed);Assert.Single(first.Returned);Assert.Single(f.State.ContentCatalog.PosterItems);
-        var retry=new PosterContentReturn(f.Store,new Shell(Move),Desktop(f));Assert.True((await retry.ReturnForUninstall(retry.InspectUninstall(),0)).Completed);
+        var retry=new ContentReturnFixture(f.Store,new Shell(Move),Desktop(f));Assert.True((await retry.ReturnForUninstall(retry.InspectUninstall(),0)).Completed);
         Assert.True(File.Exists(Path.Combine(f.Source,"a.txt")));Assert.True(File.Exists(Path.Combine(f.Source,"b.txt")));
     }
     [Fact] public async Task ChangedInventoryCannotMoveFiles()
     {
-        using var f=new F();Collect(f,"a.txt");var shell=new Shell(Move);var service=new PosterContentReturn(f.Store,shell,Desktop(f));var preview=service.InspectUninstall();
+        using var f=new F();Collect(f,"a.txt");var shell=new Shell(Move);var service=new ContentReturnFixture(f.Store,shell,Desktop(f));var preview=service.InspectUninstall();
         File.WriteAllText(Path.Combine(f.Collection.StorageLocator!,"new.txt"),"new");
         Assert.False((await service.ReturnForUninstall(preview,0)).Completed);Assert.Equal(0,shell.Calls);
     }
     [Fact] public async Task CancelBeforeStartDoesNotMoveFiles()
     {
-        using var f=new F();Collect(f,"a.txt");var shell=new Shell(Move);var service=new PosterContentReturn(f.Store,shell,Desktop(f));
+        using var f=new F();Collect(f,"a.txt");var shell=new Shell(Move);var service=new ContentReturnFixture(f.Store,shell,Desktop(f));
         Assert.False((await service.ReturnForUninstall(service.InspectUninstall(),0,new CancellationToken(true))).Completed);Assert.Equal(0,shell.Calls);
     }
     [Fact] public async Task RecordedResultReconcilesWithoutSecondMoveOrPosterDeletion()
     {
-        using var f=new F();string origin=Collect(f,"a.txt");var shell=new Shell(Move);var service=new PosterContentReturn(f.Store,shell,Desktop(f))
+        using var f=new F();string origin=Collect(f,"a.txt");var shell=new Shell(Move);var service=new ContentReturnFixture(f.Store,shell,Desktop(f))
         {Checkpoint=phase=>{if(phase=="ResultRecorded")throw new IOException("simulated interruption");}};
         Assert.False((await service.ReturnForUninstall(service.InspectUninstall(),0)).Completed);
         Assert.True(File.Exists(origin));Assert.Single(f.State.ContentCatalog.PosterItems);
-        var restart=new PosterContentReturn(f.Store,shell,Desktop(f));Assert.Empty(restart.Reconcile());Assert.Empty(f.State.ContentCatalog.PosterItems);
+        var restart=new ContentReturnFixture(f.Store,shell,Desktop(f));Assert.Empty(restart.Reconcile());Assert.Empty(f.State.ContentCatalog.PosterItems);
         Assert.Empty(restart.InspectUninstall().Files);Assert.Single(f.State.Catalog.Posters);Assert.Equal(1,shell.Calls);
     }
     [Fact] public async Task CollisionNeverOverwritesWithoutShellDecision()
     {
         using var f=new F();string original=Collect(f,"collision.txt");File.WriteAllText(original,"sentinel");
-        var service=new PosterContentReturn(f.Store,new Shell((_,_)=>new(null,true,0)),Desktop(f));
+        var service=new ContentReturnFixture(f.Store,new Shell((_,_)=>new(null,true,0)),Desktop(f));
         Assert.False((await service.ReturnForUninstall(service.InspectUninstall(),0)).Completed);
         Assert.Equal("sentinel",File.ReadAllText(original));Assert.Single(service.InspectUninstall().Files);
     }
     [Fact] public void InspectionIsNotAnImplicitMoveAndPendingTransfersBlockReturn()
     {
-        using var f=new F();Collect(f,"kept.txt");var state=f.State;var shell=new Shell(Move);var service=new PosterContentReturn(f.Store,shell,Desktop(f));
+        using var f=new F();Collect(f,"kept.txt");var state=f.State;var shell=new Shell(Move);var service=new ContentReturnFixture(f.Store,shell,Desktop(f));
         Assert.Single(service.InspectUninstall().Files);Assert.Equal(state.Revision,f.State.Revision);Assert.Equal(0,shell.Calls);
         f.Stage(f.File("pending.txt"));Assert.Throws<IOException>(()=>service.InspectUninstall());
     }
@@ -194,7 +194,7 @@ public sealed class UninstallContentTests
     }
     [Fact] public void ExplicitPreserveRecordsOfflineLocationsWithoutOpeningOrMovingThem()
     {
-        using var f=new F();Collect(f,"keep.txt");var shell=new Shell(Move);var service=new PosterContentReturn(f.Store,shell,Desktop(f));
+        using var f=new F();Collect(f,"keep.txt");var shell=new Shell(Move);var service=new ContentReturnFixture(f.Store,shell,Desktop(f));
         var path=f.Collection.StorageLocator!;Directory.Move(path,path+"-external");
         Assert.Contains(path,service.RetainedLocations());Assert.Equal(0,shell.Calls);Assert.Throws<IOException>(()=>service.InspectUninstall());
     }

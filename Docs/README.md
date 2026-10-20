@@ -1,6 +1,6 @@
 # DesktopUp V2 文档入口
 
-2026-10-19 当前：**R1～R4 USER PASS / CLOSED；现有业务基础架构出口通过**。R4两组人工均已确认，验收和准入依据见[第19～20节](A_Project/40_Implementation/Architecture/FOUNDATION_REMAINDER_PLAN.md#r4-composition-boundary)。真实热度可进入下一批规划，尚未开工；通用能力平台、动态模板/AI/更新器未实现。当前仍impl/architecture-foundation，源码/测试/图源检查点b90768b已提交并推送至同名远端分支；未合并，待用户确认整体架构优化完成后再考虑集成；发布及真实登录自启继续暂停。以下为阶段历史。
+2026-10-20 当前：**本轮基础架构整理 USER ACCEPTED / CLOSED；R1～R8、P1～P3均已验。** 用户已授权正式收口，[当前架构图、收口范围与交付限制](A_Project/40_Implementation/Architecture/FOUNDATION_REMAINDER_PLAN.md#31-本轮基础架构正式收口与当前架构图2026-10-20)已记录。图稿showcase 9/9通过，浏览器/视觉复验未完成；不与业务验收混记。剩余规模成本和历史锁冲突继续携带，动态模板/AI/更新器等未实现。当前impl/architecture-foundation及未提交成果保留，本轮不改产品、不提交/推送/合并；真实热度实施HOLD，发布/登录自启仍暂停。下方为阶段历史。
 
 2026-10-19 当前：迁移指纹与统一编码修复已在impl/architecture-foundation完成定向验证，未提交/推送；[实现、旧库副本与构建证据](A_Project/40_Implementation/V3-04/PREVIEW_INSTALLER_DELIVERY.md#2026-10-19-迁移指纹与统一编码修复)。发布同步仍暂停，安装与真实登录自启未复验。基础架构仍IN PROGRESS、真实热度HOLD，R1下一片仍映射创建/同步；下方“问题未修”是此前快照。
 

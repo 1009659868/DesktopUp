@@ -16,10 +16,10 @@ public sealed class DirectoryMappingTests
         var command = new CreatePosterCommand(Guid.NewGuid().ToString(), StateCommandSource.ControlCenter, s.Revision,
             new(s.Catalog.Posters.ToDictionary(p => p.Poster.PosterId, p => p.EntityVersion), CatalogVersion: s.Catalog.CatalogVersion, ContentVersion: s.ContentVersion),
             PosterConfigurationFactory.NewBasicBox("映射", "DISPLAY1"));
-        var result = new MappedDirectoryService(f.Store).Create(command, directory ?? f.Source);
+        var result = ContentTestServices.Mapping(f.Store).Create(command, directory ?? f.Source);
         Assert.True(result.Status == StateCommandStatus.Committed, result.Error); return result.ResultPosterId!;
     }
-    private static void Settle(MappedDirectoryService service, Clock clock)
+    private static void Settle(MappedDirectoryUseCase service, Clock clock)
     { service.Reconcile(); clock.Advance(); var result = service.Reconcile(); Assert.Empty(result.Notices); }
     [Fact] public void MappingCreatesIndependentBorrowedPosterWithoutWritingOrMovingFiles()
     {
@@ -35,7 +35,7 @@ public sealed class DirectoryMappingTests
     [Fact] public void EmptyDirectoryCanBeMappedAndLaterAddsDirectChildrenOnly()
     {
         using var f = new F(); string id = Map(f); Assert.Empty(f.State.ContentCatalog.PosterItems);
-        var clock = new Clock(); var service = new MappedDirectoryService(f.Store, clock);
+        var clock = new Clock(); var service = ContentTestServices.Mapping(f.Store, clock);
         string sub = Path.Combine(f.Source, "folder"); Directory.CreateDirectory(sub); File.WriteAllText(Path.Combine(sub, "nested.txt"), "child");
         f.File("top.txt"); Settle(service, clock);
         Assert.Equal(2, f.State.ContentCatalog.PosterItems.Count); Assert.DoesNotContain(f.State.ContentCatalog.Items, i => i.DisplayName == "nested.txt");
@@ -45,7 +45,7 @@ public sealed class DirectoryMappingTests
     {
         using var f = new F(); string path = f.File("before.txt"); f.File("neighbor.txt"); string id = Map(f);
         var before = f.State; var original = before.ContentCatalog.Items.Single(i => i.Target.Locator == path);
-        var clock = new Clock(); var service = new MappedDirectoryService(f.Store, clock);
+        var clock = new Clock(); var service = ContentTestServices.Mapping(f.Store, clock);
         File.Move(path, Path.Combine(f.Source, "after.txt")); Settle(service, clock);
         Assert.Equal(before.ContentCatalog.PosterItems, f.State.ContentCatalog.PosterItems);
         Assert.Equal(before.Catalog.Posters.Single(p => p.Poster.PosterId == id).Poster.ContentLayoutJson, f.State.Catalog.Posters.Single(p => p.Poster.PosterId == id).Poster.ContentLayoutJson);
@@ -57,7 +57,7 @@ public sealed class DirectoryMappingTests
     [Fact] public void DeleteUsesCommonRelationRemovalAndKeepsOtherCards()
     {
         using var f = new F(); string path = f.File("remove.txt"); f.File("keep.txt"); Map(f);
-        var clock = new Clock(); var service = new MappedDirectoryService(f.Store, clock);
+        var clock = new Clock(); var service = ContentTestServices.Mapping(f.Store, clock);
         File.Delete(path); Settle(service, clock);
         Assert.Single(f.State.ContentCatalog.PosterItems); Assert.Single(f.State.ContentCatalog.Memberships.Where(m => m.Origin == ContentMembershipOrigin.Source));
         Assert.True(File.Exists(Path.Combine(f.Source, "keep.txt")));
@@ -65,7 +65,7 @@ public sealed class DirectoryMappingTests
     [Fact] public void MissingOrReplacedRootNeverClearsCardsOrClaimsNewDirectory()
     {
         using var f = new F(); f.File("old.txt"); Map(f); var before = f.State;
-        var clock = new Clock(); var service = new MappedDirectoryService(f.Store, clock);
+        var clock = new Clock(); var service = ContentTestServices.Mapping(f.Store, clock);
         string parked = f.Source + "-parked"; Directory.Move(f.Source, parked);
         Assert.NotEmpty(service.Reconcile().Notices); clock.Advance(); Assert.NotEmpty(service.Reconcile().Notices);
         Directory.CreateDirectory(f.Source); f.File("different.txt"); Assert.NotEmpty(service.Reconcile().Notices);
@@ -75,14 +75,14 @@ public sealed class DirectoryMappingTests
     {
         using var f = new F(); string path = f.File("before.txt"); Map(f); var card = Assert.Single(f.State.ContentCatalog.PosterItems);
         using var restart = new SqliteStateStore(f.Paths); Assert.True(restart.Initialize().Succeeded);
-        File.Move(path, Path.Combine(f.Source, "after.txt")); var clock = new Clock(); var service = new MappedDirectoryService(restart, clock); Settle(service, clock);
+        File.Move(path, Path.Combine(f.Source, "after.txt")); var clock = new Clock(); var service = ContentTestServices.Mapping(restart, clock); Settle(service, clock);
         Assert.Equal(card, Assert.Single(f.State.ContentCatalog.PosterItems));
     }
     [Fact] public void SameNameReplacementGetsNewCardIdentity()
     {
         using var f = new F(); string path = f.File("same.txt"); Map(f); var old = Assert.Single(f.State.ContentCatalog.PosterItems);
         File.Move(path, Path.Combine(f.DirectoryRoot, "parked.txt")); File.WriteAllText(path, "replacement");
-        var clock = new Clock(); var service = new MappedDirectoryService(f.Store, clock); Settle(service, clock);
+        var clock = new Clock(); var service = ContentTestServices.Mapping(f.Store, clock); Settle(service, clock);
         Assert.NotEqual(old.Id, Assert.Single(f.State.ContentCatalog.PosterItems).Id);
     }
     [Fact] public void ExistingOwnerAndOverlappingRootsAreRejectedWithoutChangingOriginal()
@@ -99,9 +99,9 @@ public sealed class DirectoryMappingTests
     [Theory][InlineData(NewContentKind.Folder, "folder")][InlineData(NewContentKind.TextFile, "new.txt")][InlineData(NewContentKind.Shortcut, "link.lnk")]
     public void NewContentUsesMappedDirectoryNotManagedStorage(NewContentKind kind, string name)
     {
-        using var f = new F(); string id = Map(f); var service = new MappedDirectoryService(f.Store);
+        using var f = new F(); string id = Map(f); var service = ContentTestServices.Mapping(f.Store);
         var location = new NewContentLocation(null, f.State.ContentVersion, f.State.Catalog.Posters.Single(p => p.Poster.PosterId == id).EntityVersion) { Mapping = service.ResolveNewContent(id) };
-        string path = new ContentCreationService(f.Store).Create(id, location, kind, name, f.Source);
+        string path = new ContentCreationFixture(f.Store).Create(id, location, kind, name, f.Source);
         Assert.Equal(Path.Combine(f.Source, name), path); Assert.Single(f.State.ContentCatalog.PosterItems);
         Assert.False(LocalTransferFiles.Exists(Path.Combine(f.Collection.StorageLocator!, name))); Assert.Empty(f.Journal.Read());
         if (kind == NewContentKind.Shortcut) Assert.Equal(f.Source, ShellShortcutFile.ReadStoredTarget(path));
@@ -112,8 +112,8 @@ public sealed class DirectoryMappingTests
         var command = new RemovePosterCommand(Guid.NewGuid().ToString(), StateCommandSource.ControlCenter, s.Revision,
             new(new Dictionary<string,long> { [id] = s.Catalog.Posters.Single(p => p.Poster.PosterId == id).EntityVersion }, CatalogVersion: s.Catalog.CatalogVersion), id, true);
         var result = f.Repository.Execute(new(command.RequestId, "remove", s.Revision, command.ReadSet), _ => new() { Removes = [id] });
-        Assert.Equal(StateCommandStatus.Committed, result.Status); new MappedDirectoryService(f.Store).Reconcile();
-        Assert.True(File.Exists(path)); Assert.Single(f.State.Catalog.Posters); Assert.Empty(new MappedDirectoryService(f.Store).ActivePaths());
+        Assert.Equal(StateCommandStatus.Committed, result.Status); ContentTestServices.Mapping(f.Store).Reconcile();
+        Assert.True(File.Exists(path)); Assert.Single(f.State.Catalog.Posters); Assert.Empty(ContentTestServices.Mapping(f.Store).ActivePaths());
     }
     [Fact] public void ManagedIncomingRejectsMappedPosterBeforeAnyFileMove()
     {
@@ -132,7 +132,7 @@ public sealed class DirectoryMappingTests
         Assert.NotNull(result.PreMigrationBackupFileName);
         Assert.Equal(checksum, f.Sql("SELECT checksum_sha256 FROM schema_migrations WHERE version=22"));
         Assert.Equal(before.ContentCatalog.PosterItems, f.State.ContentCatalog.PosterItems);
-        Assert.Empty(new MappedDirectoryService(f.Store).ActivePaths());
+        Assert.Empty(ContentTestServices.Mapping(f.Store).ActivePaths());
     }
     [Fact] public void FailedCreationRollsBackPosterAndEvidenceTogether()
     {
@@ -146,15 +146,15 @@ public sealed class DirectoryMappingTests
     {
         using var f = new F(); f.File("keep.txt"); Map(f); var before = f.State;
         for (int i = 0; i < 1000; i++) File.WriteAllText(Path.Combine(f.Source, "extra-" + i), "");
-        var service = new MappedDirectoryService(f.Store);
+        var service = ContentTestServices.Mapping(f.Store);
         Assert.NotEmpty(service.Reconcile().Notices); Assert.Equal(before.Revision, f.State.Revision);
         using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
-        Assert.Throws<OperationCanceledException>(() => MappedDirectoryService.Scan(f.Source, cancelled.Token));
+        Assert.Throws<OperationCanceledException>(() => new LocalContentObservationFiles().ScanMapping(f.Source, cancelled.Token));
     }
     [Fact] public void ChangedDirectoryDuringCommitIsNotPublished()
     {
         using var f = new F(); f.File("old.txt"); Map(f); f.File("new.txt"); var before = f.State;
-        var clock = new Clock(); var service = new MappedDirectoryService(f.Store, clock) { BeforeCommit = () => f.File("late.txt") };
+        var clock = new Clock(); var service = ContentTestServices.Mapping(f.Store, clock, () => f.File("late.txt"));
         service.Reconcile(); clock.Advance(); Assert.NotEmpty(service.Reconcile().Notices);
         Assert.Equal(before.Revision, f.State.Revision);
     }
@@ -165,7 +165,7 @@ public sealed class DirectoryMappingTests
         var intent = journal.Begin(id, [card.LayoutItemId]); string destination = Path.Combine(f.DirectoryRoot, "exited.txt");
         File.Move(path, destination); journal.End(intent, true);
         Assert.Equal(1, journal.ObserveReleasedMove(intent)); journal.Close(intent);
-        var clock = new Clock(); var service = new MappedDirectoryService(f.Store, clock); Settle(service, clock);
+        var clock = new Clock(); var service = ContentTestServices.Mapping(f.Store, clock); Settle(service, clock);
         Assert.Empty(f.State.ContentCatalog.PosterItems); Assert.Empty(f.State.ContentCatalog.Memberships);
         Assert.Equal("owned-content", File.ReadAllText(destination));
     }
@@ -177,26 +177,28 @@ public sealed class DirectoryMappingTests
         var stale = journal.Begin(id, [card.LayoutItemId]); Assert.True(stale.Items[0].Missing); journal.End(stale, false);
         File.WriteAllText(path, "replacement");
         Assert.Throws<IOException>(() => journal.Begin(id, [card.LayoutItemId]));
-        Assert.Throws<IOException>(() => new MappedDirectoryService(f.Store).ValidateAction(id, card.LayoutItemId));
+        Assert.Throws<IOException>(() => ContentTestServices.Mapping(f.Store).ValidateAction(id, card.LayoutItemId));
         Assert.Equal("replacement", File.ReadAllText(path));
     }
     [Fact] public void MappedNewContentFailureCleansOnlyOwnUnchangedResult()
     {
-        using var f = new F(); string id = Map(f); var service = new MappedDirectoryService(f.Store);
+        using var f = new F(); string id = Map(f); var service = ContentTestServices.Mapping(f.Store);
         var location = new NewContentLocation(null, f.State.ContentVersion, f.State.Catalog.Posters.Single(p => p.Poster.PosterId == id).EntityVersion) { Mapping = service.ResolveNewContent(id) };
-        service.BeforeCommit = () => throw new IOException("injected");
-        Assert.Throws<IOException>(() => service.CreateNew(id, location, NewContentKind.TextFile, "new.txt", [], default));
+        Action beforeCommit = () => throw new IOException("injected");
+        var creation = new MappedContentCreationUseCase(new SqliteMappedDirectoryStorage(f.Store),
+            new LocalContentObservationFiles(), new LocalOwnedContentCreationFiles(), () => beforeCommit());
+        Assert.Throws<IOException>(() => creation.Create(id, location, NewContentKind.TextFile, "new.txt", [], default));
         Assert.False(File.Exists(Path.Combine(f.Source, "new.txt"))); Assert.Empty(f.State.ContentCatalog.PosterItems);
-        service.BeforeCommit = () => File.WriteAllText(Path.Combine(f.Source, "new.txt"), "external");
-        Assert.Throws<IOException>(() => service.CreateNew(id, location, NewContentKind.TextFile, "new.txt", [], default));
+        beforeCommit = () => File.WriteAllText(Path.Combine(f.Source, "new.txt"), "external");
+        Assert.Throws<IOException>(() => creation.Create(id, location, NewContentKind.TextFile, "new.txt", [], default));
         Assert.Equal("external", File.ReadAllText(Path.Combine(f.Source, "new.txt"))); Assert.Empty(f.State.ContentCatalog.PosterItems);
     }
     [Fact] public void MappedRenameThenObserverKeepsCardIdentityAndDoesNotRecommitUnchangedSnapshot()
     {
         using var f = new F(); f.File("old.txt"); string id = Map(f);
         var card = Assert.Single(f.State.ContentCatalog.PosterItems); var item = Assert.Single(f.State.ContentCatalog.Items);
-        new ContentRenameService(f.Store).Rename(id, card.LayoutItemId, item.Id, item.Version, "new.txt");
-        var clock = new Clock(); var service = new MappedDirectoryService(f.Store, clock); Settle(service, clock);
+        new ContentRenameFixture(f.Store).Rename(id, card.LayoutItemId, item.Id, item.Version, "new.txt");
+        var clock = new Clock(); var service = ContentTestServices.Mapping(f.Store, clock); Settle(service, clock);
         Assert.Equal(card, Assert.Single(f.State.ContentCatalog.PosterItems)); long revision = f.State.Revision;
         Assert.False(service.Reconcile().Changed); Assert.Equal(revision, f.State.Revision);
     }

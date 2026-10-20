@@ -13,7 +13,7 @@ public sealed class SqliteContentStartupSteps(SqliteStateStore store, StorageLoc
         return new(finished.Count(x => !x.Item.IsFinished), finished.Count(x => x.Kind == TransferFinishKind.Preserved));
     }
     public void EnsureSingleOwnership() => SingleOwnerMigration.Apply(store);
-    public void ReconcileRenames() => new ContentRenameService(store).Reconcile();
+    public void ReconcileRenames() => new ContentRenameUseCase(new SqliteContentRenameJournal(store), new LocalContentActionFiles()).Reconcile();
     public IReadOnlyList<string> ReconcileReturns() => returns.Reconcile();
     public IReadOnlyList<string> ReconcileCrossPoster() => new CrossPosterTransfer(store).Reconcile();
     public void SettleMappedIngress() => new MappedDirectoryIngress(store).SettleInterrupted();

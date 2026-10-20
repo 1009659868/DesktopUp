@@ -26,7 +26,7 @@ internal sealed partial class PosterSpatialRuntime
             return new(StateCommandStatus.NotReady, request.RequestId, current.Revision, current.Revision, current, null);
         });
         if (prepared is null) throw new IOException(preparation.Error);
-        using var stopping = CancellationTokenSource.CreateLinkedTokenSource(cancellation, _fileTransferStopping.Token);
+        using var stopping = CancellationTokenSource.CreateLinkedTokenSource(cancellation, _contentOperations.Stopping);
         var result = await Task.Run(() => _mapping.Create(prepared, path, stopping.Token));
         state.Refresh();
         if (result.Status is not (StateCommandStatus.Committed or StateCommandStatus.Replayed)) throw new IOException(result.Error);

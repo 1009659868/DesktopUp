@@ -9,6 +9,18 @@ public partial class App
     private IContentMonitor? _managedContentMonitor;
     private IDisposable? _managedContentMonitorLease;
     private string? _lastManagedContentNotice;
+    private long _observedContentVersion = -1;
+
+    private void InvalidateObservationTargets(StateProjectionChangedEventArgs change)
+    {
+        // Binding/provisioning/relocation changes publish through the existing projection boundary.
+        // Conservatively rediscover on item changes, but unchanged routes do NOT schedule all content.
+        // In particular, publishing the monitor's own commit must not fan out to every directory again.
+        if (change.CatalogChanged || _observedContentVersion != change.Projection.ContentVersion)
+            _managedContentMonitor?.RefreshTargets();
+        _observedContentVersion = change.Projection.ContentVersion;
+    }
+
     private async Task DiscoverStartupTransfers(ContentStartupUseCase startup,
         Func<Action<ManagedContentSyncResult>, IContentMonitor> startMonitor)
     {

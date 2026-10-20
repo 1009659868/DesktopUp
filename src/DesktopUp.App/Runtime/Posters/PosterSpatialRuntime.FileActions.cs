@@ -60,7 +60,7 @@ internal sealed partial class PosterSpatialRuntime
 
     internal async Task RenameContent(string posterId,string itemId,Guid contentId,long version,string name,string identity)
     {
-        await Task.Run(()=>FileActions.Rename(posterId,itemId,contentId,version,name,identity,_fileTransferStopping.Token));
+        await Task.Run(()=>FileActions.Rename(posterId,itemId,contentId,version,name,identity,_contentOperations.Stopping));
         state.Refresh();
     }
 
@@ -69,10 +69,9 @@ internal sealed partial class PosterSpatialRuntime
     internal async Task<ContentDeletionResult> DeleteContent(string posterId, string[] items, nint owner, CancellationToken cancellation)
     {
         if (!TransfersAvailable || HasCenterDraft(posterId)) throw new IOException("请先完成当前文件操作。");
-        _fileTransferBusy = true; _fileTransferPoster = posterId; ActivityChanged?.Invoke();
-        using var stop = CancellationTokenSource.CreateLinkedTokenSource(cancellation, _fileTransferStopping.Token);
+        using var active = BeginFileOperation(posterId);
+        using var stop = CancellationTokenSource.CreateLinkedTokenSource(cancellation, _contentOperations.Stopping);
         var operation = Task.Run(() => FileActions.Delete(posterId, items, owner, stop.Token));
-        _fileTransferTask = ObserveForShutdown();
         try
         {
             var result = await operation;
@@ -81,10 +80,8 @@ internal sealed partial class PosterSpatialRuntime
         }
         finally
         {
-            try { state.Refresh(); }
-            finally { _fileTransferBusy = false; _fileTransferPoster = null; ActivityChanged?.Invoke(); }
+            FinishFileOperation(active);
         }
-        async Task ObserveForShutdown() { try { await operation; } catch { /* caller reports failure */ } }
     }
 
     internal async Task<NewContentLocation?> PrepareNewContent(string posterId)
@@ -105,26 +102,15 @@ internal sealed partial class PosterSpatialRuntime
         string name, string? target, CancellationToken cancellation)
     {
         if (!TransfersAvailable || HasCenterDraft(posterId)) throw new IOException("请等待当前文件操作完成。");
-        _fileTransferBusy = true; _fileTransferPoster = posterId; ActivityChanged?.Invoke();
-        var operation = Run();
-        _fileTransferTask = ObserveForShutdown();
-        return await operation;
-        async Task ObserveForShutdown()
-        { try { await operation; } catch (Exception) { /* The caller reports failure; shutdown still awaits cleanup. */ } }
-        async Task<string> Run()
+        using var active = BeginFileOperation(posterId);
+        using var stopping = CancellationTokenSource.CreateLinkedTokenSource(cancellation, _contentOperations.Stopping);
+        try
         {
-            using var stopping = CancellationTokenSource.CreateLinkedTokenSource(cancellation, _fileTransferStopping.Token);
-            try
-            {
-                string path = await Task.Run(() => FileActions.Create(posterId, location, kind, name, target, stopping.Token));
-                log.Write("info", "content.created", new { posterId, kind, path });
-                return path;
-            }
-            finally
-            {
-                state.Refresh(); _fileTransferBusy = false; _fileTransferPoster = null; ActivityChanged?.Invoke();
-            }
+            string path = await Task.Run(() => FileActions.Create(posterId, location, kind, name, target, stopping.Token));
+            log.Write("info", "content.created", new { posterId, kind, path });
+            return path;
         }
+        finally { FinishFileOperation(active); }
     }
     internal void NotifyFileActionState(string? id)
     { NotifyContentEditorChanged(id); ActivityChanged?.Invoke(); }

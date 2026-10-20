@@ -32,7 +32,7 @@ internal sealed partial class PosterSpatialRuntime
         string destination = Path.Combine(returned, Path.GetFileName(intent.Items.Single().Path));
         File.Move(intent.Items.Single().Path, destination); // Simulates external Shell result, not native pointer coverage.
         CompleteNativeExit(source, intent, new(true, false, 0, default));
-        await _fileTransferTask.WaitAsync(TimeSpan.FromSeconds(15));
+        await _contentOperations.FileOperationCompletion.WaitAsync(TimeSpan.FromSeconds(15));
         if (repository.Read().ContentCatalog.PosterItems.Any(p => p.Id == card.Id) || !File.Exists(destination))
             throw new IOException("Native completion did not observe the external result.");
 
@@ -44,7 +44,7 @@ internal sealed partial class PosterSpatialRuntime
         var target = _windows[poster]; string external = Make("mapped-incoming.txt");
         var ticket = target.IncomingProbeTicket([external], false);
         ReceiveFiles(target, ticket, target.IncomingProbeLanding(ticket));
-        await _fileTransferTask.WaitAsync(TimeSpan.FromSeconds(30));
+        await _contentOperations.FileOperationCompletion.WaitAsync(TimeSpan.FromSeconds(30));
         if (File.Exists(external) || !File.Exists(Path.Combine(mapped, Path.GetFileName(external))) ||
             repository.Read().ContentCatalog.PosterItems.Count(p => p.PosterId == poster) != 1)
             throw new IOException("Mapped ingress did not publish the observed Shell result.");

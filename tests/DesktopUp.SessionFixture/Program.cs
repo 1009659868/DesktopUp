@@ -4,6 +4,24 @@ using DesktopUp.Infrastructure;
 using System.Text.Json;
 using DesktopUp.Testing;
 
+if (args.Length == 2 && args[1] == "--architecture-attribution")
+{
+    ReadValidationCostFixture.Run(args[0]);
+    return;
+}
+
+if (args.Length == 2 && args[1] == "--architecture-directory-cost")
+{
+    await DirectoryObservationCostFixture.Run(args[0]);
+    return;
+}
+
+if (args.Length == 2 && args[1] is "--architecture-cost" or "--architecture-discovery-cost")
+{
+    await ReadObservationCostFixture.Run(args[0], discovery: args[1] == "--architecture-discovery-cost");
+    return;
+}
+
 // Read-only validation shares the production parser; no fixture/database is created in this mode.
 if (args.Length == 2 && args[1] == "--content-compatibility")
 {

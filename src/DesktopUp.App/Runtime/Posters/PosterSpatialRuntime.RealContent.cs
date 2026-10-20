@@ -4,15 +4,12 @@ namespace DesktopUp;
 
 internal sealed partial class PosterSpatialRuntime
 {
-    private readonly HashSet<Task> _realContentOperations = new();
-    internal void TrackContentOperation(Task operation)
+    internal void TrackContentOperation(Task operation) => _contentOperations.Track(operation);
+    internal async Task WaitForContentOperationsAsync()
     {
-        lock (_realContentOperations) _realContentOperations.Add(operation);
-        _ = operation.ContinueWith(done => { lock (_realContentOperations) _realContentOperations.Remove(done); },
-            CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+        await _contentOperations.DrainAsync();
+        _contentOperations.Dispose();
     }
-    internal Task WaitForContentOperationsAsync()
-    { lock (_realContentOperations) return Task.WhenAll(_realContentOperations.ToArray()); }
     internal string? RevealContentEditor(string id) => _windows.TryGetValue(id, out var window) ? window.RevealSelectedContent() : "请先显示海报。";
     internal string? SelectAllRealContent(string id, bool clear = false) => _windows.TryGetValue(id, out var window) ? window.SelectAllRealContent(clear) : "请先显示海报。";
     internal string? RefreshRealContentEditor(string id) => _windows.TryGetValue(id, out var window) ? window.RefreshRealContent() : "请先显示海报。";

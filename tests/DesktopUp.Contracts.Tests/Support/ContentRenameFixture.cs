@@ -1,15 +1,11 @@
-using System.Text.Json;
 using DesktopUp.Application;
-using DesktopUp.Domain;
-using Microsoft.Data.Sqlite;
+using DesktopUp.Infrastructure;
 
-namespace DesktopUp.Infrastructure;
+namespace DesktopUp.Testing;
 
-// Compatibility entry for startup/fixtures; all sequencing lives in Application.
-public sealed class ContentRenameService(SqliteStateStore store)
+// Test setup/checkpoint adapter only; product startup composes the use case directly.
+internal sealed class ContentRenameFixture(SqliteStateStore store)
 {
-    internal static void Verify(SqliteConnection c, SqliteTransaction? t)
-    { using var q=c.CreateCommand(); q.Transaction=t; q.CommandText="SELECT operation_id,body_json,closed FROM content_renames LIMIT 0"; using var r=q.ExecuteReader(); }
     internal Action<string>? Checkpoint { get; set; }
 
 

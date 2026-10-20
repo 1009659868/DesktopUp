@@ -8,10 +8,18 @@ internal sealed partial class PosterVisualWindow
     private PointerScreenPoint _contentMenuPoint;
     internal bool HasFileAction => _contentSession.HasFileAction;
     private void SetFileActionBusy(bool busy)
-    { _contentSession.SetInteraction(PosterContentInteraction.FileAction, busy);spatial.NotifyFileActionState(PosterId); }
+    {
+        _contentSession.SetInteraction(PosterContentInteraction.FileAction, busy);
+        try { spatial.NotifyFileActionState(PosterId); }
+        catch
+        {
+            if (busy) _contentSession.SetInteraction(PosterContentInteraction.FileAction, false);
+            throw;
+        }
+    }
     private string? BeginContentDelete()
     {
-        if (_disposed || HasFileAction || HasContentGesture || !spatial.TransfersAvailable || spatial.HasCenterDraft(PosterId!))
+        if (spatial.ContentOperationsStopping || _disposed || HasFileAction || HasContentGesture || !spatial.TransfersAvailable || spatial.HasCenterDraft(PosterId!))
             return "请先完成当前操作。";
         string[] ids = SelectedContentIds();
         if (ids.Length == 0) return "请先选择文件。";
@@ -30,7 +38,7 @@ internal sealed partial class PosterVisualWindow
     }
     private string? BeginShellUi(string? itemId, ShellUiAction action)
     {
-        if (_contentSession.HasFileAction || _disposed || HasContentGesture || spatial.IsPosterSpatialBusy(PosterId!)) return "请先完成当前操作。";
+        if (spatial.ContentOperationsStopping || _contentSession.HasFileAction || _disposed || HasContentGesture || spatial.IsPosterSpatialBusy(PosterId!)) return "请先完成当前操作。";
         var target = itemId is null ? null : spatial.ContentActionRelation(PosterId!,itemId);
         if (itemId is not null && target is null) return "当前项目没有可用的本机路径。";
         var point = _contentMenuPoint;

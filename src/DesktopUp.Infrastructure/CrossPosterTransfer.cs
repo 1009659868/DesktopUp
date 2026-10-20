@@ -10,16 +10,11 @@ internal sealed record CrossPosterIntent(string Kind, Guid Id, ShellExitIntent S
 
 // An authenticated in-process OLE handoff, not a second drag protocol. The existing
 // directory operation journal stores a tagged intent; no schema change/file replay.
-public sealed class CrossPosterTransfer(SqliteStateStore store, IShellDirectoryTransfer? shell = null) : ICrossPosterStorage
+public sealed class CrossPosterTransfer(SqliteStateStore store) : ICrossPosterStorage
 {
+    private readonly MappedDirectoryUseCase _mapping = new(
+        new SqliteMappedDirectoryStorage(store), new LocalContentObservationFiles());
     internal const string Kind = "cross-poster-v1";
-    internal Action<string>? Checkpoint { get; set; }
-    public Task<MappedIngressResult> Execute(ShellExitIntent source, string targetId, IReadOnlyList<string> paths,
-        RegisteredManagedStorage? storage, IncomingContentPlacement? landing, nint owner, Func<bool> current,
-        CancellationToken token = default, long? expectedTargetVersion = null) =>
-        new CrossPosterTransferUseCase(this, shell ?? new ShellDirectoryTransfer(), Checkpoint)
-            .Execute(source, targetId, paths, storage, landing, owner, current, token, expectedTargetVersion);
-
     public ICrossPosterAttempt BeginAttempt() => new Attempt(this, store);
 
     // SQLite receipts, pinned identity and atomic catalog updates only. The application
@@ -51,9 +46,9 @@ public sealed class CrossPosterTransfer(SqliteStateStore store, IShellDirectoryT
             foreach (var item in sources)
             {
                 RequireSource(before, source.PosterId, item);
-                new MappedDirectoryService(store).ValidateAction(source.PosterId, before.ContentCatalog.PosterItems.Single(p => p.Id == item.CardId).LayoutItemId);
+                adapter._mapping.ValidateAction(source.PosterId, before.ContentCatalog.PosterItems.Single(p => p.Id == item.CardId).LayoutItemId);
                 if (store.ProtectedTransferPath(item.Path) || item.Path.Equals(target.Path, StringComparison.OrdinalIgnoreCase) ||
-                    LocalTransferFiles.Contains(item.Path, target.Path) || new MappedDirectoryService(store).ActivePaths().Any(p =>
+                    LocalTransferFiles.Contains(item.Path, target.Path) || adapter._mapping.ActivePaths().Any(p =>
                         p.Equals(item.Path, StringComparison.OrdinalIgnoreCase) || LocalTransferFiles.Contains(item.Path, p)))
                     throw new IOException("来源与受保护目录或映射根重叠。");
                 MappedDirectoryIngress.ValidateTree(store, item.Path, token);
@@ -101,7 +96,7 @@ public sealed class CrossPosterTransfer(SqliteStateStore store, IShellDirectoryT
         var state = new SqliteStateCommandRepository(store).Read();
         var binding = state.ContentCatalog.Bindings.SingleOrDefault(b => b.PosterId == id);
         if (binding is not null && state.ContentCatalog.Collections.Any(c => c.Id == binding.CollectionId && c.Kind == ContentCollectionKind.Mapped))
-            return new MappedDirectoryService(store).ResolveNewContent(id);
+            return _mapping.ResolveNewContent(id);
         if (storage is null) throw new IOException("目标收纳位置不可用。");
         ManagedStorageProvisioner.ValidateRegistration(store, storage.Root, storage.Collection);
         return new(storage.Collection.Id, storage.Collection.StorageLocator!, LocalTransferFiles.Identity(storage.Collection.StorageLocator!));

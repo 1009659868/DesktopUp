@@ -8,6 +8,16 @@ namespace DesktopUp.Infrastructure;
 // Atomic receipt/index persistence and identity guards; never starts or retries rename.
 public sealed class SqliteContentRenameJournal(SqliteStateStore store) : IContentRenameJournal
 {
+    private readonly MappedDirectoryUseCase _mapping = new(
+        new SqliteMappedDirectoryStorage(store), new LocalContentObservationFiles());
+    internal static void Verify(SqliteConnection connection, SqliteTransaction? transaction)
+    {
+        using var query = connection.CreateCommand();
+        query.Transaction = transaction;
+        query.CommandText = "SELECT operation_id,body_json,closed FROM content_renames LIMIT 0";
+        using var reader = query.ExecuteReader();
+    }
+
     public IDisposable AcquireExecutor() => new SqliteTransferJournal(store).AcquireExecutor();
     public void RequireIdle()
     {
@@ -16,7 +26,7 @@ public sealed class SqliteContentRenameJournal(SqliteStateStore store) : IConten
             throw new IOException("请等待当前文件移动或收纳位置迁移完成。");
     }
     public DesktopStateSnapshot ReadState() => new SqliteStateCommandRepository(store).Read();
-    public void ValidateMappedAction(string posterId, string itemId) => new MappedDirectoryService(store).ValidateAction(posterId,itemId);
+    public void ValidateMappedAction(string posterId, string itemId) => _mapping.ValidateAction(posterId,itemId);
     public bool ProtectedPath(string path) => store.ProtectedTransferPath(path);
     public void Prepare(ContentRenameIntent intent, long expectedContentVersion)
     {

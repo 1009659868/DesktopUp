@@ -7,9 +7,6 @@ namespace DesktopUp.Infrastructure;
 public sealed class SqliteContentCreationStorage(SqliteStateStore store) : IContentCreationStorage
 {
     public IContentCreationAttempt BeginAttempt(Action<string, string>? checkpoint) => new Attempt(store, checkpoint);
-    public string CreateMapped(string posterId, NewContentLocation location, NewContentKind kind,
-        string name, byte[] bytes, CancellationToken token) =>
-        new MappedDirectoryService(store).CreateNew(posterId, location, kind, name, bytes, token);
 
     private sealed class Attempt(SqliteStateStore store, Action<string, string>? checkpoint) : IContentCreationAttempt
     {
@@ -82,11 +79,11 @@ public sealed class SqliteContentCreationStorage(SqliteStateStore store) : ICont
                 try
                 {
                     using var parent = LocalTransferFiles.LockDirectory(stage);
-                    if (LocalTransferFiles.Identity(stage) == directory.Identity) ContentCreationService.RemoveExactEmptyOrFile(source, created);
+                    if (LocalTransferFiles.Identity(stage) == directory.Identity) LocalOwnedContentCreationFiles.RemoveExactEmptyOrFile(source, created);
                 }
                 catch (Exception e) when (e is IOException or UnauthorizedAccessException) { }
             }
-            if (stage is not null && directory is not null) ContentCreationService.RemoveExactEmptyOrFile(stage, directory);
+            if (stage is not null && directory is not null) LocalOwnedContentCreationFiles.RemoveExactEmptyOrFile(stage, directory);
         }
     }
 }

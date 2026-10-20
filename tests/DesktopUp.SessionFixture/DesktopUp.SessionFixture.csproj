@@ -3,4 +3,8 @@
   <ItemGroup><ProjectReference Include="../../src/DesktopUp.Infrastructure/DesktopUp.Infrastructure.csproj" /></ItemGroup>
   <ItemGroup><Compile Include="../Shared/MultiPosterFixtureData.cs" Link="MultiPosterFixtureData.cs" /></ItemGroup>
   <ItemGroup><Compile Include="../Shared/MeasurementFixtureData.cs" Link="MeasurementFixtureData.cs" /></ItemGroup>
+  <ItemGroup>
+    <Compile Include="../Shared/ContentCreationFixture.cs" Link="Support/ContentCreationFixture.cs" />
+    <Compile Include="../Shared/ContentTestServices.cs" Link="Support/ContentTestServices.cs" />
+  </ItemGroup>
 </Project>

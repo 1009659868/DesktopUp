@@ -1,5 +1,75 @@
 # V3-04 验证记录
 
+## 2026-10-20 本轮基础架构正式收口与Archify图（当前）
+
+- 用户授权：本轮基础架构整理正式收口，原R1～R8/P1～P3验收记录不重开。无产品修改、构建/合同/交互测试或Git操作，旧候选和真实文件保持。
+- 图稿：architecture、中文、静态classic；当前图源对应未提交工作区，24份相关源码路径/摘要放旁侧清单，不错误绑定HEAD远程链接。最终validate/deliver为showcase 9/9、composition 0 errors/0 warnings。
+- 图源SHA-256：65ad42d29f04045eca18c75e861c179826947f2219d2922f633e4590126cbf21（5205字节）。HTML SHA-256：70fc42843f58d60e07f88137942363ea4c5773dee243cc185f4bb9ba3cb968f5（715218字节）。[交付回执](../../20_Architecture/ArchitectureReview/Foundation-Closed/delivery.receipt.json)保留机器结果与源码依据。
+- browser_evidence=failed：指定Edge后visual-check进程提前退出，退出码1，未完成任何视口测量/捕获；不能写成skipped或通过。最初未发现Chrome的输出不是最新证据。
+- visual_review=skipped：无渲染截图；补充内置浏览器读取本地file://被安全策略拒绝，停止该路径，未换协议/服务器/CDP绕过。不宣称主题、首屏、交互或美观已人工看过。
+- 复审与图稿状态分开：业务架构CLOSED，图稿确定性检查通过，浏览器/视觉待补；详细范围及文件链接归[第31节](../Architecture/FOUNDATION_REMAINDER_PLAN.md#31-本轮基础架构正式收口与当前架构图2026-10-20)。
+
+## 2026-10-20 P2/P3 USER PASS及最终架构/成本复审（历史）
+
+- 人工依据：用户明确回复“P2验证通过了的，P3验证也通过”。第28/29节原集中范围均记录USER PASS / CLOSED，不以自动结果代替人工，不追填未验环境。
+- 静态复审：对照原目标图源及当前未提交源码，核对现有业务调用链、会话/呈现、生命周期、存储/平台与观察调度；结论与剩余项见[第30节](../Architecture/FOUNDATION_REMAINDER_PLAN.md#30-p2p3收口后的最终架构与成本复审2026-10-20)。仅在已有业务职责范围通过，不认证全部未来平台或规模性能。
+- 本轮实际执行只读check-architecture.ps1 -Offline：生产组装108、正常Compile108/0 Review、Review177/69额外、Preview隔离四门PASS。脚本内预期失败子命令用于Preview验证，整体以成功回执/无抛异常判断。
+- 核对已有证据：P3 TRX为19/19 PASS、四份正常候选DLL摘要均与candidate-hashes.json相符；重读before02/after02原始cost.json确认扫描49→7、200→17、可见5487.7395→7598.6749ms。没有重跑测试/性能基准或声称整体变快。
+- 精简原则：产品源码未改，不重建候选、不运行交互/安装/桌面测试，也不追加人工矩阵。历史锁冲突及发布/登录/满盘/长期环境状态原样保留。
+- 收尾核对：本轮前后212条非Markdown源码/模块/脚本/测试/构建路径的存在状态及文件摘要一致，无新增代码差异；仅12份文档更新。当前新增/现行复审段26个本地文件链接可解析，git diff --check通过（修正报告末尾多余空行后复核）。分支仍impl/architecture-foundation，HEAD仍87b81a3；既有未提交改动未撤销。
+
+## 2026-10-20 P3按目录观察 CODE/AUTO（历史交付，后已人工通过）
+
+19项定向PASS：新队列与真实worker、范围筛选、新鲜证据/根关系/版本保护、最终扫描竞态；没有重跑全套。正常/Review/fixture构建0警告0错误，964份源码文本/25冻结迁移及编译隔离通过；核心摘要一致。实际同夹具前后突发/35秒失联测量与恢复通过，扫描次数减少但本次可见延迟变慢，完整数值与边界归[第29节](../Architecture/FOUNDATION_REMAINDER_PLAN.md#29-p3按目录观察与有界公平调度2026-10-20)。
+
+probe01 PID26132/27492在线观察与离线新增重启均PASS，退出0/资源0；仅一条预期根失联warning、无error。正常烟测PID51516 ready、退出0/资源0，无warning/error；正常人工候选PID11980启动。两组人工未确认，P2亦未补记USER PASS。锁冲突未定因继续保留，不推进热度、不提交/推送/合并。以下为历史快照。
+
+## 2026-10-20 P2目标发现 CODE/AUTO（集中人工待验）
+
+ContentMonitorDiscoveryTests与ReadObservationCostTests共11项PASS，正常/Review/fixture构建0警告0错误；961份源码文本/25冻结迁移、生产108/Review177与Preview隔离通过。63秒新旧实际timer对照确认目标发现32→3、内容核对均3次，随后真实变更均入库；只声称读取调用与该路径分配减少，不声称全部观察或UI性能闭环。
+
+实际生产monitor探针PID31208在线映射/外部移出、PID46728离线新增重启均PASS/退出0/资源0；失联阶段一次预期warning，无error。正常烟测PID48012海报ready、退出0/资源0，无warning/error；人工候选PID46648独立启动。原始证据、包摘要及仅两组人工步骤归[第28节](../Architecture/FOUNDATION_REMAINDER_PLAN.md#28-p2目标发现与无变化投影成本2026-10-20)。历史锁冲突继续OPEN，P2尚未USER PASS，不推进热度、不提交/推送/合并。
+
+## 2026-10-20 P1同轮共享读取 USER PASS / CLOSED（历史）
+
+用户确认本批验证符合预期：普通外部同步、映射变化两组均USER PASS；P1归因与安全共享读取收口。验收包candidate02、范围及既有自动证据归[第26节](../Architecture/FOUNDATION_REMAINDER_PLAN.md#26-p1-同轮安全共享读取2026-10-20)，后续顺序归第27节。本轮仅更新文档并核对差异，不改产品、不重跑构建/回归、不提交/推送/合并。规模成本、历史锁冲突与未验环境保持原状态，P2尚未开始、真实热度HOLD。
+
+## 2026-10-20 P1同轮共享读取 CODE/AUTO（交付时历史）
+
+第25节归因/方向获用户确认，本轮新实现见[第26节](../Architecture/FOUNDATION_REMAINDER_PLAN.md#26-p1-同轮安全共享读取2026-10-20)。最终22项定向PASS，正常/Review/Fixture均0警告0错误、960份源码文本/25冻结迁移、编译集合108/177与Preview隔离通过。candidate02核心程序集三包一致；最终paired02旧/新三对交错测量均完成真实提交，原始慢轮和全环境/摘要保留，不引用中间paired01作最终证明。
+
+实际monitor/Dispatcher接线probe01在线变化/失联恢复/外部移出及重启离线新增通过，PID52276/52860；一条预期失联warning、无error。正常候选烟测PID46856 ready、退出0、资源0。人工候选数据独立，仅两组待用户确认，不将自动探针当鼠标/选择器人工结果。历史锁冲突继续OPEN，无本轮提交/推送/合并或热度接入。
+
+## 2026-10-20 R8 USER PASS / CLOSED；P1归因证据（历史）
+
+用户确认R8验证符合预期，复用第24节候选与自动门收口，不重跑旧矩阵。P1读取归因完成，尚未获用户报告确认；仅夹具/文档变化。fixture03构建0警告0错误，958份源码文本/25冻结SQL通过，四个生产核心DLL与R8正常包摘要一致；7项ReadObservationCostTests通过。三轮原始读基线、SQL回调分组、自检与真实隔离提交均保留，最终工具report01独立完成；详细范围、摘要、入口与数字归[第25节](../Architecture/FOUNDATION_REMAINDER_PLAN.md#25-p1-读取与校验成本归因2026-10-20)。
+
+不隐藏失败/慢轮：final02在12映射首次提交锁冲突，12张成本未落盘、final03未执行；未重试该文件，事后只读库仍240项且quick_check=ok。report01计数/分配一致但墙钟明显变慢，原因未定，不能只选快轮作时延保证。提交全过、锁已修复、生产性能改善均不作声明。下一集中确认仅报告/方案一组，下一优化须新鲜提交检查及交错旧/新测量；不推进热度、不合并。
+
+## 2026-10-20 R7 USER PASS / CLOSED；R8 CODE/AUTO（历史）
+
+R7普通收纳外部移出、映射观察两组用户确认符合预期，按第23节收口；没有重跑R7矩阵。R8纯移动67份逐文件摘要一致，随后独立清理测试专用生产包装；最终定向71项PASS（首轮63项为中间范围），normal/Review/Fixture均0警告0错误，源文本956/冻结SQL25、编译集合108/177与Preview隔离通过。正常候选PID37216四海报ready、退出0、资源0、无error；不冒充原生鼠标或新性能测量。完整证据、当前候选、一组人工及保留成本/首因未明事项归[第24节](../Architecture/FOUNDATION_REMAINDER_PLAN.md#24-r8-目录整理与最终架构复审2026-10-20)。R8仍USER PENDING；不推进热度或合并。
+
+## 2026-10-20 R7 CODE/AUTO，集中人工待验
+
+R6两组USER PASS已收口。R7先基线再决策，只保留完整读取合并；无条件投影/窄表跳过校验。最终12项定向通过，normal/Review/Fixture Release均0警告0错误；候选candidate02共用Application/Infrastructure/Domain。final01同进程旧/新发现读取对照约减半分配；现有生产monitor/Dispatcher探针probe02的在线变化、失联/恢复、外部移出和离线新增重启两段通过，退出资源0；不代表真实鼠标已验。中间实验和初次夹具错误记录保留，不当作最终数据。全部数字、摘要、测试边界与两组人工见[第23节](../Architecture/FOUNDATION_REMAINDER_PLAN.md#23-r7-读取与观察成本2026-10-20)。整体架构IN PROGRESS、热度HOLD，不补USER PASS或合并。
+
+## 2026-10-20 R6 USER PASS / CLOSED
+
+用户确认连续新建/跨海报/取消重拖与带行内命名状态退出重开两组均符合预期，R6收口。复用最终候选/11项定向/最终隔离证据，不重跑矩阵；单次未移动未定因事项不补PASS。继续R7先测量，整体架构IN PROGRESS、热度HOLD、不合并。
+
+## 2026-10-20 R6定向完成，集中人工待验
+
+11项定向、正常/Review/SessionFixture构建、生产/Review编译边界通过；最终probe03含Refresh/通知失败、取消/重试、原生重复完成和原有交接链，退出资源0。正常包四会话ready并退出0/资源0。probe02一次第四项未移动仍记失败，源文件完整且目标不存在，同包新数据复验通过不替代初因诊断；现场保留。详情/摘要/过滤范围/两组人工统一见[第22节](../Architecture/FOUNDATION_REMAINDER_PLAN.md#22-r6-操作生命周期与异常安全2026-10-20)。不补本批USER PASS、真实鼠标或历史未验环境。
+
+## 2026-10-20 R5 USER PASS / CLOSED
+
+用户确认集中验证符合预期：映射新建、行内命名、冲突不覆盖、Esc默认保留及重启一致。复用R5最终候选和130项定向证据，不重跑矩阵；继续R6，整体架构仍IN PROGRESS、热度HOLD、不合并。
+
+## 2026-10-20 R5 CODE/AUTO通过 集中人工待验
+
+定向130个不同条目全部通过，未跑累计全量；正常/Review/SessionFixture构建均0警告错误。108/176编译集合及发布隔离通过；源文本951文件/25冻结迁移通过。映射行内命名实际接线探针PID19124通过、退出资源0，无error；nativeMouse=false，真实鼠标仍待一组集中人工。纯移动字节、候选指纹、清理边界及准确过滤范围见[第21节](../Architecture/FOUNDATION_REMAINDER_PLAN.md#21-复审修订与r5至r8实施计划)。不继承旧包为本批USER PASS，不补发布/自启未验项。
+
 ## 2026-10-19 当前分支Git同步检查
 
 本轮仅同步impl/architecture-foundation：纯编码提交cff657e及源码/测试/图文检查点b90768b已推送，远端SHA核对一致。源文本门947文件、25份冻结迁移通过，diff检查通过；上传清单不含out候选、数据库或日志。未重跑构建/行为矩阵，未合并任何分支；整体架构优化待用户确认后再考虑集成，详见当前HANDOFF。

@@ -24,7 +24,8 @@ public sealed class NativeShellExitJournal(SqliteStateStore store) : INativeShel
         if (state.ContentCatalog.Bindings.Any(b => b.PosterId == posterId &&
             state.ContentCatalog.Collections.Any(c => c.Id == b.CollectionId && c.Kind == ContentCollectionKind.Mapped)))
         {
-            var mapping = new MappedDirectoryService(store);
+            var mapping = new MappedDirectoryUseCase(
+                new SqliteMappedDirectoryStorage(store), new LocalContentObservationFiles());
             foreach (string itemId in layoutIds) mapping.ValidateAction(posterId, itemId, allowMissing: true);
         }
         var items = sources.Select(s =>

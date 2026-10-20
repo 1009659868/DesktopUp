@@ -169,6 +169,7 @@ public partial class App : Microsoft.UI.Xaml.Application
         {
             return;
         }
+        InvalidateObservationTargets(args);
         _spatialRuntime?.OnProjection(args);
         _autoEvidence.Apply(args);
         _controlCenter?.ApplyProjection(args.Projection.ControlCenter);

@@ -433,7 +433,7 @@ public sealed class SqliteStateStore : IStateStore
             if (migration.Version >= 19) SqliteStorageRelocationJournal.Verify(connection, transaction);
             if (migration.Version >= 20) ManagedContentObservationStore.Verify(connection, transaction);
             if (migration.Version >= 21) NativeShellExitJournal.Verify(connection, transaction);
-            if (migration.Version >= 22) ContentRenameService.Verify(connection, transaction);
+            if (migration.Version >= 22) SqliteContentRenameJournal.Verify(connection, transaction);
             if (migration.Version >= 23) MappedDirectoryStore.Verify(connection, transaction);
             if (migration.Version >= 24) MappedDirectoryIngress.Verify(connection, transaction);
             if (migration.Version >= 25) ContentReturnStore.Verify(connection, transaction);
@@ -559,7 +559,7 @@ public sealed class SqliteStateStore : IStateStore
         if (expectedVersion >= 19) SqliteStorageRelocationJournal.Verify(connection, null);
         if (expectedVersion >= 20) ManagedContentObservationStore.Verify(connection, null);
         if (expectedVersion >= 21) NativeShellExitJournal.Verify(connection, null);
-        if (expectedVersion >= 22) ContentRenameService.Verify(connection, null);
+        if (expectedVersion >= 22) SqliteContentRenameJournal.Verify(connection, null);
         if (expectedVersion >= 23) MappedDirectoryStore.Verify(connection, null);
         if (expectedVersion >= 24) MappedDirectoryIngress.Verify(connection, null);
         if (expectedVersion >= 25) ContentReturnStore.Verify(connection, null);

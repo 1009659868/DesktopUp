@@ -1,5 +1,6 @@
 using DesktopUp.Application;
 using DesktopUp.Domain;
+using Microsoft.Data.Sqlite;
 
 namespace DesktopUp.Infrastructure;
 
@@ -14,8 +15,17 @@ public sealed class SqliteMappedDirectoryStorage(SqliteStateStore store) : IMapp
 
     public void ValidateRoot(DesktopStateSnapshot state, string path, Guid? own = null)
     {
-        if (store.ProtectedTransferPath(path, rootRegistration: true)) throw new IOException("此目录与应用、系统或临时数据重叠，不能映射。");
-        var managed = new SqliteTransferJournal(store).StorageLocations();
+        RequirePermittedRoot(path);
+        ValidateRootRelations(state, path, own, new SqliteTransferJournal(store).StorageLocations());
+    }
+    private void RequirePermittedRoot(string path)
+    {
+        if (store.ProtectedTransferPath(path, rootRegistration: true))
+            throw new IOException("此目录与应用、系统或临时数据重叠，不能映射。");
+    }
+    private static void ValidateRootRelations(DesktopStateSnapshot state, string path, Guid? own,
+        IReadOnlyList<RegisteredManagedStorage> managed)
+    {
         if (managed.Any(s => Overlap(path, s.Root.Locator)) || ActiveCollections(state).Any(c => c.Id != own && Overlap(path, c.StorageLocator!)))
             throw new IOException("目录与已有收纳位置或目录映射重叠，请选择独立目录。");
     }
@@ -27,7 +37,35 @@ public sealed class SqliteMappedDirectoryStorage(SqliteStateStore store) : IMapp
             new SqliteStorageRelocationJournal(store).Read().Any(r => r.Commit is null && r.Closure is null)) throw new IOException("文件操作进行中，稍后核对映射。");
     }
 
-    public MappedDirectoryEvidence Evidence(Guid collection) => store.ExecuteRead((c, t) => MappedDirectoryStore.Read(c, t, collection))
+    // All data is materialized and the transaction is closed before any filesystem scan.
+    public MappedObservationRead ReadObservation(CancellationToken token = default, IReadOnlySet<string>? directories = null) => store.ExecuteRead((c, t) =>
+    {
+        token.ThrowIfCancellationRequested();
+        var state = SqliteStateCommandRepository.ReadSnapshot(c, t);
+        var active = ActiveCollections(state).Where(c => directories is null || directories.Contains(c.StorageLocator!)).ToArray();
+        var entries = new Dictionary<Guid, MappedObservationEntry>();
+        if (active.Length == 0) return new MappedObservationRead(state, entries);
+        var managed = SqliteTransferJournal.ReadStorageLocations(c, t, state.ContentCatalog);
+        foreach (var collection in active)
+        {
+            token.ThrowIfCancellationRequested();
+            try
+            {
+                RequirePermittedRoot(collection.StorageLocator!);
+                ValidateRootRelations(state, collection.StorageLocator!, collection.Id, managed);
+                entries.Add(collection.Id, new(ReadEvidence(c, t, collection.Id)));
+            }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException)
+            {
+                entries.Add(collection.Id, new(null, e.Message));
+            }
+        }
+        return new MappedObservationRead(state, entries);
+    });
+
+    public MappedDirectoryEvidence Evidence(Guid collection) => store.ExecuteRead((c, t) => ReadEvidence(c, t, collection));
+    private static MappedDirectoryEvidence ReadEvidence(SqliteConnection c, SqliteTransaction t, Guid collection) =>
+        MappedDirectoryStore.Read(c, t, collection)
         ?? throw new IOException("目录缺少本机身份记录，未自动认领。请删除映射海报后重新选择目录。");
 
     public StateTransactionResult Create(CreatePosterCommand command, MappedDirectoryScan scan) => store.ExecuteWrite((c, t) =>

@@ -8,7 +8,7 @@ internal sealed partial class PosterVisualWindow
 {
     private string? BeginContentRename(string itemId)
     {
-        if(_disposed || HasFileAction || HasContentGesture || spatial.IsPosterSpatialBusy(PosterId!))return "请先完成当前操作。";
+        if(spatial.ContentOperationsStopping || _disposed || HasFileAction || HasContentGesture || spatial.IsPosterSpatialBusy(PosterId!))return "请先完成当前操作。";
         if(spatial.ContentActionRelation(PosterId!,itemId) is null)return "来源已变化，请重新选择。";
         SetFileActionBusy(true); spatial.TrackContentOperation(Observe());return null;
         async Task Observe()

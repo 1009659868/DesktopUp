@@ -24,7 +24,8 @@ public sealed class ShellCreatedContentService(SqliteStateStore store)
         if (poster.Poster.IsLocked) throw new IOException("海报已锁定；新建对象仍保留在目录中。");
         if (location.Mapping is { } expected)
         {
-            var mapped = new MappedDirectoryService(store);
+            var mapped = new MappedDirectoryUseCase(
+                new SqliteMappedDirectoryStorage(store), new LocalContentObservationFiles());
             if (mapped.ResolveNewContent(posterId) != expected) throw new IOException("映射目录已变化。");
             mapped.CommitIncoming(posterId, [created.Path], null, poster.EntityVersion);
             return;

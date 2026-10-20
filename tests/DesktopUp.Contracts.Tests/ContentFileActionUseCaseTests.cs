@@ -13,7 +13,7 @@ public sealed class ContentFileActionUseCaseTests
     {
         var calls = new List<string>();
         var storage = new Creation(calls, finish);
-        var useCase = new ContentCreationUseCase(storage, new Files(), (phase, _) => calls.Add(phase));
+        var useCase = new ContentCreationUseCase(storage, new Files(), null!, (phase, _) => calls.Add(phase));
         if (finish == ContentCreationFinish.Completed)
             Assert.Equal(@"C:\owned\new.txt", useCase.Create("poster", new(null, 1, 2), NewContentKind.TextFile, "new.txt"));
         else
@@ -86,7 +86,6 @@ public sealed class ContentFileActionUseCaseTests
         { calls.Add("prepare"); return new(Guid.NewGuid(), @"C:\stage\new.txt", @"C:\owned\new.txt"); }
         public ContentCreationFinish Complete(Guid operationId, CancellationToken token) { calls.Add("complete"); return finish; }
         public void Dispose() => calls.Add("dispose");
-        public string CreateMapped(string posterId, NewContentLocation location, NewContentKind kind, string name, byte[] bytes, CancellationToken token) => throw new NotSupportedException();
     }
     private sealed class Deletion(List<string> calls) : IContentDeletionStorage, IContentDeletionAttempt
     {

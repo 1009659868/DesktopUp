@@ -60,6 +60,7 @@ public sealed class ContentObservationUseCaseTests
         public IDisposable AcquireCreation() { calls.Add("executor"); return new Lease(() => calls.Add("executor-release")); }
         public void RequireIdle() => calls.Add("idle");
         public DesktopStateSnapshot ReadState() { calls.Add("read"); return null!; }
+        public MappedObservationRead ReadObservation(CancellationToken token = default, IReadOnlySet<string>? directories = null) => throw new NotSupportedException();
         public void ValidateRoot(DesktopStateSnapshot state, string path, Guid? own = null) => calls.Add("validate");
         public StateTransactionResult Create(CreatePosterCommand command, MappedDirectoryScan scan)
         { calls.Add("commit"); return null!; }
@@ -69,6 +70,9 @@ public sealed class ContentObservationUseCaseTests
     }
     private sealed class Files(List<string> calls, Action scanned) : IContentObservationFiles
     {
+        public string Identity(string path) => throw new NotSupportedException();
+        public string MappedItemIdentity(string path) => throw new NotSupportedException();
+        public IEnumerable<string> Enumerate(string directory) => throw new NotSupportedException();
         public string Normalize(string path) { calls.Add("normalize"); return path; }
         public IDisposable LockDirectory(string path) { calls.Add("root-lock"); return new Lease(() => calls.Add("root-release")); }
         public MappedDirectoryScan ScanMapping(string path, CancellationToken token = default)

@@ -33,8 +33,10 @@ public sealed class ArchitectureTests
         Assert.Empty(project.Descendants("Compile")); // No linked storage implementation under a platform-looking name.
         Assert.False(File.Exists(Path.Combine(root, "src/DesktopUp.Infrastructure/LocalContentReferenceProbe.cs")));
         Assert.True(File.Exists(Path.Combine(root, "src/DesktopUp.Windows/Content/LocalContentReferenceProbe.cs")));
-        foreach (string path in Directory.EnumerateFiles(worker, "*.cs", SearchOption.TopDirectoryOnly))
+        foreach (string path in Directory.EnumerateFiles(worker, "*.cs", SearchOption.AllDirectories))
         {
+            string relative = Path.GetRelativePath(worker, path).Replace('\\', '/');
+            if (relative.StartsWith("obj/") || relative.StartsWith("bin/")) continue;
             string source = File.ReadAllText(path);
             Assert.DoesNotContain("DesktopUp.Infrastructure", source);
             Assert.DoesNotContain("Sqlite", source);
@@ -54,7 +56,7 @@ public sealed class ArchitectureTests
         string Read(string path) => File.ReadAllText(Path.Combine(root, path));
         var presenter = Read("src/DesktopUp.App/Presentation/PosterContentPresenter.cs");
         var layout = Read("src/DesktopUp.Application/Features/Content/Layout/ContentPresentationLayout.cs");
-        var host = Read("src/DesktopUp.App/PosterVisualWindow.Content.cs");
+        var host = Read("src/DesktopUp.App/Views/Poster/PosterVisualWindow.Content.cs");
         foreach (var forbidden in new[] { "Sqlite", "ContentFileAction", "IStateCommandService", "File.", "Directory.",
             "ContentLayoutSolver.Resolve", "DispatcherQueue" })
             Assert.DoesNotContain(forbidden, presenter);
@@ -129,7 +131,7 @@ public sealed class ArchitectureTests
         Assert.Contains("IContentActionService", adapter);
         Assert.DoesNotContain("IContentOpenJournal", adapter);
         Assert.DoesNotContain("ILocalContentWorker", adapter);
-        string poster = File.ReadAllText(Path.Combine(root, "src/DesktopUp.App/PosterSpatialRuntime.ContentSource.cs"));
+        string poster = File.ReadAllText(Path.Combine(root, "src/DesktopUp.App/Runtime/Posters/PosterSpatialRuntime.ContentSource.cs"));
         Assert.DoesNotContain("IContentOpenJournal", poster);
         Assert.Contains("IContentActionService", poster);
     }
@@ -143,7 +145,7 @@ public sealed class ArchitectureTests
         foreach (string forbidden in new[] { "DispatcherQueue", "Sqlite", "IStateCommandService",
             "PosterVisualWindow", "Timer", "IContentAssetProvider" })
             Assert.DoesNotContain(forbidden, session, StringComparison.Ordinal);
-        string host = File.ReadAllText(Path.Combine(root, "src/DesktopUp.App/PosterVisualWindow.ContentProposals.cs"));
+        string host = File.ReadAllText(Path.Combine(root, "src/DesktopUp.App/Views/Poster/PosterVisualWindow.ContentProposals.cs"));
         Assert.Contains("_contentSession", host);
         Assert.Contains("BeginDrain", host);
         foreach (string oldState in new[] { "_contentHeatSession", "_contentThemeBuffer", "_contentProposalDrainQueued",
@@ -163,9 +165,9 @@ public sealed class ArchitectureTests
     public void FileActionVerticalSliceUsesApplicationPortsAndBootstrapComposition()
     {
         string root = FindRepositoryRoot();
-        var surfaces = string.Join("\n", new[] { "PosterVisualWindow.FileActions.cs",
-            "PosterVisualWindow.NewContent.cs", "PosterVisualWindow.InlineRename.cs",
-            "PosterSpatialRuntime.FileActions.cs" }.Select(name =>
+        var surfaces = string.Join("\n", new[] { "Views/Poster/PosterVisualWindow.FileActions.cs",
+            "Views/Poster/PosterVisualWindow.NewContent.cs", "Views/Poster/PosterVisualWindow.InlineRename.cs",
+            "Runtime/Posters/PosterSpatialRuntime.FileActions.cs" }.Select(name =>
                 File.ReadAllText(Path.Combine(root, "src/DesktopUp.App", name))));
         foreach (string forbidden in new[] { "DesktopUp.Infrastructure", "Sqlite", "LocalTransferFiles",
             "new ContentCreationService", "new ContentRenameService", "new ContentDeletionService", "new ShellUiClient" })
@@ -180,8 +182,8 @@ public sealed class ArchitectureTests
     public void TransferVerticalSliceUsesApplicationOrchestrationAndNoConcreteStorage()
     {
         string root = FindRepositoryRoot();
-        var surfaces = string.Join("\n", new[] { "PosterSpatialRuntime.Incoming.cs", "PosterSpatialRuntime.NativeExit.cs",
-            "PosterSpatialRuntime.TransferUseCases.cs", "PosterVisualWindow.Transfers.cs" }.Select(name =>
+        var surfaces = string.Join("\n", new[] { "Runtime/Posters/PosterSpatialRuntime.Incoming.cs", "Runtime/Posters/PosterSpatialRuntime.NativeExit.cs",
+            "Runtime/Posters/PosterSpatialRuntime.TransferUseCases.cs", "Views/Poster/PosterVisualWindow.Transfers.cs" }.Select(name =>
                 File.ReadAllText(Path.Combine(root, "src/DesktopUp.App", name))));
         foreach (string forbidden in new[] { "DesktopUp.Infrastructure", "Sqlite", "LocalTransferFiles", "_transferStore" })
             Assert.DoesNotContain(forbidden, surfaces, StringComparison.Ordinal);
@@ -201,7 +203,7 @@ public sealed class ArchitectureTests
     public void MappingObservationAndStartupAreComposedBehindApplicationBoundaries()
     {
         string root = FindRepositoryRoot();
-        foreach (string name in new[] { "App.Transfers.cs", "PosterSpatialRuntime.MappedPosterCreation.cs", "PosterSpatialRuntime.MappingStatus.cs" })
+        foreach (string name in new[] { "App.Transfers.cs", "Runtime/Posters/PosterSpatialRuntime.MappedPosterCreation.cs", "Runtime/Posters/PosterSpatialRuntime.MappingStatus.cs" })
         {
             string source = File.ReadAllText(Path.Combine(root, "src/DesktopUp.App", name));
             foreach (string forbidden in new[] { "DesktopUp.Infrastructure", "Sqlite", "LocalTransferFiles", "_transferStore" })
@@ -245,7 +247,7 @@ public sealed class ArchitectureTests
             Environment.NewLine,
             new[]
             {
-                "PosterVisualWindow.cs",
+                "Views/Poster/PosterVisualWindow.cs",
                 "ControlCenterService.cs",
                 "ControlCenterWindow.xaml.cs",
                 "ControlCenterWindow.AutoPosture.cs",
@@ -275,7 +277,7 @@ public sealed class ArchitectureTests
             root,
             "src",
             "DesktopUp.App",
-            "PosterVisualWindow.cs"));
+            "Views/Poster/PosterVisualWindow.cs"));
         string watcher = File.ReadAllText(Path.Combine(
             root,
             "src",
@@ -302,7 +304,7 @@ public sealed class ArchitectureTests
             root,
             "src",
             "DesktopUp.App",
-            "PosterVisualWindow.cs"));
+            "Views/Poster/PosterVisualWindow.cs"));
         string watcher = File.ReadAllText(Path.Combine(
             root,
             "src",
@@ -326,9 +328,9 @@ public sealed class ArchitectureTests
     public void PosterFillIsWindowScopedAndUpdatedWithPresentation()
     {
         string root = FindRepositoryRoot();
-        string backdrop = File.ReadAllText(Path.Combine(root, "src/DesktopUp.App/PosterVisualWindow.Backdrop.cs"));
-        string visual = File.ReadAllText(Path.Combine(root, "src/DesktopUp.App/PosterVisualWindow.cs"));
-        string presentation = File.ReadAllText(Path.Combine(root, "src/DesktopUp.App/PosterVisualWindow.Presentation.cs"));
+        string backdrop = File.ReadAllText(Path.Combine(root, "src/DesktopUp.App/Views/Poster/PosterVisualWindow.Backdrop.cs"));
+        string visual = File.ReadAllText(Path.Combine(root, "src/DesktopUp.App/Views/Poster/PosterVisualWindow.cs"));
+        string presentation = File.ReadAllText(Path.Combine(root, "src/DesktopUp.App/Views/Poster/PosterVisualWindow.Presentation.cs"));
         Assert.Contains("new WinUIEx.TransparentTintBackdrop(color)", backdrop);
         Assert.DoesNotContain("static WinUIEx.TransparentTintBackdrop", backdrop);
         Assert.Contains("_windowBackdrop.TintColor = color", backdrop);
@@ -350,8 +352,8 @@ public sealed class ArchitectureTests
         string root = FindRepositoryRoot();
         foreach (string path in new[]
         {
-            "PosterVisualWindow.SceneHost.cs", "PosterVisualWindow.SurfacePaint.cs",
-            "PosterSpatialRuntime.SceneMotion.cs", "PosterVisualWindow.Backdrop.cs"
+            "Views/Poster/PosterVisualWindow.SceneHost.cs", "Views/Poster/PosterVisualWindow.SurfacePaint.cs",
+            "Runtime/Posters/PosterSpatialRuntime.SceneMotion.cs", "Views/Poster/PosterVisualWindow.Backdrop.cs"
         })
         {
             string source = File.ReadAllText(Path.Combine(root, "src/DesktopUp.App", path));
@@ -373,10 +375,10 @@ public sealed class ArchitectureTests
     public void BackdropOwnsEraseWhileActiveAndDisconnectsBeforeWindowClose()
     {
         string root = FindRepositoryRoot();
-        string backdrop = File.ReadAllText(Path.Combine(root, "src/DesktopUp.App/PosterVisualWindow.Backdrop.cs"));
-        string visual = File.ReadAllText(Path.Combine(root, "src/DesktopUp.App/PosterVisualWindow.cs"));
+        string backdrop = File.ReadAllText(Path.Combine(root, "src/DesktopUp.App/Views/Poster/PosterVisualWindow.Backdrop.cs"));
+        string visual = File.ReadAllText(Path.Combine(root, "src/DesktopUp.App/Views/Poster/PosterVisualWindow.cs"));
         string watcher = File.ReadAllText(Path.Combine(root, "src/DesktopUp.Windows/DesktopEnvironmentWatcher.cs"));
-        string session = File.ReadAllText(Path.Combine(root, "src/DesktopUp.App/WinUiPosterSession.cs"));
+        string session = File.ReadAllText(Path.Combine(root, "src/DesktopUp.App/Runtime/Posters/WinUiPosterSession.cs"));
         Assert.Contains("compositionOwnsBackground: () => visual.HasWindowBackdrop", session);
         Assert.Contains("_compositionOwnsBackground?.Invoke() != true", watcher);
         Assert.Contains("return DefSubclassProc", watcher);
@@ -410,7 +412,7 @@ public sealed class ArchitectureTests
     public void ReturnAndUninstallHostsUseApplicationUseCasesWithoutStorageOrFileWorkflow()
     {
         string root = FindRepositoryRoot();
-        foreach (string name in new[] { "App.Uninstall.cs", "PosterSpatialRuntime.ContentReturn.cs" })
+        foreach (string name in new[] { "App.Uninstall.cs", "Runtime/Posters/PosterSpatialRuntime.ContentReturn.cs" })
         {
             string source = File.ReadAllText(Path.Combine(root, "src/DesktopUp.App", name));
             foreach (string forbidden in new[] { "DesktopUp.Infrastructure", "Sqlite", "_transferStore",
@@ -478,7 +480,11 @@ public sealed class ArchitectureTests
         // Delete is a live keyboard entry, not dead code merely because it has no menu entry.
         Assert.Contains("RemoveSelectedReference()", repair);
         Assert.Contains("RemoveSelectedReference()", File.ReadAllText(Path.Combine(root, "src/DesktopUp.App/ControlCenterWindow.ContentLayout.cs")));
-        foreach (string file in Directory.EnumerateFiles(Path.Combine(root, "src/DesktopUp.App"), "PosterSpatialRuntime*.cs"))
+        var runtimeSources = Directory.GetFiles(Path.Combine(root, "src/DesktopUp.App/Runtime/Posters"),
+            "PosterSpatialRuntime*.cs", SearchOption.AllDirectories);
+        Assert.NotEmpty(runtimeSources);
+        Assert.Empty(Directory.GetFiles(Path.Combine(root, "src/DesktopUp.App"), "PosterSpatialRuntime*.cs"));
+        foreach (string file in runtimeSources)
         {
             string source = File.ReadAllText(file);
             foreach (string forbidden in new[] { "DesktopUp.Infrastructure", "Sqlite", "_transferStore", "RunTransfer(", "RunOutgoing(" })
@@ -486,6 +492,20 @@ public sealed class ArchitectureTests
         }
         Assert.False(File.Exists(Path.Combine(root, "src/DesktopUp.App/PosterSpatialRuntime.Outgoing.cs")));
         Assert.True(File.Exists(Path.Combine(root, "tools/review/App/PosterSpatialRuntime.LegacyOutgoingProbe.cs")));
+    }
+
+    [Fact]
+    public void MappedCreationAndLegacyTestAdaptersStayOutsideProductionStorageWorkflow()
+    {
+        Assert.Equal(typeof(ContentCreationUseCase).Assembly, typeof(MappedContentCreationUseCase).Assembly);
+        Assert.DoesNotContain(typeof(IContentCreationStorage).GetMethods(), m => m.Name == "CreateMapped");
+        var infrastructure = typeof(SqliteStateStore).Assembly;
+        foreach (string retired in new[] { "MappedDirectoryService", "ContentCreationService",
+            "ContentRenameService", "ContentDeletionService", "ManagedContentSynchronizer", "PosterContentReturn" })
+            Assert.Null(infrastructure.GetType("DesktopUp.Infrastructure." + retired));
+        Assert.DoesNotContain(infrastructure.GetTypes(), t => t.Namespace == "DesktopUp.Testing");
+        Assert.Null(typeof(CrossPosterTransfer).GetMethod("Execute"));
+        Assert.Null(typeof(MappedDirectoryIngress).GetMethod("Execute"));
     }
 
     private static string FindRepositoryRoot()

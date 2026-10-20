@@ -31,19 +31,24 @@ public sealed partial class SqliteTransferJournal
         }).ToArray();
     });
 
-    public IReadOnlyList<RegisteredManagedStorage> StorageLocations() => store.ExecuteRead((c,t)=>
+    public IReadOnlyList<RegisteredManagedStorage> StorageLocations() => store.ExecuteRead((c, t) =>
+        ReadStorageLocations(c, t, SqliteStateCommandRepository.ReadSnapshot(c, t).ContentCatalog));
+
+    // The caller supplies the catalog read in this SAME transaction, never a retained projection.
+    internal static IReadOnlyList<RegisteredManagedStorage> ReadStorageLocations(
+        SqliteConnection c, SqliteTransaction t, ContentCatalogSnapshot catalog)
     {
-        var state=SqliteStateCommandRepository.ReadSnapshot(c,t);
+        var collections = catalog.Collections.ToDictionary(x => x.Id);
         var result=new List<RegisteredManagedStorage>();
         using var q=Command(c,t,"SELECT r.body_json,c.collection_id FROM managed_storage_collections c JOIN managed_storage_roots r ON c.root_id=r.root_id");
         using var rows=q.ExecuteReader();
         while(rows.Read())
         {
             if(result.Count>=1000)throw new InvalidDataException("Storage registration capacity exceeded.");
-            result.Add(new(Decode<ManagedStorageRoot>(rows.GetString(0)),state.ContentCatalog.Collections.Single(x=>x.Id==Guid.Parse(rows.GetString(1)))));
+            result.Add(new(Decode<ManagedStorageRoot>(rows.GetString(0)),collections[Guid.Parse(rows.GetString(1))]));
         }
-        return (IReadOnlyList<RegisteredManagedStorage>)result;
-    });
+        return result;
+    }
 
     // Discovery is read-only. Reconciliation is explicit and never replays a file move.
     public TransferRetryTicket PreviewRetry(Guid operationId,int index)

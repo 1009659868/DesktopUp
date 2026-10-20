@@ -36,8 +36,6 @@ public interface IContentCreationAttempt : IDisposable
 public interface IContentCreationStorage
 {
     IContentCreationAttempt BeginAttempt(Action<string, string>? checkpoint);
-    string CreateMapped(string posterId, NewContentLocation location, NewContentKind kind,
-        string name, byte[] bytes, CancellationToken token);
 }
 
 public sealed record ContentDeletionResult(int Removed, bool Cancelled, IReadOnlyList<string> Errors);
@@ -68,4 +66,15 @@ public interface IContentFileActionContext
 public interface IShellUiClient
 {
     Task<ShellUiResult> RunAsync(ShellUiRequest request, CancellationToken stopping);
+}
+
+// Physical creation proof. The application decides when to verify, publish or clean.
+public interface IOwnedContentCreationFiles
+{
+    IOwnedContentCreation Create(string path, NewContentKind kind, byte[] bytes);
+}
+public interface IOwnedContentCreation
+{
+    IDisposable PinUnchanged();
+    void RemoveIfUnchanged();
 }

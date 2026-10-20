@@ -9,7 +9,7 @@ namespace DesktopUp.Infrastructure;
 public sealed record MappedIngressIntent(Guid Id, string PosterId, MappedNewContent Target, IReadOnlyList<MappedIngressSource> Sources, bool Copy);
 
 // Write-ahead intent and observed Shell results. Restart never replays a file operation.
-public sealed class MappedDirectoryIngress(SqliteStateStore store, IShellDirectoryTransfer? executor = null) : IMappedIngressStorage
+public sealed class MappedDirectoryIngress(SqliteStateStore store) : IMappedIngressStorage
 {
     internal static void Verify(SqliteConnection c, SqliteTransaction? t)
     { using var q=c.CreateCommand();q.Transaction=t;q.CommandText="SELECT operation_id,body_json,results_json,closed FROM mapped_directory_ingress LIMIT 0";using var r=q.ExecuteReader(); }
@@ -17,17 +17,12 @@ public sealed class MappedDirectoryIngress(SqliteStateStore store, IShellDirecto
     { using var q=c.CreateCommand();q.Transaction=t;q.CommandText="SELECT EXISTS(SELECT 1 FROM mapped_directory_ingress WHERE closed=0)";return Convert.ToInt64(q.ExecuteScalar())!=0; });
     public int SettleInterrupted() => store.ExecuteWrite((c,t) =>
     { using var q=c.CreateCommand();q.Transaction=t;q.CommandText="UPDATE mapped_directory_ingress SET closed=1 WHERE closed=0";return q.ExecuteNonQuery(); });
-    internal Action<string>? Checkpoint { get; set; }
-    public Task<MappedIngressResult> Execute(string posterId, IReadOnlyList<string> paths, bool copy,
-        IncomingContentPlacement? landing, nint owner, Func<bool> current, CancellationToken token = default,long? expectedPosterVersion = null) =>
-        new MappedIngressUseCase(this, executor ?? new ShellDirectoryTransfer(), Checkpoint)
-            .Execute(posterId, paths, copy, landing, owner, current, token, expectedPosterVersion);
-
     public IMappedIngressAttempt BeginAttempt() => new Attempt(store);
     private sealed class Attempt(SqliteStateStore store) : IMappedIngressAttempt
     {
         private readonly SqliteTransferJournal journal = new(store);
-        private readonly MappedDirectoryService mapping = new(store);
+        private readonly MappedDirectoryUseCase mapping = new(
+            new SqliteMappedDirectoryStorage(store), new LocalContentObservationFiles());
         private readonly NativeShellExitJournal native = new(store);
         private readonly List<ShellExitIntent> exits = [];
         private Guid operation;
@@ -61,7 +56,7 @@ public sealed class MappedDirectoryIngress(SqliteStateStore store, IShellDirecto
             var sources=paths.Select(LocalTransferFiles.Normalize).ToArray();
             if(sources.Distinct(StringComparer.OrdinalIgnoreCase).Count()!=sources.Length || sources.Any(p=>sources.Any(q=>p!=q && LocalTransferFiles.Contains(p,q))))
                 throw new IOException("不能同时拖入重复对象或父目录及其子项。");
-            if(MappedDirectoryService.Scan(target.Path,token).Items.Count+sources.Length>ContentLayoutPolicy.MaximumItems)throw new IOException("目录映射最多1000个直接子项，未移动文件。");
+            if(new LocalContentObservationFiles().ScanMapping(target.Path,token).Items.Count+sources.Length>ContentLayoutPolicy.MaximumItems)throw new IOException("目录映射最多1000个直接子项，未移动文件。");
             var facts=new List<MappedIngressSource>();
             foreach(string source in sources)
             {

@@ -1,0 +1,223 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "DesktopUp｜基础架构收口后的现状",
+    "locale": "zh-CN",
+    "quality_profile": "showcase"
+  },
+  "layout": {
+    "mode": "grid",
+    "origin": [
+      50,
+      60
+    ],
+    "cols": 4,
+    "cellW": 250,
+    "cellH": 92,
+    "gapX": 100,
+    "gapY": 150
+  },
+  "components": [
+    {
+      "id": "foundation-host",
+      "type": "backend",
+      "label": "显式组装与应用寿命",
+      "sublabel": "Bootstrap / App.Lifetime",
+      "tag": "唯一资源所有者 · 退出屏障",
+      "row": 0,
+      "col": 0,
+      "size": [
+        250,
+        92
+      ]
+    },
+    {
+      "id": "directory-observer",
+      "type": "backend",
+      "label": "按目录观察与调度",
+      "sublabel": "每配置一个 worker / timer",
+      "tag": "去重队列 · 每轮最多4根",
+      "row": 0,
+      "col": 1,
+      "size": [
+        250,
+        92
+      ]
+    },
+    {
+      "id": "compiled-scenes",
+      "type": "backend",
+      "label": "内置场景模块",
+      "sublabel": "Lamp / Rain（编译期）",
+      "tag": "场景端口 · 非动态模板",
+      "row": 0,
+      "col": 3,
+      "size": [
+        250,
+        92
+      ]
+    },
+    {
+      "id": "interaction-entry",
+      "type": "frontend",
+      "label": "海报与控制中心入口",
+      "sublabel": "App.Views / Runtime",
+      "tag": "采集交互 · 不执行业务事务",
+      "row": 1,
+      "col": 0,
+      "size": [
+        250,
+        92
+      ]
+    },
+    {
+      "id": "business-usecases",
+      "type": "backend",
+      "label": "现有业务用例",
+      "sublabel": "Application / 内容与生命周期",
+      "tag": "文件 · 拖放 · 归还 · 迁移",
+      "row": 1,
+      "col": 1,
+      "size": [
+        250,
+        92
+      ]
+    },
+    {
+      "id": "poster-session-layout",
+      "type": "backend",
+      "label": "海报会话与纯布局",
+      "sublabel": "Application / Domain",
+      "tag": "交互保护 · 提案缓冲 · 代次",
+      "row": 1,
+      "col": 2,
+      "size": [
+        250,
+        92
+      ]
+    },
+    {
+      "id": "frame-presentation",
+      "type": "frontend",
+      "label": "增量呈现与同代命中",
+      "sublabel": "Presenter / WinUI 原生宿主",
+      "tag": "稳定卡片 · 暖图 · 同代提交",
+      "row": 1,
+      "col": 3,
+      "size": [
+        250,
+        92
+      ]
+    },
+    {
+      "id": "persistence-adapters",
+      "type": "database",
+      "label": "持久化与文件适配",
+      "sublabel": "Infrastructure / SQLite / 文件",
+      "tag": "账本 · 新鲜校验 · 原子提交",
+      "row": 2,
+      "col": 1,
+      "size": [
+        250,
+        92
+      ]
+    },
+    {
+      "id": "windows-worker",
+      "type": "external",
+      "label": "Windows 适配与独立 Worker",
+      "sublabel": "元数据 · Shell · 图标",
+      "tag": "系统调用 / 私有 IPC · 不读配置库",
+      "row": 2,
+      "col": 2,
+      "size": [
+        250,
+        92
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "host-entry-lifetime",
+      "from": "foundation-host",
+      "to": "interaction-entry",
+      "label": "启动与排空",
+      "labelAt": [175, 166]
+    },
+    {
+      "id": "input-business-intent",
+      "from": "interaction-entry",
+      "to": "business-usecases",
+      "label": "用户意图",
+      "variant": "emphasis"
+    },
+    {
+      "id": "business-session-projection",
+      "from": "business-usecases",
+      "to": "poster-session-layout",
+      "label": "状态投影",
+      "variant": "emphasis"
+    },
+    {
+      "id": "session-presentation-frame",
+      "from": "poster-session-layout",
+      "to": "frame-presentation",
+      "label": "同代帧",
+      "variant": "emphasis"
+    },
+    {
+      "id": "observer-business-reconcile",
+      "from": "directory-observer",
+      "to": "business-usecases",
+      "label": "核对调用",
+      "labelAt": [525, 166]
+    },
+    {
+      "id": "business-adapter-port",
+      "from": "business-usecases",
+      "to": "persistence-adapters",
+      "label": "原子端口",
+      "labelAt": [525, 408]
+    },
+    {
+      "id": "adapter-platform-bridge",
+      "from": "persistence-adapters",
+      "to": "windows-worker",
+      "label": "调用 / IPC"
+    },
+    {
+      "id": "scene-presentation-port",
+      "from": "compiled-scenes",
+      "to": "frame-presentation",
+      "label": "场景端口",
+      "labelAt": [1225, 166]
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "本轮收口范围",
+      "items": [
+        "R1～R8、P1～P3 已验；现有业务职责收口",
+        "六程序集模块化单体；箭头为主要运行协作"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "继续携带",
+      "items": [
+        "全局读写、慢目录与版本争用：按证据处理",
+        "历史锁冲突未定因；不代表规模性能认证"
+      ]
+    },
+    {
+      "dot": "slate",
+      "title": "尚未实现",
+      "items": [
+        "真实热度生产链、动态模板、AI、独立更新器",
+        "已有提案接点；后续能力不再叠入窗口或存储"
+      ]
+    }
+  ]
+}

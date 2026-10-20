@@ -31,7 +31,9 @@ public partial class App
             new NativeShellExitUseCase(new NativeShellExitJournal(store)));
         runtime.ConfigureFileActions(new ContentFileActionService(
             new SqliteContentFileActionContext(store), files,
-            new ContentCreationUseCase(new SqliteContentCreationStorage(store), files),
+            new ContentCreationUseCase(new SqliteContentCreationStorage(store), files,
+                new MappedContentCreationUseCase(new SqliteMappedDirectoryStorage(store),
+                    new LocalContentObservationFiles(), new LocalOwnedContentCreationFiles())),
             new ContentRenameUseCase(new SqliteContentRenameJournal(store), files),
             new ContentDeletionUseCase(new SqliteContentDeletionStorage(store), files, new ShellDirectoryTransfer()),
             new ShellUiClient(ContentWorkerLocation.InApplication(AppContext.BaseDirectory), _ledger!)));

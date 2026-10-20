@@ -11,17 +11,16 @@ internal sealed partial class PosterSpatialRuntime
     private void StartLegacyOutgoingProbe(PosterVisualWindow window, string[] selection)
     {
         if (_outgoingProbeDestination is null || !TransfersAvailable || !window.CanTransferFiles) return;
-        _fileTransferBusy = true;
-        _fileTransferPoster = window.PosterId;
-        ActivityChanged?.Invoke();
-        _fileTransferTask = RunOutgoing(window, selection);
+        var operation = BeginFileOperation(window.PosterId!);
+        TrackContentOperation(RunOutgoing(window, selection, operation));
     }
 
-    private async Task RunOutgoing(PosterVisualWindow window,string[] selection)
+    private async Task RunOutgoing(PosterVisualWindow window,string[] selection, ContentOperationLifetime.FileOperation operation)
     {
+        using var active = operation;
         string id=window.PosterId!;long entity=window.TransferEntityVersion;
         int completed=0,failed=0;var errors=new List<string>();
-        bool Current()=>!_fileTransferStopping.IsCancellationRequested&&!_suspended&&window.CanTransferFiles&&
+        bool Current()=>!ContentOperationsStopping&&!_suspended&&window.CanTransferFiles&&
             window.TransferEntityVersion==entity&&_windows.GetValueOrDefault(id)==window&&!HasCenterDraft(id);
         try
         {
@@ -50,9 +49,9 @@ internal sealed partial class PosterSpatialRuntime
                     }
                     var result=await Task.Run(()=>
                     {
-                        _fileTransferStopping.Token.ThrowIfCancellationRequested();
+                        _contentOperations.Stopping.ThrowIfCancellationRequested();
                         journal.Begin(preview.Plan,preview.Files,preview.Plan.Fingerprint);
-                        return new AutomaticTransferCompletion(journal).Execute(preview.Plan.Request.OperationId,_fileTransferStopping.Token);
+                        return new AutomaticTransferCompletion(journal).Execute(preview.Plan.Request.OperationId,_contentOperations.Stopping);
                     });
                     state.Refresh();entity=window.TransferEntityVersion;
                     if(result.Single().Item.Phase==DurableTransferPhase.NoOp)
@@ -68,7 +67,7 @@ internal sealed partial class PosterSpatialRuntime
             log.Write("info","transfer.egress_finished",new{posterId=id,completed,failed,total=sources.Count,errors});
         }
         catch(Exception e){window.TransferFeedback("本次未移动，请重新拖动："+e.Message);log.Write("warning","transfer.egress_failed",new{e.Message});}
-        finally{state.Refresh();_fileTransferBusy=false;_fileTransferPoster=null;ActivityChanged?.Invoke();}
+        finally { FinishFileOperation(active); }
     }
     private string? _outgoingProbeDestination = null; // Assigned only by the guarded owned-data probe.
     private LocalTransferPreview PrepareOutgoingForRuntime(DesktopStateSnapshot state,string poster,string layoutId)

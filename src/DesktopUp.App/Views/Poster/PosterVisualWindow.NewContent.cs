@@ -9,7 +9,7 @@ internal sealed partial class PosterVisualWindow
 {
     private string? BeginContentCreate(NewContentKind kind)
     {
-        if (_disposed || HasFileAction || HasContentGesture || spatial.IsPosterSpatialBusy(PosterId!)) return "请先完成当前操作。";
+        if (spatial.ContentOperationsStopping || _disposed || HasFileAction || HasContentGesture || spatial.IsPosterSpatialBusy(PosterId!)) return "请先完成当前操作。";
         SetFileActionBusy(true); spatial.TrackContentOperation(Observe()); return null;
         async Task Observe()
         {

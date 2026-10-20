@@ -5,10 +5,11 @@ namespace DesktopUp;
 
 internal sealed partial class PosterSpatialRuntime
 {
-    private TaskCompletionSource? _nativeExitLifetime;
+    private ContentOperationLifetime.FileOperation? _nativeExitOperation;
+    private bool _nativeExitCompleting;
     private bool _nativeExitToPoster;
     private ShellExitIntent? _nativeExitIntent;
-    internal bool CanReceiveInto(string id)=>TransfersAvailable || _nativeExitLifetime is not null && _fileTransferPoster!=id &&
+    internal bool CanReceiveInto(string id)=>TransfersAvailable || _nativeExitOperation is not null && !IsFileTransferActive(id) &&
         !_nativeExitToPoster && NativeExitCurrent;
     internal ShellExitIntent? PreparePosterDropHandoff(string id, IReadOnlyList<string> paths)
     {
@@ -23,24 +24,35 @@ internal sealed partial class PosterSpatialRuntime
         if (!TransfersAvailable) return null;
         // Called while the original button is still down. Durable intent precedes handing
         // physical paths to Shell; unlike the old path there is no proposed destination.
-        var intent = _nativeShellExit!.Begin(window.PosterId!, selection);
-        _fileTransferBusy = true; _fileTransferPoster = window.PosterId;
-        _nativeExitIntent = intent;
-        _nativeExitLifetime = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        _fileTransferTask = _nativeExitLifetime.Task; ActivityChanged?.Invoke(); return intent;
+        var operation = BeginFileOperation(window.PosterId!);
+        try
+        {
+            var intent = _nativeShellExit!.Begin(window.PosterId!, selection);
+            _nativeExitIntent = intent;
+            _nativeExitOperation = operation;
+            return intent;
+        }
+        catch { operation.Dispose(); throw; }
     }
-    internal bool NativeExitCurrent => !_fileTransferStopping.IsCancellationRequested && !_suspended;
-    internal CancellationToken NativeExitStopping => _fileTransferStopping.Token;
-    internal async void CompleteNativeExit(PosterVisualWindow window, ShellExitIntent intent, NativeShellDragResult? result)
+    internal bool NativeExitCurrent => !ContentOperationsStopping && !_suspended;
+    internal CancellationToken NativeExitStopping => _contentOperations.Stopping;
+    internal void CompleteNativeExit(PosterVisualWindow window, ShellExitIntent intent, NativeShellDragResult? result)
     {
-        var lifetime = _nativeExitLifetime;
+        if (_nativeExitOperation is not { } operation || _nativeExitIntent?.Id != intent.Id || _nativeExitCompleting) return;
+        _nativeExitCompleting = true;
+        TrackContentOperation(ObserveNativeExit(window, intent, result, operation));
+    }
+
+    private async Task ObserveNativeExit(PosterVisualWindow window, ShellExitIntent intent,
+        NativeShellDragResult? result, ContentOperationLifetime.FileOperation operation)
+    {
         try
         {
             await _nativeShellExit!.Complete(intent,
                 result is null ? null : new ShellExitCompletion(result.Released, result.ReturnedToOrigin, result.Effect, _nativeExitToPoster),
                 new NativeExitPresentation(() => state.Refresh(), (paths, token) =>
                     window.ConfirmMissingReferenceAsync("以下原位置已不存在。仅从海报移除失效卡片，不删除任何文件：\n\n"+string.Join("\n",paths),token)),
-                _fileTransferStopping.Token);
+                _contentOperations.Stopping);
             log.Write("info","transfer.native_shell_returned",new{intent.Id,result?.Released,result?.Effect,result?.ReturnedToOrigin,applicationFileActions=false});
         }
         catch(OperationCanceledException) { }
@@ -51,8 +63,9 @@ internal sealed partial class PosterSpatialRuntime
             catch(Exception e) { log.Write("warning","transfer.native_shell_refresh_deferred",new{e.Message}); }
             finally
             {
-                _fileTransferBusy=false; _fileTransferPoster=null;
-                _nativeExitLifetime=null; _nativeExitToPoster=false; _nativeExitIntent=null; lifetime?.TrySetResult(); ActivityChanged?.Invoke();
+                _nativeExitOperation=null; _nativeExitToPoster=false; _nativeExitIntent=null; _nativeExitCompleting=false;
+                operation.Dispose();
+                ActivityChanged?.Invoke();
             }
         }
     }

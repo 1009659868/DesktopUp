@@ -1,6 +1,6 @@
 # DesktopUp V2 — Poster Redesign V3
 
-2026-10-19 当前：**R1～R4 USER PASS / CLOSED；现有业务基础架构出口通过**。R4两组人工均已确认，验收和准入依据见[第19～20节](Docs/A_Project/40_Implementation/Architecture/FOUNDATION_REMAINDER_PLAN.md#r4-composition-boundary)。真实热度可进入下一批规划，尚未开工；通用能力平台、动态模板/AI/更新器未实现。当前仍impl/architecture-foundation，源码/测试/图源检查点b90768b已提交并推送至同名远端分支；未合并，待用户确认整体架构优化完成后再考虑集成；发布及真实登录自启继续暂停。以下为阶段历史。
+2026-10-20 当前：**本轮基础架构整理 USER ACCEPTED / CLOSED（R1～R8、P1～P3）**。现有业务职责、操作/会话生命周期、呈现与同代命中、Worker及观察读取边界已收口；详见[最终复审与收口](Docs/A_Project/40_Implementation/Architecture/FOUNDATION_REMAINDER_PLAN.md#30-p2p3收口后的最终架构与成本复审2026-10-20)。用户已授权将已验成果提交推送并合入 `impl/develop`，同步精简发布线 `impl/main`、执行实际打包验证，最终回到 `impl/develop`；执行结果见[当前交接](Docs/A_Project/40_Implementation/V3-04/HANDOFF.md)。剩余读取/观察成本与 P1/R6 锁冲突未定因继续保留；真实登录自启及未验环境不补 PASS。真实热度不实施，动态模板、AI 和独立更新器未实现。以下为阶段历史。
 
 2026-10-16 当前：[开机自启动](Docs/A_Project/40_Implementation/V3-04/PREVIEW_INSTALLER_DELIVERY.md#2026-10-16-v3-09-03开机自启动前移计划)已完成定向自动验证；“关闭与卸载”人工通过，真实登录自启按用户要求暂缓、保留未验。本轮获授权提交/推送impl/09-03-startup并合入、同步impl/develop，不更新impl/main；结果见HANDOFF。下一主线V3-06真实热度，本轮不实施。下方为历史阶段。
 

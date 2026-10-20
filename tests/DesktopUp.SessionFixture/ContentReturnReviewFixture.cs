@@ -24,7 +24,7 @@ internal static class ContentReturnReviewFixture
             var state=repository.Read();var command=new CreatePosterCommand(Guid.NewGuid().ToString(),StateCommandSource.ControlCenter,state.Revision,
                 new(state.Catalog.Posters.ToDictionary(p=>p.Poster.PosterId,p=>p.EntityVersion),CatalogVersion:state.Catalog.CatalogVersion,ContentVersion:state.ContentVersion),Definition(name,x));
             if(directory is not null)
-            {var result=new MappedDirectoryService(store).Create(command,directory);if(result.Status!=StateCommandStatus.Committed)throw new IOException(result.Error);return result.ResultPosterId!;}
+            {var result=ContentTestServices.Mapping(store).Create(command,directory);if(result.Status!=StateCommandStatus.Committed)throw new IOException(result.Error);return result.ResultPosterId!;}
             coordinator.Refresh();var added=coordinator.Execute(command);if(!added.Succeeded)throw new IOException(added.Error);return added.ResultPosterId!;
         }
         string second=Add(architecture ? "B · 原路径保留" : "B · 返回桌面",.34), third=Add("C · 冲突取消",.66);
@@ -45,7 +45,7 @@ internal static class ContentReturnReviewFixture
         if (!architecture)
         {
             Directory.Delete(Path.Combine(root,"origin-B")); // Known-empty, fixture-only original directory.
-            var current=repository.Read();new ContentCreationService(store).Create(second,new(storage,current.ContentVersion,
+            var current=repository.Read();new ContentCreationFixture(store).Create(second,new(storage,current.ContentVersion,
                 current.Catalog.Posters.Single(p=>p.Poster.PosterId==second).EntityVersion),NewContentKind.TextFile,unique+"-new.txt");
         } // Architecture review uses known origins only; never leaves fallback samples on the real desktop.
         string collision=Make("origin-C","C-collision.txt");Collect(third,collision);File.WriteAllText(collision,"existing unrelated owned sample; must not silently overwrite");

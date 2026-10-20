@@ -8,12 +8,12 @@ public sealed class ManagedContentSyncUseCase(IManagedContentObservationStorage 
 {
     private readonly TimeProvider _clock = clock ?? TimeProvider.System;
     private readonly Dictionary<Guid, (string Witness, DateTimeOffset Since)> _stable = [];
-    public IReadOnlyList<string> ActivePaths() => storage.Locations().Select(l => l.Collection.StorageLocator!).ToArray();
 
-    public ManagedContentSyncResult Reconcile(CancellationToken token = default)
+    public ManagedContentSyncResult Reconcile(CancellationToken token = default, IReadOnlySet<string>? directories = null)
     {
-        if(storage.HasPendingDirectoryOrReturn())return new(0,0,true,[]);
-        int removed = 0, renamed = 0; bool pending = false, changed = false; var notices = new List<string>();
+        if(storage.HasPendingDirectoryOrReturn())return new(0,0,true,[]) { RetryAll = true };
+        int removed = 0, renamed = 0; bool pending = false, changed = false, retryAll = false; var notices = new List<string>();
+        var retries = new List<ContentObservationRetry>();
         try
         {
             // ObserveReleasedMove requires a durable released=1 receipt AND Missing=false.
@@ -22,7 +22,7 @@ public sealed class ManagedContentSyncUseCase(IManagedContentObservationStorage 
             removed += nativeRemoved; changed |= nativeRemoved > 0;
             var nativePending = storage.PendingExits();
             if (storage.HasPendingRelocation())
-            { _stable.Clear(); return new(0, 0, true, []); }
+            { _stable.Clear(); return new(removed, 0, true, []) { IndexChanged = changed, RetryAll = true }; }
             var transfers = storage.PendingTransfers();
             var locations = storage.Locations();
             foreach (var obsolete in _stable.Keys.Except(locations.Select(l => l.Collection.Id)).ToArray()) _stable.Remove(obsolete);
@@ -30,12 +30,13 @@ public sealed class ManagedContentSyncUseCase(IManagedContentObservationStorage 
             {
                 token.ThrowIfCancellationRequested();
                 string directory = location.Collection.StorageLocator!;
+                if (directories is not null && !directories.Contains(directory)) continue;
                 try
                 {
                     if (transfers.Any(r => Overlaps(directory, r.Source) || Overlaps(directory, r.Destination)) ||
                         nativePending.Any(i => i.Items.Any(item => Overlaps(directory,item.Path) &&
                             (item.Missing || !storage.HasReleasedReceipt(i)))))
-                    { _stable.Remove(location.Collection.Id); pending = true; continue; }
+                    { _stable.Remove(location.Collection.Id); Retry(); continue; }
                     using var root = files.LockDirectory(location.Root.Locator);
                     using var child = files.LockDirectory(directory);
                     storage.ValidateRegistration(location);
@@ -71,15 +72,15 @@ public sealed class ManagedContentSyncUseCase(IManagedContentObservationStorage 
                     string witness = StateRequestFingerprint.Compute(new { location, state.ContentVersion, inventory });
                     var now = _clock.GetUtcNow();
                     if (!_stable.TryGetValue(location.Collection.Id, out var previous) || previous.Witness != witness)
-                    { _stable[location.Collection.Id] = (witness, now); pending = true; continue; }
-                    if (now - previous.Since < TimeSpan.FromSeconds(2)) { pending = true; continue; }
+                    { _stable[location.Collection.Id] = (witness, now); Retry(); continue; }
+                    if (now - previous.Since < TimeSpan.FromSeconds(2)) { Retry(); continue; }
                     beforeCommit?.Invoke(); token.ThrowIfCancellationRequested();
                     // Enumeration/settling do NOT hold the move executor. Take it only for the
                     // final validation and commit, yielding when an actual file operation owns it.
                     using var commitLease = storage.AcquireObservation();
                     // A second complete enumeration immediately before the CAS rejects transient scans.
                     if (!Same(inventory, files.Inventory(directory, token)))
-                    { _stable.Remove(location.Collection.Id); pending = true; continue; }
+                    { _stable.Remove(location.Collection.Id); Retry(); continue; }
                     storage.ValidateRegistration(location);
                     var removedMembers = members.Where(m => missing.Contains(m.ContentItemId)).Select(m => m.Id).ToArray();
                     var related = state.ContentCatalog.Memberships.Where(m => missing.Contains(m.ContentItemId)).Select(m => m.Id).ToHashSet();
@@ -105,15 +106,16 @@ public sealed class ManagedContentSyncUseCase(IManagedContentObservationStorage 
                         plan, updatedEvidence));
                     _stable.Remove(location.Collection.Id);
                     if (result.Status == StateCommandStatus.Committed) { changed = true; removed += cardIds.Length; renamed += moves.Count; }
-                    else { pending = true; notices.Add(result.Error ?? "状态已变化，稍后重新核对。"); }
+                    else { Retry(); notices.Add(result.Error ?? "状态已变化，稍后重新核对。"); }
                 }
                 catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException)
-                { _stable.Remove(location.Collection.Id); notices.Add("收纳集合暂不可核实，已保留关联：" + e.Message); }
+                { _stable.Remove(location.Collection.Id); Retry(unavailable: true); notices.Add("收纳集合暂不可核实，已保留关联：" + e.Message); }
+                void Retry(bool unavailable = false) { pending = true; retries.Add(new(directory, unavailable)); }
             }
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
-        { _stable.Clear(); pending = true; notices.Add("收纳操作进行中或目录不可用，稍后核对：" + e.Message); }
-        return new(removed, renamed, pending, notices.Distinct().ToArray()) { IndexChanged = changed };
+        { _stable.Clear(); pending = true; retryAll = true; notices.Add("收纳操作进行中或目录不可用，稍后核对：" + e.Message); }
+        return new(removed, renamed, pending, notices.Distinct().ToArray()) { IndexChanged = changed, Retries = retries, RetryAll = retryAll };
     }
 
     private static bool Same(IReadOnlyDictionary<string,string> a, IReadOnlyDictionary<string,string> b) =>

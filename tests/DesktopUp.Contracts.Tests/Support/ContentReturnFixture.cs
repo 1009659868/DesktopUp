@@ -1,15 +1,16 @@
 using DesktopUp.Application;
+using DesktopUp.Infrastructure;
 
-namespace DesktopUp.Infrastructure;
+namespace DesktopUp.Testing;
 
 // Compatibility entry for existing tools/tests. Production hosts compose the use cases directly.
-public sealed class PosterContentReturn
+internal sealed class ContentReturnFixture
 {
     private readonly ContentReturnUseCase _returns;
     private readonly UninstallContentUseCase _uninstall;
     internal Action<string>? Checkpoint { get; set; }
 
-    public PosterContentReturn(SqliteStateStore store, IShellDirectoryTransfer? shell = null, string? desktopDirectory = null)
+    public ContentReturnFixture(SqliteStateStore store, IShellDirectoryTransfer? shell = null, string? desktopDirectory = null)
     {
         var storage = new SqliteContentReturnStorage(store);
         _returns = new(storage, new LocalContentReturnFiles(store, desktopDirectory),

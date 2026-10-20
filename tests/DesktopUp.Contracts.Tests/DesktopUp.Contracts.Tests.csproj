@@ -39,4 +39,8 @@
     <ItemGroup><_HelperFiles Include="%(_HelperTargets.RootDir)%(_HelperTargets.Directory)*" /></ItemGroup>
     <Copy SourceFiles="@(_HelperFiles)" DestinationFolder="$(TargetDir)content-test-helpers" SkipUnchangedFiles="true" />
   </Target>
+  <ItemGroup>
+    <Compile Include="../Shared/ContentCreationFixture.cs" Link="Support/ContentCreationFixture.cs" />
+    <Compile Include="../Shared/ContentTestServices.cs" Link="Support/ContentTestServices.cs" />
+  </ItemGroup>
 </Project>

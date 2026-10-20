@@ -8,6 +8,9 @@ namespace DesktopUp.Infrastructure;
 public sealed class LocalContentObservationFiles : IContentObservationFiles
 {
     internal Action<string>? Enumerating { get; set; }
+    public string Identity(string path) => LocalTransferFiles.Identity(path);
+    public string MappedItemIdentity(string path) => LocalTransferFiles.Identity(path) + ":" + File.GetCreationTimeUtc(path).Ticks;
+    public IEnumerable<string> Enumerate(string directory) => Directory.EnumerateFileSystemEntries(directory);
     public string Normalize(string path) => LocalTransferFiles.Normalize(path);
     public IDisposable LockDirectory(string path) => LocalTransferFiles.LockDirectory(path);
     public bool Contains(string parent, string child) => LocalTransferFiles.Contains(parent, child);
@@ -28,7 +31,7 @@ public sealed class LocalContentObservationFiles : IContentObservationFiles
             if ((attributes & (FileAttributes.Hidden | FileAttributes.System)) != 0) continue;
             var preview = LocalContentReferenceProbe.Inspect(entry);
             var item = preview.Item ?? throw new IOException(preview.Message);
-            string objectId = LocalTransferFiles.Identity(entry) + ":" + File.GetCreationTimeUtc(entry).Ticks;
+            string objectId = MappedItemIdentity(entry);
             facts.Add(new(item, objectId, $"{preview.Length}:{preview.LastWriteTicks}"));
         }
         return new(path, identity, facts.OrderBy(f => f.Item.Target.Locator, StringComparer.OrdinalIgnoreCase).ToArray());

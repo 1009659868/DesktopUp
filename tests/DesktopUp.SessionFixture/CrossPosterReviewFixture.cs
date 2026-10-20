@@ -26,7 +26,7 @@ internal static class CrossPosterReviewFixture
                 new(state.Catalog.Posters.ToDictionary(p=>p.Poster.PosterId,p=>p.EntityVersion),CatalogVersion:state.Catalog.CatalogVersion,ContentVersion:state.ContentVersion),Definition(name,x));
             if(directory is not null)
             {
-                var result=new MappedDirectoryService(store).Create(command,directory);
+                var result=ContentTestServices.Mapping(store).Create(command,directory);
                 if(result.Status!=StateCommandStatus.Committed)throw new IOException(result.Error);return result.ResultPosterId!;
             }
             var added=coordinator.Execute(command);if(!added.Succeeded)throw new IOException(added.Error);
@@ -37,7 +37,7 @@ internal static class CrossPosterReviewFixture
         var provisioner=new ManagedStorageProvisioner(store);var preview=provisioner.Preview(root);var storage=provisioner.Confirm(preview,preview.Fingerprint);
         void New(string poster,NewContentKind kind,string name)
         {
-            var state=repository.Read();new ContentCreationService(store).Create(poster,new(storage,state.ContentVersion,
+            var state=repository.Read();new ContentCreationFixture(store).Create(poster,new(storage,state.ContentVersion,
                 state.Catalog.Posters.Single(p=>p.Poster.PosterId==poster).EntityVersion),kind,name);
         }
         New(first.PosterId,NewContentKind.TextFile,"A-图标随卡片.txt");

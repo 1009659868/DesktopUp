@@ -35,10 +35,31 @@ public partial class App
                 await RunContentObservationProbe(repository, root, _startupIntent.Arguments.Contains("--incoming-restart"));
                 return; // This slice only; no cumulative native interaction suite.
             }
+            if (_startupIntent.Arguments.Contains("--r6-lifecycle-probe"))
+            {
+                await _spatialRuntime.R1TransfersProbe(root);
+                string poster = repository.Read().Catalog.Posters.First().Poster.PosterId;
+                await _spatialRuntime.VerifyOperationLifetimeForProbe(poster);
+                return;
+            }
             if (_startupIntent.Arguments.Contains("--r1-transfers-probe"))
             {
                 await _spatialRuntime.R1TransfersProbe(root);
                 return; // Only this slice, not the accumulated ingress/selection/UI suites.
+            }
+            if (_startupIntent.Arguments.Contains("--r5-mapped-actions-probe"))
+            {
+                string mappedDirectory = Path.Combine(root, "r5-mapped");
+                Directory.CreateDirectory(mappedDirectory);
+                string poster = await _spatialRuntime.CreateMappedPoster(mappedDirectory, CancellationToken.None);
+                var location = await _spatialRuntime.PrepareNewContent(poster) ?? throw new IOException("No mapped location.");
+                await _spatialRuntime.CreateContent(poster, location, NewContentKind.TextFile, "first.txt", null, CancellationToken.None);
+                await _spatialRuntime.BackdropWindowForProbe(poster).VerifyInlineNamingForProbe();
+                if (repository.Read().ContentCatalog.PosterItems.Count(p => p.PosterId == poster) != 3 ||
+                    !File.Exists(Path.Combine(mappedDirectory, "first.txt")))
+                    throw new IOException("Mapped action results were not indexed in their original directory.");
+                _log!.Write("info", "contract.r5_mapped_actions_passed", new { nativeMouse = false, keyboardDispatch = false });
+                return;
             }
             if (_startupIntent.Arguments.Contains("--r1-file-actions-probe"))
             {
@@ -232,7 +253,7 @@ internal sealed partial class PosterSpatialRuntime
             var window=_windows.Values.Single();
             var catalog=new SqliteStateCommandRepository(_reviewTransferStore!).Read().ContentCatalog;
             StartLegacyOutgoingProbe(window,catalog.PosterItems.Where(c=>c.PosterId==window.PosterId).Select(c=>c.LayoutItemId).ToArray());
-            await _fileTransferTask;
+            await _contentOperations.FileOperationCompletion;
         }
         finally{_outgoingProbeDestination=null;}
     }
@@ -244,7 +265,7 @@ internal sealed partial class PosterSpatialRuntime
         var window=_windows.Values.Single();
         if(manual && window.EditContent(new(ContentLayoutEditKind.Mode){Mode=ContentLayoutMode.Manual}) is {} error)throw new IOException(error);
         var ticket=window.IncomingProbeTicket(paths,frame);
-        ReceiveFiles(window,ticket,window.IncomingProbeLanding(ticket));await _fileTransferTask;
+        ReceiveFiles(window,ticket,window.IncomingProbeLanding(ticket));await _contentOperations.FileOperationCompletion;
     }
     internal async Task IncomingCollapsedProbe()
     {

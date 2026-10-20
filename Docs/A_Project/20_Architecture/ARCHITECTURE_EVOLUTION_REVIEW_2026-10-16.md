@@ -1,6 +1,6 @@
 # DesktopUp 架构审查与增量演进建议
 
-当前进度：A、B打开切片、C热度切片及闪烁修订已人工通过并本地集成；**完整基础架构仍IN PROGRESS**，不是完整SessionController/Presenter或目标架构已完成。用户要求回到impl/architecture-foundation，先补齐[基础架构余项及退出标准](../40_Implementation/Architecture/FOUNDATION_REMAINDER_PLAN.md)，真实热度HOLD。原五张图保留4ae822a基线/目标提案；[集成后现状](ArchitectureReview/Integrated-53b6bec/README.md)另列，下文“本轮”指原审查轮。
+原五张图保留4ae822a基线/目标提案，下文“本轮”指原审查轮。2026-10-20 当前：**本轮基础架构整理 USER ACCEPTED / CLOSED；R1～R8、P1～P3均已验。** 用户已授权正式收口，[当前架构图、收口范围与交付限制](../40_Implementation/Architecture/FOUNDATION_REMAINDER_PLAN.md#31-本轮基础架构正式收口与当前架构图2026-10-20)已记录。图稿showcase 9/9通过，浏览器/视觉复验未完成；不与业务验收混记。剩余规模成本和历史锁冲突继续携带，动态模板/AI/更新器等未实现。当前impl/architecture-foundation及未提交成果保留，本轮不改产品、不提交/推送/合并；真实热度实施HOLD，发布/登录自启仍暂停。下方为阶段历史。
 
 日期：2026-10-16。审查基线：`impl/develop@4ae822a`。**这是源码审查与设计提案，不是已实施重构，也不是性能测量报告。** 本轮不修改产品代码、数据库、用户配置或 Git 分支，不提交/推送。
 

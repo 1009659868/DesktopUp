@@ -4,7 +4,7 @@ namespace DesktopUp.Application;
 
 // Single owner of creation ordering, settling and mapping observation decisions.
 // Missing/replaced/unreadable directories never count as an empty successful scan.
-public sealed class MappedDirectoryUseCase(IMappedDirectoryStorage storage, IContentObservationFiles files,
+public sealed partial class MappedDirectoryUseCase(IMappedDirectoryStorage storage, IContentObservationFiles files,
     TimeProvider? clock = null, Action? beforeCommit = null)
 {
     private readonly TimeProvider _clock = clock ?? TimeProvider.System;
@@ -27,48 +27,66 @@ public sealed class MappedDirectoryUseCase(IMappedDirectoryStorage storage, ICon
         return storage.Create(command, scan);
     }
 
-    public MappedDirectorySyncResult Reconcile(CancellationToken token = default)
+    public MappedDirectorySyncResult Reconcile(CancellationToken token = default, IReadOnlySet<string>? directories = null)
     {
-        bool changed = false, pending = false; var notices = new List<string>();
-        var states=new List<MappedDirectoryState>();
+        bool changed = false, pending = false, retryAll = false;
+        var retries = new List<ContentObservationRetry>();
+        var notices = new List<string>();
+        var states = new List<MappedDirectoryState>();
         try
         {
             storage.RequireIdle();
-            var state = storage.ReadState();
+            var observation = storage.ReadObservation(token, directories);
+            var state = observation.State;
             var active = ActiveCollections(state).ToArray();
             foreach (var removed in _settling.Keys.Except(active.Select(c => c.Id)).ToArray()) _settling.Remove(removed);
             foreach (var collection in active)
             {
                 token.ThrowIfCancellationRequested();
-                string owner=state.ContentCatalog.Bindings.Single(b=>b.CollectionId==collection.Id).PosterId;
+                if (directories is not null && !directories.Contains(collection.StorageLocator!)) continue;
+                var binding = state.ContentCatalog.Bindings.SingleOrDefault(b => b.CollectionId == collection.Id);
+                if (binding is null) { _settling.Remove(collection.Id); continue; }
+                string owner = binding.PosterId;
                 try
                 {
-                    storage.ValidateRoot(state, collection.StorageLocator!, collection.Id);
+                    var entry = observation.Directories[collection.Id];
+                    if (entry.Error is { } error) throw new IOException(error);
+                    var baseline = entry.Evidence ?? throw new IOException("目录缺少本轮观察证据。");
                     using var root = files.LockDirectory(collection.StorageLocator!);
-                    var baseline = storage.Evidence(collection.Id); var scan = files.ScanMapping(collection.StorageLocator!, token);
+                    var scan = files.ScanMapping(collection.StorageLocator!, token);
                     if (baseline.Identity != scan.Identity) throw new IOException("目录身份已变化，未接管同名替代目录。");
-                    string posterId = state.ContentCatalog.Bindings.Single(b => b.CollectionId == collection.Id).PosterId;
-                    var plan = DirectoryMappingPolicy.Reconcile(state, posterId, scan.Items, baseline.Items);
-                    states.Add(new(owner,scan.Path,true));
+                    var plan = DirectoryMappingPolicy.Reconcile(state, owner, scan.Items, baseline.Items);
+                    states.Add(new(owner, scan.Path, true));
                     if (!plan.Plan.HasChanges) { _settling.Remove(collection.Id); continue; }
                     string witness = scan.Fingerprint + ":" + state.ContentVersion;
                     if (!_settling.TryGetValue(collection.Id, out var prior) || prior.Fingerprint != witness)
-                    { _settling[collection.Id] = (witness, _clock.GetUtcNow()); pending = true; continue; }
-                    if (_clock.GetUtcNow() - prior.At < TimeSpan.FromSeconds(2)) { pending = true; continue; }
+                    { _settling[collection.Id] = (witness, _clock.GetUtcNow()); Retry(); continue; }
+                    if (_clock.GetUtcNow() - prior.At < TimeSpan.FromSeconds(2)) { Retry(); continue; }
                     beforeCommit?.Invoke(); token.ThrowIfCancellationRequested();
-                    using var lease = storage.AcquireObservation(); storage.RequireIdle();
+                    using var lease = storage.AcquireObservation();
+                    storage.RequireIdle();
+                    storage.ValidateRoot(state, collection.StorageLocator!, collection.Id);
                     if (scan.Fingerprint != files.ScanMapping(collection.StorageLocator!, token).Fingerprint) throw new IOException("目录仍在变化，稍后核对。");
                     changed |= CommitObservation(state, collection, scan);
-                    _settling.Remove(collection.Id); state = storage.ReadState();
+                    _settling.Remove(collection.Id);
+                    observation = storage.ReadObservation(token, directories);
+                    state = observation.State;
                 }
                 catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException)
-                { _settling.Remove(collection.Id); notices.Add(collection.Name + "：" + e.Message);
-                    states.RemoveAll(s=>s.PosterId==owner);states.Add(new(owner,collection.StorageLocator!,false,e.Message));pending=true; }
+                {
+                    _settling.Remove(collection.Id);
+                    notices.Add(collection.Name + "：" + e.Message);
+                    states.RemoveAll(s => s.PosterId == owner);
+                    states.Add(new(owner, collection.StorageLocator!, false, e.Message));
+                    Retry(unavailable: true);
+                }
+                void Retry(bool unavailable = false)
+                { pending = true; retries.Add(new(collection.StorageLocator!, unavailable)); }
             }
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
-        { pending = true; notices.Add(e.Message); }
-        return new(changed, pending, notices) { States=states };
+        { pending = true; retryAll = true; notices.Add(e.Message); }
+        return new(changed, pending, notices) { States = states, Retries = retries, RetryAll = retryAll };
     }
     public bool CommitObservation(DesktopStateSnapshot state, Collection collection, MappedDirectoryScan scan,
         IReadOnlyList<string>? incoming = null, IncomingContentPlacement? landing = null)

@@ -26,7 +26,8 @@ public partial class App
             var files = new LocalContentObservationFiles();
             var observation = new ContentObservationService(
                 new ManagedContentSyncUseCase(new SqliteManagedContentObservationStorage(store), files),
-                new MappedDirectoryUseCase(new SqliteMappedDirectoryStorage(store), files));
+                new MappedDirectoryUseCase(new SqliteMappedDirectoryStorage(store), files),
+                new SqliteContentWatchTargetSource(store));
             return new ManagedContentMonitor(observation, completed);
         });
     }

@@ -9,13 +9,25 @@ public sealed record MappedDirectoryScan(string Path, string Identity, IReadOnly
 }
 public sealed record MappedDirectoryState(string PosterId, string Path, bool Available, string? Message = null);
 public sealed record MappedDirectorySyncResult(bool Changed, bool Pending, IReadOnlyList<string> Notices)
-{ public IReadOnlyList<MappedDirectoryState> States { get; init; } = []; }
+{
+    public IReadOnlyList<MappedDirectoryState> States { get; init; } = [];
+    public IReadOnlyList<ContentObservationRetry> Retries { get; init; } = [];
+    public bool RetryAll { get; init; }
+}
+// Scheduling hints only. Failed scans never become evidence of an empty directory.
+public sealed record ContentObservationRetry(string Path, bool Unavailable = false);
 public sealed record MappedDirectoryEvidence(string Identity, IReadOnlyList<MappedContentObservation> Items);
+// Detached data for one observation pass; no live transaction and no reuse after a write.
+public sealed record MappedObservationRead(DesktopStateSnapshot State,
+    IReadOnlyDictionary<Guid, MappedObservationEntry> Directories);
+public sealed record MappedObservationEntry(MappedDirectoryEvidence? Evidence, string? Error = null);
 public sealed record ManagedContentObservation(Guid MembershipId, string Locator, string Identity);
 public sealed record ManagedContentSyncResult(int RemovedCards, int RenamedItems, bool Pending, IReadOnlyList<string> Notices)
 {
     public IReadOnlyList<MappedDirectoryState> MappingStates { get; init; } = [];
     public bool IndexChanged { get; init; }
+    public IReadOnlyList<ContentObservationRetry> Retries { get; init; } = [];
+    public bool RetryAll { get; init; }
     public bool Changed => IndexChanged || RemovedCards != 0 || RenamedItems != 0;
 }
 public sealed record MappedCreationPlan(StateMutationPlan Mutation, Guid? CollectionId,
@@ -33,6 +45,7 @@ public interface IMappedDirectoryStorage
     IDisposable AcquireObservation();
     void RequireIdle();
     DesktopStateSnapshot ReadState();
+    MappedObservationRead ReadObservation(CancellationToken token = default, IReadOnlySet<string>? directories = null);
     void ValidateRoot(DesktopStateSnapshot state, string path, Guid? own = null);
     MappedDirectoryEvidence Evidence(Guid collection);
     StateTransactionResult Create(CreatePosterCommand command, MappedDirectoryScan scan);
@@ -58,6 +71,9 @@ public interface IManagedContentObservationStorage
 }
 public interface IContentObservationFiles
 {
+    string Identity(string path);
+    string MappedItemIdentity(string path);
+    IEnumerable<string> Enumerate(string directory);
     string Normalize(string path);
     IDisposable LockDirectory(string path);
     bool Contains(string parent, string child);
@@ -65,12 +81,19 @@ public interface IContentObservationFiles
     IReadOnlyDictionary<string, string> Inventory(string path, CancellationToken token = default);
 }
 public sealed record ContentWatchTarget(string Path, bool Recursive);
+// Each read is fresh and validated. The monitor may retain routes, never authoritative state/proof.
+public interface IContentWatchTargetSource
+{
+    IReadOnlyList<ContentWatchTarget> Read();
+}
 public interface IContentObservation
 {
     IReadOnlyList<ContentWatchTarget> WatchTargets();
-    ManagedContentSyncResult Reconcile(CancellationToken token = default);
+    // Null is a full pass; a set restricts work to matching FRESH registrations, never authorizes paths.
+    ManagedContentSyncResult Reconcile(CancellationToken token = default, IReadOnlySet<string>? directories = null);
 }
 public interface IContentMonitor : IAsyncDisposable
 {
     void Invalidate();
+    void RefreshTargets();
 }

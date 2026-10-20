@@ -10,6 +10,7 @@ internal sealed partial class PosterVisualWindow
 
     private void DispatchRealContentOpen(ContentOpenIntent intent, IAsyncContentActions actions)
     {
+        if (spatial.ContentOperationsStopping) return;
         long lifetime = _contentOpenLifetime;
         var ports = _contentPorts;
         PublishContentFeedback("正在交给 Windows 打开…", transient: true);
@@ -44,7 +45,7 @@ internal sealed partial class PosterVisualWindow
     internal string? RevealSelectedContent()
     {
         if (_contentPorts.Open is not IAsyncContentActions actions || _selectedContentItem is not { } item) return "请选择真实内容。";
-        if (HasContentGesture || spatial.IsPosterSpatialBusy(PosterId!)) return "请先完成当前交互。";
+        if (spatial.ContentOperationsStopping || HasContentGesture || spatial.IsPosterSpatialBusy(PosterId!)) return "请先完成当前交互。";
         long lifetime = _contentOpenLifetime;
         PublishContentFeedback("正在定位来源…", transient: true);
         spatial.TrackContentOperation(Observe());

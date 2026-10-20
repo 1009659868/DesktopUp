@@ -1,5 +1,93 @@
 # V3-04 当前交接
 
+## 2026-10-20 已验架构成果集成与发布同步（执行中）
+
+用户已授权：提交推送当前架构成果，合入并推送 `impl/develop`；以该集成状态更新精简的 `impl/main`，执行实际构建/打包与隔离安装验证，最终切回 `impl/develop`。不推进真实热度；第30.4节剩余成本和 P1 final02 / R6 probe02 锁冲突未定因继续保留，不以发布测试成功销项。
+
+远端 fetch 后无新增冲突；本地 develop 原有3个未推送的已验提交一并保留。原发布暂停 stash `0d082b90b9ef500b519162444bce869a28b49757` 及旧安装/数据/失败证据保留，不套用或覆盖；本次从已验开发状态重新准备发布。发布精简仅发生在 main，不反向合入开发线。实际结果另记，不提前标记通过。
+
+## 2026-10-20 本轮基础架构正式收口与现状图（当前）
+
+用户已明确授权收口本轮基础架构整理：USER ACCEPTED / CLOSED，R1～R8及P1～P3原人工通过保持。详见[第31节](../Architecture/FOUNDATION_REMAINDER_PLAN.md#31-本轮基础架构正式收口与当前架构图2026-10-20)。不再安排下一架构批次或重复验收；本轮只改文档和图源/产物，不改产品或真实数据，无Git操作，仍impl/architecture-foundation@87b81a3及未提交成果。
+
+[当前架构HTML](../../../../out/architecture-foundation-closed-20261020/current.architecture.html)已经Archify validate/deliver：showcase 9/9、0错误/警告；[图源与回执](../../20_Architecture/ArchitectureReview/Foundation-Closed/delivery.receipt.json)绑定24份实际源码摘要和HTML/JSON摘要。9节点表示主要运行协作，不冒充全部程序集依赖；目标图、R4历史图未改。
+
+图的浏览器检查failed、视觉复验skipped：本机Edge的DevTools检查提前退出，无截图；补充内置浏览器读取file://被安全策略拒绝，未绕过。不能将确定性产物检查当成四尺寸/主题视觉通过。HTML可由用户自行打开，后续可在允许的环境补记图稿视觉结果，不重开已验业务。
+
+剩余成本、未知锁冲突、发布/真实登录自启和其他未验环境按第30.4节继续携带。真实热度实施HOLD、模板/AI/更新器未实现；Git提交/推送/合并或下一功能仍待单独授权。以下为历史。
+
+## 2026-10-20 P2/P3 USER PASS / CLOSED，最终架构与成本复审完成（历史）
+
+用户明确确认P2此前已经通过、P3也通过，两批集中验收均收口。工作区仍为impl/architecture-foundation@87b81a3及原有未提交成果；本轮只更新记录与只读复审，无产品修改、构建/交互重测、提交/推送/合并。此前P2/P3待验文字保留为交付时历史，不再作为当前待办。唯一详细结论：[基础架构第30节](../Architecture/FOUNDATION_REMAINDER_PLAN.md#30-p2p3收口后的最终架构与成本复审2026-10-20)。
+
+现有业务的应用用例、会话/操作生命周期、纯布局/增量呈现/同代命中、存储/平台和组合边界通过本轮复审，不再默认安排更多架构拆层。并非全部目标平台或规模性能完成：未来热度生产者、通用准入、动态模板/AI/独立更新器未实现。保留启动兼容桥的精确用途及局部可读性债务，后续触及再收整，不添加仅转发层。
+
+成本确认：P1减少同轮重复校验，P2减少目标发现频率，P3减少无关根完整扫描；P3一对可见延迟5.49→7.60秒反而更慢，不宣称全局提速。剩余全局校验/连接与锁等待、受管无变化证据写入、单根扫描/全局版本争用按第30.4节触发条件先测量再决定。P1 final02与R6 probe02锁冲突首因仍未知，现场保留，新成功不销项。
+
+只读check-architecture四门PASS，实际生产108/Review177；原P3 TRX核对19/19、正常候选四份DLL摘要吻合，未冒充本轮重新执行测试。P2/P3原候选/隔离数据和所有真实文件保持，本轮不启动/关闭进程或产生桌面样例。源码差异及文档校验见VERIFICATION。
+
+下一步由用户审阅结论后决定是否授权Git集成、是否另行规划真实热度；当前热度实施HOLD，不自动开工。发布同步/真实登录自启仍暂停，真实满盘/长期多屏DPI未验继续携带。不要再次要求已通过的P2/P3人工，也不要从R4旧图或第20节旧准入推定当前进度。
+
+## 2026-10-20 P3 CODE/AUTO，集中人工待验（历史交付）
+
+impl/architecture-foundation@87b81a3及既有未提交工作区继续保留；R1～R8/P1已收口，P2人工未获明确确认。本批按目录去重、最多4根/轮、串行FIFO和失联退避替代全局内容脏位；App发布只刷新目标，新鲜读取、完整扫描/二次见证、文件操作优先和CAS保留。仍一个worker/timer，无目录移动或旧生产双路径。唯一详细记录：[第29节](../Architecture/FOUNDATION_REMAINDER_PLAN.md#29-p3按目录观察与有界公平调度2026-10-20)。
+
+19项定向、正常/Review/fixture构建与隔离、生产monitor在线/离线探针通过。12映射同夹具对照：突发扫描49→7、35秒失联期间健康根扫描200→17；新增可见5.49→7.60秒，本次没有延迟提升，不能外推UI/FPS/CPU。根移动可能不发子项事件，仍依靠周期兜底；分批增加启动/全核对准备读取的可能成本明确保留。
+
+正常候选out/architecture-p3-directory/candidate01/app，隔离样例out/drop-d3/architecture-p3-directory-review01；已启动PID11980。入口scripts/start-architecture-observation-review.ps1 -Batch P3 -Action Open，仅两张映射变化、迁移后外部移出/退出重开两组人工，兼顾P2尚待确认入口，不重复旧矩阵。正常烟测PID51516/探针PID26132、27492退出0/资源0；probe一条预期失联warning，无error。历史锁冲突不销项，真实热度HOLD、发布/登录自启仍暂停；未提交/推送/合并。人工后先最终架构/成本复审，不自动开工热度。下方为历史。
+
+## 2026-10-20 P2 CODE/AUTO，人工仍待确认（历史交付）
+
+继续impl/architecture-foundation@87b81a3及既有未提交修改；R1～R8/P1已收口。本批只减少无变化目标发现的调用，不添加投影权威缓存；既有2秒worker与15-tick兜底保留，提交/新鲜读取/目录错误隔离不改。App沿投影CatalogChanged/ContentVersion通知既有Invalidate；旧每tick读库路径已替换，无并列开关或新增生产类。详细证据与边界归[第28节](../Architecture/FOUNDATION_REMAINDER_PLAN.md#28-p2目标发现与无变化投影成本2026-10-20)。
+
+11项定向、正常/Review/fixture构建与编译隔离、实际monitor在线/离线变化探针通过。6映射空闲63秒目标发现32→3次、该路径线程分配76.762→7.226MB；Reconcile仍3次，墙钟存在波动，不外推FPS/CPU。正常包烟测PID48012退出0/资源0；probe01有一次预期失联warning、无error。历史P1 final02锁冲突及R6 probe02未定因继续保留。
+
+已启动正常候选PID46648：out/architecture-p2-discovery/candidate01/app；隔离样例out/drop-d3/architecture-p2-discovery-review01，启动scripts/start-architecture-observation-review.ps1 -Batch P2 -Action Open。只验运行中新建映射、迁移收纳位置后外部移出两组；不重验累计矩阵，不能将自动探针当人工PASS。原包/真实文件不动；本轮无提交/推送/合并。人工后再决定P3，真实热度HOLD、发布/真实登录自启仍暂停。下方为历史。
+
+## 2026-10-20 P1共享读取 USER PASS / CLOSED（历史）
+
+用户确认本批两组验证符合预期，P1归因及同轮安全共享读取收口；R1～R8现有业务职责整理已收口。基线仍impl/architecture-foundation@87b81a3加R5～R8/P1未提交修改；本轮只记验收，不修改产品、不重跑测试、不提交/推送/合并，真实热度HOLD。唯一详细记录：[第26节](../Architecture/FOUNDATION_REMAINDER_PLAN.md#26-p1-同轮安全共享读取2026-10-20)。
+
+MappedDirectoryUseCase使用一次脱离事务的准备上下文，移除逐目录整库重复读取；实际提交重新核实根/证据、二次扫描及写事务/CAS，成功后重读上下文。缺失、格式错误、null成员、超限只拒绝对应目录；全局损坏仍拒绝整轮。没有跨轮缓存、计时器变更或并列旧入口。
+
+最终candidate02：22项定向、normal/Review/Fixture构建、编译隔离及交错三对测量通过。12映射每轮校验36→12、线程分配约144.89→47.91MB；具体耗时及慢轮保留在第26节，不外推UI帧率。实际monitor/重启离线变化probe01两段通过；失联测试有一条预期warning、无error，正常烟测PID46856退出0/资源0。历史final02锁冲突、R6 probe02仍未定因，不能被新测试通过覆盖。
+
+已验包out/architecture-p1-shared/candidate02/app，样例out/drop-d3/architecture-p1-shared-review01；普通外部移出与映射改名/新增两组USER PASS。旧包/配置/真实文件不动，隔离证据保留。下一建议P2目标发现/无变化投影，按测量再决定P3目录预算/退避，之后最终复审及集成决策；详见[第27节](../Architecture/FOUNDATION_REMAINDER_PLAN.md#27-p1收口后的系列计划2026-10-20)。P2未开始，规模成本OPEN；发布同步/真实登录自启仍暂停，历史锁冲突未定因继续携带，不自动进热度。以下为历史快照。
+
+## 2026-10-20 R8 USER PASS / CLOSED，P1归因待集中确认（历史）
+
+用户确认R8验证符合预期，收口现有业务职责/目录整理。当前impl/architecture-foundation@87b81a3加R5～R8与P1未提交修改；本轮不提交/推送/合并，真实热度HOLD。P1只修改测量夹具及文档，生产核心DLL与R8正常候选一致；7项读取保护定向PASS、fixture03构建及独立复跑完成，没有新增应用验收包或功能矩阵。
+
+唯一报告、原始证据、时延波动和下一读取边界：[基础架构第25节](../Architecture/FOUNDATION_REMAINDER_PLAN.md#25-p1-读取与校验成本归因2026-10-20)。12映射/240项一轮无变化核对36次完整校验、约143MB线程分配，重复读取是优先热点；没有性能改善声明。下一切片同轮有界读取复用，保留全部语义校验、目录错误隔离、最终新鲜检查/CAS；不先改2秒/30秒调度或跨轮缓存。
+
+本次final02提交锁异常（mapped-12首次提交）保留在out/drop-d3/architecture-p1-final02；文件保留、未入库，未定因/未重试，和R6旧probe02不是同一已证实原因。fixture03/report01的成功只验证工具新数据，不能覆盖该失败；绝对耗时复跑变慢亦未归因。仅集中确认报告，不要求再跑旧业务；P1未获USER PASS，成本仍OPEN。发布/自启等原携带项不补验。以下为历史快照。
+
+## 2026-10-20 R7 USER PASS / CLOSED，R8集中确认待验（历史）
+
+用户确认R7两组均通过，收口局部读取优化，不关闭OPT-CONTENT-SYNC-01。R8已完成67份字节不变的目录归位、三个生产测试便捷入口清理、目标职责对照与读取/观察P1～P3计划。唯一详细记录：[第24节](../Architecture/FOUNDATION_REMAINDER_PLAN.md#24-r8-目录整理与最终架构复审2026-10-20)；源码导航src/README.md，移动证据R8_MOVES.json。旧R4图为历史，不能代替最终对照。
+
+当前impl/architecture-foundation@87b81a3加R5～R8未提交修改；不提交/推送/合并、真实热度HOLD。最终71项定向、normal/Review/Fixture构建及正常启动/退出通过；R8 USER PENDING，未宣布整体架构或规模性能完成。R6 probe02首因未知等携带项保留。候选out/architecture-r8-review/candidate01/app，样例out/drop-d3/architecture-r8-review01；启动scripts/start-architecture-file-actions-review.ps1 -Batch R8 -Action Open。集中仅一组切换/收展+新建命名；不用重复文件矩阵。之后建议先成本P1，是否继续由用户决定。以下为历史快照。
+
+## 2026-10-20 R6 USER PASS / CLOSED，R7集中人工待验（历史）
+
+用户确认R6两组均通过并收口，旧probe02未定因记录仍保留。R7先测后改：仅将监听目录发现从两份完整读取合为同事务一份，保留所有旧解析与校验；条件投影/窄表试验已撤回，不留接口或缓存。最终同进程对照1/6/12映射发现分配约减半，完整核对成本仍高、调度未改；12项定向及真实monitor/启动离线变化接线通过。详见[第23节](../Architecture/FOUNDATION_REMAINDER_PLAN.md#23-r7-读取与观察成本2026-10-20)。
+
+当前impl/architecture-foundation@87b81a3加R5/R6/R7未提交修改；不提交/推送/合并，热度HOLD。最终候选out/architecture-r7-cost/candidate02/app；人工样例out/drop-d3/architecture-r7-cost-review01；启动scripts/start-architecture-observation-review.ps1 -Batch R7 -Action Open。仅验普通收纳外部移出与映射重命名两组，旧功能矩阵不重跑。candidate01/after01/after02是撤回实验，最终性能证据为final01，不能混用。R7通过后进入R8最终职责/目录/成本对照；不提前宣布基础架构完成。以下为历史快照。
+
+## 2026-10-20 R5 USER PASS / CLOSED，R6集中人工待验（历史）
+
+用户确认R5集中验证符合预期，已收口。R6操作生命周期所有者、异常释放、原生完成防重复与退出排空接线已完成；旧字段/观察任务已删除。11项定向、正常/Review/夹具构建、最终隔离探针及正常包退出通过；probe02一次批量未移动保留现场、初因待查，不能抹去该失败。范围、代码/证据与两组人工统一见[第22节](../Architecture/FOUNDATION_REMAINDER_PLAN.md#22-r6-操作生命周期与异常安全2026-10-20)。
+
+当前impl/architecture-foundation@87b81a3加R5/R6未提交修改，不提交/推送/合并，热度/扫描优化未做。候选out/architecture-r6-lifecycle/candidate01/app；隔离数据out/drop-d3/architecture-r6-lifecycle-review01；启动scripts/start-architecture-file-actions-review.ps1 -Batch R6 -Action Open。只验连续新建/跨海报/取消重拖及带行内编辑退出重开。待确认后R7成本测量，R8最终复审；下方待验状态为历史。
+
+## 2026-10-20 R5残余用例与旧入口 集中人工待验（历史）
+
+复审已纠正整体架构准入PASS，R1～R4原功能验收保留。当前impl/architecture-foundation@87b81a3加未提交修改；本轮无Git提交/推送/合并，真实热度HOLD。唯一详细进度/纯移动证据/清理及验证：[第21节](../Architecture/FOUNDATION_REMAINDER_PLAN.md#21-复审修订与r5至r8实施计划)。
+
+映射新建/关联校验/结果登记归Application；生产MappedDirectoryService退役，四个测试包装移出产品编译并命名Fixture。事务/文件身份/只清理自建未变对象保持；R6忙态异常和R7扫描未混改。130个不同定向、正常/Review/夹具构建、产品隔离及映射行内探针通过，不冒充鼠标人工。
+
+正常候选PID53060已打开，路径out/architecture-r5-content/candidate01/app，独立数据out/drop-d3/architecture-r5-content-review01。重开：scripts/start-architecture-file-actions-review.ps1 -Batch R5 -Action Open。一组人工：C映射中新建文件夹/文本、行内命名/同名冲突/Esc默认保留、mapping-C文件与卡片一致、退出重开保留。旧包/配置和真实文件不动，样例仅在out；待用户确认后收口R5，再R6，不自动合并。
+
 ## 2026-10-19 当前分支同步与集成限制（当前）
 
 按用户本轮授权，只提交并推送impl/architecture-foundation，不合并、不变基、不切换或更新impl/develop/impl/main。后续必须等用户确认整体架构优化完成，再考虑集成；R1～R4已验收不视为自动合并授权。

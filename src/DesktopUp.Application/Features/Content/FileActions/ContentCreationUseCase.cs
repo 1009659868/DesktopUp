@@ -2,7 +2,7 @@ namespace DesktopUp.Application;
 
 // Validation, mapped/managed routing and completion policy are independent of storage.
 public sealed class ContentCreationUseCase(IContentCreationStorage storage, IContentActionFiles files,
-    Action<string, string>? checkpoint = null)
+    MappedContentCreationUseCase mapped, Action<string, string>? checkpoint = null)
 {
     public string SuggestName(string directory, NewContentKind kind)
         => SuggestName(files, directory, kind);
@@ -37,7 +37,7 @@ public sealed class ContentCreationUseCase(IContentCreationStorage storage, ICon
             _ = files.Identity(target); // Existing ordinary local file/folder; do not resolve/execute.
             bytes = files.EncodeShortcut(target);
         }
-        if (location.Mapping is not null) return storage.CreateMapped(posterId, location, kind, name, bytes, token);
+        if (location.Mapping is not null) return mapped.Create(posterId, location, kind, name, bytes, token);
         using var attempt = storage.BeginAttempt(checkpoint);
         var prepared = attempt.Prepare(posterId, location, kind, name, bytes, token);
         checkpoint?.Invoke("Journaled", prepared.Source);

@@ -28,7 +28,7 @@ public sealed class ContentNativeActionTests
     private static void Rename(F f,string name)
     {
         var card=Assert.Single(f.State.ContentCatalog.PosterItems);var relation=ContentRelationPolicy.Resolve(f.State.ContentCatalog,f.Main,card.LayoutItemId)!;
-        new ContentRenameService(f.Store).Rename(f.Main,card.LayoutItemId,relation.Item.Id,relation.Item.Version,name);
+        new ContentRenameFixture(f.Store).Rename(f.Main,card.LayoutItemId,relation.Item.Id,relation.Item.Version,name);
     }
     [Fact]public void RenamePreservesCardLayoutAndBytesAndSurvivesRestart()
     {
@@ -38,7 +38,7 @@ public sealed class ContentNativeActionTests
         Assert.Equal("after.txt",Assert.Single(after.ContentCatalog.Items).DisplayName);
         Assert.Equal("owned-content",File.ReadAllText(Assert.Single(after.ContentCatalog.Items).Target.Locator));Assert.False(File.Exists(old));
         Assert.Equal(0L,f.Sql("SELECT count(*) FROM content_renames WHERE closed=0"));
-        using var reopened=new SqliteStateStore(f.Paths);Assert.True(reopened.Initialize().Succeeded);Assert.Equal(0,new ContentRenameService(reopened).Reconcile());
+        using var reopened=new SqliteStateStore(f.Paths);Assert.True(reopened.Initialize().Succeeded);Assert.Equal(0,new ContentRenameFixture(reopened).Reconcile());
     }
     [Fact]public void CollisionDoesNotOverwriteEitherFile()
     {
@@ -63,7 +63,7 @@ public sealed class ContentNativeActionTests
         f.Sql($"INSERT INTO content_renames(operation_id,body_json) VALUES('{intent.Id}','{json}');");
         if(moved)File.Move(old,next);
         using var reopened=new SqliteStateStore(f.Paths);Assert.True(reopened.Initialize().Succeeded);
-        Assert.Equal(moved?1:0,new ContentRenameService(reopened).Reconcile());
+        Assert.Equal(moved?1:0,new ContentRenameFixture(reopened).Reconcile());
         Assert.Equal(moved?next:old,Assert.Single(f.State.ContentCatalog.Items).Target.Locator);
         Assert.Equal(moved,File.Exists(next));Assert.Equal(!moved,File.Exists(old));
     }
@@ -113,7 +113,7 @@ public sealed class ContentNativeActionTests
         using var f=new F();string path=Collect(f),identity=LocalTransferFiles.Identity(path);var before=f.State;
         var card=Assert.Single(before.ContentCatalog.PosterItems);var item=Assert.Single(before.ContentCatalog.Items);
         File.Move(path,Path.Combine(f.Source,"original.txt"));File.WriteAllText(path,"replacement");
-        Assert.Throws<IOException>(()=>new ContentRenameService(f.Store).Rename(f.Main,card.LayoutItemId,item.Id,item.Version,"after.txt",expectedIdentity:identity));
+        Assert.Throws<IOException>(()=>new ContentRenameFixture(f.Store).Rename(f.Main,card.LayoutItemId,item.Id,item.Version,"after.txt",expectedIdentity:identity));
         Assert.Equal("replacement",File.ReadAllText(path));Assert.Equal(before.Revision,f.State.Revision);
     }
     [Fact]public void FolderRenameUpdatesKnownDescendantsWithoutAddingNewCards()
@@ -123,7 +123,7 @@ public sealed class ContentNativeActionTests
         f.AddReference(LocalContentReferenceProbe.Inspect(folder).Item!);f.AddReference(LocalContentReferenceProbe.Inspect(child).Item!);
         var before=f.State;var root=before.ContentCatalog.Items.Single(i=>i.Target.Locator==folder);
         var card=before.ContentCatalog.PosterItems.Single(p=>ContentRelationPolicy.Resolve(before.ContentCatalog,f.Main,p.LayoutItemId)!.Item.Id==root.Id);
-        new ContentRenameService(f.Store).Rename(f.Main,card.LayoutItemId,root.Id,root.Version,"renamed-folder");
+        new ContentRenameFixture(f.Store).Rename(f.Main,card.LayoutItemId,root.Id,root.Version,"renamed-folder");
         Assert.Equal(before.ContentCatalog.PosterItems,f.State.ContentCatalog.PosterItems);
         Assert.All(f.State.ContentCatalog.Items,i=>Assert.Contains("renamed-folder",i.Target.Locator));
         Assert.Equal("child",File.ReadAllText(Path.Combine(f.Source,"renamed-folder","child.txt")));
