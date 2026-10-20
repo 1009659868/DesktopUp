@@ -1,0 +1,218 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-20",
+  "diagram_type": "architecture",
+  "scope": "当前工作区现有业务；基础架构正式收口，不包含未来平台完成声明",
+  "repository": {
+    "path": "G:/A_/Tools/DesktopUp_V2",
+    "branch": "impl/architecture-foundation",
+    "head": "87b81a3d55db1bee21519fc900d2fb91ed0f740b",
+    "includes_uncommitted_changes": true,
+    "commit_push_merge_performed": false
+  },
+  "specification": {
+    "sha256": "65ad42d29f04045eca18c75e861c179826947f2219d2922f633e4590126cbf21",
+    "bytes": 5205
+  },
+  "artifact": {
+    "sha256": "70fc42843f58d60e07f88137942363ea4c5773dee243cc185f4bb9ba3cb968f5",
+    "bytes": 715218
+  },
+  "output": "G:\\A_\\Tools\\DesktopUp_V2\\out\\architecture-foundation-closed-20261020\\current.architecture.html",
+  "validation": {
+    "checksPassed": 9,
+    "checkCount": 9,
+    "compositionProfile": "showcase",
+    "compositionStatus": "pass",
+    "errors": 0,
+    "warnings": 0
+  },
+  "browser_evidence": "failed",
+  "browser_evidence_receipt": "../../../../../out/architecture-foundation-closed-20261020/current.architecture.visual-check.json",
+  "browser_error": "Chrome DevTools process exit failed: Chrome closed with exit code 0\nChrome process: exit code 0.",
+  "visual_review": "skipped",
+  "visual_review_reason": "自动浏览器未产生截图；补充内置浏览器读取被file://安全策略拒绝，未绕过。没有可供视觉审阅的渲染结果。",
+  "correction_rounds": 0,
+  "correction_rounds_scope": "交付后的视觉修订轮数；本轮无可见截图，不作视觉通过声明。",
+  "source_evidence": [
+    {
+      "id": "foundation-host",
+      "label": "显式组装与应用寿命",
+      "sources": [
+        {
+          "path": "src/DesktopUp.App/Bootstrap/ApplicationComposition.cs",
+          "label": "显式组合根",
+          "sha256": "777268c1d075073f8a7bc5fe1b84f52dd48994f794bf44231aed57e80acff23c"
+        },
+        {
+          "path": "src/DesktopUp.App/Bootstrap/App.ContentServices.cs",
+          "label": "真实用例装配",
+          "sha256": "76df213e9e070b295f23bca58545d62f004e647b53f2268de1d81d9869082b8b"
+        },
+        {
+          "path": "src/DesktopUp.App/App.Lifetime.cs",
+          "label": "停止与排空顺序",
+          "sha256": "055dbbcfaf7b6ca516de50d5aa94f2172035306418368bddac86a548c13ffae8"
+        }
+      ]
+    },
+    {
+      "id": "directory-observer",
+      "label": "按目录观察与调度",
+      "sources": [
+        {
+          "path": "src/DesktopUp.Infrastructure/ManagedContentMonitor.cs",
+          "label": "监听和周期兜底",
+          "sha256": "edf49a0d46bee514cc200b7848a12d60201288da22d9669d1f0a86d1bbab6993"
+        },
+        {
+          "path": "src/DesktopUp.Infrastructure/ContentObservation/DirectoryObservationQueue.cs",
+          "label": "有界排队与退避",
+          "sha256": "1373db50cb28aad53750ee8359bdce81b368f9496fbc90d5eec6dc97df238501"
+        },
+        {
+          "path": "src/DesktopUp.App/Bootstrap/App.ContentObservation.cs",
+          "label": "观察生产接线",
+          "sha256": "7a693d26ac1708a744f391b883ddb218467809f779a7c9b5cc5b64d120e63e20"
+        }
+      ]
+    },
+    {
+      "id": "compiled-scenes",
+      "label": "内置场景模块",
+      "sources": [
+        {
+          "path": "Directory.Build.targets",
+          "label": "模块编译接线与验收隔离",
+          "sha256": "f07bb0f61108d9ad50008667fec1daac4dd5814e563348ef5f0557ebe6bbbcf5"
+        },
+        {
+          "path": "src/DesktopUp.App/Views/Poster/PosterVisualWindow.SceneHost.cs",
+          "label": "场景宿主",
+          "sha256": "956ab09671a349fc3ab7c15026bb52a1de2e37c13de03593d6a25c7d4b5405f7"
+        }
+      ]
+    },
+    {
+      "id": "interaction-entry",
+      "label": "海报与控制中心入口",
+      "sources": [
+        {
+          "path": "src/DesktopUp.App/Runtime/Posters/PosterSpatialRuntime.TransferUseCases.cs",
+          "label": "拖放意图与呈现回调",
+          "sha256": "ec21dae7a009d85f02932e7b9470be23ad01725397177fc6d09bd5b1649922a5"
+        },
+        {
+          "path": "src/DesktopUp.App/Runtime/Posters/PosterSpatialRuntime.FileActions.cs",
+          "label": "内容操作接入",
+          "sha256": "34bcda779398a9232fc2d7f34e4d888013271c7014a9915d90058f2db28d6965"
+        }
+      ]
+    },
+    {
+      "id": "business-usecases",
+      "label": "现有业务用例",
+      "sources": [
+        {
+          "path": "src/DesktopUp.Application/Features/Content/FileActions/MappedContentCreationUseCase.cs",
+          "label": "真实业务顺序与失败收尾",
+          "sha256": "bb7e7d585a912c75b8c1c741620e9f27202f34b07266b1b419f3e9a98fd6c534"
+        },
+        {
+          "path": "src/DesktopUp.Application/Features/Content/Lifecycle/ContentReturnUseCase.cs",
+          "label": "归还与取消",
+          "sha256": "f732d8726ded72d73ea61b9ebeef62e4a0f58c5027811f218026d9bf4eb1e396"
+        },
+        {
+          "path": "src/DesktopUp.Application/Features/Content/ContentOperationLifetime.cs",
+          "label": "宿主内容操作生命周期",
+          "sha256": "d1330b04b0b49183007f6771a0a89c0273f788d1d3d8c4d005af2e6f0423f3c4"
+        }
+      ]
+    },
+    {
+      "id": "poster-session-layout",
+      "label": "海报会话与纯布局",
+      "sources": [
+        {
+          "path": "src/DesktopUp.Application/Features/Content/Layout/PosterContentSession.cs",
+          "label": "会话唯一状态所有者",
+          "sha256": "bfed920750aaaa3d22ef030fa2fc6a3387a58e2c008487cefa37108597784eec"
+        },
+        {
+          "path": "src/DesktopUp.Application/Features/Content/Layout/ContentPresentationLayout.cs",
+          "label": "纯布局与帧准备",
+          "sha256": "db03164092667372c72c77358af3d969d3be32c100b7bb716724493ecb44eef1"
+        },
+        {
+          "path": "src/DesktopUp.App/App.xaml.cs",
+          "label": "状态投影到运行会话",
+          "sha256": "130703c177e42bf138975d83f4fbbbacfdf8d33675c6ff7f73a3d22356bab79e"
+        }
+      ]
+    },
+    {
+      "id": "frame-presentation",
+      "label": "增量呈现与同代命中",
+      "sources": [
+        {
+          "path": "src/DesktopUp.App/Presentation/PosterContentPresenter.cs",
+          "label": "UI资源与差异更新",
+          "sha256": "b7159ff7b03950c6a6864c917ed8813225996c1c389ed5aefe739795a28ab368"
+        },
+        {
+          "path": "src/DesktopUp.App/Views/Poster/PosterVisualWindow.ContentPublication.cs",
+          "label": "绘制与命中发布",
+          "sha256": "5076d9467b843834af0f58fbdb29ef801b713febbcf0e3dc4d1809f7da303334"
+        }
+      ]
+    },
+    {
+      "id": "persistence-adapters",
+      "label": "持久化与文件适配",
+      "sources": [
+        {
+          "path": "src/DesktopUp.Infrastructure/Persistence/State/SqliteStateStore.cs",
+          "label": "事务与校验",
+          "sha256": "e1a1e0078cffa589d2e8a422ef2146b772fc697efffe7749be74c7b82175f4ce"
+        },
+        {
+          "path": "src/DesktopUp.Infrastructure/ContentObservation/SqliteContentStartupSteps.cs",
+          "label": "保留的启动收尾兼容桥",
+          "sha256": "7a3a1292130c419426001d86a3bc53efce577a673c5d9cbea79378b5664acd42"
+        },
+        {
+          "path": "src/DesktopUp.Infrastructure/ContentObservation/SqliteMappedDirectoryStorage.cs",
+          "label": "观察读取与提交适配",
+          "sha256": "f9915804559957e623f901cc0e2562684192abe1a6e8c494150e179d23a7f0f7"
+        }
+      ]
+    },
+    {
+      "id": "windows-worker",
+      "label": "Windows 适配与独立 Worker",
+      "sources": [
+        {
+          "path": "src/DesktopUp.ContentWorker/Program.cs",
+          "label": "独立进程与私有协议",
+          "sha256": "0fa271075e3c2b9ebb449625789983a2d088d2034db8a22acb7293126aac04cd"
+        },
+        {
+          "path": "src/DesktopUp.ContentWorker/DesktopUp.ContentWorker.csproj",
+          "label": "平台依赖与无源码链接",
+          "sha256": "71b45d06d48aaec56fda5f3ab7dd186e1aa24c7b2280e7e2b44a1382fdca6d9b"
+        },
+        {
+          "path": "src/DesktopUp.Windows/Content/LocalContentReferenceProbe.cs",
+          "label": "本机只读探测",
+          "sha256": "a38fa07ef201c496549f943f642ea18a838e569b310551db92598dd5ae71f8b1"
+        }
+      ]
+    }
+  ],
+  "notes": [
+    "Archify要求源码来源链接绑定公开提交；本图对应未提交工作区，故源码证据保存在本清单而不是伪装成HEAD链接。",
+    "箭头为主要运行协作，不是全部程序集引用；Windows适配与独立Worker为系统能力聚合，非同一进程声明。",
+    "原子端口含读取、准备、提交和系统执行；状态投影经App与StateProjectionCoordinator接线，非用例直接控制窗口。"
+  ]
+}

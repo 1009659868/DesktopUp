@@ -9,10 +9,13 @@ internal sealed partial class ControlCenterService(
     Action toggleDynamicEffectsPaused,
     IStateProjectionCoordinator state, IStateCommandService commands, PosterInputRouter inputRouter,
     Func<PosterSurfaceProjection, EffectivePosterLayout?> effectiveLayout,
-    Func<PosterSpatialRuntime?>? spatialRuntime = null, PortableProfileController? portable = null,
-    DesktopUp.Infrastructure.SqliteStateStore? transferStore = null,
-    DesktopUp.Infrastructure.ManagedStorageService? storageLocation = null,
-    Func<ILocalContentWorker?>? iconWorker = null) : IDisposable
+    Func<PosterSpatialRuntime?>? spatialRuntime = null, PortableProfileUseCase? portable = null,
+    ITransferLocationNotices? transferLocations = null,
+    StorageLocationUseCase? storageLocation = null,
+    Func<ILocalContentWorker?>? iconWorker = null,
+    ContentReturnUseCase? contentReturns = null,
+    Action? requestRecovery = null, IContentIconSource? iconSource = null,
+    ContentReferenceRepairUseCase? referenceRepair = null, StartupRegistrationService? startup = null) : IDisposable
 {
     private ControlCenterWindow? _window;
     private IDisposable? _lease;
@@ -69,10 +72,10 @@ internal sealed partial class ControlCenterService(
                     });
                 stage = "apply-projection";
                 pendingWindow.ConfigureContentLayout(() => spatialRuntime?.Invoke());
-                pendingWindow.ConfigureReferences(command => { var result = commands.Execute(command); ShowCommandResult(result); return result; });
-                if (iconWorker is not null && state is StateProjectionCoordinator iconCoordinator)
-                    pendingWindow.ConfigureContentIcons(iconWorker, (command, cancellation) =>
-                    { var result = iconCoordinator.Execute(command, cancellation); ShowCommandResult(result); return result; });
+                if (referenceRepair is not null) pendingWindow.ConfigureReferenceRepair(referenceRepair, ShowCommandResult);
+                if (iconWorker is not null && iconSource is not null)
+                    pendingWindow.ConfigureContentIcons(iconSource, iconWorker, (command, cancellation) =>
+                    { var result = commands.Execute(command, cancellation); ShowCommandResult(result); return result; });
                 pendingWindow.ConfigureCenterTheme(theme =>
                 {
                     if (!state.TryGetCurrent(out var current) || current is null) return;
@@ -80,9 +83,7 @@ internal sealed partial class ControlCenterService(
                         StateCommandSource.ControlCenter, SettingsStateCommandKind.SetCenterTheme, current.Revision,
                         current.ControlCenter.Settings.Settings with { CenterTheme = theme })));
                 });
-                pendingWindow.ConfigureStartup(new StartupRegistrationService(new DesktopUp.Windows.WindowsStartupRegistration(
-                    AppContext.BaseDirectory, DistributionBuild.IsInstallable,
-                    !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DESKTOPUP_V3_TEST_DATA_ROOT")))), enabled =>
+                if (startup is not null) pendingWindow.ConfigureStartup(startup, enabled =>
                 {
                     if (!state.TryGetCurrent(out var current) || current is null) return Unavailable("startup", 0);
                     return commands.Execute(new SettingsStateCommand(Guid.NewGuid().ToString("N"),
@@ -108,8 +109,9 @@ internal sealed partial class ControlCenterService(
                     edit => spatialRuntime?.Invoke()?.PreviewControlCenterSetting(edit) == true,
                     () => spatialRuntime?.Invoke()?.CancelControlCenterVisuals(),
                     id => spatialRuntime?.Invoke()?.LocateControlCenterPoster(id) ?? "桌面尚未就绪。", ledger);
-                if (portable is not null) pendingWindow.ConfigurePortable(portable, ledger, log);
-                if (transferStore is not null) pendingWindow.ConfigureTransfers(transferStore, () => state.Refresh(), storageLocation);
+                if (portable is not null && requestRecovery is not null)
+                    pendingWindow.ConfigurePortable(portable, ledger, log, requestRecovery);
+                if (transferLocations is not null) pendingWindow.ConfigureTransfers(transferLocations, () => state.Refresh(), storageLocation);
                 if (_selection.BuildView(_sessions, _environmentPending, _globallyHidden) is { } initialView)
                 {
                     pendingWindow.ApplyView(initialView, _commandError);
@@ -280,10 +282,10 @@ internal sealed partial class ControlCenterService(
         try
         {
             if (!OriginCurrent()) return;
-            if (transferStore is not null)
+            if (contentReturns is not null)
             {
                 // Settle recorded results before freezing this deletion's consent. No file replay.
-                var notices = await Task.Run(() => new DesktopUp.Infrastructure.PosterContentReturn(transferStore).Reconcile());
+                var notices = await Task.Run(contentReturns.Reconcile);
                 if (notices.Count > 0)
                 {
                     _commandError = string.Join("\n", notices); Show(); Present(); return;

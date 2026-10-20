@@ -20,7 +20,7 @@ internal sealed partial class PosterVisualWindow
     internal ContentCompositionRead ReadCompositionForProbe()
     {
         (_window?.Content as FrameworkElement)?.UpdateLayout();
-        return new(ContentLayoutPolicy.Freeze(ContentDocument), _contentSnapshot!, _contentViewport!,
+        return new(ContentLayoutPolicy.Freeze(ContentDocument), _contentLayout.Snapshot!, _contentLayout.Viewport!,
             _authoritativePoster?.ContentLayoutJson, _stateRevision, _posterEntityVersion, _contentOpenIntentCount,
             _geometry.WidthDip, _contentNotice, _contentFeedbackText?.Text,
             _contentFeedbackCallout?.Visibility == Visibility.Visible, ReadContentSurfaceForSmoke());
@@ -32,7 +32,7 @@ internal sealed partial class PosterVisualWindow
     {
         void Require(bool ok, string message) { if (!ok) throw new InvalidOperationException(message); }
         Require(TestContentFeedbackEnabled, "Composition feedback observation requires explicit DESKTOPUP_TEST_CONTENT_FEEDBACK=1 from the test runner.");
-        Require(!_disposed && !_contentPresentationSuspended && !HasContentGesture && !_contentReadOnly &&
+        Require(!_disposed && !_contentSession.IsSuspended && !HasContentGesture && !_contentReadOnly &&
             !_geometry.IsLocked && !IsEditing && _transitionLayout is null && inputRouter.Capture is null,
             "Composition probe requires an idle writable native surface.");
         var before = ReadCompositionForProbe();
@@ -57,7 +57,7 @@ internal sealed partial class PosterVisualWindow
             Send(PosterInputEventKind.GesturePreview, end, 2);
             FlushContentMotion(false);
             var gesture = _contentGesture!;
-            Require(gesture.Proposal is not null && gesture.LastEdit is not null && gesture.EditResult is { Accepted: true },
+            Require(_contentSession.Draft is not null && gesture.LastEdit is not null && gesture.EditResult is { Accepted: true },
                 "Production drag did not produce a valid preview.");
             var feedback = ContentInteractionFeedbackPolicy.Describe(gesture.Document, gesture.Snapshot, gesture.LastEdit!, gesture.EditResult!);
             Require(feedback.Impact.AdoptsProjection && feedback.Impact.OffscreenAffectedItemIds.Count > 0,
@@ -71,7 +71,7 @@ internal sealed partial class PosterVisualWindow
                 "Actual poster feedback does not explain full-picture and offscreen impact.");
             Require(preview.Surface.CanvasMatches && preview.Surface.InputMatches && preview.Surface.Clipped,
                 "Native preview canvas/input/clip disagree.");
-            return new(capture, start, end, before, ContentLayoutPolicy.Freeze(gesture.Proposal!), feedback);
+            return new(capture, start, end, before, ContentLayoutPolicy.Freeze(_contentSession.Draft!), feedback);
         }
         catch { if (_contentGesture?.Capture == capture) CancelContentGesture("composition-probe-failed"); throw; }
     }
@@ -96,7 +96,7 @@ internal sealed partial class PosterVisualWindow
         HandleContentInput(PosterContentInputPolicy.Event(press.Capture, PosterInputEventKind.GestureCompleted, press.Start, press.End,
             inputRouter.ReadSurface(inputSession)!.Layout.Revision, 3, TitleNativeEndReason.None));
         var after = ReadCompositionForProbe();
-        if (HasContentGesture || _contentDraft is not null || _contentDraftProjection is not null || _contentMotionTimer is not null ||
+        if (HasContentGesture || _contentSession.Draft is not null || _contentSession.DraftProjection is not null || _contentMotionTimer is not null ||
             inputRouter.Capture is not null || after.Revision != press.Before.Revision + 1 ||
             after.EntityVersion != press.Before.EntityVersion + 1 || after.Document.DocumentVersion != press.Before.Document.DocumentVersion + 1 ||
             after.OpenIntents != press.Before.OpenIntents || !ContentLayoutEditing.SameState(press.Expected, after.Document) ||

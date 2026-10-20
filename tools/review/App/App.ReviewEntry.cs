@@ -1,5 +1,4 @@
 using DesktopUp.Application;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace DesktopUp;
 
@@ -8,17 +7,17 @@ public partial class App
 {
     partial void RunReviewTools()
     {
-        if (_services is null || _log is null || _dispatcher is null ||
+        if (_composition is null || _log is null || _dispatcher is null ||
             _controlCenter is null || _spatialRuntime is null || _ledger is null) return;
         if(_startupIntent.Arguments.Contains("--content-raster-posture-probe",StringComparer.Ordinal))
-        { RunContentHeatRuntimeProbe(_services.GetRequiredService<IUserDataPaths>().Root, postureOnly: true);return; }
+        { RunContentHeatRuntimeProbe(_composition.Paths.Root, postureOnly: true);return; }
         if(_startupIntent.Arguments.Contains("--content-heat-runtime-probe",StringComparer.Ordinal))
-        { RunContentHeatRuntimeProbe(_services.GetRequiredService<IUserDataPaths>().Root);return; }
+        { RunContentHeatRuntimeProbe(_composition.Paths.Root);return; }
         if(_startupIntent.Arguments.Contains("--incoming-probe",StringComparer.Ordinal))
-        { RunIncomingProbe(_services.GetRequiredService<IUserDataPaths>().Root);return; }
+        { RunIncomingProbe(_composition.Paths.Root);return; }
         if(_startupIntent.Arguments.Contains("--storage-settings-probe",StringComparer.Ordinal))
         {
-            RunStorageSettingsProbe(_services.GetRequiredService<IUserDataPaths>().Root);
+            RunStorageSettingsProbe(_composition.Paths.Root);
             return;
         }
         string[] smokeFlags = ["--content-reference-probe", "--posture-groups-probe", "--rain-resource-probe", "--rain-scene-probe", "--rain-scene-restart", "--scene-module-probe", "--content-source-probe", "--content-browse-probe", "--backdrop-probe", "--lamp-pointer-probe", "--template-recipe-probe", "--template-recipe-restart", "--content-composition-probe", "--content-fields-probe", "--content-rejected-heat-probe", "--content-protocol-probe", "--content-native-probe", "--content-native-mouse-probe", "--content-interaction-restart", "--lamp-parameter-probe", "--ui-c-sample-probe", "--content-layout-smoke", "--content-layout-restart", "--picker-smoke", "--portable-smoke", "--tray-smoke", "--control-center-smoke", "--title-surface-smoke", "--auto-measurement", "--auto-lifetime-smoke", "--auto-settings-smoke", "--auto-posture-smoke", "--continuity-smoke", "--continuity-arrange", "--menu-smoke", "--presentation-smoke", "--spatial-smoke", "--input-confirmation-smoke", "--multi-instance-smoke", "--multi-instance-restart"];
@@ -31,7 +30,7 @@ public partial class App
         {
             string? testRoot = Environment.GetEnvironmentVariable("DESKTOPUP_V3_TEST_DATA_ROOT");
             string normalRoot = Path.GetFullPath(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DesktopUp", "V3"));
-            string actual = Path.GetFullPath(_services.GetRequiredService<IUserDataPaths>().Root);
+            string actual = Path.GetFullPath(_composition.Paths.Root);
             if (string.IsNullOrWhiteSpace(testRoot) || actual.Equals(normalRoot, StringComparison.OrdinalIgnoreCase) ||
                 actual.StartsWith(normalRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
                 _log.Write("error", "auto_posture.smoke_refused", new { reason = "isolated-profile-required" });
@@ -112,7 +111,7 @@ public partial class App
         {
             string? testRoot = Environment.GetEnvironmentVariable("DESKTOPUP_V3_TEST_DATA_ROOT");
             string normalRoot = Path.GetFullPath(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DesktopUp", "V3"));
-            string actual = Path.GetFullPath(_services.GetRequiredService<IUserDataPaths>().Root);
+            string actual = Path.GetFullPath(_composition.Paths.Root);
             if (string.IsNullOrWhiteSpace(testRoot) || actual.Equals(normalRoot, StringComparison.OrdinalIgnoreCase) ||
                 actual.StartsWith(normalRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
                 _log.Write("error", "multi_instance.smoke_refused", new { reason = "isolated-profile-required" });
@@ -122,7 +121,7 @@ public partial class App
         {
             string? testRoot = Environment.GetEnvironmentVariable("DESKTOPUP_V3_TEST_DATA_ROOT");
             string normalRoot = Path.GetFullPath(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DesktopUp", "V3"));
-            string actual = Path.GetFullPath(_services.GetRequiredService<IUserDataPaths>().Root);
+            string actual = Path.GetFullPath(_composition.Paths.Root);
             if (string.IsNullOrWhiteSpace(testRoot) || actual.Equals(normalRoot, StringComparison.OrdinalIgnoreCase) ||
                 actual.StartsWith(normalRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
                 _log.Write("error", "continuity.smoke_refused", new { reason = "isolated-profile-required" });
@@ -132,7 +131,7 @@ public partial class App
         {
             string? testRoot = Environment.GetEnvironmentVariable("DESKTOPUP_V3_TEST_DATA_ROOT");
             string normalRoot = Path.GetFullPath(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DesktopUp", "V3"));
-            string actual = Path.GetFullPath(_services.GetRequiredService<IUserDataPaths>().Root);
+            string actual = Path.GetFullPath(_composition.Paths.Root);
             if (string.IsNullOrWhiteSpace(testRoot) || actual.Equals(normalRoot, StringComparison.OrdinalIgnoreCase) ||
                 actual.StartsWith(normalRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
                 _log.Write("error", "menu.smoke_refused", new { reason = "isolated-profile-required" });
@@ -142,7 +141,7 @@ public partial class App
         {
             string? testRoot = Environment.GetEnvironmentVariable("DESKTOPUP_V3_TEST_DATA_ROOT");
             string normalRoot = Path.GetFullPath(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DesktopUp", "V3"));
-            string actual = Path.GetFullPath(_services.GetRequiredService<IUserDataPaths>().Root);
+            string actual = Path.GetFullPath(_composition.Paths.Root);
             if (string.IsNullOrWhiteSpace(testRoot) || actual.Equals(normalRoot, StringComparison.OrdinalIgnoreCase) ||
                 actual.StartsWith(normalRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) ||
                 _startupIntent.Arguments.Any(a => a is "--spatial-smoke" or "--input-confirmation-smoke"))
@@ -153,7 +152,7 @@ public partial class App
         {
             string? testRoot = Environment.GetEnvironmentVariable("DESKTOPUP_V3_TEST_DATA_ROOT");
             string normalRoot = Path.GetFullPath(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DesktopUp", "V3"));
-            string actual = Path.GetFullPath(_services.GetRequiredService<IUserDataPaths>().Root);
+            string actual = Path.GetFullPath(_composition.Paths.Root);
             if (string.IsNullOrWhiteSpace(testRoot) || actual.Equals(normalRoot, StringComparison.OrdinalIgnoreCase) ||
                 actual.StartsWith(normalRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
                 _log.Write("error", "spatial.smoke_refused", new { reason = "isolated-profile-required" });
@@ -165,7 +164,7 @@ public partial class App
         {
             string? testRoot = Environment.GetEnvironmentVariable("DESKTOPUP_V3_TEST_DATA_ROOT");
             string normalRoot = Path.GetFullPath(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DesktopUp", "V3"));
-            string actual = Path.GetFullPath(_services.GetRequiredService<IUserDataPaths>().Root);
+            string actual = Path.GetFullPath(_composition.Paths.Root);
             if (string.IsNullOrWhiteSpace(testRoot) || actual.Equals(normalRoot, StringComparison.OrdinalIgnoreCase) ||
                 actual.StartsWith(normalRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
                 _log.Write("error", "input_confirmation.smoke_refused", new { reason = "isolated-profile-required" });

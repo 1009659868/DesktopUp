@@ -17,7 +17,7 @@ internal sealed partial class PosterVisualWindow
         try
         {
             Require(!IsEditing && !HasContentGesture && _spatialGesture is null && native is null,"Idle fixture required.");
-            var view = _contentViewport!; var snapshot = _contentSnapshot!;
+            var view = _contentLayout.Viewport!; var snapshot = _contentLayout.Snapshot!;
             int span = Math.Min(12,(int)Math.Floor(((vertical ? view.WidthDip : view.HeightDip) + snapshot.GapDip) /
                 (snapshot.CellDip + snapshot.GapDip)));
             Require(span >= 8,"Fixture cannot exercise an item-derived minimum beyond the shell baseline.");
@@ -27,7 +27,7 @@ internal sealed partial class PosterVisualWindow
             Require(SetEditing(true),"Editing border not published.");
             Require(TryReadContentFrameMinimum(out int minWidth,out int minHeight),"No trusted minimum.");
             var initial = _bounds; var before = ReadBrowseForProbe();
-            var sizes = _contentSnapshot!.Items.ToDictionary(i=>i.ItemId,i=>(i.Bounds.Width,i.Bounds.Height));
+            var sizes = _contentLayout.Snapshot!.Items.ToDictionary(i=>i.ItemId,i=>(i.Bounds.Width,i.Bounds.Height));
             var kind = vertical ? PosterInputTargetKind.ResizeRight : PosterInputTargetKind.ResizeBottom;
             void Send(PosterInputEventKind action,int delta)
             {
@@ -48,8 +48,8 @@ internal sealed partial class PosterVisualWindow
                     (vertical ? _bounds.Height==initial.Height : _bounds.Width==initial.Width),"Resize changed anchored/main geometry.");
                 var read = ReadBrowseForProbe();
                 Require(read.CanvasMatches && read.InputMatches && read.Clipped,"Actual XAML/HRGN/input disagree.");
-                Require(_contentSnapshot!.SpaceStatus==ContentLayoutSpaceStatus.Normal &&
-                    _contentSnapshot.Items.All(i=>sizes[i.ItemId]==(i.Bounds.Width,i.Bounds.Height)),"Resize scaled or clipped cross-axis items.");
+                Require(_contentLayout.Snapshot!.SpaceStatus==ContentLayoutSpaceStatus.Normal &&
+                    _contentLayout.Snapshot.Items.All(i=>sizes[i.ItemId]==(i.Bounds.Width,i.Bounds.Height)),"Resize scaled or clipped cross-axis items.");
                 Require(_stateRevision==before.Revision && _authoritativePoster!.ContentLayoutJson==before.StoredRaw,"Preview persisted state.");
                 observations.Add(new{delta,_bounds,minWidth,minHeight,read});
             }

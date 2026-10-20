@@ -109,13 +109,13 @@ public sealed class SpatialAnimationTests
         var folder = new DirectoryInfo(AppContext.BaseDirectory);
         while (folder is not null && !File.Exists(Path.Combine(folder.FullName, "Directory.Build.props"))) folder = folder.Parent;
         Assert.NotNull(folder);
-        string visual = File.ReadAllText(Path.Combine(folder.FullName, "src/DesktopUp.App/PosterVisualWindow.cs"));
+        string visual = File.ReadAllText(Path.Combine(folder.FullName, "src/DesktopUp.App/Views/Poster/PosterVisualWindow.cs"));
         string prepare = visual.Split("public PreparedSpatialFrame? PrepareSpatialFrame")[1].Split("public bool CommitSpatialFrames")[0];
         Assert.DoesNotContain("ApplyVisualRegion", prepare); Assert.DoesNotContain("UpdateItemScrollState", prepare);
         string batch = visual.Split("public bool CommitSpatialFrames")[1].Split("public PreparedSpatialFrame? PreparePostureRestore")[0];
         Assert.True(batch.IndexOf("ApplyPreparedBoundsBatch", StringComparison.Ordinal) < batch.IndexOf("owner.ApplyVisualRegion", StringComparison.Ordinal));
         Assert.Contains("root.UpdateLayout()", batch); Assert.Contains("finally", batch);
-        string runtime = File.ReadAllText(Path.Combine(folder.FullName, "src/DesktopUp.App/PosterSpatialRuntime.Posture.cs"));
+        string runtime = File.ReadAllText(Path.Combine(folder.FullName, "src/DesktopUp.App/Runtime/Posters/PosterSpatialRuntime.Posture.cs"));
         Assert.Contains("CompositionTarget.Rendering += run.RenderingHandler", runtime);
         Assert.Contains("CompositionTarget.Rendering -= run.RenderingHandler", runtime);
         Assert.Contains("timer.Tick += WatchPosture", runtime); Assert.DoesNotContain("timer.Tick += AdvancePosture", runtime);

@@ -24,7 +24,7 @@ internal static class ContentCompatibilityReviewFixture
         var state = new SqliteStateCommandRepository(store).Read();
         var storage = new SqliteTransferJournal(store).StorageLocations().Single();
         string poster = BuiltInStateIdentities.PrimaryPosterId;
-        new ContentCreationService(store).Create(poster, new(storage, state.ContentVersion,
+        new ContentCreationFixture(store).Create(poster, new(storage, state.ContentVersion,
             state.Catalog.Posters.Single(p => p.Poster.PosterId == poster).EntityVersion),
             NewContentKind.Shortcut, "本地快捷方式.lnk", target);
         File.WriteAllText(Path.Combine(review, ".compatibility-fixture"), "owned");

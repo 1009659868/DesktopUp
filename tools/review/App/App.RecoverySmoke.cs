@@ -1,5 +1,4 @@
 using DesktopUp.Application;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Dispatching;
 
 namespace DesktopUp;
@@ -13,7 +12,7 @@ public partial class App
         if (!_startupIntent.Arguments.Contains("--recovery-smoke", StringComparer.Ordinal)) return;
         string? testRoot = Environment.GetEnvironmentVariable("DESKTOPUP_V3_TEST_DATA_ROOT");
         string normalRoot = Path.GetFullPath(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DesktopUp", "V3"));
-        string actual = Path.GetFullPath(_services!.GetRequiredService<IUserDataPaths>().Root);
+        string actual = Path.GetFullPath(_composition!.Paths.Root);
         if (string.IsNullOrWhiteSpace(testRoot) || actual.Equals(normalRoot, StringComparison.OrdinalIgnoreCase) ||
             actual.StartsWith(normalRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
         { _log!.Write("error", "contract.recovery_smoke_refused", new { reason = "isolated-profile-required" }); return; }

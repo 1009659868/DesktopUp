@@ -1,6 +1,8 @@
 # V3 通用内容与多海报细化工作流 V1
 
-2026-10-16 当前：架构A/B/C及展开图标闪烁复验均USER PASS / CLOSED；本轮按授权本地集成impl/develop，不推送、不更新impl/main。结果归[收口记录](../40_Implementation/Architecture/C_HEAT_RUNTIME.md)与当前交接；下一项V3-06真实热度尚未开始。普通构建不含独立验收执行器；原自启登录/长测等未验继续携带，架构图仍为4ae822a基线，下方为历史。
+2026-10-20 当前：**本轮基础架构整理 USER ACCEPTED / CLOSED；R1～R8、P1～P3均已验。** 用户已授权正式收口，[当前架构图、收口范围与交付限制](../40_Implementation/Architecture/FOUNDATION_REMAINDER_PLAN.md#31-本轮基础架构正式收口与当前架构图2026-10-20)已记录。图稿showcase 9/9通过，浏览器/视觉复验未完成；不与业务验收混记。剩余规模成本和历史锁冲突继续携带，动态模板/AI/更新器等未实现。当前impl/architecture-foundation及未提交成果保留，本轮不改产品、不提交/推送/合并；真实热度实施HOLD，发布/登录自启仍暂停。下方为阶段历史。
+
+2026-10-16 当前：**基础架构整改 IN PROGRESS，真实热度准入 HOLD**。工作分支 `impl/architecture-foundation`；R1 文件动作及拖放两片均 USER PASS，源码检查点 `b3bfdc6` 已推送，本次同步验收与接续记录，不合入 develop。下一片为映射创建／同步，再收清 R1 生命周期及配置入口，之后 R2 会话 → R3 呈现与同代命中 → R4 组装／平台依赖；详见[余项计划及拉取接续入口](../40_Implementation/Architecture/FOUNDATION_REMAINDER_PLAN.md#10-拉取后的接续入口)。此前 main 发布草稿因迁移 SQL 换行哈希兼容问题暂存，未发布、未修复，自启真实登录仍未验；详见当前 HANDOFF。下方为阶段历史，不覆盖本段。
 
 2026-10-16 当前：[前移自启动](../40_Implementation/V3-04/PREVIEW_INSTALLER_DELIVERY.md#2026-10-16-v3-09-03开机自启动前移计划)关闭/卸载USER PASS，真实登录暂缓未验；按用户明确授权携带该项同步功能分支、集成impl/develop，不更新impl/main。Git结果见HANDOFF，不补整体PASS。下一主线真实热度→联合稳定性/发布→模板平台/AI，构造卡片延期；本轮仅记录与Git同步。下方为此前系列计划。
 

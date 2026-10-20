@@ -1,0 +1,342 @@
+{
+  "phase": "R8 pure move before cleanup",
+  "date": "2026-10-20",
+  "basis": "Working tree including accepted uncommitted R5-R7; not Git HEAD",
+  "moves": [
+    {
+      "from": "src/DesktopUp.App/PosterSpatialRuntime.Automatic.cs",
+      "to": "src/DesktopUp.App/Runtime/Posters/PosterSpatialRuntime.Automatic.cs",
+      "sha256": "DCF93E22D369A5B46E727E4DC77A838EA76D16FF9AA8C89C72A0BA7C3ED14C7C"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterSpatialRuntime.Content.cs",
+      "to": "src/DesktopUp.App/Runtime/Posters/PosterSpatialRuntime.Content.cs",
+      "sha256": "A55A0D5639D5775459263A78422AE8D6B66DFCBE94FF83AB118BB623DE961E9F"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterSpatialRuntime.ContentReturn.cs",
+      "to": "src/DesktopUp.App/Runtime/Posters/PosterSpatialRuntime.ContentReturn.cs",
+      "sha256": "CE739E6CCE7544322E92D3079339212F0192F5CBCA31C95EC9CF2F48358C7087"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterSpatialRuntime.ContentSource.cs",
+      "to": "src/DesktopUp.App/Runtime/Posters/PosterSpatialRuntime.ContentSource.cs",
+      "sha256": "5FE7857C154C4AAF6D0C167D3714CC3255BB59E3B880152BEAFB80B1B5EC39E5"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterSpatialRuntime.ControlCenter.cs",
+      "to": "src/DesktopUp.App/Runtime/Posters/PosterSpatialRuntime.ControlCenter.cs",
+      "sha256": "61FAFC67E4940DCC4831A087DBF0D4CED18F620D11C591F748A467F01D45F19E"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterSpatialRuntime.cs",
+      "to": "src/DesktopUp.App/Runtime/Posters/PosterSpatialRuntime.cs",
+      "sha256": "2DEA0F7F1CA7550DF1108D7B4F5E3EF391D4F0C21176294946DE3B842CDAFC61"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterSpatialRuntime.Effective.cs",
+      "to": "src/DesktopUp.App/Runtime/Posters/PosterSpatialRuntime.Effective.cs",
+      "sha256": "2C59A7C813267D151060D4AC7446E1DBA468784CD9B8942193EE580AC7F9F553"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterSpatialRuntime.FileActions.cs",
+      "to": "src/DesktopUp.App/Runtime/Posters/PosterSpatialRuntime.FileActions.cs",
+      "sha256": "34BCDA779398A9232FC2D7F34E4D888013271C7014A9915D90058F2DB28D6965"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterSpatialRuntime.Incoming.cs",
+      "to": "src/DesktopUp.App/Runtime/Posters/PosterSpatialRuntime.Incoming.cs",
+      "sha256": "947818E2F303E4833712D38B4830EFDDE39814409523407175C26265E72EA847"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterSpatialRuntime.MappedPosterCreation.cs",
+      "to": "src/DesktopUp.App/Runtime/Posters/PosterSpatialRuntime.MappedPosterCreation.cs",
+      "sha256": "AAB1E19B25EBA10FAABA8D364D4208D28ADE59D5B63013F69C9817482706B549"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterSpatialRuntime.MappingStatus.cs",
+      "to": "src/DesktopUp.App/Runtime/Posters/PosterSpatialRuntime.MappingStatus.cs",
+      "sha256": "83CBE2D09126939795798D54ED673DD9C52D3B519D173808826FD7AFEC2D559F"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterSpatialRuntime.NativeExit.cs",
+      "to": "src/DesktopUp.App/Runtime/Posters/PosterSpatialRuntime.NativeExit.cs",
+      "sha256": "F8B335BB4266CE1A898BD3AB422F0A5D223106666548529F6302738ECB43940A"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterSpatialRuntime.Pointer.cs",
+      "to": "src/DesktopUp.App/Runtime/Posters/PosterSpatialRuntime.Pointer.cs",
+      "sha256": "2FC67164C5C9480BC085678ADDD24F5692ACBAEDD2ACECA52F742F10EC8CD14D"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterSpatialRuntime.Portable.cs",
+      "to": "src/DesktopUp.App/Runtime/Posters/PosterSpatialRuntime.Portable.cs",
+      "sha256": "09CDFCBB79130091B5A610053DFE4724793F55ACCE86892B2CE45D528FF4FE0E"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterSpatialRuntime.Posture.cs",
+      "to": "src/DesktopUp.App/Runtime/Posters/PosterSpatialRuntime.Posture.cs",
+      "sha256": "BBAE01F171EA52E2EF33CA9B0DDF54101212E33A28F2C260E7595E8DD1421E8D"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterSpatialRuntime.PostureGroups.cs",
+      "to": "src/DesktopUp.App/Runtime/Posters/PosterSpatialRuntime.PostureGroups.cs",
+      "sha256": "A9BDF07AD58DE9571B5A1E3D2F75B2C5FCD6CA420CC068CCA49B005EAA2C5EED"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterSpatialRuntime.RealContent.cs",
+      "to": "src/DesktopUp.App/Runtime/Posters/PosterSpatialRuntime.RealContent.cs",
+      "sha256": "4597E5BE64D522E47F404AEBD41827853C6B472FA4401128B8CA3F166BDC3720"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterSpatialRuntime.SceneMotion.cs",
+      "to": "src/DesktopUp.App/Runtime/Posters/PosterSpatialRuntime.SceneMotion.cs",
+      "sha256": "07E1C00E59FFFB7712B0A6FFEFBE80863C0020B331E40CA116EEE73FE91971C4"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterSpatialRuntime.Title.cs",
+      "to": "src/DesktopUp.App/Runtime/Posters/PosterSpatialRuntime.Title.cs",
+      "sha256": "85C697BBA3DFB1E7D7DB86BFC72D60C055EDF22D3A72B17C09B676CF8447321A"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterSpatialRuntime.Transfers.cs",
+      "to": "src/DesktopUp.App/Runtime/Posters/PosterSpatialRuntime.Transfers.cs",
+      "sha256": "446666A851D2D18C8212FD37AD5F1175350C3C3829A940A65AE050F062BD96E8"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterSpatialRuntime.TransferUseCases.cs",
+      "to": "src/DesktopUp.App/Runtime/Posters/PosterSpatialRuntime.TransferUseCases.cs",
+      "sha256": "EC21DAE7A009D85F02932E7B9470BE23AD01725397177FC6D09BD5B1649922A5"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterSpatialRuntime.Usability.cs",
+      "to": "src/DesktopUp.App/Runtime/Posters/PosterSpatialRuntime.Usability.cs",
+      "sha256": "BB74C866F3ECE8A18B6BD2360F815B2987EE46499B775010A3C6A38093AB76EC"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterVisualWindow.Backdrop.cs",
+      "to": "src/DesktopUp.App/Views/Poster/PosterVisualWindow.Backdrop.cs",
+      "sha256": "E6C4C56B3E582E6490CF534C29301E8222AB31F8FEC965395D2ADFCD1F028523"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterVisualWindow.Content.cs",
+      "to": "src/DesktopUp.App/Views/Poster/PosterVisualWindow.Content.cs",
+      "sha256": "59D8F26C77BD4AE2A24A7137DB99351F2C3CEC5CB246A163EE3209B8D4E29873"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterVisualWindow.ContentActivation.cs",
+      "to": "src/DesktopUp.App/Views/Poster/PosterVisualWindow.ContentActivation.cs",
+      "sha256": "1C43718021101920D2033CBFE7E5E1EE2AADFB14C0D016DC947B7DA58D955B94"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterVisualWindow.ContentAssets.cs",
+      "to": "src/DesktopUp.App/Views/Poster/PosterVisualWindow.ContentAssets.cs",
+      "sha256": "9F9B27580A993A722B76CB83A4C570EA70AC415D80270916F30B05083DC7952F"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterVisualWindow.ContentDragImage.cs",
+      "to": "src/DesktopUp.App/Views/Poster/PosterVisualWindow.ContentDragImage.cs",
+      "sha256": "C2B90DAF7A7846CC7DCE50746AB019B1FFD32B37BF4B3F4F73D5AD26EE7A683A"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterVisualWindow.ContentEditing.cs",
+      "to": "src/DesktopUp.App/Views/Poster/PosterVisualWindow.ContentEditing.cs",
+      "sha256": "C656A644B4A57C37F402DE4F8E77D58BE281876282E8293FEE226DCA83D7EEF6"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterVisualWindow.ContentFeedback.cs",
+      "to": "src/DesktopUp.App/Views/Poster/PosterVisualWindow.ContentFeedback.cs",
+      "sha256": "24341B66B802DA08F6F32A2DAA04E90543DE57BD5588D2F7846D39910CDED23F"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterVisualWindow.ContentMarquee.cs",
+      "to": "src/DesktopUp.App/Views/Poster/PosterVisualWindow.ContentMarquee.cs",
+      "sha256": "3A76BBBADF238184F94592289D296795E44D5D7BA91C5C5BA9CB8B0C19B9A0DB"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterVisualWindow.ContentMenu.cs",
+      "to": "src/DesktopUp.App/Views/Poster/PosterVisualWindow.ContentMenu.cs",
+      "sha256": "EA58D737563BF41280412AA8774465266AD7EB5A056F6CB50A5D4E8E9269312B"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterVisualWindow.ContentProposals.cs",
+      "to": "src/DesktopUp.App/Views/Poster/PosterVisualWindow.ContentProposals.cs",
+      "sha256": "8153E19907FEA391C5A57E3941E2BFC2379B6FF3272DDBA7D4CE15A0E72BBD1C"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterVisualWindow.ContentPublication.cs",
+      "to": "src/DesktopUp.App/Views/Poster/PosterVisualWindow.ContentPublication.cs",
+      "sha256": "5076D9467B843834AF0F58FBDB29EF801B713FEBBCF0E3DC4D1809F7DA303334"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterVisualWindow.ContentSelection.cs",
+      "to": "src/DesktopUp.App/Views/Poster/PosterVisualWindow.ContentSelection.cs",
+      "sha256": "EDB8A314635C0F62B363E26BC9A76618F5A4D7C4AF7740E6D0FF4587801978F2"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterVisualWindow.ContentSource.cs",
+      "to": "src/DesktopUp.App/Views/Poster/PosterVisualWindow.ContentSource.cs",
+      "sha256": "5E66A707E80AC751BB8BC426119327475C553B0550533F33728DC4185AB25CED"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterVisualWindow.ContentSpace.cs",
+      "to": "src/DesktopUp.App/Views/Poster/PosterVisualWindow.ContentSpace.cs",
+      "sha256": "F08E48575F1BD556D2DC571FBAA8449F6C1842C4BF7AC9617BAB6F7DC902F8A2"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterVisualWindow.ControlCenter.cs",
+      "to": "src/DesktopUp.App/Views/Poster/PosterVisualWindow.ControlCenter.cs",
+      "sha256": "C054A2DABE9E46D9392F8C234A556A27F86C75E59DC36BEDEF121C0DF5B29398"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterVisualWindow.cs",
+      "to": "src/DesktopUp.App/Views/Poster/PosterVisualWindow.cs",
+      "sha256": "C1DF3D7E9EEB39821C29DF3499F7020B8E2D135C7257029831431C503E73E209"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterVisualWindow.Feedback.cs",
+      "to": "src/DesktopUp.App/Views/Poster/PosterVisualWindow.Feedback.cs",
+      "sha256": "BF82DBA7E63895AC504B6FA4DE4D8566165E63C2175F3CEB5F86734C02E52A73"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterVisualWindow.FileActions.cs",
+      "to": "src/DesktopUp.App/Views/Poster/PosterVisualWindow.FileActions.cs",
+      "sha256": "29ED12C01FC3F7F603E21A4BC8103178EF543C784871426D0BA987FEE2C61F9F"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterVisualWindow.FileDialogs.cs",
+      "to": "src/DesktopUp.App/Views/Poster/PosterVisualWindow.FileDialogs.cs",
+      "sha256": "EC55C2FD044E1D5D1BAB2AAD889603ED83A368AE8CEC9A678AD677F8AAB668A4"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterVisualWindow.InlineRename.cs",
+      "to": "src/DesktopUp.App/Views/Poster/PosterVisualWindow.InlineRename.cs",
+      "sha256": "46AA808C39ED1B03CB62C1D059CF47BEBF59F5381A469B77A4F4E705FE6F4154"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterVisualWindow.MappingStatus.cs",
+      "to": "src/DesktopUp.App/Views/Poster/PosterVisualWindow.MappingStatus.cs",
+      "sha256": "E8716BD1395EDA81A698D400B31ED5AC88A204388C2D160C8637950C9C85BE6B"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterVisualWindow.NewContent.cs",
+      "to": "src/DesktopUp.App/Views/Poster/PosterVisualWindow.NewContent.cs",
+      "sha256": "FD1191EEA3359280ACAEE7F9290EA34937D5D59E5B444C7EA7ED906312B1227C"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterVisualWindow.Pointer.cs",
+      "to": "src/DesktopUp.App/Views/Poster/PosterVisualWindow.Pointer.cs",
+      "sha256": "BFFDE3C29A6B2A30A291710FC2E7B1E8CD45E043A9EEDA3D4F5319150B37839C"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterVisualWindow.Presentation.cs",
+      "to": "src/DesktopUp.App/Views/Poster/PosterVisualWindow.Presentation.cs",
+      "sha256": "623669E1D025F8D7ED7A396851A5A7EB1A48BF42994A5818123B102A248CF5E8"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterVisualWindow.RealContent.cs",
+      "to": "src/DesktopUp.App/Views/Poster/PosterVisualWindow.RealContent.cs",
+      "sha256": "1C98F896516BE1B94E49BEC6B972A01071B0EE75FBCD4B50640A85C02DDA516C"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterVisualWindow.SceneHost.cs",
+      "to": "src/DesktopUp.App/Views/Poster/PosterVisualWindow.SceneHost.cs",
+      "sha256": "956AB09671A349FC3AB7C15026BB52A1DE2E37C13DE03593D6A25C7D4B5405F7"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterVisualWindow.SurfacePaint.cs",
+      "to": "src/DesktopUp.App/Views/Poster/PosterVisualWindow.SurfacePaint.cs",
+      "sha256": "B600694136B35014EADE1A9F56EE4828B9085FC393CA1D200E17B33BAB087103"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterVisualWindow.TitleChrome.cs",
+      "to": "src/DesktopUp.App/Views/Poster/PosterVisualWindow.TitleChrome.cs",
+      "sha256": "028CD964F0D3C1344D717BE683CE35BFAC7B85E1EE38C16EEC6C234CEC79C0B3"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterVisualWindow.TransferConfirmation.cs",
+      "to": "src/DesktopUp.App/Views/Poster/PosterVisualWindow.TransferConfirmation.cs",
+      "sha256": "2B6955AA7CC1A8B1F1F3684F9A6F212D20C78F4F80C75C1C0E89D29C99A331CA"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterVisualWindow.Transfers.cs",
+      "to": "src/DesktopUp.App/Views/Poster/PosterVisualWindow.Transfers.cs",
+      "sha256": "7EE3CAE5554A608EA76140E1BC5451B98FA03BFA5434D20E5A10FF2A7E841F8B"
+    },
+    {
+      "from": "src/DesktopUp.App/PosterVisualWindow.Transition.cs",
+      "to": "src/DesktopUp.App/Views/Poster/PosterVisualWindow.Transition.cs",
+      "sha256": "3CD84E8B9437148ECAE19FF119A00D11F2FDB3F4D382C0ED2D22D59A55A02163"
+    },
+    {
+      "from": "src/DesktopUp.App/WinUiPosterSession.cs",
+      "to": "src/DesktopUp.App/Runtime/Posters/WinUiPosterSession.cs",
+      "sha256": "A309CED442EB1E5BD5EEA402B95F32AF476D0D258E1BE760064146FF25D18F6E"
+    },
+    {
+      "from": "src/DesktopUp.Infrastructure/SqliteContentRepository.cs",
+      "to": "src/DesktopUp.Infrastructure/Persistence/State/SqliteContentRepository.cs",
+      "sha256": "5071EF5C97BDD71D8C19CEEE1310E785533CB44272F9FA95AC51CD400B0A11A9"
+    },
+    {
+      "from": "src/DesktopUp.Infrastructure/SqlitePosterCatalogRepository.cs",
+      "to": "src/DesktopUp.Infrastructure/Persistence/State/SqlitePosterCatalogRepository.cs",
+      "sha256": "77124CFE87B290C20F1DE88944D1AD4158AA6D6187C59DA1FFFA59BD9B087425"
+    },
+    {
+      "from": "src/DesktopUp.Infrastructure/SqliteSpatialContinuityRepository.cs",
+      "to": "src/DesktopUp.Infrastructure/Persistence/State/SqliteSpatialContinuityRepository.cs",
+      "sha256": "317E2B93CB7EF882DD05EBD68FA16D4B3DF12EC93D0F045A5902CBC3F1C7FCE9"
+    },
+    {
+      "from": "src/DesktopUp.Infrastructure/SqliteSpatialProofRepository.cs",
+      "to": "src/DesktopUp.Infrastructure/Persistence/State/SqliteSpatialProofRepository.cs",
+      "sha256": "7B2979792B2A19F2E08EB6B9A2E082F20CD669D1813DE7F0F840AC541C90CF40"
+    },
+    {
+      "from": "src/DesktopUp.Infrastructure/SqliteStateCommandRepository.cs",
+      "to": "src/DesktopUp.Infrastructure/Persistence/State/SqliteStateCommandRepository.cs",
+      "sha256": "F6B4C2B25490F3B3A183CA60F59295EA1FF3CC637E3F8D3AB02446C44E3B4BE4"
+    },
+    {
+      "from": "src/DesktopUp.Infrastructure/SqliteStateRepositories.cs",
+      "to": "src/DesktopUp.Infrastructure/Persistence/State/SqliteStateRepositories.cs",
+      "sha256": "CE18E525A241C4C01C52FF9BDC92EE36627B12217866AE5C071A109688D69C4D"
+    },
+    {
+      "from": "src/DesktopUp.Infrastructure/SqliteStateStore.cs",
+      "to": "src/DesktopUp.Infrastructure/Persistence/State/SqliteStateStore.cs",
+      "sha256": "E1A1E0078CFFA589D2E8A422EF2146B772FC697EFFFE7749BE74C7B82175F4CE"
+    },
+    {
+      "from": "src/DesktopUp.Infrastructure/SqliteStorageRelocationJournal.cs",
+      "to": "src/DesktopUp.Infrastructure/Persistence/Transfers/SqliteStorageRelocationJournal.cs",
+      "sha256": "56A2368308323324408A1CCED0B58ACDC35FFC6C637D1A2BBD0C2CA565732477"
+    },
+    {
+      "from": "src/DesktopUp.Infrastructure/SqliteStorageRelocationJournal.Transactions.cs",
+      "to": "src/DesktopUp.Infrastructure/Persistence/Transfers/SqliteStorageRelocationJournal.Transactions.cs",
+      "sha256": "5C7DBBC129E84A0160125B70D589E72F25C0AD5FEDCA20C7D25D2D9C73EB8B6C"
+    },
+    {
+      "from": "src/DesktopUp.Infrastructure/SqliteTransferJournal.Closures.cs",
+      "to": "src/DesktopUp.Infrastructure/Persistence/Transfers/SqliteTransferJournal.Closures.cs",
+      "sha256": "F6FB37DBF664D7FA2B885F4DB9F8FD54904F26B3E5139B7D0E7BDAAD1900A730"
+    },
+    {
+      "from": "src/DesktopUp.Infrastructure/SqliteTransferJournal.cs",
+      "to": "src/DesktopUp.Infrastructure/Persistence/Transfers/SqliteTransferJournal.cs",
+      "sha256": "77D0B29AE168DA9A7E320A1F05F2426C2A37ED81F8E44F966DDC3D924E6A5B82"
+    },
+    {
+      "from": "src/DesktopUp.Infrastructure/SqliteTransferJournal.IndexRecovery.cs",
+      "to": "src/DesktopUp.Infrastructure/Persistence/Transfers/SqliteTransferJournal.IndexRecovery.cs",
+      "sha256": "CAE0A910762FF798CD7412C3511C19B06A40B7EC6081403640455C9DFF034B45"
+    },
+    {
+      "from": "src/DesktopUp.Infrastructure/SqliteTransferJournal.Recovery.cs",
+      "to": "src/DesktopUp.Infrastructure/Persistence/Transfers/SqliteTransferJournal.Recovery.cs",
+      "sha256": "7C465B71B7B0008A63A3FA3C8C9406878EDC04EA818A34FEF6D6B4D7868B1BCF"
+    }
+  ]
+}

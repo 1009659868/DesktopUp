@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 $ErrorActionPreference='Stop'
 $clickRepo=Split-Path -Parent $PSScriptRoot
 $clickExe=Join-Path $clickRepo 'out/drop-d3/click-probe02/DesktopUp.NativeDragProbe.exe'

@@ -40,11 +40,11 @@ internal sealed class ProbeContentAssets : IContentAssetProvider
 
 internal sealed partial class PosterVisualWindow
 {
-    private object SourceProbeRead() => new { PosterId, sourceVersion = _contentSourceVersion,
+    private object SourceProbeRead() => new { PosterId, sourceVersion = _contentSession.SourceVersion,
         revision = _stateRevision, document = ContentDocument.DocumentVersion, members = ContentDocument.ItemSetVersion,
-        demand = _contentVisibleAssetKeys.Values.ToArray(), active = _contentAssets?.RunningLoads ?? 0,
-        cached = _contentAssets?.Count ?? 0, bytes = _contentAssets?.CachedBytes ?? 0, attempted = _contentAssetAttempted.Count,
-        accepted = _contentAssetAcceptedCount, HasContentGesture, suspended = _contentPresentationSuspended, _disposed,
+        demand = Rasters.VisibleKeys.Values.ToArray(), active = Rasters.Cache?.RunningLoads ?? 0,
+        cached = Rasters.Cache?.Count ?? 0, bytes = Rasters.Cache?.CachedBytes ?? 0, attempted = Rasters.Attempted,
+        accepted = Rasters.AcceptedCount, HasContentGesture, suspended = _contentSession.IsSuspended, _disposed,
         canvas = ReadBrowseForProbe() };
 
     internal async Task<object> RunContentSourceForProbeAsync(PosterVisualWindow[] windows, CancellationToken cancellation,
@@ -66,13 +66,13 @@ internal sealed partial class PosterVisualWindow
             for (int i = 0; ; i++)
             {
                 assets.CompleteAll(); await Task.Delay(10, cancellation);
-                if (windows.Where(w => !w._disposed).All(w => w._contentAssets?.RunningLoads is null or 0) && assets.PendingCount == 0) return;
+                if (windows.Where(w => !w._disposed).All(w => w.Rasters.Cache?.RunningLoads is null or 0) && assets.PendingCount == 0) return;
                 if (i > 400) throw new TimeoutException("Resource queue failed to quiesce.");
             }
         }
         void Record(string name)
         {
-            cases.Add(name); observations.Add(new { name, windows = windows.Where(w => !w._disposed && !w._contentPresentationSuspended)
+            cases.Add(name); observations.Add(new { name, windows = windows.Where(w => !w._disposed && !w._contentSession.IsSuspended)
                 .Select(w => w.SourceProbeRead()).ToArray(), providerCalls = assets.Calls.Count });
         }
         DirectContentProtocolPress Press()
@@ -104,17 +104,17 @@ internal sealed partial class PosterVisualWindow
         {
             Require(windows.Length is 1 or 3 or 6 && windows.All(w => !w._geometry.IsCollapsed && !w._geometry.IsLocked), "Use expanded 1/3/6 resource fixture.");
             foreach (var w in windows) spatial.BindContentSource(w.PosterId!, ports);
-            await Until(() => windows.All(w => w._contentAssets?.RunningLoads == 4));
+            await Until(() => windows.All(w => w.Rasters.Cache?.RunningLoads == 4));
             Require(assets.Calls.Count == windows.Length * 4, "Initial per-surface concurrency exceeded.");
             var raw = windows.ToDictionary(w => w.PosterId!, w => w._authoritativePoster!.ContentLayoutJson);
             int oldCalls = assets.Calls.Count;
             for (int i = 0; i < 20; i++) source.Advance();
-            await Until(() => windows.All(w => w._contentSourceVersion == source.Version));
+            await Until(() => windows.All(w => w._contentSession.SourceVersion == source.Version));
             Require(assets.Calls.Count == oldCalls, "Source version churn bypassed real occupied load slots.");
             await Drain();
-            Require(windows.All(w => w._contentAssetAttempted.Count == w._contentVisibleAssetKeys.Count &&
-                w._contentAssets!.Count <= 64 && w._contentAssets.CachedBytes <= 16 * 1024 * 1024), "Pump did not finish without extra input or exceeded cache.");
-            Require(windows.All(w => w._contentVisibleAssetKeys.Values.All(k => k.SourceVersion == source.Version)), "Old source keys returned.");
+            Require(windows.All(w => w.Rasters.Attempted == w.Rasters.VisibleKeys.Count &&
+                w.Rasters.Cache!.Count <= 64 && w.Rasters.Cache.CachedBytes <= 16 * 1024 * 1024), "Pump did not finish without extra input or exceeded cache.");
+            Require(windows.All(w => w.Rasters.VisibleKeys.Values.All(k => k.SourceVersion == source.Version)), "Old source keys returned.");
             Require(windows.All(w => w._authoritativePoster!.ContentLayoutJson == raw[w.PosterId!]), "Metadata reorder wrote layout.");
             Record("bounded-source-churn-and-slot-replenishment");
 
@@ -125,12 +125,12 @@ internal sealed partial class PosterVisualWindow
             Require(source.Opens.Count == opened + 1, "Key repeat duplicated open intent."); ReleaseContentActivationKey();
             var press = Press(); long revision = _stateRevision;
             source.Missing = _contentGesture!.Slot.ItemId; source.Advance();
-            await Until(() => _contentSourceVersion == source.Version && !HasContentGesture);
+            await Until(() => _contentSession.SourceVersion == source.Version && !HasContentGesture);
             LateRelease(press);
             Require(_stateRevision == revision && _contentMotionTimer is null, "Invalidated source gesture wrote data.");
             Require(SelectContentItem(source.Missing) is null && ActivateSelectedContent(false) is not null && source.Opens.Count == opened + 1,
                 "Unavailable content opened.");
-            source.Missing = null; source.Advance(); await Until(() => _contentSourceVersion == source.Version); await Drain();
+            source.Missing = null; source.Advance(); await Until(() => _contentSession.SourceVersion == source.Version); await Drain();
             Require(ActivateSelectedContent(false) is null && source.Opens.Count == opened + 2, "Recovery requires restarting the app.");
             ReleaseContentActivationKey(); Record("availability-recovery-gesture-cancel-and-open-dedup");
 
@@ -153,44 +153,44 @@ internal sealed partial class PosterVisualWindow
             foreach (bool collapsed in new[] { true, false })
             {
                 var completion = new TaskCompletionSource<StateCommandResult>();
-                long beforeRevision = _stateRevision, beforeVersion = _contentSourceVersion;
+                long beforeRevision = _stateRevision, beforeVersion = _contentSession.SourceVersion;
                 spatial.SetCollapsed(new("source-posture-" + Guid.NewGuid().ToString("N"), StateCommandSource.ControlCenter,
                     PosterStateCommandKind.SetCollapsed, _stateRevision, PosterId!, _authoritativePoster! with { IsCollapsed = collapsed })
                     { ReadSet = StateReadSet.ForPoster(PosterId!, _posterEntityVersion) }, r => completion.TrySetResult(r));
                 await Until(() => _transitionLayout is { NativePrepared: true } || completion.Task.IsCompleted);
                 Require(_transitionLayout is { NativePrepared: true }, "No intermediate R4 surface observed.");
                 var tree = _contentStructure; var layout = _transitionLayout;
-                source.Advance(); await Until(() => _contentSourceRefreshPending);
-                Require(_contentSourceVersion == beforeVersion && ReferenceEquals(tree, _contentStructure) &&
-                    ReferenceEquals(layout, _transitionLayout) && _contentVisibleAssetKeys.Count == 0,
+                source.Advance(); await Until(() => _contentSession.SourceRefreshPending);
+                Require(_contentSession.SourceVersion == beforeVersion && ReferenceEquals(tree, _contentStructure) &&
+                    ReferenceEquals(layout, _transitionLayout) && Rasters.VisibleKeys.Count == 0,
                     "Source changed the prepared R4 tree or retained stale resource admission.");
                 var posture = await completion.Task.WaitAsync(cancellation);
                 Require(posture.Succeeded && posture.CurrentRevision == beforeRevision + 1 && _transitionLayout is null,
                     "R4 did not finish exactly one transaction.");
-                await Until(() => _contentSourceVersion == source.Version && !_contentSourceRefreshPending);
+                await Until(() => _contentSession.SourceVersion == source.Version && !_contentSession.SourceRefreshPending);
                 await Drain();
             }
             Record("source-notification-r4-restore-safe-point");
 
             // Final lifecycle test: a source notification/result after old HWND disposal must not
             // revive that surface. The catalog-owned adapter reconnects to the new session.
-            source.Advance(); await Until(() => _contentSourceVersion == source.Version && _contentAssets?.RunningLoads == 4);
-            var oldCache = _contentAssets!; long acceptedBefore = _contentAssetAcceptedCount;
+            source.Advance(); await Until(() => _contentSession.SourceVersion == source.Version && Rasters.Cache?.RunningLoads == 4);
+            var oldCache = Rasters.Cache!; long acceptedBefore = Rasters.AcceptedCount;
             var hide = stateCommands.Execute(new PosterStateCommand("source-hide-" + Guid.NewGuid().ToString("N"), StateCommandSource.ControlCenter,
                 PosterStateCommandKind.SetVisible, _stateRevision, PosterId!, _authoritativePoster! with { IsVisible = false })
                 { ReadSet = StateReadSet.ForPoster(PosterId!, _posterEntityVersion) });
             Require(hide.Succeeded, "Hide failed.");
-            await Until(() => _disposed || _contentPresentationSuspended);
+            await Until(() => _disposed || _contentSession.IsSuspended);
             assets.CompleteAll(); await Until(() => oldCache.RunningLoads == 0);
             source.Advance(); await Task.Delay(30, cancellation);
-            Require(_contentAssetAcceptedCount == acceptedBefore && (_contentAssets?.RunningLoads ?? 0) == 0, "Hidden surface accepted a late resource.");
+            Require(Rasters.AcceptedCount == acceptedBefore && (Rasters.Cache?.RunningLoads ?? 0) == 0, "Hidden surface accepted a late resource.");
             var hidden = hide.Projection!.PostersById[ids[0]];
             var show = stateCommands.Execute(new PosterStateCommand("source-show-" + Guid.NewGuid().ToString("N"), StateCommandSource.ControlCenter,
                 PosterStateCommandKind.SetVisible, hide.CurrentRevision, ids[0], hidden.Poster with { IsVisible = true })
                 { ReadSet = StateReadSet.ForPoster(ids[0], hidden.EntityVersion) });
             Require(show.Succeeded, "Show failed.");
-            await Until(() => findWindow(ids[0]) is { _contentPresentationSuspended: false } shown &&
-                ReferenceEquals(shown._contentPorts, ports) && shown._contentSourceVersion == source.Version);
+            await Until(() => findWindow(ids[0]) is { _contentSession.IsSuspended: false } shown &&
+                ReferenceEquals(shown._contentPorts, ports) && shown._contentSession.SourceVersion == source.Version);
             assets.CompleteAll(); cases.Add("hidden-late-result-and-session-rebind");
             return new { passed = true, checks, cases, posters = windows.Length, observations,
                 nativeInput = false, realFiles = false, sourceSchemaFrozen = false, bitmapDecode = false };

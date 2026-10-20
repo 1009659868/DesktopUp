@@ -1,4 +1,4 @@
-#requires -Version 7
+﻿#requires -Version 7
 param([Parameter(Mandatory)][string]$EvidenceRoot, [Parameter(Mandatory)][string]$DataRoot, [switch]$CheckOnly)
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'Start-DesktopUpFixtureProcess.ps1')

@@ -1,5 +1,15 @@
 # 架构图源与重生成
 
+## 当前 R4收口后的架构与目标对照
+
+2026-10-19，R1～R4 USER PASS / CLOSED。现状以[源码对照与图表回执](R4-Closed/README.md)为准，图源R4-Closed/current.architecture.json；HTML在out/architecture-r4-closed。原目标图源不变，明确区分基础职责已落地、能力接点部分具备与未来能力未实现。R4目录及下方A/B/C、Integrated-53b6bec均为历史快照，不覆盖本段。
+
+## A/B/C 集成后更新（2026-10-16）
+
+当前代码基线为 `impl/develop@53b6bec`。见[集成后当前架构与流程说明](Integrated-53b6bec/README.md)：整体架构已通过 9/9 showcase、四尺寸浏览器检查及深浅主题目视检查；三张新流程图因 Archify 布线校验冲突停止于图源，未交付 HTML，文字流程与诊断已保留。本次不改产品源码，不提交/推送，不开始下一批。
+
+## 原始审查快照（4ae822a）
+
 审查基线为 `impl/develop@4ae822a`。现状与目标建议分开，详见[审查报告](../ARCHITECTURE_EVOLUTION_REVIEW_2026-10-16.md)。
 
 - 两张 architecture：当前运行职责、建议目标职责。

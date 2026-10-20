@@ -1,3 +1,4 @@
+using DesktopUp.Windows;
 using System.Text.Json;
 using DesktopUp.Application;
 using DesktopUp.Domain;
@@ -6,116 +7,88 @@ namespace DesktopUp.Infrastructure;
 
 internal sealed record CrossPosterIntent(string Kind, Guid Id, ShellExitIntent Source, string TargetPoster,
     MappedNewContent Target, RegisteredManagedStorage? Storage, IncomingContentPlacement? Landing);
-internal sealed record CrossPosterResult(Guid CardId, string Path, string Identity);
 
 // An authenticated in-process OLE handoff, not a second drag protocol. The existing
 // directory operation journal stores a tagged intent; no schema change/file replay.
-public sealed class CrossPosterTransfer(SqliteStateStore store, IShellDirectoryTransfer? shell = null)
+public sealed class CrossPosterTransfer(SqliteStateStore store) : ICrossPosterStorage
 {
+    private readonly MappedDirectoryUseCase _mapping = new(
+        new SqliteMappedDirectoryStorage(store), new LocalContentObservationFiles());
     internal const string Kind = "cross-poster-v1";
-    internal Action<string>? Checkpoint { get; set; }
-    public async Task<MappedIngressResult> Execute(ShellExitIntent source, string targetId, IReadOnlyList<string> paths,
-        RegisteredManagedStorage? storage, IncomingContentPlacement? landing, nint owner, Func<bool> current,
-        CancellationToken token = default, long? expectedTargetVersion = null)
+    public ICrossPosterAttempt BeginAttempt() => new Attempt(this, store);
+
+    // SQLite receipts, pinned identity and atomic catalog updates only. The application
+    // owns iteration, Shell invocation, cancellation and receipt/commit ordering.
+    private sealed class Attempt(CrossPosterTransfer adapter, SqliteStateStore store) : ICrossPosterAttempt
     {
-        // A prior acknowledgement failure must not force a separate recovery UI.
-        // Only recorded results are reconciled; this never repeats a file operation.
-        var priorErrors = Reconcile();
-        if (priorErrors.Count > 0) throw new IOException(string.Join("\n", priorErrors));
-        using var lease = new SqliteTransferJournal(store).AcquireExecutor();
-        token.ThrowIfCancellationRequested();
-        var journal = new SqliteTransferJournal(store);
-        if (!current() || source.PosterId == targetId || MappedDirectoryIngress.Pending(store) || journal.Read().Any(r => !r.IsFinished) ||
-            new SqliteStorageRelocationJournal(store).Read().Any(r => r.Commit is null && r.Closure is null)) throw new IOException("当前文件操作尚未结束。");
-        var sources = source.Items.Where(i => !i.Missing).ToArray();
-        if (sources.Length is < 1 or > 100 || !sources.Select(i => i.Path).SequenceEqual(paths, StringComparer.OrdinalIgnoreCase))
-            throw new IOException("拖动来源已变化，未交接。");
-        var target = ResolveTarget(targetId, storage);
-        using var targetPin = LocalTransferFiles.LockDirectory(target.Path);
-        var before = new SqliteStateCommandRepository(store).Read();
-        long version = before.Catalog.Posters.Single(p => p.Poster.PosterId == targetId).EntityVersion;
-        if (expectedTargetVersion is { } expected && expected != version) throw new IOException("松手后目标海报已变化。");
-        RequirePosters(before, source.PosterId, targetId);
-        if (before.ContentCatalog.PosterItems.Count(p => p.PosterId == targetId) + sources.Length > ContentLayoutPolicy.MaximumItems)
-            throw new IOException("目标海报内容数量已达上限。");
-        foreach (var item in sources)
+        private readonly IDisposable _lease = new SqliteTransferJournal(store).AcquireExecutor();
+        private IDisposable? _targetPin;
+        private CrossPosterIntent? _intent;
+        public CrossPosterPreparation Prepare(ShellExitIntent source, string targetId, IReadOnlyList<string> paths,
+            RegisteredManagedStorage? storage, IncomingContentPlacement? landing, Func<bool> current,
+            CancellationToken token, long? expectedTargetVersion)
         {
-            RequireSource(before, source.PosterId, item);
-            new MappedDirectoryService(store).ValidateAction(source.PosterId, before.ContentCatalog.PosterItems.Single(p => p.Id == item.CardId).LayoutItemId);
-            if (store.ProtectedTransferPath(item.Path) || item.Path.Equals(target.Path, StringComparison.OrdinalIgnoreCase) ||
-                LocalTransferFiles.Contains(item.Path, target.Path) || new MappedDirectoryService(store).ActivePaths().Any(p =>
-                    p.Equals(item.Path, StringComparison.OrdinalIgnoreCase) || LocalTransferFiles.Contains(item.Path, p)))
-                throw new IOException("来源与受保护目录或映射根重叠。");
-            MappedDirectoryIngress.ValidateTree(store, item.Path, token);
-            if (before.ContentCatalog.PosterItems.Any(p => p.Id != item.CardId &&
-                ContentRelationPolicy.Resolve(before.ContentCatalog, p.PosterId, p.LayoutItemId) is { } child && LocalTransferFiles.Contains(item.Path, child.Item.Target.Locator)))
-                throw new IOException("此文件夹内另有独立卡片；请先移出内部卡片后再移动文件夹，避免留下失效来源。");
-        }
-        var intent = new CrossPosterIntent(Kind, Guid.NewGuid(), source, targetId, target, storage, landing);
-        store.PreserveTransferGuard();
-        WriteIntent(intent); Checkpoint?.Invoke("Prepared");
-        var results = new List<CrossPosterResult>(); var errors = new List<string>(); int completed = 0, skipped = 0;
-        bool indexFailed = false;
-        try
-        {
+            token.ThrowIfCancellationRequested();
+            var journal = new SqliteTransferJournal(store);
+            if (!current() || source.PosterId == targetId || MappedDirectoryIngress.Pending(store) || journal.Read().Any(r => !r.IsFinished) ||
+                new SqliteStorageRelocationJournal(store).Read().Any(r => r.Commit is null && r.Closure is null)) throw new IOException("当前文件操作尚未结束。");
+            var sources = source.Items.Where(i => !i.Missing).ToArray();
+            if (sources.Length is < 1 or > 100 || !sources.Select(i => i.Path).SequenceEqual(paths, StringComparer.OrdinalIgnoreCase))
+                throw new IOException("拖动来源已变化，未交接。");
+            var target = adapter.ResolveTarget(targetId, storage);
+            _targetPin = LocalTransferFiles.LockDirectory(target.Path);
+            var before = new SqliteStateCommandRepository(store).Read();
+            long version = before.Catalog.Posters.Single(p => p.Poster.PosterId == targetId).EntityVersion;
+            if (expectedTargetVersion is { } expected && expected != version) throw new IOException("松手后目标海报已变化。");
+            RequirePosters(before, source.PosterId, targetId);
+            if (before.ContentCatalog.PosterItems.Count(p => p.PosterId == targetId) + sources.Length > ContentLayoutPolicy.MaximumItems)
+                throw new IOException("目标海报内容数量已达上限。");
             foreach (var item in sources)
             {
-                if (token.IsCancellationRequested || !current()) break;
-                try
-                {
-                    bool Valid()
-                    {
-                        if (token.IsCancellationRequested || !current() || ResolveTarget(targetId, storage) != target) return false;
-                        var now = new SqliteStateCommandRepository(store).Read(); RequirePosters(now, source.PosterId, targetId);
-                        if (now.Catalog.Posters.Single(p => p.Poster.PosterId == targetId).EntityVersion != version) return false;
-                        RequireSource(now, source.PosterId, item); return true;
-                    }
-                    if (!Valid()) throw new IOException("来源或目标状态已变化，未移动此项。");
-                    // Ordinary posters share one managed collection. Never copy/move a file onto itself.
-                    bool same = string.Equals(Path.GetDirectoryName(item.Path), target.Path, StringComparison.OrdinalIgnoreCase);
-                    ShellDirectoryResult result = same ? new(item.Path, false, 0) :
-                        await (shell ?? new ShellDirectoryTransfer()).Run(item.Path, target.Path, false, owner, Valid, token).ConfigureAwait(false);
-                    if (result.Destination is not { } destination)
-                    {
-                        skipped++;
-                        if (new NativeShellExitJournal(store).IsStillMissing(item))
-                            errors.Add($"Windows未返回可核实的位置；文件未由本程序再次处理。请核对来源 {item.Path} 和目标目录 {target.Path}。");
-                        else if (result.HResult < 0 && !result.Cancelled) errors.Add(Path.GetFileName(item.Path) + "：Windows未完成该项。");
-                        if (result.Cancelled) break;
-                        continue;
-                    }
-                    if (!string.Equals(Path.GetDirectoryName(destination), target.Path, StringComparison.OrdinalIgnoreCase) || ResolveTarget(targetId, storage) != target)
-                        throw new IOException("Windows返回的目标位置无法核实；文件保留。");
-                    var receipt = new CrossPosterResult(item.CardId, destination, LocalTransferFiles.Identity(destination));
-                    indexFailed = true;
-                    results.Add(receipt); WriteResults(intent, results); Checkpoint?.Invoke("FileRecorded");
-                    try { Commit(intent, receipt, landing, version); }
-                    catch { indexFailed = true; throw; }
-                    indexFailed = false;
-                    completed++; Checkpoint?.Invoke("IndexCommitted");
-                    var after = new SqliteStateCommandRepository(store).Read();
-                    version = after.Catalog.Posters.Single(p => p.Poster.PosterId == targetId).EntityVersion;
-                    if (landing is not null)
-                    {
-                        var card = after.ContentCatalog.PosterItems.Single(p => p.PosterId == targetId &&
-                            after.ContentCatalog.Memberships.Any(m => m.Id == p.MembershipId && m.ContentItemId == item.ContentId));
-                        ContentLayoutPolicy.TryRead(after.Catalog.Posters.Single(p => p.Poster.PosterId == targetId).Poster.ContentLayoutJson, targetId, out var layout, out _);
-                        landing = landing.Advance(layout!, card.LayoutItemId);
-                    }
-                    if (result.Cancelled) break;
-                }
-                catch (OperationCanceledException) { break; }
-                catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException or System.Runtime.InteropServices.COMException)
-                { errors.Add(Path.GetFileName(item.Path) + "：" + e.Message); if (indexFailed) break; }
+                RequireSource(before, source.PosterId, item);
+                adapter._mapping.ValidateAction(source.PosterId, before.ContentCatalog.PosterItems.Single(p => p.Id == item.CardId).LayoutItemId);
+                if (store.ProtectedTransferPath(item.Path) || item.Path.Equals(target.Path, StringComparison.OrdinalIgnoreCase) ||
+                    LocalTransferFiles.Contains(item.Path, target.Path) || adapter._mapping.ActivePaths().Any(p =>
+                        p.Equals(item.Path, StringComparison.OrdinalIgnoreCase) || LocalTransferFiles.Contains(item.Path, p)))
+                    throw new IOException("来源与受保护目录或映射根重叠。");
+                MappedDirectoryIngress.ValidateTree(store, item.Path, token);
+                if (before.ContentCatalog.PosterItems.Any(p => p.Id != item.CardId &&
+                    ContentRelationPolicy.Resolve(before.ContentCatalog, p.PosterId, p.LayoutItemId) is { } child && LocalTransferFiles.Contains(item.Path, child.Item.Target.Locator)))
+                    throw new IOException("此文件夹内另有独立卡片；请先移出内部卡片后再移动文件夹，避免留下失效来源。");
             }
+            var intent = new CrossPosterIntent(Kind, Guid.NewGuid(), source, targetId, target, storage, landing);
+            store.PreserveTransferGuard();
+            _intent = intent;
+            adapter.WriteIntent(intent);
+            return new(target, sources, version);
         }
-        finally
+        public bool IsCurrent(ShellExitItem source, long version)
         {
-            // A completed physical result remains durable until its index can be observed.
-            // Ordinary cancel/failure has no pending user workflow and can be dragged again.
-            if (!indexFailed) Close(intent.Id);
+            var intent = _intent!;
+            if (adapter.ResolveTarget(intent.TargetPoster, intent.Storage) != intent.Target) return false;
+            var now = ReadState(); RequirePosters(now, intent.Source.PosterId, intent.TargetPoster);
+            if (now.Catalog.Posters.Single(p => p.Poster.PosterId == intent.TargetPoster).EntityVersion != version) return false;
+            RequireSource(now, intent.Source.PosterId, source); return true;
         }
-        return new(completed, sources.Length - completed, errors);
+        public bool IsStillMissing(ShellExitItem source) => new NativeShellExitJournal(store).IsStillMissing(source);
+        public CrossPosterResult CaptureDestination(ShellExitItem source, string destination)
+        {
+            var intent = _intent!;
+            if (!string.Equals(Path.GetDirectoryName(destination), intent.Target.Path, StringComparison.OrdinalIgnoreCase) ||
+                adapter.ResolveTarget(intent.TargetPoster, intent.Storage) != intent.Target)
+                throw new IOException("Windows返回的目标位置无法核实；文件保留。");
+            return new(source.CardId, destination, LocalTransferFiles.Identity(destination));
+        }
+        public void RecordResults(IReadOnlyList<CrossPosterResult> results) => adapter.WriteResults(_intent!, results);
+        public void Commit(CrossPosterResult result, IncomingContentPlacement? landing, long expectedTargetVersion) =>
+            adapter.Commit(_intent!, result, landing, expectedTargetVersion);
+        public DesktopStateSnapshot ReadState() => new SqliteStateCommandRepository(store).Read();
+        public void Close() => adapter.Close(_intent!.Id);
+        public void Dispose()
+        {
+            try { _targetPin?.Dispose(); }
+            finally { _lease.Dispose(); }
+        }
     }
 
     private MappedNewContent ResolveTarget(string id, RegisteredManagedStorage? storage)
@@ -123,7 +96,7 @@ public sealed class CrossPosterTransfer(SqliteStateStore store, IShellDirectoryT
         var state = new SqliteStateCommandRepository(store).Read();
         var binding = state.ContentCatalog.Bindings.SingleOrDefault(b => b.PosterId == id);
         if (binding is not null && state.ContentCatalog.Collections.Any(c => c.Id == binding.CollectionId && c.Kind == ContentCollectionKind.Mapped))
-            return new MappedDirectoryService(store).ResolveNewContent(id);
+            return _mapping.ResolveNewContent(id);
         if (storage is null) throw new IOException("目标收纳位置不可用。");
         ManagedStorageProvisioner.ValidateRegistration(store, storage.Root, storage.Collection);
         return new(storage.Collection.Id, storage.Collection.StorageLocator!, LocalTransferFiles.Identity(storage.Collection.StorageLocator!));
@@ -235,7 +208,7 @@ public sealed class CrossPosterTransfer(SqliteStateStore store, IShellDirectoryT
         q.CommandText = "INSERT INTO mapped_directory_ingress(operation_id,body_json) VALUES($id,$body)";
         q.Parameters.AddWithValue("$id", intent.Id.ToString()); q.Parameters.AddWithValue("$body", JsonSerializer.Serialize(intent)); return q.ExecuteNonQuery();
     });
-    private void WriteResults(CrossPosterIntent intent, List<CrossPosterResult> results) => store.ExecuteWrite((c, t) =>
+    private void WriteResults(CrossPosterIntent intent, IReadOnlyList<CrossPosterResult> results) => store.ExecuteWrite((c, t) =>
     {
         using var q = c.CreateCommand(); q.Transaction = t;
         q.CommandText = "UPDATE mapped_directory_ingress SET results_json=$body WHERE operation_id=$id";

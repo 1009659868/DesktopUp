@@ -1,12 +1,13 @@
 using DesktopUp.Application;
 using DesktopUp.Domain;
 using DesktopUp.Infrastructure;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace DesktopUp;
 
 public partial class App
 {
+    partial void ConfigureTransferReview(PosterSpatialRuntime runtime) =>
+        runtime.ConfigureTransferReview(_composition!.Store);
     private async void RunIncomingProbe(string dataRoot)
     {
         IDisposable? lease=null;
@@ -28,7 +29,48 @@ public partial class App
             var watch=System.Diagnostics.Stopwatch.StartNew();
             while(!_spatialRuntime!.IncomingProbeReady)
             {if(watch.Elapsed.TotalSeconds>20)throw new IOException("Incoming surface not ready.");await Task.Delay(100);}
-            var repository=new SqliteStateCommandRepository(_services!.GetRequiredService<SqliteStateStore>());
+            var repository=new SqliteStateCommandRepository(_composition!.Store);
+            if (_startupIntent.Arguments.Contains("--r1-observation-probe"))
+            {
+                await RunContentObservationProbe(repository, root, _startupIntent.Arguments.Contains("--incoming-restart"));
+                return; // This slice only; no cumulative native interaction suite.
+            }
+            if (_startupIntent.Arguments.Contains("--r6-lifecycle-probe"))
+            {
+                await _spatialRuntime.R1TransfersProbe(root);
+                string poster = repository.Read().Catalog.Posters.First().Poster.PosterId;
+                await _spatialRuntime.VerifyOperationLifetimeForProbe(poster);
+                return;
+            }
+            if (_startupIntent.Arguments.Contains("--r1-transfers-probe"))
+            {
+                await _spatialRuntime.R1TransfersProbe(root);
+                return; // Only this slice, not the accumulated ingress/selection/UI suites.
+            }
+            if (_startupIntent.Arguments.Contains("--r5-mapped-actions-probe"))
+            {
+                string mappedDirectory = Path.Combine(root, "r5-mapped");
+                Directory.CreateDirectory(mappedDirectory);
+                string poster = await _spatialRuntime.CreateMappedPoster(mappedDirectory, CancellationToken.None);
+                var location = await _spatialRuntime.PrepareNewContent(poster) ?? throw new IOException("No mapped location.");
+                await _spatialRuntime.CreateContent(poster, location, NewContentKind.TextFile, "first.txt", null, CancellationToken.None);
+                await _spatialRuntime.BackdropWindowForProbe(poster).VerifyInlineNamingForProbe();
+                if (repository.Read().ContentCatalog.PosterItems.Count(p => p.PosterId == poster) != 3 ||
+                    !File.Exists(Path.Combine(mappedDirectory, "first.txt")))
+                    throw new IOException("Mapped action results were not indexed in their original directory.");
+                _log!.Write("info", "contract.r5_mapped_actions_passed", new { nativeMouse = false, keyboardDispatch = false });
+                return;
+            }
+            if (_startupIntent.Arguments.Contains("--r1-file-actions-probe"))
+            {
+                // Reuse the actual inline naming fixture without replaying old drag/drop suites.
+                string poster = repository.Read().Catalog.Posters.Single().Poster.PosterId;
+                var location = await _spatialRuntime.PrepareNewContent(poster) ?? throw new IOException("No action location.");
+                await _spatialRuntime.CreateContent(poster, location, NewContentKind.TextFile, "first.txt", null, CancellationToken.None);
+                await _spatialRuntime.BackdropWindowForProbe(poster).VerifyInlineNamingForProbe();
+                _log!.Write("info", "contract.r1_file_actions_passed", new { nativeMouse = false, keyboardDispatch = false });
+                return;
+            }
             if (_startupIntent.Arguments.Contains("--appearance-layout-probe"))
             {
                 _controlCenter!.Show();
@@ -209,9 +251,9 @@ internal sealed partial class PosterSpatialRuntime
         try
         {
             var window=_windows.Values.Single();
-            var catalog=new SqliteStateCommandRepository(_transferStore!).Read().ContentCatalog;
-            TransferFiles(window,null,catalog.PosterItems.Where(c=>c.PosterId==window.PosterId).Select(c=>c.LayoutItemId).ToArray());
-            await _fileTransferTask;
+            var catalog=new SqliteStateCommandRepository(_reviewTransferStore!).Read().ContentCatalog;
+            StartLegacyOutgoingProbe(window,catalog.PosterItems.Where(c=>c.PosterId==window.PosterId).Select(c=>c.LayoutItemId).ToArray());
+            await _contentOperations.FileOperationCompletion;
         }
         finally{_outgoingProbeDestination=null;}
     }
@@ -223,7 +265,7 @@ internal sealed partial class PosterSpatialRuntime
         var window=_windows.Values.Single();
         if(manual && window.EditContent(new(ContentLayoutEditKind.Mode){Mode=ContentLayoutMode.Manual}) is {} error)throw new IOException(error);
         var ticket=window.IncomingProbeTicket(paths,frame);
-        ReceiveFiles(window,ticket,window.IncomingProbeLanding(ticket));await _fileTransferTask;
+        ReceiveFiles(window,ticket,window.IncomingProbeLanding(ticket));await _contentOperations.FileOperationCompletion;
     }
     internal async Task IncomingCollapsedProbe()
     {
@@ -247,7 +289,7 @@ internal sealed partial class PosterVisualWindow
 {
     internal void SelectManagedItemForProbe(string itemId){SetContentSelection(itemId,control:true);RefreshContentSurface();}
     internal bool ManagedItemAbsentForProbe(string itemId)=>!ContentDocument.Placements.Any(p=>p.ItemId==itemId) &&
-        !_contentCards.ContainsKey(itemId) && !SelectedContentIds().Contains(itemId) && _selectedContentItem!=itemId;
+        !Presenter.Cards.ContainsKey(itemId) && !SelectedContentIds().Contains(itemId) && _selectedContentItem!=itemId;
     internal bool IncomingProbeReady=>CanTransferFiles&&_fileDrop?.IsReady==true;
     internal IncomingDropTicket IncomingProbeTicket(string[] paths,bool frame)
     {
@@ -259,5 +301,5 @@ internal sealed partial class PosterVisualWindow
         ShowIncomingPreview(preview);var ticket=session.Drop(paths,surface,point,0,2)!;ShowIncomingPreview(null);return ticket;
     }
     internal IncomingContentPlacement? IncomingProbeLanding(IncomingDropTicket ticket)=>
-        IncomingContentPlacement.From(EnsureContentSnapshot(_bounds),_contentViewport!,ticket.Preview.Location);
+        IncomingContentPlacement.From(EnsureContentSnapshot(_bounds),_contentLayout.Viewport!,ticket.Preview.Location);
 }

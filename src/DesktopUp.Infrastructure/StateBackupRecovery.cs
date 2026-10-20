@@ -6,17 +6,12 @@ using Microsoft.Data.Sqlite;
 
 namespace DesktopUp.Infrastructure;
 
-public sealed record StateBackupCandidate(
-    string FileName, DateTime LastWriteUtc, bool IsValid, int SchemaVersion, long? Revision, string? Error);
-
-public sealed record StateBackupRecoveryResult(bool Succeeded, string? Error, string? ArchivePath);
-
 /// <summary>
 /// Explicit offline recovery only. The owner must hold the application single-instance lease,
 /// dispose every state store/connection, and call this before initializing a new state store.
 /// A durable pending journal blocks normal startup until explicitly resolved.
 /// </summary>
-public sealed class StateBackupRecovery
+public sealed class StateBackupRecovery : IStateBackupRecovery
 {
     private const string DatabaseName = "desktopup.sqlite3";
     private const string JournalName = "recovery-pending.json";

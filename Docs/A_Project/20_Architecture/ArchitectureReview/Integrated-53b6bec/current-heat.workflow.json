@@ -1,0 +1,183 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "热度运行边界｜已能安全接提案，尚未接真实评分",
+    "locale": "zh-CN",
+    "quality_profile": "showcase"
+  },
+  "lanes": [
+    {
+      "id": "apply",
+      "label": "已有派生与发布路径"
+    },
+    {
+      "id": "protect",
+      "label": "拒收／延期／保留",
+      "variant": "exception"
+    }
+  ],
+  "mainPath": [
+    "offer",
+    "buffer",
+    "gate",
+    "derive",
+    "valid",
+    "publish"
+  ],
+  "nodes": [
+    {
+      "id": "offer",
+      "lane": "apply",
+      "col": 0,
+      "type": "backend",
+      "label": "接收布局提案",
+      "sublabel": "海报／内容集／版本匹配"
+    },
+    {
+      "id": "buffer",
+      "lane": "apply",
+      "col": 1,
+      "type": "messagebus",
+      "label": "保留最新提案",
+      "sublabel": "ContentHeatSession"
+    },
+    {
+      "id": "gate",
+      "lane": "apply",
+      "col": 2,
+      "type": "security",
+      "label": "宿主安全点",
+      "sublabel": "Dispatcher＋交互保护"
+    },
+    {
+      "id": "derive",
+      "lane": "apply",
+      "col": 3,
+      "type": "backend",
+      "label": "从作者布局派生",
+      "sublabel": "复用 Domain 规则与档位"
+    },
+    {
+      "id": "valid",
+      "lane": "apply",
+      "col": 4,
+      "type": "security",
+      "label": "校验可用空间",
+      "sublabel": "通过后才替换有效状态"
+    },
+    {
+      "id": "publish",
+      "lane": "apply",
+      "col": 5,
+      "type": "frontend",
+      "label": "发布有效布局",
+      "sublabel": "沿原绘制与命中路径"
+    },
+    {
+      "id": "stale",
+      "lane": "protect",
+      "col": 0,
+      "type": "security",
+      "label": "拒收旧提案",
+      "sublabel": "错误身份／版本／已关闭"
+    },
+    {
+      "id": "waiting",
+      "lane": "protect",
+      "col": 2,
+      "type": "messagebus",
+      "label": "保留缓冲等待",
+      "sublabel": "结束交互后重新调度"
+    },
+    {
+      "id": "rejected",
+      "lane": "protect",
+      "col": 4,
+      "type": "backend",
+      "label": "保留上一有效状态",
+      "sublabel": "无效候选版本被消费",
+      "width": 132
+    }
+  ],
+  "edges": [
+    {
+      "id": "a",
+      "from": "offer",
+      "to": "buffer",
+      "label": "接受",
+      "role": "main"
+    },
+    {
+      "id": "b",
+      "from": "buffer",
+      "to": "gate",
+      "label": "排队唤醒",
+      "role": "main"
+    },
+    {
+      "id": "c",
+      "from": "gate",
+      "to": "derive",
+      "label": "保护已解除",
+      "role": "main"
+    },
+    {
+      "id": "d",
+      "from": "derive",
+      "to": "valid",
+      "label": "候选文档",
+      "role": "main"
+    },
+    {
+      "id": "e",
+      "from": "valid",
+      "to": "publish",
+      "label": "校验通过",
+      "role": "main"
+    },
+    {
+      "id": "f",
+      "from": "offer",
+      "to": "stale",
+      "label": "不匹配",
+      "role": "error",
+      "variant": "security"
+    },
+    {
+      "id": "g",
+      "from": "gate",
+      "to": "waiting",
+      "label": "交互保护中",
+      "role": "branch",
+      "route": "straight"
+    },
+    {
+      "id": "h",
+      "from": "valid",
+      "to": "rejected",
+      "label": "空间校验失败",
+      "role": "error",
+      "variant": "security",
+      "route": "straight"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "唯一状态所有者",
+      "items": [
+        "Session 持有缓冲、有效提案、派生文档与档位；不持有窗口或存储。",
+        "窗口仍负责交互安全点、调度与同帧发布，作者配置不被热度覆盖。"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "现有机制 ≠ 完整热度功能",
+      "items": [
+        "当前只验证提案接入；成功事实消费和实际评分尚未制作。",
+        "未来“下次展开／明确刷新”发布节奏不能仅用安全点代替。"
+      ]
+    }
+  ]
+}

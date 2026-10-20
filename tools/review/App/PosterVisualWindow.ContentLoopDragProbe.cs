@@ -76,9 +76,9 @@ internal sealed partial class PosterVisualWindow
         void Released(ContentBrowseAnchor expectedAnchor)
         {
             Require(!HasContentGesture && _contentMotionTimer is null && _contentMotionLease is null &&
-                _contentDraft is null && _contentDraftProjection is null, "Gesture resources were not released.");
+                _contentSession.Draft is null && _contentSession.DraftProjection is null, "Gesture resources were not released.");
             var read = Read();
-            var expected = ContentLayoutFlow.RestoreAnchor(_contentSnapshot!, _contentViewport!, expectedAnchor);
+            var expected = ContentLayoutFlow.RestoreAnchor(_contentLayout.Snapshot!, _contentLayout.Viewport!, expectedAnchor);
             Require(Math.Abs(read.ScrollX - expected.ScrollXDip) < 1e-6 && Math.Abs(read.ScrollY - expected.ScrollYDip) < 1e-6,
                 "End did not restore the grabbed-item anchor.");
         }
@@ -122,11 +122,11 @@ internal sealed partial class PosterVisualWindow
                     {
                         var point = Point(xx, yy);
                         Preview(press, point);
-                        if (gesture.Proposal is { } proposal && !ContentLayoutEditing.SameState(gesture.Document, proposal)) destination = point;
+                        if (_contentSession.Draft is { } proposal && !ContentLayoutEditing.SameState(gesture.Document, proposal)) destination = point;
                     }
                 Require(destination.HasValue, "Fixture had no legal changed drop.");
                 anchor = gesture.Navigation.EndAnchor(gesture.PointerDeltaX, gesture.PointerDeltaY);
-                var intended = gesture.Proposal!;
+                var intended = _contentSession.Draft!;
                 Send(press, PosterInputEventKind.GestureCompleted, destination!.Value);
                 Released(anchor);
                 var afterCommit = Read();
@@ -165,14 +165,14 @@ internal sealed partial class PosterVisualWindow
                         var point = new PointerScreenPoint(press.Point.X + (int)Math.Round(delta.X * pitch * gesture.ScaleX),
                             press.Point.Y + (int)Math.Round(delta.Y * pitch * gesture.ScaleY));
                         Preview(press, point);
-                        if (gesture.Proposal is { } candidate && !ContentLayoutEditing.SameState(gesture.Document, candidate))
+                        if (_contentSession.Draft is { } candidate && !ContentLayoutEditing.SameState(gesture.Document, candidate))
                         { destination = point; break; }
                     }
                     Require(destination.HasValue, "No legal changing resize for the actual seam handle.");
-                    intended = gesture.Proposal!;
+                    intended = _contentSession.Draft!;
                     Preview(press, press.Point);
                     Preview(press, destination!.Value);
-                    Require(ContentLayoutEditing.SameState(intended, gesture.Proposal!), "Reverse samples drifted the span proposal.");
+                    Require(ContentLayoutEditing.SameState(intended, _contentSession.Draft!), "Reverse samples drifted the span proposal.");
                     anchor = gesture.Navigation.EndAnchor(gesture.PointerDeltaX, gesture.PointerDeltaY);
                     Send(press, commit ? PosterInputEventKind.GestureCompleted : PosterInputEventKind.GestureCancelled, destination.Value);
                     Released(anchor);

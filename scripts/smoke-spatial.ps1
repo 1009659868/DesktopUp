@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 param([Parameter(Mandatory)][string]$ExecutablePath, [Parameter(Mandatory)][string]$DataRoot,
     [ValidateSet('Full','Constrained','InsufficientSpace')][string]$ExpectedExpansion, [switch]$LeaveExpanded, [string]$AnimationConfig)
 $ErrorActionPreference = 'Stop'

@@ -1,0 +1,2 @@
+CREATE TABLE mapped_directory_ingress(operation_id TEXT PRIMARY KEY, body_json TEXT NOT NULL CHECK(json_valid(body_json)),
+    results_json TEXT NOT NULL DEFAULT '[]' CHECK(json_valid(results_json)), closed INTEGER NOT NULL DEFAULT 0 CHECK(closed IN(0,1))) STRICT;

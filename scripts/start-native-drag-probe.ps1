@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 param([switch]$PrepareOnly, [switch]$CheckOnly)
 $ErrorActionPreference = 'Stop'
 if ($PrepareOnly -and $CheckOnly) { throw 'Choose PrepareOnly OR CheckOnly.' }

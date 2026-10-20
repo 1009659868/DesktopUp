@@ -1,3 +1,4 @@
+using DesktopUp.Windows;
 using DesktopUp.Application;
 using DesktopUp.Infrastructure;
 using DesktopUp.Domain;
@@ -7,8 +8,11 @@ namespace DesktopUp.Contracts.Tests;
 
 public sealed class ManagedStorageServiceTests
 {
-    private static ManagedStorageService Service(F f,SqliteStateStore? store=null,string? storage=null)=>
-        new(store??f.Store,StorageProfileKind.Isolated,"C:/unused-local",storage??Path.Combine(f.DirectoryRoot,"defaults"));
+    private static StorageLocationUseCase Service(F f,SqliteStateStore? store=null,string? storage=null,Action<string>? checkpoint=null)=>
+        Create(store??f.Store,storage??Path.Combine(f.DirectoryRoot,"defaults"),checkpoint);
+    private static StorageLocationUseCase Create(SqliteStateStore store,string? storage,Action<string>? checkpoint=null)=>
+        new(new SqliteStorageLocationStorage(store,StorageProfileKind.Isolated,"C:/unused-local",storage,checkpoint),
+            new StorageRelocationUseCase(new LocalStorageRelocationExecution(store)),checkpoint);
     private static SqliteStateStore Empty(F f,string suffix="empty")
     {var store=new SqliteStateStore(new UserDataPaths(Path.Combine(f.DirectoryRoot,suffix)));Assert.True(store.Initialize().Succeeded);
      new SqliteStateCommandRepository(store).EnsureInitialized(PosterConfigurationFactory.NewBasicBox("settings","DISPLAY1"));return store;}
@@ -31,7 +35,7 @@ public sealed class ManagedStorageServiceTests
     }
     [Fact] public void MissingIsolationNeverFallsBackToDailyStorage()
     {
-        using var f=new F();using var store=Empty(f);var service=new ManagedStorageService(store,StorageProfileKind.Isolated,"C:/unused-local");
+        using var f=new F();using var store=Empty(f);var service=Create(store,null);
         Assert.Throws<ArgumentException>(()=>service.Read());Assert.Throws<ArgumentException>(()=>service.EnsureReady());
         Assert.Empty(new SqliteTransferJournal(store).StorageLocations());
     }
@@ -53,15 +57,13 @@ public sealed class ManagedStorageServiceTests
     [Theory] [InlineData("IntentWritten")] [InlineData("ReceiptWritten")] [InlineData("Registered")]
     public void InterruptedDefaultSetupCanContinueOnlyFromDurableIdentity(string checkpoint)
     {
-        using var f=new F();using var store=Empty(f);var service=Service(f,store);
-        service.CreationCheckpoint=point=>{if(point==checkpoint)throw new IOException("injected setup loss");};
+        using var f=new F();using var store=Empty(f);var service=Service(f,store,checkpoint:point=>{if(point==checkpoint)throw new IOException("injected setup loss");});
         Assert.Throws<IOException>(()=>service.EnsureReady());
         var fresh=Service(f,store);var ready=fresh.EnsureReady();Assert.True(fresh.Read().Exists);Assert.Equal(ready,fresh.EnsureReady());
     }
     [Fact] public void UnreceiptedDirectoryCreationIsPreservedNotGuessed()
     {
-        using var f=new F();using var store=Empty(f);var service=Service(f,store);
-        service.CreationCheckpoint=point=>{if(point=="DirectoryCreated")throw new IOException("loss before receipt");};
+        using var f=new F();using var store=Empty(f);var service=Service(f,store,checkpoint:point=>{if(point=="DirectoryCreated")throw new IOException("loss before receipt");});
         Assert.Throws<IOException>(()=>service.EnsureReady());Assert.True(Directory.Exists(service.ProposedDefaultPath));
         Assert.Throws<IOException>(()=>Service(f,store).EnsureReady());Assert.Empty(new SqliteTransferJournal(store).StorageLocations());
     }

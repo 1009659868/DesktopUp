@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 param([Parameter(Mandatory)][string]$CandidateDirectory,[Parameter(Mandatory)][string]$Name)
 $ErrorActionPreference='Stop'
 $repo=Split-Path -Parent $PSScriptRoot

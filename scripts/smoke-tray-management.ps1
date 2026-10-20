@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 param([int[]]$PosterCounts=@(0,1,3), [switch]$SkipCenter, [ValidateSet('global','layout')][string]$Candidate='global',
     [string]$PackageDirectory)
 $ErrorActionPreference='Stop'

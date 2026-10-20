@@ -7,11 +7,56 @@ namespace DesktopUp;
 
 internal sealed partial class PosterSpatialRuntime
 {
+    internal async Task R1TransfersProbe(string root)
+    {
+        var repository = new SqliteStateCommandRepository(_reviewTransferStore!);
+        if (repository.Read().ContentCatalog.PosterItems.Count != 0) throw new IOException("Fresh owned fixture required.");
+        string sourceDirectory = Path.Combine(root, "sources"); Directory.CreateDirectory(sourceDirectory);
+        string Make(string name)
+        {
+            string path = Path.Combine(sourceDirectory, name);
+            using var writer = new StreamWriter(new FileStream(path, FileMode.CreateNew));
+            writer.Write("R1 owned transfer sample"); return path;
+        }
+        var paths = Enumerable.Range(1, 4).Select(i => Make($"sample-{i}.txt")).ToArray();
+        await IncomingProbe(paths);
+        if (repository.Read().ContentCatalog.PosterItems.Count != 4 || paths.Any(File.Exists))
+            throw new IOException("Application ingress did not publish four committed items.");
+        await CrossPosterProbe(false); // Existing source-lifetime / queued OLE handoff checks.
+
+        var current = repository.Read();
+        var card = current.ContentCatalog.PosterItems.GroupBy(p => p.PosterId).Single(g => g.Count() == 1).Single();
+        var source = _windows[card.PosterId];
+        var intent = BeginNativeExit(source, [card.LayoutItemId]) ?? throw new IOException("Exit admission failed.");
+        string returned = Path.Combine(root, "outgoing-target"); Directory.CreateDirectory(returned);
+        string destination = Path.Combine(returned, Path.GetFileName(intent.Items.Single().Path));
+        File.Move(intent.Items.Single().Path, destination); // Simulates external Shell result, not native pointer coverage.
+        CompleteNativeExit(source, intent, new(true, false, 0, default));
+        await _contentOperations.FileOperationCompletion.WaitAsync(TimeSpan.FromSeconds(15));
+        if (repository.Read().ContentCatalog.PosterItems.Any(p => p.Id == card.Id) || !File.Exists(destination))
+            throw new IOException("Native completion did not observe the external result.");
+
+        string mapped = Path.Combine(root, "mapping"); Directory.CreateDirectory(mapped);
+        string poster = await CreateMappedPoster(mapped, CancellationToken.None);
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        while (!_windows.TryGetValue(poster, out var ready) || !ready.IncomingProbeReady)
+        { if (watch.Elapsed.TotalSeconds > 15) throw new IOException("Mapped window not ready."); await Task.Delay(100); }
+        var target = _windows[poster]; string external = Make("mapped-incoming.txt");
+        var ticket = target.IncomingProbeTicket([external], false);
+        ReceiveFiles(target, ticket, target.IncomingProbeLanding(ticket));
+        await _contentOperations.FileOperationCompletion.WaitAsync(TimeSpan.FromSeconds(30));
+        if (File.Exists(external) || !File.Exists(Path.Combine(mapped, Path.GetFileName(external))) ||
+            repository.Read().ContentCatalog.PosterItems.Count(p => p.PosterId == poster) != 1)
+            throw new IOException("Mapped ingress did not publish the observed Shell result.");
+        log.Write("info", "contract.r1_transfers_passed",
+            new { nativeMouse = false, externalExitSimulated = true, mappedShellExecuted = true, items = 4 });
+    }
+
     // Explicit owned-data application probe. Exercises the real source lifetime, admission,
     // receiver and renderer; does not synthesize OS mouse input or claim OLE pointer coverage.
     internal async Task CrossPosterProbe(bool restart)
     {
-        var repository = new SqliteStateCommandRepository(_transferStore!);
+        var repository = new SqliteStateCommandRepository(_reviewTransferStore!);
         var before = repository.Read();
         if (restart)
         {

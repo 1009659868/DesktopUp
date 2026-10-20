@@ -1,5 +1,64 @@
 # Windows 11 x64 独立预览安装包
 
+## 2026-10-19 迁移指纹与统一编码修复
+
+**CODE / 定向验证完成；发布同步仍 PAUSED，真实登录自启仍未验。** 用户随后授权按补全方案处理，本轮仅在 impl/architecture-foundation 修复并验证，不恢复发布合并、安装或自启操作。下方“暂停修复/问题未修”是此前现场快照。
+
+### 根因与实现
+
+- 旧迁移在多个 C# raw string 中声明，SHA256 包含编译时换行。单独锁定 SqliteStateStore.cs 的 LF，不能约束其他声明文件。除最先阻断的 schema13 外，保留库 schema17 也具有已核实的 CRLF 指纹差异。
+- 迁移1～25全部抽到 src/DesktopUp.Infrastructure/Persistence/Migrations/001.sql～025.sql，UTF-8无BOM、LF、不追加末尾换行；catalog.xml 固定版本、名称、文件、SHA256及每项历史指纹证据。删除原业务类中的重复SQL声明，由 SqliteMigrationCatalog 读取嵌入资源，严格解码、检查原始字节哈希后，把同一文本交给SQLite执行。schema仍为25，不增加表结构或改写旧账本。
+- 修订前架构 product01 和失败发布包20261016.101的25项编译SQL逐项相同。当前资源仅把已核实的CRLF转为LF，除此之外逐字不变。保留这两个产物实际生成的历史指纹；另加入原schema21库实际记录且能仅以换行差异精确复现的v13/v17指纹。**不是运行时生成/接受任意LF、CRLF、空白变体**；未知指纹、错误名称、跨版本挪用指纹及实际schema破坏仍拒绝。旧记录只读不重写，新记录只写固定资源的指纹。
+- .editorconfig 给出编辑规则，.gitattributes 固定检出换行：普通源码/SQL/构建配置为UTF-8无BOM+LF；PowerShell 5.1为UTF-8 BOM+CRLF；cmd为UTF-8无BOM+CRLF。scripts/validate-source-text.ps1 使用严格UTF-8解码、字节级BOM检查、NUL/EOL检查及固定SQL哈希检查；只报错，不自动修文件。
+- Directory.Build.targets 把检查接入普通dotnet/VS构建和Publish入口，package-preview.ps1也在CheckOnly/打包前检查，并把文本规则加入源码绑定。无需依赖开发者全局core.autocrlf。UTF-8校验不能判断本来已是合法UTF-8的文字是否“语义乱码”，但拒绝不合法字节、UTF-16、错误BOM及换行，避免默认编码静默替换。
+- 机械格式整理与逻辑修改分开核对：108份已有PowerShell脚本只有BOM/换行变化，解码后的文本与HEAD一致；已有打包脚本另有上述入口接线。C#业务差异仅迁移声明提取及迁移身份检查，没有改动海报、手势、文件搬移或热度逻辑。未使用git renormalize/提交/分支切换。
+
+### 精简验证与证据
+
+影响面是迁移身份、旧库升级/备份及构建文本来源，不重跑UI/拖放人工或全量合同。
+
+- 正常产品 Release 构建：out/migration-identity-20261019/product01，0警告/0错误，不含Review执行器；Infrastructure SHA256为 A013FE98CEDCA0F6B3FFC5CA9F1FFD768A92D8F159FAF732C5D1D3794581C4D1。
+- 选用 MigrationFingerprintTests、SqliteStateStoreTests、StateBackupRecoveryTests、ContentReferencePersistenceTests，共58个唯一测试最终通过。初轮57通过、1项新测试误用只校验当前schema的ValidateBackup接口；改为正式旧备份候选验证路径后，新增组9/9通过，49个未改的既有通过结果复用。构建时发现的XML注释/PS宿主模块依赖错误亦已修正，失败日志保留，不补写初轮PASS。
+- 新增覆盖：25资源与预修订指纹、schema21/25旧账本逐项保留、升级/重开/备份、全新库固定指纹、错误名称/指纹/真实schema及SQL字节损坏拒绝。证据 out/migration-identity-20261019/tests 与 out/migration-identity-tests-build*.log。
+- 当时保留的真实旧库仅复制到 out/migration-identity-20261019/retained-copy01，使用新产品Infrastructure实际初始化：21→25成功，再次Ready；原21条账本及升级前备份全部保持。源备份与真实Preview库SHA256仍是 72A5B4ECC0B35ABA9E2526A688784E8F2BC19261E10501C30DFD8E8F08E09DA3。结果 retained-copy-result.json；未启动App、未搬动收纳文件。
+- 文本门通过891份源码/构建相关文件及25份SQL；9组编码/换行/SQL反例均拒绝且不改写输入，直接MSBuild的构建与不重编译发布入口也拒绝非法字节。证据 text-gate02；Windows PowerShell 5.1下原卸载/工具链/启动辅助三脚本解析通过；core.autocrlf=true/false得到相同Git eol规则。
+- package-preview.ps1 -CheckOnly -Offline通过，未创建新安装包。完整安装/运行/真实登录自启没有在本轮复验，不将“库初始化成功”写成“安装版自启通过”。
+
+### 后续边界
+
+当前修复尚未提交/推送/合入develop或main。main仍f80765e，发布草稿stash及旧安装包/配置全部保留。后续获准继续发布时，应把本次修复作为独立变更同步到发布来源，不顺带合入未完成R1；impl/main必须保留.editorconfig、.gitattributes、共同构建目标、validate-source-text.ps1和嵌入迁移资源，它们是发布构建必需文件，不是可删除的测试资料。随后重新构建独立安装候选并继续尚未通过的登录自启验收。
+
+这是向新修订版升级的兼容，不承诺旧候选能反读新版本创建/新增迁移的规范指纹。回退使用保留的旧配置/迁移前备份，不让旧验收包直接打开已升级的同一数据库。旧记录未被改写不等于所有历史二进制具有双向兼容能力。
+
+本次属于持久化/构建一致性修复，不关闭R1，也不提前进入真实热度。架构现状和下一步仍以[基础架构余项](../Architecture/FOUNDATION_REMAINDER_PLAN.md)为准。
+
+### 之前的暂停决定（保留历史）
+
+2026-10-19 用户明确决定：**发布同步 PAUSED，保留现场**。不实施下方提出的迁移换行兼容修复，不继续打包/安装/自启动验证，待用户重新要求继续。问题保持 OPEN，草稿/失败包/原配置备份不动；本次仅本地登记决定，未额外提交或推送。
+
+## 2026-10-16 发布同步阻断与现场保全
+
+**状态：发布同步未完成；构建/安装载荷校验通过，启动与真实登录未验通过；兼容问题未修。** 本轮用户转为要求同步架构进度，未授权或实施此修复。历史自启动“关闭/卸载”人工通过仍保留，但不覆盖此次新包失败。
+
+来源为本地已验 `impl/develop@53b6bec`，发布基线 `impl/main@f80765e`；不含 `impl/architecture-foundation@b3bfdc6` 的 R1 文件动作/拖放余项。合并按发布边界排除了 Docs/tests/tools、独立 Review 源及专用 StartupReview 通道/测试环境覆盖；服务注册保留在 Bootstrap，当前窗口反馈使用既有 CurrentWindow。README/包内说明同步已验能力、自启及卸载边界；没有业务功能改造。
+
+### 实际结果
+
+- 精简源码普通 Release 构建及正常 Preview 自包含构建均 0 警告/0 错误；403项源码清单哈希在打包后仍一致，索引406个跟踪路径，不含开发目录/验收脚本。
+- 包：`out/releases/main-20261016-startup01/DesktopUp-Preview-20261016.101-win-x64-Setup.exe`；SHA256 `3F2F62D35AFDAF5C663FDAAE43567FA80420DCB1E62D11CCA97A8C4C528C16AF`。这是未提交合并树生成的失败候选，元数据 SourceCommit=f80765e、IncludesUncommittedChanges=true；不是已发布的 main 成品。
+- 安装到 `out/releases/main-20261016-startup-check01/installed space`，未创建桌面快捷方式；813项安装载荷清单验证通过。旧安装登记未改，新安装仍保留以供定位，不运行。
+- 启动前把原 `%LOCALAPPDATA%/DesktopUp/Preview` 完整复制并逐项核验到同证据目录 `profile-before`，未重置配置。随后 `--autostart` 启动 PID52312，在状态库初始化前置校验处失败并显示保护窗口；已经正常 `--exit` 退出，没有强杀。
+- 原数据库 schema=21，失败点为 `Migration ledger mismatch at schema version 13`。只读核对：原记录 `217BFBF8017E342B013D34777FECB68B54A3C28713A28293280D58346F19FA79`；新包编译 SQL 的 LF 哈希 `E94E6680BA64CCDB8A679EC088F5532DEFC4E7305E0B6066DE7F2C0A4CA4D57A`。仅转为 CRLF 即精确复现原记录。迁移校验直接散列 SQL 原始字符串字节，换行差异会被误判；不能据此认定用户数据损坏。
+- 原数据库尝试前后 SHA256 均为 `72A5B4ECC0B35ABA9E2526A688784E8F2BC19261E10501C30DFD8E8F08E09DA3`。未搬文件、未写 Run 自启项、未注销/重启；静默启动、重复启动等后续检查没有完成，不能写 PASS。
+
+### 保全与后续处理
+
+本机草稿 stash：`0d082b90b9ef500b519162444bce869a28b49757`，描述 `release-sync-f80765e-from-53b6bec-blocked-sql-line-endings-20261016`；保存树 `1f09dacfb86c880ff7b2ede2dad1b802eb12fe68` 与合并结束前索引一致。原合并来源为53b6bec；merge元状态已经结束以便切回架构分支，没有形成发布 merge commit。main/origin/main仍f80765e。不得把stash当正式发布提交，或反向应用到架构/develop。
+
+stash、失败包、备份、results/app-events和BLOCKER均仅本机out/Git暂存，不随架构拉取；上面保留了另机重新定位所需来源与证据摘要。继续发布时应先核对实际refs；在干净发布工作区重新按Git策略合并来源，或审查本机stash后恢复等价树并正确保留合并父提交，不能直接把没有merge元状态的暂存当普通提交发布。
+
+建议的窄修复范围仍待后续授权：在不重置库、不改表结构、不改写历史迁移记录、不跳过schema/身份校验的前提下，兼容**同一 SQL 的 LF/CRLF 等价字节形式**。先用原库副本和两种换行生成的记录验证兼容，同时验证任意改动哈希仍拒绝，再重建新编号正常安装包继续自启动验证。可能影响其他版本迁移及备份校验的范围仍需核清，不把它只限定为 schema13，也不借机扩大到 R1 架构改造。真实登录需用户准备后进行；手动 --autostart 不替代登录验收。
+
 ## 2026-10-16 V3-09-03开机自启动前移（计划）
 
 用户要求在V3-06真实热度之前插入该发布能力。已验05-13/05-14源提交31c11b5、develop集成3c33a68；功能分支impl/09-03-startup从此派生。现为 **AUTO PASS / 部分USER PASS / 真实登录暂缓未验**：用户确认“关闭与卸载”通过，暂不验收真实登录自启，并明确授权提交、推送及合入impl/develop。此次允许携带该未验项集成，不把V3-09-03整体或真实登录标为PASS；impl/main不在同步范围。Git结果见[当前交接](HANDOFF.md)。

@@ -222,8 +222,8 @@ public sealed partial class ControlCenterWindow
                 writable && icon is not null && _applyIcon is not null);
             Add("恢复默认图标", () => ForSameItem(() => _ = EditCardIcon(true)),
                 writable && icon?.HasCustomIcon == true && _applyIcon is not null);
-            Add("修复所选引用…", () => ForSameItem(() => _ = EditReferences(true)),
-                writable && item is not null && view?.SelectedIds.Count == 1 && _applyReferences is not null);
+            Add("修复所选引用…", () => ForSameItem(() => _ = RepairSelectedReference()),
+                writable && item is not null && view?.SelectedIds.Count == 1 && _referenceRepair is not null);
         }
         if (placement is not null)
         {

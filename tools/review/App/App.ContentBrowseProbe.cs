@@ -34,19 +34,19 @@ internal sealed partial class PosterVisualWindow
     private ContentBrowseProbeRead ReadBrowseForProbe()
     {
         (_window?.Content as FrameworkElement)?.UpdateLayout();
-        var snapshot = _contentSnapshot ?? throw new InvalidOperationException("No presented content snapshot.");
-        var viewport = _contentViewport ?? throw new InvalidOperationException("No presented content viewport.");
+        var snapshot = _contentLayout.Snapshot ?? throw new InvalidOperationException("No presented content snapshot.");
+        var viewport = _contentLayout.Viewport ?? throw new InvalidOperationException("No presented content viewport.");
         var published = inputRouter.ReadSurface(inputSession) ?? throw new InvalidOperationException("No published input surface.");
         if (_monitor is null) throw new InvalidOperationException("No display scale.");
         var document = ContentDocument;
-        var tiles = ContentLayoutFlow.ProjectTiles(snapshot, viewport, _contentBrowseMode);
+        var tiles = ContentLayoutFlow.ProjectTiles(snapshot, viewport, _contentLayout.BrowseMode);
         var hits = published.Layout.Regions.Where(r => r.Kind == PosterInputTargetKind.ContentItem).ToList();
         int hitCount = hits.Count;
         var reads = new List<ContentBrowseTileProbe>();
         foreach (var tile in tiles)
         {
-            _contentCards.TryGetValue(TileKey(tile), out var card);
-            bool canvas = card is not null && _contentCanvas?.Children.Contains(card) == true &&
+            Presenter.Cards.TryGetValue(TileKey(tile), out var card);
+            bool canvas = card is not null && Presenter.Surface?.Children.Contains(card) == true &&
                 Math.Abs(Canvas.GetLeft(card) - tile.Bounds.X) < .01 &&
                 Math.Abs(Canvas.GetTop(card) - tile.Bounds.Y) < .01 &&
                 Math.Abs(card.Width - tile.Bounds.Width) < .01 && Math.Abs(card.Height - tile.Bounds.Height) < .01;
@@ -65,7 +65,7 @@ internal sealed partial class PosterVisualWindow
                 card is null ? null : Canvas.GetLeft(card), card is null ? null : Canvas.GetTop(card),
                 expected, actual, canvas && identity, hitIndex >= 0 && identity));
         }
-        var clip = (_contentCanvas?.Clip as RectangleGeometry)?.Rect;
+        var clip = (Presenter.Surface?.Clip as RectangleGeometry)?.Rect;
         string raw = ContentLayoutPolicy.Serialize(document);
         string? stored = _authoritativePoster?.ContentLayoutJson;
         bool vertical = snapshot.FlowAxis == ContentFlowAxis.Vertical;
@@ -73,8 +73,8 @@ internal sealed partial class PosterVisualWindow
             document.LoopScroll, ContentLayoutFlow.IsLooping(snapshot, viewport), snapshot.ScrollXDip, snapshot.ScrollYDip,
             Math.Max(1, snapshot.CellDip + snapshot.GapDip), ContentLayoutFlow.LoopPeriodDip(snapshot, viewport),
             vertical ? snapshot.ExtentHeightDip : snapshot.ExtentWidthDip,
-            vertical ? viewport.HeightDip : viewport.WidthDip, document.Placements.Count, _contentCards.Count, hitCount,
-            reads.All(r => r.CanvasMatches) && _contentCards.Count == tiles.Count,
+            vertical ? viewport.HeightDip : viewport.WidthDip, document.Placements.Count, Presenter.Cards.Count, hitCount,
+            reads.All(r => r.CanvasMatches) && Presenter.Cards.Count == tiles.Count,
             reads.All(r => r.InputMatches) && hits.Count == 0 && hitCount == tiles.Count,
             clip.HasValue && Math.Abs(clip.Value.Width - viewport.WidthDip) < .01 && Math.Abs(clip.Value.Height - viewport.HeightDip) < .01,
             snapshot.Items.OrderBy(p => p.ReadOrder).Last().ItemId,
@@ -159,7 +159,7 @@ internal sealed partial class PosterVisualWindow
         void Head() => ScrollContentForSmoke(0, 0); // Explicit RAM-only fixture reset, never a wheel assertion.
         try
         {
-            Require(!_disposed && !_contentPresentationSuspended && !_geometry.IsCollapsed && !_geometry.IsLocked &&
+            Require(!_disposed && !_contentSession.IsSuspended && !_geometry.IsCollapsed && !_geometry.IsLocked &&
                 !IsEditing && !HasContentGesture && _transitionLayout is null, "Use an expanded unlocked idle fixture.");
             var initial = Read("fixture-initial");
             Require(initial.Members == 100 && ContentDocument.Mode == ContentLayoutMode.Automatic,

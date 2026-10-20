@@ -1,4 +1,4 @@
-using DesktopUp.Infrastructure;
+using DesktopUp.Application;
 using DesktopUp.Windows;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -7,32 +7,31 @@ namespace DesktopUp;
 
 public sealed partial class ControlCenterWindow
 {
-    private SqliteStateStore? _transferStore;
+    private ITransferLocationNotices? _transferLocations;
     private Action? _refreshTransfers;
-    private ManagedStorageService? _storageLocation;
+    private StorageLocationUseCase? _storageLocation;
     private CancellationTokenSource? _storageCancellation;
     internal void CancelStorageChange()=>_storageCancellation?.Cancel();
     internal Task ShowStorageForProbe()=>PortableAction(ShowStorageLocation);
     internal Task ChangeStorageForProbe(StorageChangePreview preview)=>PortableAction(()=>RunStorageChange(preview));
     internal ContentDialog? StorageDialogForProbe=>_portableDialog;
     private readonly CancellationTokenSource _transferStopping=new();
-    internal bool TransferGlobalEntryForProbe=>_transferStore is not null && MoreActionsButton.IsEnabled;
-    internal void ConfigureTransfers(SqliteStateStore store,Action refresh,ManagedStorageService? storageLocation=null)
+    internal bool TransferGlobalEntryForProbe=>_transferLocations is not null && MoreActionsButton.IsEnabled;
+    internal void ConfigureTransfers(ITransferLocationNotices locations,Action refresh,StorageLocationUseCase? storageLocation=null)
     {
-        _transferStore=store;_refreshTransfers=refresh;_storageLocation=storageLocation;
+        _transferLocations=locations;_refreshTransfers=refresh;_storageLocation=storageLocation;
         ((FrameworkElement)Content).Loaded+=async (_,_)=>await DiscoverTransferPending();
         Closed+=(_,_)=>_transferStopping.Dispose();
     }
     private async Task DiscoverTransferPending()
     {
-        if(_transferStore is null)return;
+        if(_transferLocations is null)return;
         try
         {
-            var rows=await Task.Run(()=>new SqliteTransferJournal(_transferStore).Read());
+            var rows=await Task.Run(()=>_transferLocations.Read());
             if(_editingClosed||_portableStopping)return;
             // Exception-only locations, not an action/retry/task manager.
-            TransferRecoveryMenu.Visibility=rows.Any(x=>x.Phase==DurableTransferPhase.Review &&
-                x.Error?.StartsWith(SqliteTransferJournalNotice.UnmovedPrefix,StringComparison.Ordinal)!=true)
+            TransferRecoveryMenu.Visibility=rows.Count>0
                 ?Visibility.Visible:Visibility.Collapsed;
         }
         catch(Exception e){_portableLog?.Write("warning","transfer.locations_unavailable",new{e.Message});}
@@ -44,9 +43,9 @@ public sealed partial class ControlCenterWindow
         await PortableAction(ShowStorageLocation);
     }
 
-    internal async Task<RegisteredManagedStorage?> EnsureTransferStorageAsync(bool forceChoose=false)
+    internal async Task<RegisteredManagedStorage?> EnsureTransferStorageAsync()
     {
-        if(_transferStore is null)return null;
+        if(_transferLocations is null)return null;
         RegisteredManagedStorage? result=null;
         await PortableAction(async()=>
         {
@@ -129,12 +128,6 @@ public sealed partial class ControlCenterWindow
         if(!_editingClosed&&!_portableStopping)await PortableDialog("收纳位置",result.Message+
             (result.RetainedPaths.Count==0?"":"\n\n"+string.Join("\n",result.RetainedPaths)));
     }
-    internal async Task<bool> ConfirmDirectTransferAsync(string message)
-    {
-        bool confirmed=false;
-        await PortableAction(async()=>confirmed=await PortableDialog("确认移动",message,"移动"));
-        return confirmed;
-    }
     internal void ShowTransferFailure(string message)
     {
         if(_editingClosed||_portableStopping)return;
@@ -144,13 +137,9 @@ public sealed partial class ControlCenterWindow
     }
     private async void TransferRecovery_Click(object sender,RoutedEventArgs e)=>await PortableAction(async()=>
     {
-        if(_transferStore is null)return;
-        var rows=await Task.Run(()=>new SqliteTransferJournal(_transferStore).Read());
-        var exceptions=rows.Where(x=>x.Phase==DurableTransferPhase.Review &&
-            x.Error?.StartsWith(SqliteTransferJournalNotice.UnmovedPrefix,StringComparison.Ordinal)!=true).TakeLast(30);
+        if(_transferLocations is null)return;
+        var rows=await Task.Run(()=>_transferLocations.Read());
         await PortableDialog("异常文件位置", "这些操作未能确认完成，程序未删除或覆盖文件。可复制位置到资源管理器查看，再重新拖动。\n\n"+
-            string.Join("\n\n",exceptions.Select(x=>$"{Path.GetFileName(x.File.Source)}\n原位置：{x.File.Source}\n目标位置：{x.File.Destination}")));
+            string.Join("\n\n",rows.Select(x=>$"{Path.GetFileName(x.Source)}\n原位置：{x.Source}\n目标位置：{x.Destination}")));
     });
 }
-// User presentation does not expose the journal's phase/closure controls.
-internal static class SqliteTransferJournalNotice { internal const string UnmovedPrefix="自动收尾：原文件未移动；"; }

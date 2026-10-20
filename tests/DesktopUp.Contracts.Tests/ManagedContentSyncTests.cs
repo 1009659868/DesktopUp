@@ -1,3 +1,4 @@
+using DesktopUp.Windows;
 using DesktopUp.Application;
 using DesktopUp.Domain;
 using DesktopUp.Infrastructure;
@@ -8,6 +9,21 @@ namespace DesktopUp.Contracts.Tests;
 
 public sealed class ManagedContentSyncTests
 {
+    [Fact]
+    public void ScopedPassCannotObserveUnselectedCollectionOrTreatArbitraryPathAsAuthority()
+    {
+        using var f = new F(); string path = Collect(f), outside = Path.Combine(f.Source, "outside.txt");
+        File.Move(path, outside);
+        var clock = new Clock(); var service = new ManagedContentSyncUseCase(new SqliteManagedContentObservationStorage(f.Store), new LocalContentObservationFiles(), clock);
+        var wrong = new HashSet<string>([f.Source], StringComparer.OrdinalIgnoreCase);
+        Assert.False(service.Reconcile(directories: wrong).Changed); clock.Advance();
+        Assert.False(service.Reconcile(directories: wrong).Changed); Assert.Single(f.State.ContentCatalog.PosterItems);
+        var actual = new HashSet<string>([f.Collection.StorageLocator!], StringComparer.OrdinalIgnoreCase);
+        Assert.Equal(f.Collection.StorageLocator, Assert.Single(service.Reconcile(directories: actual).Retries).Path);
+        clock.Advance(); Assert.Equal(1, service.Reconcile(directories: actual).RemovedCards);
+        Assert.True(File.Exists(outside)); Assert.Empty(f.State.ContentCatalog.PosterItems);
+    }
+
     private sealed class Clock : TimeProvider
     { public DateTimeOffset Now = DateTimeOffset.UtcNow; public override DateTimeOffset GetUtcNow() => Now; public void Advance() => Now += TimeSpan.FromSeconds(3); }
     private static string Collect(F f, string name = "collected.txt")
@@ -15,13 +31,13 @@ public sealed class ManagedContentSyncTests
         var p = f.Stage(f.File(name)); var row = Assert.Single(f.Executor.Execute(p.Plan.Request.OperationId));
         Assert.True(row.Phase == DurableTransferPhase.IndexCommitted, row.Error); return p.Files[0].Destination;
     }
-    private static ManagedContentSyncResult Settle(ManagedContentSynchronizer sync, Clock clock)
+    private static ManagedContentSyncResult Settle(ManagedContentSyncFixture sync, Clock clock)
     { sync.Reconcile(); clock.Advance(); return sync.Reconcile(); }
 
     [Fact] public void ExternalMoveRemovesCardsAndManagedMembershipWithoutTouchingMovedFileAndRestartStaysEmpty()
     {
         using var f = new F(); string path = Collect(f); var original = f.State; string outside = Path.Combine(f.Source,"on-desktop.txt");
-        File.Move(path,outside); var clock = new Clock(); var sync = new ManagedContentSynchronizer(f.Store,clock);
+        File.Move(path,outside); var clock = new Clock(); var sync = new ManagedContentSyncFixture(f.Store,clock);
         Assert.False(sync.Reconcile().Changed); Assert.Single(f.State.ContentCatalog.PosterItems);
         clock.Advance(); var result = sync.Reconcile(); Assert.Equal(1,result.RemovedCards); Assert.Empty(result.Notices);
         Assert.Empty(f.State.ContentCatalog.PosterItems); Assert.Single(f.State.ContentCatalog.Items);
@@ -50,7 +66,7 @@ public sealed class ManagedContentSyncTests
         using var f = new F(); Collect(f); var before = f.State; string away = f.Root.Locator+"-offline";
         Directory.Move(f.Root.Locator,away);
         if(replacement)Directory.CreateDirectory(f.Root.Locator);
-        var clock = new Clock(); var sync = new ManagedContentSynchronizer(f.Store,clock);
+        var clock = new Clock(); var sync = new ManagedContentSyncFixture(f.Store,clock);
         Assert.False(Settle(sync,clock).Changed); Assert.Equal(before.Revision,f.State.Revision);
         if(replacement)Directory.Delete(f.Root.Locator); Directory.Move(away,f.Root.Locator);
         Assert.False(Settle(sync,clock).Changed); Assert.Single(f.State.ContentCatalog.PosterItems);
@@ -58,7 +74,7 @@ public sealed class ManagedContentSyncTests
     [Fact] public void TransientMoveBackAndFinalEnumerationRaceDoNotRemoveCard()
     {
         using var f = new F(); string path = Collect(f); string away = Path.Combine(f.Source,"temporary.txt"); File.Move(path,away);
-        var clock = new Clock(); var sync = new ManagedContentSynchronizer(f.Store,clock); Assert.True(sync.Reconcile().Pending);
+        var clock = new Clock(); var sync = new ManagedContentSyncFixture(f.Store,clock); Assert.True(sync.Reconcile().Pending);
         sync.BeforeCommit = () => File.Move(away,path); clock.Advance(); Assert.False(sync.Reconcile().Changed);
         Assert.Single(f.State.ContentCatalog.PosterItems); sync.BeforeCommit = null; Assert.False(Settle(sync,clock).Changed);
     }
@@ -66,7 +82,7 @@ public sealed class ManagedContentSyncTests
     {
         using var f = new F(); string path = Collect(f); File.Move(path,Path.Combine(f.Source,"outside.txt"));
         string blocked = Path.Combine(f.Collection.StorageLocator!,"unrelated.txt"); File.WriteAllText(blocked,"unmanaged");
-        var clock = new Clock(); var sync = new ManagedContentSynchronizer(f.Store,clock);
+        var clock = new Clock(); var sync = new ManagedContentSyncFixture(f.Store,clock);
         using(var held = new FileStream(blocked,FileMode.Open,FileAccess.ReadWrite,FileShare.None))
         { Assert.False(Settle(sync,clock).Changed); Assert.Single(f.State.ContentCatalog.PosterItems); }
         sync.Enumerating = _ => throw new UnauthorizedAccessException("injected incomplete enumeration");
@@ -76,7 +92,7 @@ public sealed class ManagedContentSyncTests
     [Fact] public void OwnTransferLeaseAndPendingIntentDeferObservation()
     {
         using var f = new F(); string path = Collect(f); File.Move(path,Path.Combine(f.Source,"outside.txt"));
-        var clock = new Clock(); var sync = new ManagedContentSynchronizer(f.Store,clock);
+        var clock = new Clock(); var sync = new ManagedContentSyncFixture(f.Store,clock);
         using(f.Journal.AcquireExecutor())Assert.False(Settle(sync,clock).Changed);
         var pending = f.Stage(f.File("another.txt")); Assert.False(Settle(sync,clock).Changed);
         Assert.Single(f.State.ContentCatalog.PosterItems);
@@ -102,7 +118,7 @@ public sealed class ManagedContentSyncTests
     [Fact] public void CasAndDatabaseFailureNeverPartiallyPrune()
     {
         using var f = new F(); string path = Collect(f); File.Move(path,Path.Combine(f.Source,"outside.txt"));
-        var clock = new Clock(); var sync = new ManagedContentSynchronizer(f.Store,clock); sync.Reconcile(); clock.Advance();
+        var clock = new Clock(); var sync = new ManagedContentSyncFixture(f.Store,clock); sync.Reconcile(); clock.Advance();
         f.Sql("CREATE TRIGGER sync_fault BEFORE UPDATE ON content_head BEGIN SELECT RAISE(ABORT,'injected'); END;");
         Assert.Throws<SqliteException>(()=>sync.Reconcile()); Assert.Single(f.State.ContentCatalog.PosterItems);
         f.Sql("DROP TRIGGER sync_fault;"); Assert.Equal(1,sync.Reconcile().RemovedCards);
@@ -127,7 +143,7 @@ public sealed class ManagedContentSyncTests
     [Fact] public void NewIntentBetweenObservationAndCommitTakesPriority()
     {
         using var f=new F();string path=Collect(f);File.Move(path,Path.Combine(f.Source,"outside.txt"));
-        var clock=new Clock();var sync=new ManagedContentSynchronizer(f.Store,clock);
+        var clock=new Clock();var sync=new ManagedContentSyncFixture(f.Store,clock);
         sync.Reconcile();clock.Advance();sync.BeforeCommit=()=>f.Stage(f.File("priority.txt"));
         Assert.False(sync.Reconcile().Changed);Assert.Single(f.State.ContentCatalog.PosterItems);
     }
@@ -149,7 +165,7 @@ public sealed class ManagedContentSyncTests
         var cards=f.State.ContentCatalog.PosterItems.ToArray();string old=incoming.Files[0].Destination;
         string renamed=Path.Combine(f.Collection.StorageLocator!,"renamed-folder");Directory.Move(old,renamed);
         File.WriteAllText(Path.Combine(renamed,"unmanaged.txt"),"do not import");
-        var clock=new Clock();var sync=new ManagedContentSynchronizer(f.Store,clock);
+        var clock=new Clock();var sync=new ManagedContentSyncFixture(f.Store,clock);
         Assert.Equal(2,Settle(sync,clock).RenamedItems);Assert.Equal(cards,f.State.ContentCatalog.PosterItems);Assert.Equal(2,f.State.ContentCatalog.Items.Count);
         Directory.Move(renamed,Path.Combine(f.Source,"returned-folder"));Assert.Equal(2,Settle(sync,clock).RemovedCards);
         Assert.Equal("nested",File.ReadAllText(Path.Combine(f.Source,"returned-folder","child.txt")));
@@ -180,7 +196,12 @@ public sealed class ManagedContentSyncTests
     [Fact] public async Task BackgroundWatcherEventuallyUpdatesWithoutControlCenterAndDisposesCleanly()
     {
         using var f = new F(); string path=Collect(f); var completed=new TaskCompletionSource<ManagedContentSyncResult>(TaskCreationOptions.RunContinuationsAsynchronously);
-        await using(var monitor=new ManagedContentMonitor(f.Store,r=>{if(r.Changed)completed.TrySetResult(r);}))
+        var files = new LocalContentObservationFiles();
+        var observation = new ContentObservationService(
+            new ManagedContentSyncUseCase(new SqliteManagedContentObservationStorage(f.Store), files),
+            new MappedDirectoryUseCase(new SqliteMappedDirectoryStorage(f.Store), files),
+            new SqliteContentWatchTargetSource(f.Store));
+        await using(var monitor=new ManagedContentMonitor(observation,r=>{if(r.Changed)completed.TrySetResult(r);}))
         { File.Move(path,Path.Combine(f.Source,"outside.txt")); Assert.Equal(1,(await completed.Task.WaitAsync(TimeSpan.FromSeconds(15))).RemovedCards); }
         Assert.Empty(f.State.ContentCatalog.PosterItems);
     }

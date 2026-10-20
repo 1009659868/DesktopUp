@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 param([ValidateSet('Open','Folder','Status')][string]$Action='Open',[switch]$PrepareOnly,
       [string]$CandidateDirectory,[string]$ReviewDirectory)
 $ErrorActionPreference='Stop'

@@ -1,3 +1,4 @@
+using DesktopUp.Application;
 using System.Security.Cryptography;
 using DesktopUp.Infrastructure;
 using Microsoft.Data.Sqlite;

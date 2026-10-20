@@ -1,0 +1,182 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "图标收展｜暂停加载不再等于销毁图像",
+    "locale": "zh-CN",
+    "quality_profile": "showcase"
+  },
+  "lanes": [
+    {
+      "id": "warm",
+      "label": "已加载图标的收展路径"
+    },
+    {
+      "id": "invalidate",
+      "label": "真实失效与释放",
+      "variant": "exception"
+    }
+  ],
+  "mainPath": [
+    "ready",
+    "collapse",
+    "retain",
+    "expand",
+    "paint",
+    "demand"
+  ],
+  "nodes": [
+    {
+      "id": "ready",
+      "lane": "warm",
+      "col": 0,
+      "type": "frontend",
+      "label": "图标已就绪",
+      "sublabel": "当前来源匹配的位图"
+    },
+    {
+      "id": "collapse",
+      "lane": "warm",
+      "col": 1,
+      "type": "backend",
+      "label": "海报收起",
+      "sublabel": "内容隐藏，不结束窗口会话",
+      "width": 120
+    },
+    {
+      "id": "retain",
+      "lane": "warm",
+      "col": 2,
+      "type": "messagebus",
+      "label": "暂停请求并保留",
+      "sublabel": "有界缓存与已解码图像"
+    },
+    {
+      "id": "expand",
+      "lane": "warm",
+      "col": 3,
+      "type": "backend",
+      "label": "准备展开树",
+      "sublabel": "动画期不新建加载批次"
+    },
+    {
+      "id": "paint",
+      "lane": "warm",
+      "col": 4,
+      "type": "frontend",
+      "label": "匹配当前图标",
+      "sublabel": "有效旧位图立即呈现"
+    },
+    {
+      "id": "demand",
+      "lane": "warm",
+      "col": 5,
+      "type": "backend",
+      "label": "恢复可见需求",
+      "sublabel": "复用同一缓存与并发预算"
+    },
+    {
+      "id": "obsolete",
+      "lane": "invalidate",
+      "col": 2,
+      "type": "security",
+      "label": "淘汰过期键",
+      "sublabel": "来源／成员代次变化"
+    },
+    {
+      "id": "cold",
+      "lane": "invalidate",
+      "col": 4,
+      "type": "backend",
+      "label": "正常异步补图",
+      "sublabel": "首载或图标确实变化"
+    },
+    {
+      "id": "release",
+      "lane": "invalidate",
+      "col": 5,
+      "type": "backend",
+      "label": "完整释放资源",
+      "sublabel": "真正暂停／换源／销毁"
+    }
+  ],
+  "edges": [
+    {
+      "id": "a",
+      "from": "ready",
+      "to": "collapse",
+      "label": "收起操作",
+      "role": "main"
+    },
+    {
+      "id": "b",
+      "from": "collapse",
+      "to": "retain",
+      "label": "取消不可见请求",
+      "role": "main"
+    },
+    {
+      "id": "c",
+      "from": "retain",
+      "to": "expand",
+      "label": "再次展开",
+      "role": "main"
+    },
+    {
+      "id": "d",
+      "from": "expand",
+      "to": "paint",
+      "label": "预备绘制",
+      "role": "main"
+    },
+    {
+      "id": "e",
+      "from": "paint",
+      "to": "demand",
+      "label": "过渡结束",
+      "role": "main"
+    },
+    {
+      "id": "f",
+      "from": "retain",
+      "to": "obsolete",
+      "label": "来源改变",
+      "role": "branch",
+      "route": "straight"
+    },
+    {
+      "id": "g",
+      "from": "paint",
+      "to": "cold",
+      "label": "无有效旧图",
+      "role": "branch",
+      "route": "straight"
+    },
+    {
+      "id": "h",
+      "from": "demand",
+      "to": "release",
+      "label": "生命周期结束",
+      "role": "branch",
+      "route": "straight"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "本次修订",
+      "items": [
+        "保留最后可见集合，最多64项；字节缓存沿用原16 MiB上限。",
+        "已验的连续收展不新增图标请求，避免整组闪回 FILE／DIR。"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "仍保留的安全边界",
+      "items": [
+        "迟到结果仍检查会话、来源和可见键；过期图不能重新覆盖当前图。",
+        "不承诺首次启动、真实换源或完整暂停恢复时零加载。"
+      ]
+    }
+  ]
+}

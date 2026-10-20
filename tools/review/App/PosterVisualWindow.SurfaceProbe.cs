@@ -15,7 +15,7 @@ internal sealed partial class PosterVisualWindow
             throw new InvalidOperationException("Injected reset did not remove the native HRGN.");
         log.Write("info", "title_surface.region_reset_injected", new
         {
-            PosterId, requestId = _activeCommandRequestId,
+            PosterId, requestId = _contentSession.ActiveCommand,
             cachedWidth = _appliedVisualRegion?.Width, cachedHeight = _appliedVisualRegion?.Height, observed,
             nativeInput = false, databaseWrites = false
         });

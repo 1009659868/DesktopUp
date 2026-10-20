@@ -1,3 +1,4 @@
+using DesktopUp.Application;
 using DesktopUp.Infrastructure;
 using Microsoft.UI.Xaml;
 

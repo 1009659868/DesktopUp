@@ -1,0 +1,242 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "当前架构｜R1–R4 验收收口",
+    "locale": "zh-CN",
+    "quality_profile": "showcase"
+  },
+  "components": [
+    {
+      "id": "composition",
+      "type": "backend",
+      "label": "启动组合根",
+      "sublabel": "显式组装、唯一资源所有者",
+      "pos": [
+        40,
+        65
+      ],
+      "size": [
+        240,
+        82
+      ]
+    },
+    {
+      "id": "file-adapters",
+      "type": "external",
+      "label": "文件／Shell 适配",
+      "sublabel": "执行端口与结果登记",
+      "pos": [
+        400,
+        65
+      ],
+      "size": [
+        240,
+        82
+      ]
+    },
+    {
+      "id": "content-worker",
+      "type": "external",
+      "label": "独立 ContentWorker",
+      "sublabel": "有界协议；不依赖持久库",
+      "pos": [
+        760,
+        65
+      ],
+      "size": [
+        240,
+        82
+      ]
+    },
+    {
+      "id": "windows-library",
+      "type": "external",
+      "label": "Windows 平台库",
+      "sublabel": "共享本机元数据探测",
+      "pos": [
+        1105,
+        65
+      ],
+      "size": [
+        240,
+        82
+      ]
+    },
+    {
+      "id": "interaction-ui",
+      "type": "frontend",
+      "label": "薄界面与输入适配",
+      "sublabel": "海报／中心：意图与反馈",
+      "pos": [
+        40,
+        345
+      ],
+      "size": [
+        240,
+        82
+      ]
+    },
+    {
+      "id": "application-cases",
+      "type": "backend",
+      "label": "应用用例层",
+      "sublabel": "内容、配置、生命周期",
+      "pos": [
+        400,
+        345
+      ],
+      "size": [
+        240,
+        82
+      ]
+    },
+    {
+      "id": "poster-core",
+      "type": "backend",
+      "label": "会话与纯布局内核",
+      "sublabel": "草稿／提案保护、同代帧",
+      "pos": [
+        760,
+        345
+      ],
+      "size": [
+        240,
+        82
+      ]
+    },
+    {
+      "id": "presentation-host",
+      "type": "frontend",
+      "label": "呈现宿主与 Presenter",
+      "sublabel": "稳定卡片、暖图、提交协调",
+      "pos": [
+        1105,
+        345
+      ],
+      "size": [
+        240,
+        82
+      ]
+    },
+    {
+      "id": "persistence",
+      "type": "database",
+      "label": "持久化适配",
+      "sublabel": "SQLite、CAS 与安全账本",
+      "pos": [
+        400,
+        625
+      ],
+      "size": [
+        240,
+        82
+      ]
+    },
+    {
+      "id": "native-input",
+      "type": "external",
+      "label": "Windows 输入区域",
+      "sublabel": "同代应用／读回、失败停路由",
+      "pos": [
+        1105,
+        625
+      ],
+      "size": [
+        240,
+        82
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "compose-adapters",
+      "from": "composition",
+      "to": "file-adapters",
+      "label": "显式组装"
+    },
+    {
+      "id": "compose-hosts",
+      "from": "composition",
+      "to": "interaction-ui",
+      "label": "创建宿主",
+      "labelDy": 70
+    },
+    {
+      "id": "worker-protocol",
+      "from": "file-adapters",
+      "to": "content-worker",
+      "label": "进程协议"
+    },
+    {
+      "id": "shared-probe",
+      "from": "content-worker",
+      "to": "windows-library",
+      "label": "只读探测"
+    },
+    {
+      "id": "typed-intents",
+      "from": "interaction-ui",
+      "to": "application-cases",
+      "label": "类型化意图"
+    },
+    {
+      "id": "project-state",
+      "from": "application-cases",
+      "to": "poster-core",
+      "label": "状态投影"
+    },
+    {
+      "id": "render-frame",
+      "from": "poster-core",
+      "to": "presentation-host",
+      "label": "同代帧"
+    },
+    {
+      "id": "apply-native",
+      "from": "presentation-host",
+      "to": "native-input",
+      "label": "应用／读回",
+      "labelDy": 70
+    },
+    {
+      "id": "storage-ports",
+      "from": "application-cases",
+      "to": "persistence",
+      "label": "事务端口",
+      "labelDy": 70
+    },
+    {
+      "id": "file-ports",
+      "from": "application-cases",
+      "to": "file-adapters",
+      "label": "执行端口"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "已验收的基础边界",
+      "items": [
+        "R1–R4 USER PASS；现有业务保持。",
+        "图示职责协作，不是一条同步调用栈。"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "已具备的增量接点",
+      "items": [
+        "热度／主题提案由会话准入与保护。",
+        "新增评分不进入窗口或具体存储实现。"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "与完整目标仍有差距",
+      "items": [
+        "真实评分、热加载模板、AI、更新器未实现。",
+        "轮询规模化优化仍待研究，未承诺提速。"
+      ]
+    }
+  ]
+}

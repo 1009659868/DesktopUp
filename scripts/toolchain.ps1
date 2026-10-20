@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 # Shared by setup/build/run/package. Callers restore environment and console
 # output encoding in finally. Tool archives are versioned and hash-checked.
 function Get-DesktopUpToolchain {

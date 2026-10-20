@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 $ErrorActionPreference='Stop'
 if (-not ('DesktopUpM08InputProbe' -as [type])) { Add-Type -Path (Join-Path $PSScriptRoot 'M08InputProbe.cs') }
 $taskProbe=[DesktopUpM08InputProbe]::Read()

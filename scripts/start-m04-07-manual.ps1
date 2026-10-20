@@ -1,4 +1,4 @@
-param(
+﻿param(
     [ValidateSet('interaction', 'chain', 'removal', 'return-sync', 'expand-down-first', 'expand-up', 'expand-mixed', 'expand-constrained', 'expand-blocked')]
     [string]$Scenario = 'expand-down-first',
     [switch]$CheckOnly

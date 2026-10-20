@@ -211,6 +211,64 @@ public sealed class PortableImportTransactionTests
             placed.Projection.PostersById[Fixture.Original].Poster);
     }
 
+    [Theory]
+    [InlineData("success", 1, 2)]
+    [InlineData("file-changed", 0, 0)]
+    [InlineData("guard-before", 0, 1)]
+    [InlineData("backup-failed", 1, 1)]
+    [InlineData("backup-stale", 1, 1)]
+    [InlineData("guard-after", 1, 2)]
+    public void Use_case_preserves_recheck_backup_guard_and_single_commit_order(
+        string scenario, int backups, int guards)
+    {
+        using var f = new Fixture();
+        long revision = f.Repository.Read().Revision;
+        var calls = new List<string>();
+        var backup = new ObservedBackupStore(f.Store, () =>
+        {
+            calls.Add("backup");
+            return scenario switch
+            {
+                "backup-failed" => new(false, null, null, "owned fault"),
+                "backup-stale" => new(true, "stale", revision - 1, null),
+                _ => f.Store.CreateBackup("use-case-test")
+            };
+        });
+        int guardCount = 0, publications = 0;
+        f.Coordinator.ProjectionChanged += (_, _) => { publications++; calls.Add("commit"); };
+        var useCase = new PortableProfileUseCase(f.Repository, f.Coordinator, backup,
+            new PortableProfileFile(f.Paths), () => Fixture.Topology(), _ =>
+            {
+                calls.Add("guard");
+                guardCount++;
+                return scenario != "guard-before" && !(scenario == "guard-after" && guardCount == 2);
+            });
+        string path = Path.Combine(f.Paths.Root, "profile.json");
+        useCase.Save(path, useCase.Export(), false);
+        var ticket = useCase.Preview(path, PortableImportMode.Append, false);
+        if (scenario == "file-changed") File.AppendAllText(path, " ");
+        var result = useCase.Apply(ticket);
+
+        Assert.Equal(scenario == "success", result.Succeeded);
+        Assert.Equal(backups, calls.Count(c => c == "backup"));
+        Assert.Equal(guards, guardCount);
+        Assert.Equal(result.Succeeded ? 1 : 0, publications);
+        Assert.Equal(revision + publications, f.Repository.Read().Revision);
+        if (result.Succeeded)
+            Assert.Equal(new[] { "guard", "backup", "guard", "commit" }, calls);
+    }
+
+    // Observes only the backup boundary; the command transaction and file adapter remain real.
+    private sealed class ObservedBackupStore(IStateStore inner, Func<StateBackupResult> backup) : IStateStore
+    {
+        public int LatestSchemaVersion => inner.LatestSchemaVersion;
+        public StateStoreInitializationResult Initialize() => inner.Initialize();
+        public StateStoreHead ReadHead() => inner.ReadHead();
+        public StateBackupResult CreateBackup(string reason = "manual") => backup();
+        public StateBackupValidationResult ValidateBackup(string path) => inner.ValidateBackup(path);
+        public void Dispose() { }
+    }
+
     private sealed class Fixture : IDisposable
     {
         public const string Original = "poster-original";

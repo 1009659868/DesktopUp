@@ -6,6 +6,66 @@ namespace DesktopUp.Contracts.Tests;
 
 public sealed partial class StorageRelocationFilesTests
 {
+    [Fact]
+    public void ApplicationOrdersStagesAndRejectsWrongConfirmationBeforeAnyEffect()
+    {
+        using var fixture = new F();
+        var plan = Preview(fixture);
+        var execution = new RecordingExecution();
+        var useCase = new StorageRelocationUseCase(execution);
+        Assert.Throws<IOException>(() => useCase.Execute(plan, "wrong"));
+        Assert.Empty(execution.Calls);
+        Assert.True(useCase.Execute(plan, plan.Fingerprint).Committed);
+        Assert.Equal(new[] { "prepare", "record", "commit", "finish" }, execution.Calls);
+        execution.Calls.Clear();
+        useCase.Reconcile(plan.Request.OperationId);
+        Assert.Equal(new[] { "finish" }, execution.Calls);
+    }
+
+    [Theory]
+    [InlineData("prepare", false)]
+    [InlineData("record", true)]
+    public void ApplicationFinishesFailureOnlyAfterDurableIntent(string failureStage, bool shouldFinish)
+    {
+        using var fixture = new F();
+        var plan = Preview(fixture);
+        var execution = new RecordingExecution(stage =>
+        {
+            if (stage == failureStage) throw new IOException("injected boundary failure");
+        });
+        var useCase = new StorageRelocationUseCase(execution);
+        if (shouldFinish)
+        {
+            var result = useCase.Execute(plan, plan.Fingerprint);
+            Assert.False(result.Committed);
+            Assert.Equal("injected boundary failure", result.Reason);
+        }
+        else Assert.Throws<IOException>(() => useCase.Execute(plan, plan.Fingerprint));
+        Assert.Equal(shouldFinish, execution.Calls.Contains("finish"));
+        Assert.DoesNotContain("commit", execution.Calls);
+    }
+
+    private sealed class RecordingExecution(Action<string>? onStage = null) : IStorageRelocationExecution
+    {
+        public List<string> Calls { get; } = [];
+        private bool _intent, _committed;
+        private void Stage(string stage) { Calls.Add(stage); onStage?.Invoke(stage); }
+        public void Prepare(StorageRelocationPlan plan, string confirmation, CancellationToken token)
+        { Stage("prepare"); _intent = true; }
+        public void RecordVerifiedTargets(Guid operation) => Stage("record");
+        public void CommitVerifiedTargets(Guid operation) { Stage("commit"); _committed = true; }
+        public bool HasIntent(Guid operation) { Stage("has-intent"); return _intent; }
+        public StorageRelocationResult FinishObserved(Guid operation, Func<bool>? stopCleanup = null)
+        { Stage("finish"); return new(_committed, true, [], null); }
+    }
+
+    // Fault hooks stay in test composition; production has only the application execution loop.
+    private static StorageRelocationResult Execute(SqliteStateStore store,StorageRelocationPlan plan,string confirmation,
+        CancellationToken cancellation=default,Action<StorageCopyCheckpoint>? checkpoint=null,
+        Action<StorageRelocationCheckpoint>? transactionCheckpoint=null) =>
+        new StorageRelocationUseCase(new LocalStorageRelocationExecution(store,checkpoint,transactionCheckpoint))
+            .Execute(plan,confirmation,cancellation);
+
     private static string Seed(F f)
     {
         var staged=f.Stage(f.File("real.txt"));f.Executor.Execute(staged.Plan.Request.OperationId);
@@ -49,16 +109,16 @@ public sealed partial class StorageRelocationFilesTests
     public void CancellationAutomaticallyRemovesOnlyProvenTargetsAndAllowsFreshRetry(int point)
     {
         using var f=new F();string source=Seed(f);long revision=f.State.Revision;var p=Preview(f);using var cancel=new CancellationTokenSource();
-        var files=new StorageRelocationFiles(f.Store);var result=files.Execute(p,p.Fingerprint,cancel.Token,at=>{if((int)at==point)cancel.Cancel();});
+        var result=Execute(f.Store,p,p.Fingerprint,cancel.Token,at=>{if((int)at==point)cancel.Cancel();});
         Assert.False(result.Committed);Assert.True(result.Cleaned,result.Reason);Assert.True(File.Exists(source));Assert.Equal(revision,f.State.Revision);
         Assert.Empty(Directory.EnumerateFileSystemEntries(p.Request.Destination.Locator));
-        var fresh=Preview(f,p.Request.Destination.Locator);var retry=files.Execute(fresh,fresh.Fingerprint);Assert.True(retry.Committed,retry.Reason);Assert.True(retry.Cleaned,retry.Reason);
+        var fresh=Preview(f,p.Request.Destination.Locator);var retry=Execute(f.Store,fresh,fresh.Fingerprint);Assert.True(retry.Committed,retry.Reason);Assert.True(retry.Cleaned,retry.Reason);
     }
     [Theory] [InlineData("source")] [InlineData("target")] [InlineData("new-source")] [InlineData("new-target")]
     public void ExternalChangesBeforeCommitCannotBeHiddenByOldProof(string change)
     {
         using var f=new F();string source=Seed(f);var p=Preview(f);long revision=f.State.Revision;
-        var result=new StorageRelocationFiles(f.Store).Execute(p,p.Fingerprint,checkpoint:at=>
+        var result=Execute(f.Store,p,p.Fingerprint,checkpoint:at=>
         {
             if(at!=StorageCopyCheckpoint.Verified)return;
             if(change=="source")File.WriteAllText(source,"external source");
@@ -75,7 +135,7 @@ public sealed partial class StorageRelocationFilesTests
     public void IndexFailureKeepsOriginalFilesAndRollsBackEveryLocator(int point)
     {
         using var f=new F();string source=Seed(f);var before=StateRequestFingerprint.Compute(f.State);var p=Preview(f);
-        var result=new StorageRelocationFiles(f.Store).Execute(p,p.Fingerprint,transactionCheckpoint:at=>{if((int)at==point)throw new IOException("isolated SQL failure");});
+        var result=Execute(f.Store,p,p.Fingerprint,transactionCheckpoint:at=>{if((int)at==point)throw new IOException("isolated SQL failure");});
         Assert.False(result.Committed);Assert.True(result.Cleaned,result.Reason);Assert.Equal(before,StateRequestFingerprint.Compute(f.State));Assert.True(File.Exists(source));
     }
     [Theory] [InlineData("source")] [InlineData("target")] [InlineData("new-source")]
@@ -101,7 +161,7 @@ public sealed partial class StorageRelocationFilesTests
         if(feature=="readonly")File.SetAttributes(source,FileAttributes.ReadOnly);else File.WriteAllText(source+":extra","alternate");
         try
         {
-            var p=Preview(f);var result=new StorageRelocationFiles(f.Store).Execute(p,p.Fingerprint);
+            var p=Preview(f);var result=Execute(f.Store,p,p.Fingerprint);
             Assert.False(result.Committed);Assert.True(File.Exists(source));Assert.Empty(Directory.EnumerateFileSystemEntries(p.Request.Destination.Locator));
         }
         finally{if(feature=="readonly")File.SetAttributes(source,FileAttributes.Normal);}

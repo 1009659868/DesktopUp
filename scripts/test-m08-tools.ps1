@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 param([switch]$CheckOnly)
 $ErrorActionPreference='Stop'
 $taskNames=@('Get-M08Build.ps1','Test-M08NativeEnvironment.ps1','start-m08-manual.ps1','measure-m08.ps1','test-m08-tools.ps1')

@@ -1,0 +1,315 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "当前架构｜打开用例与热度会话已分离",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/1009659868/DesktopUp",
+      "revision": "53b6bec27bbb0f236eded579013ead17c79dea91"
+    }
+  },
+  "components": [
+    {
+      "id": "view",
+      "type": "frontend",
+      "label": "海报／控制中心",
+      "sublabel": "WinUI 视图与交互",
+      "pos": [
+        40,
+        275
+      ],
+      "size": [
+        220,
+        80
+      ],
+      "sources": [
+        {
+          "path": "src/DesktopUp.App/PosterVisualWindow.cs",
+          "line": 1
+        },
+        {
+          "path": "src/DesktopUp.App/ControlCenterWindow.xaml",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "id": "runtime",
+      "type": "backend",
+      "label": "App 宿主与会话",
+      "sublabel": "Bootstrap 组装＋空间编排",
+      "pos": [
+        385,
+        275
+      ],
+      "size": [
+        230,
+        80
+      ],
+      "sources": [
+        {
+          "path": "src/DesktopUp.App/Bootstrap/App.Services.cs",
+          "line": 1
+        },
+        {
+          "path": "src/DesktopUp.App/PosterSpatialRuntime.cs",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "id": "application",
+      "type": "backend",
+      "label": "应用用例／热度会话",
+      "sublabel": "打开服务＋提案派生",
+      "pos": [
+        740,
+        275
+      ],
+      "size": [
+        230,
+        80
+      ],
+      "sources": [
+        {
+          "path": "src/DesktopUp.Application/Features/Content/Open/ContentActionService.cs",
+          "line": 1
+        },
+        {
+          "path": "src/DesktopUp.Application/Features/Content/Layout/ContentHeatSession.cs",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "id": "adapters",
+      "type": "backend",
+      "label": "Infrastructure",
+      "sublabel": "持久化、Worker 及文件业务",
+      "pos": [
+        1095,
+        275
+      ],
+      "size": [
+        230,
+        80
+      ],
+      "sources": [
+        {
+          "path": "src/DesktopUp.Infrastructure/Persistence/Content/SqliteContentOpenJournal.cs",
+          "line": 1
+        },
+        {
+          "path": "src/DesktopUp.Infrastructure/CrossPosterTransfer.cs",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "id": "domain",
+      "type": "backend",
+      "label": "Domain 纯规则",
+      "sublabel": "能力、作者意图与布局求解",
+      "pos": [
+        740,
+        65
+      ],
+      "size": [
+        230,
+        75
+      ],
+      "sources": [
+        {
+          "path": "src/DesktopUp.Domain/ContentLayoutProposals.cs",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "id": "durable",
+      "type": "database",
+      "label": "SQLite＋受管文件",
+      "sublabel": "关系、打开事实与安全账本",
+      "pos": [
+        1095,
+        65
+      ],
+      "size": [
+        230,
+        75
+      ],
+      "sources": [
+        {
+          "path": "src/DesktopUp.Infrastructure/SqliteStateStore.cs",
+          "line": 1
+        },
+        {
+          "path": "src/DesktopUp.Infrastructure/LocalTransferFiles.cs",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "id": "scenes",
+      "type": "frontend",
+      "label": "Lamp／Rain",
+      "sublabel": "内置场景，仍是编译期模块",
+      "pos": [
+        40,
+        65
+      ],
+      "size": [
+        220,
+        75
+      ],
+      "sources": [
+        {
+          "path": "src/DesktopUp.App/Scenes/SceneModuleRegistry.cs",
+          "line": 1
+        },
+        {
+          "path": "Directory.Build.targets",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "id": "windows",
+      "type": "external",
+      "label": "Windows 适配",
+      "sublabel": "窗口、原生拖放与输入",
+      "pos": [
+        385,
+        505
+      ],
+      "size": [
+        230,
+        80
+      ],
+      "sources": [
+        {
+          "path": "src/DesktopUp.Windows/PosterInputIslandManager.cs",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "id": "shell-worker",
+      "type": "external",
+      "label": "ContentWorker",
+      "sublabel": "独立进程：Shell／图标／菜单",
+      "pos": [
+        1095,
+        505
+      ],
+      "size": [
+        230,
+        80
+      ],
+      "sources": [
+        {
+          "path": "src/DesktopUp.ContentWorker/Program.cs",
+          "line": 1
+        },
+        {
+          "path": "src/DesktopUp.Infrastructure/LocalContentWorkerClient.cs",
+          "line": 1
+        }
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "intent",
+      "from": "view",
+      "to": "runtime",
+      "label": "交互意图",
+      "variant": "emphasis"
+    },
+    {
+      "id": "usecases",
+      "from": "runtime",
+      "to": "application",
+      "label": "用例／派生",
+      "variant": "emphasis"
+    },
+    {
+      "id": "ports",
+      "from": "application",
+      "to": "adapters",
+      "label": "端口调用",
+      "variant": "emphasis"
+    },
+    {
+      "id": "rules",
+      "from": "application",
+      "to": "domain",
+      "label": "纯计算"
+    },
+    {
+      "id": "storage",
+      "from": "adapters",
+      "to": "durable",
+      "label": "事务／文件"
+    },
+    {
+      "id": "scenebind",
+      "from": "scenes",
+      "to": "view",
+      "label": "编译后注册",
+      "labelAt": [
+        150,
+        154
+      ]
+    },
+    {
+      "id": "native",
+      "from": "runtime",
+      "to": "windows",
+      "label": "原生操作",
+      "labelAt": [
+        500,
+        369
+      ]
+    },
+    {
+      "id": "protocol",
+      "from": "adapters",
+      "to": "shell-worker",
+      "label": "有界进程协议",
+      "variant": "dashed",
+      "labelAt": [
+        1210,
+        369
+      ]
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "已落地的边界",
+      "items": [
+        "ContentActionService 执行打开；ContentHeatSession 管理派生状态。",
+        "验收代码在 tools/review，普通产品不编入。"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "仍需逐步拆分",
+      "items": [
+        "App 仍组装具体存储，文件用例部分留在 Infrastructure。",
+        "本图是主要运行职责，不是完整程序集依赖图。"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "尚未实现",
+      "items": [
+        "生产热度消费与评分、动态模板平台、AI、更新器。",
+        "内置模块不等于可热加载插件。"
+      ]
+    }
+  ]
+}

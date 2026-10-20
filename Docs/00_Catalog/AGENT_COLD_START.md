@@ -1,5 +1,11 @@
 # DesktopUp：agent 冷启动提示词
 
+## 2026-10-16 当前接续入口：架构 R1
+
+使用实际 DesktopUp_V2 的 .NET/WinUI 仓库，先检查 Git；当前工作分支为 `impl/architecture-foundation`，源码 b3bfdc6 及随后的验收/交接提交已按用户要求同步同名远端，不合入 develop。R1 文件动作、拖放两片已人工通过；下一片是映射创建/周期同步，不重做已过两组拖放。先读 [ACTIVE_PATH](ACTIVE_PATH.md) → [当前交接](../A_Project/40_Implementation/V3-04/HANDOFF.md) → [余项计划第6～10节](../A_Project/40_Implementation/Architecture/FOUNDATION_REMAINDER_PLAN.md)。基础架构仍 IN PROGRESS，真实热度 HOLD。
+
+拉取不包含 out 中的候选、数据库、安装包或日志；旧 review 脚本的产物哈希不能直接用于新构建。发布 main 草稿已本地暂存，迁移 SQL 的 LF/CRLF 哈希兼容问题未修、自启真实登录未验；不恢复旧配置、不自动合并或发布，处理方式见当前发布记录。下方冷启动段落均为历史，不据此切到旧分支或恢复旧计划；本次 Git 授权不是后续任意提交/合并的持续授权。
+
 2026-10-14 Git检查点：用户授权保存并推送当前功能分支，源码提交 `8ded3aa`；本轮不合入 `impl/develop`，不切换分支、不更新 `impl/main`。开发文档随相邻提交保存，out产物/本地配置不上传。N4人工及全量稳定性携带项不因Git同步关闭；先核对实际Git状态，再沿下方C记录继续。
 
 2026-10-14 最新N4：用户报告属性/原生菜单失效并要求去除新建/改名弹窗，已经进入反馈修订；不要把下方旧候选状态理解为验收完成。入口脚本当前为candidate02/review02，旧candidate01/review01保留。实现锚点为ContentWorkerLocation与PosterVisualWindow.InlineRename，具体验证/携带项见[本轮C记录](../A_Project/40_Implementation/V3-05/CONTENT_NATIVE_ACTIONS.md)。无本轮Git授权。

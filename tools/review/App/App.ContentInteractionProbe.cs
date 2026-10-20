@@ -19,10 +19,10 @@ internal sealed partial class PosterVisualWindow
 
     internal ContentNativeProbeTarget NativeContentTargetForProbe(string action)
     {
-        if (_monitor is null || _contentSnapshot is null || _contentViewport is null || HasContentGesture ||
-            _contentReadOnly || _geometry.IsLocked || _contentSnapshot.LoopScroll || IsEditing != (action == "resize"))
+        if (_monitor is null || _contentLayout.Snapshot is null || _contentLayout.Viewport is null || HasContentGesture ||
+            _contentReadOnly || _geometry.IsLocked || _contentLayout.Snapshot.LoopScroll || IsEditing != (action == "resize"))
             throw new InvalidOperationException("Native finite input requires an idle writable poster, with editing enabled only for resize.");
-        var tiles=ContentLayoutFlow.ProjectTiles(_contentSnapshot,_contentViewport).Where(t =>
+        var tiles=ContentLayoutFlow.ProjectTiles(_contentLayout.Snapshot,_contentLayout.Viewport).Where(t =>
             t.Clip.Width == t.Bounds.Width && t.Clip.Height == t.Bounds.Height).OrderBy(t=>t.ReadOrder).ToArray();
         if (tiles.Length < 2) throw new InvalidOperationException("Two complete visible cards are required.");
         var tile=tiles[action == "context" ? 1 : 0];
@@ -41,13 +41,13 @@ internal sealed partial class PosterVisualWindow
             end=new(start.X+(int)Math.Round((destination.Bounds.X-tile.Bounds.X)*_monitor.ScaleX),
                 start.Y+(int)Math.Round((destination.Bounds.Y-tile.Bounds.Y)*_monitor.ScaleY));
         }
-        else if(action=="manual-drag") end=start with {Y=start.Y+(int)Math.Round((_contentSnapshot.CellDip+_contentSnapshot.GapDip)*_monitor.ScaleY)};
+        else if(action=="manual-drag") end=start with {Y=start.Y+(int)Math.Round((_contentLayout.Snapshot.CellDip+_contentLayout.Snapshot.GapDip)*_monitor.ScaleY)};
         // Stay inside this poster's frame but outside its content viewport. A frame-relative
         // offscreen destination could make the driver reject before exercising final release.
         else if(action=="invalid-drag") end=start with {Y=_bounds.Y+(int)Math.Round(ContentTopDip*_monitor.ScaleY/2)};
-        else if(action=="resize") end=start with {X=start.X-(int)Math.Round((_contentSnapshot.CellDip+_contentSnapshot.GapDip)*_monitor.ScaleX)};
+        else if(action=="resize") end=start with {X=start.X-(int)Math.Round((_contentLayout.Snapshot.CellDip+_contentLayout.Snapshot.GapDip)*_monitor.ScaleX)};
         return new(_inputIsland!.WindowHandle.ToInt64(),tile.ItemId,start,end,
-            _contentSnapshot.Items.Single(p=>p.ItemId==tile.ItemId),
+            _contentLayout.Snapshot.Items.Single(p=>p.ItemId==tile.ItemId),
             action=="auto-drag"?tiles[1].ReadOrder+1:null);
     }
 

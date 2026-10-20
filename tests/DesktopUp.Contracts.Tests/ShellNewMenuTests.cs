@@ -56,7 +56,7 @@ public sealed class ShellNewMenuTests
         Assert.Equal(1L,f.Sql("SELECT COUNT(*) FROM managed_content_observations"));
         Assert.Empty(f.Journal.Read());Assert.Equal("unrelated",File.ReadAllText(unrelated));
         string next=kind=="folder"?"renamed":"renamed.txt";
-        new ContentRenameService(f.Store).Rename(f.Main,card.LayoutItemId,relation.Item.Id,relation.Item.Version,next,expectedIdentity:created.Identity);
+        new ContentRenameFixture(f.Store).Rename(f.Main,card.LayoutItemId,relation.Item.Id,relation.Item.Version,next,expectedIdentity:created.Identity);
         using var reopened=new SqliteStateStore(f.Paths);Assert.True(reopened.Initialize().Succeeded);
         Assert.Equal(card.Id,Assert.Single(new SqliteStateCommandRepository(reopened).Read().ContentCatalog.PosterItems).Id);
         Assert.True(LocalTransferFiles.Exists(Path.Combine(directory,next)));
@@ -67,7 +67,7 @@ public sealed class ShellNewMenuTests
         var command=new CreatePosterCommand(Guid.NewGuid().ToString(),StateCommandSource.ControlCenter,s.Revision,
             new(s.Catalog.Posters.ToDictionary(p=>p.Poster.PosterId,p=>p.EntityVersion),CatalogVersion:s.Catalog.CatalogVersion,ContentVersion:s.ContentVersion),
             PosterConfigurationFactory.NewBasicBox("map","DISPLAY1"));
-        var map=new MappedDirectoryService(f.Store);var made=map.Create(command,f.Source);Assert.Equal(StateCommandStatus.Committed,made.Status);
+        var map=ContentTestServices.Mapping(f.Store);var made=map.Create(command,f.Source);Assert.Equal(StateCommandStatus.Committed,made.Status);
         string poster=made.ResultPosterId!;s=f.State;
         var location=new NewContentLocation(null,s.ContentVersion,s.Catalog.Posters.Single(p=>p.Poster.PosterId==poster).EntityVersion){Mapping=map.ResolveNewContent(poster)};
         var created=await InvokeNew(f.Source,"text");var service=new ShellCreatedContentService(f.Store);

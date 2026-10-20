@@ -17,12 +17,12 @@ internal sealed partial class PosterVisualWindow
         metaOpacity = _metaPanel?.Opacity, contentTop = ContentTopDip, rootOpacity = _window?.Content.Opacity,
         module = ReadSceneModuleForProbe(), surface = inputRouter.ReadSurface(inputSession) is null ? null : ReadContentSurfaceForSmoke() };
     internal bool RainGeometryUnchangedForProbe(object? canvas, Dictionary<string, object> cards) =>
-        ReferenceEquals(canvas, _contentCanvas) && cards.Count == _contentCards.Count &&
-        cards.All(p => _contentCards.TryGetValue(p.Key, out var card) && ReferenceEquals(card, p.Value));
+        ReferenceEquals(canvas, Presenter.Surface) && cards.Count == Presenter.Cards.Count &&
+        cards.All(p => Presenter.Cards.TryGetValue(p.Key, out var card) && ReferenceEquals(card, p.Value));
     internal (object?, Dictionary<string, object>) RainReferencesForProbe() =>
-        (_contentCanvas, _contentCards.ToDictionary(p => p.Key, p => (object)p.Value));
+        (Presenter.Surface, Presenter.Cards.ToDictionary(p => p.Key, p => (object)p.Value));
     internal bool RainSurfaceValidForProbe => BackdropColor().A == 0 && VerifyWindowBackdrop() &&
-        _metaPanel?.Opacity == 0 && _window?.Content.Opacity == 1 && _contentCards.Values.All(v => v.Opacity == 1);
+        _metaPanel?.Opacity == 0 && _window?.Content.Opacity == 1 && Presenter.Cards.Values.All(v => v.Opacity == 1);
     internal int CloudAlphaForProbe { get; private set; }
     internal bool CloudSizeAppliedForProbe(double size) => _titlePose.Scale==size && Math.Abs(_titleTransform.ScaleX-size)<1e-6 &&
         Math.Abs(_titleTransform.ScaleY-size)<1e-6 && _inputIsland?.VerifyTitleRegionForProbe((int)Math.Ceiling(84*(_monitor?.ScaleY ?? 1)))==true;

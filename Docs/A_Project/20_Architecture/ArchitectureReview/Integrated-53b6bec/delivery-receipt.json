@@ -1,0 +1,57 @@
+{
+  "date": "2026-10-16",
+  "baseline": {
+    "branch": "impl/develop",
+    "revision": "53b6bec27bbb0f236eded579013ead17c79dea91",
+    "remoteStatus": "local integration not yet pushed"
+  },
+  "skill": "Archify 2.17",
+  "scope": "current code; prior target diagrams remain proposals",
+  "architecture": {
+    "diagram_type": "architecture",
+    "output": "G:/A_/Tools/DesktopUp_V2/out/architecture-review-20261016-integrated/current.architecture.html",
+    "specification": "current.architecture.json",
+    "specification_sha256": "9beac780ac9076578224208fc0535d8abe614eb6c30565bb3dc533cf1ceaa824",
+    "specification_bytes": 6633,
+    "artifact_sha256": "2f1ad3803899da266d751db4542d7f6bd24c82b03a17a67993f4fff7ef920349",
+    "artifact_bytes": 716330,
+    "validation": {
+      "checksPassed": 9,
+      "checkCount": 9,
+      "compositionProfile": "showcase",
+      "compositionStatus": "pass",
+      "errors": 0,
+      "warnings": 0
+    },
+    "browser_evidence": "passed",
+    "browser_receipt": "../../../../../out/architecture-review-20261016-integrated/current.architecture.visual-check.json",
+    "visual_review": "passed",
+    "correction_rounds": 2,
+    "perceptual_review": {
+      "reviewer": "image-capable assistant",
+      "artifact_sha256": "2f1ad3803899da266d751db4542d7f6bd24c82b03a17a67993f4fff7ef920349",
+      "screenshots": [
+        "current.architecture.visual-check.1440x900.light.png",
+        "current.architecture.visual-check.1440x900.dark.png",
+        "current.architecture.visual-check.2048x1320.light.png",
+        "current.architecture.visual-check.2048x1320.dark.png"
+      ],
+      "scope": "Default READ/Still, light and dark at 1440x900 and 2048x1320; node/card fit, crossings, label masks, viewport balance and visible viewer controls",
+      "observations": "No node or relationship-label overlaps, no clipping, main path and exception-free architecture hierarchy remain legible, conclusion cards visible in both themes. Interactive search/focus/export actions not exercised."
+    }
+  },
+  "workflows": {
+    "status": "blocked",
+    "correction_rounds": 2,
+    "diagnostics": "workflow-diagnostics.json",
+    "htmlDelivered": false,
+    "browser_evidence": "not-run (no delivered artifact)",
+    "visual_review": "not-run (no delivered artifact)"
+  },
+  "mutations": {
+    "productCode": false,
+    "skillPackage": false,
+    "commit": false,
+    "push": false
+  }
+}

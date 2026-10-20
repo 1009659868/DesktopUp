@@ -1,0 +1,19 @@
+root = true
+
+[*.{cs,sql,xml,xaml,csproj,props,targets,json,config,Config,nsi,nsh,sln}]
+charset = utf-8
+end_of_line = lf
+
+[*.ps1]
+# Windows PowerShell 5.1 otherwise decodes non-ASCII text using the local ANSI page.
+charset = utf-8-bom
+end_of_line = crlf
+
+[*.cmd]
+charset = utf-8
+end_of_line = crlf
+
+[src/DesktopUp.Infrastructure/Persistence/Migrations/*.sql]
+# Frozen payloads retain the original raw strings' lack of a trailing newline.
+insert_final_newline = false
+trim_trailing_whitespace = false

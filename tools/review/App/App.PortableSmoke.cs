@@ -2,7 +2,6 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using DesktopUp.Application;
 using DesktopUp.Domain;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Dispatching;
 
 namespace DesktopUp;
@@ -94,7 +93,7 @@ public partial class App
                             Require(current.ProfileInitialized, "restart lost explicit initialized/empty profile");
                             cases.Add("same-root-normal-restart-preserves-imported-state"); Finish(true, null); return;
                         }
-                        Require(string.Equals(Path.GetFullPath(_services!.GetRequiredService<IUserDataPaths>().Root),
+                        Require(string.Equals(Path.GetFullPath(_composition!.Paths.Root),
                             Path.GetFullPath(dataRoot), StringComparison.OrdinalIgnoreCase), "fixture did not bind the isolated data root");
                         originals = current.Posters.Select(p => p.Poster).ToArray();
                         originalBytes = controller.Export(); originalDocument = PortableProfileCodec.Parse(originalBytes);
@@ -201,8 +200,8 @@ public partial class App
                         for (int j = i + 1; j < real.Length; j++)
                             Require(!real[i]!.Bounds.Overlaps(real[j]!.Bounds), "restored native geometry overlaps");
                         cases.Add("replace-original-restores-real-sessions-and-settings");
-                        var store = _services!.GetRequiredService<IStateStore>();
-                        var paths = _services!.GetRequiredService<IUserDataPaths>();
+                        var store = _composition!.StateStore;
+                        var paths = _composition!.Paths;
                         var backup = controller.Backup();
                         Require(backup.Succeeded && backup.FileName is not null && backup.Revision == current.Revision, "manual backup failed");
                         Require(store.ValidateBackup(Path.Combine(paths.Backups, backup.FileName!)).IsValid, "manual backup is not valid");

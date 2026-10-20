@@ -1,0 +1,1 @@
+ALTER TABLE posters ADD COLUMN content_layout_json TEXT NULL;

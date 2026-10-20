@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 param([string]$PackageDirectory, [string[]]$Cases=@('before-open','before-save','cancel-open','cancel-save','center-open','center-save','exit-open','exit-save'))
 $ErrorActionPreference='Stop'
 . (Join-Path $PSScriptRoot 'Start-DesktopUpFixtureProcess.ps1')

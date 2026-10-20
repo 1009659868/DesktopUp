@@ -4,7 +4,7 @@ namespace DesktopUp.Infrastructure;
 
 internal enum StorageCopyCheckpoint { ManifestWritten, ObjectCreated, CopyProgress, FileCopied, Prepared, Verified, SourceDeleted, TargetDeleted }
 
-// Internal until D2-04/production acceptance. Unlike LocalTransferFiles.Move this adapter
+// Unlike LocalTransferFiles.Move this internal copy/verification adapter
 // NEVER deletes any source before the one SQLite commit. It never resumes copying on startup.
 internal sealed partial class StorageRelocationFiles(SqliteStateStore store):IStorageRelocationVerifier
 {
@@ -142,25 +142,5 @@ internal sealed partial class StorageRelocationFiles(SqliteStateStore store):ISt
             return new Proof(new(plan.Fingerprint,StateRequestFingerprint.Compute(verified),verified.Claim),leases);
         }
         catch{leases.Dispose();throw;}
-    }
-    internal StorageRelocationResult Execute(StorageRelocationPlan plan,string confirmation,CancellationToken cancellation=default,
-        Action<StorageCopyCheckpoint>? checkpoint=null,Action<StorageRelocationCheckpoint>? transactionCheckpoint=null)
-    {
-        var journal=new SqliteStorageRelocationJournal(store);
-        // Wrong confirmation cannot cancel someone else's existing operation.
-        if(confirmation!=plan.Fingerprint)throw new IOException("Confirm the current plan.");
-        try
-        {
-            Prepare(plan,confirmation,cancellation,checkpoint);cancellation.ThrowIfCancellationRequested();
-            journal.RecordTargets(plan.Request.OperationId,this,transactionCheckpoint);checkpoint?.Invoke(StorageCopyCheckpoint.Verified);
-            cancellation.ThrowIfCancellationRequested();journal.Commit(plan.Request.OperationId,this,transactionCheckpoint);
-        }
-        catch(TransferInterruptionException){throw;} // Fault fixture models a process loss, not normal failure handling.
-        catch(Exception error) when(error is IOException or InvalidDataException or UnauthorizedAccessException or OperationCanceledException or NotSupportedException or System.Text.Json.JsonException)
-        {
-            if(journal.Read().All(x=>x.Plan.Request.OperationId!=plan.Request.OperationId))throw;
-            return Recover(plan.Request.OperationId,checkpoint,()=>cancellation.IsCancellationRequested) with {Reason=error.Message};
-        }
-        return Recover(plan.Request.OperationId,checkpoint,()=>cancellation.IsCancellationRequested);
     }
 }

@@ -27,7 +27,7 @@ public sealed class CrossPosterTransferTests
             PosterConfigurationFactory.NewBasicBox(name,"DISPLAY1"));
         var poster=command.Configuration with {PosterId=Guid.NewGuid().ToString(),ThemeInstanceId=Guid.NewGuid().ToString()};
         var result=mapping is null?f.Repository.Execute(new(command.RequestId,command.RequestId,state.Revision,command.ReadSet),_=>new(){Creates=[poster],ResultPosterId=poster.PosterId}):
-            new MappedDirectoryService(f.Store).Create(command,mapping);
+            ContentTestServices.Mapping(f.Store).Create(command,mapping);
         Assert.Equal(StateCommandStatus.Committed,result.Status);return result.ResultPosterId!;
     }
     private static void Icon(F f,string poster)
@@ -58,10 +58,10 @@ public sealed class CrossPosterTransferTests
         return(source,target,targetMapped?null:new(f.Root,f.Collection));
     }
     private static Task<MappedIngressResult> Run(F f,(string Source,string Target,RegisteredManagedStorage? Storage) fixture,IShellDirectoryTransfer? shell=null,
-        IncomingContentPlacement? landing=null, CrossPosterTransfer? service=null)
+        IncomingContentPlacement? landing=null, CrossPosterTransferUseCase? service=null)
     {
         var intent=Capture(f,fixture.Source);
-        return(service??new CrossPosterTransfer(f.Store,shell)).Execute(intent,fixture.Target,intent.Items.Select(i=>i.Path).ToArray(),fixture.Storage,landing,0,()=>true);
+        return(service??ContentTestServices.CrossPoster(f.Store,shell)).Execute(intent,fixture.Target,intent.Items.Select(i=>i.Path).ToArray(),fixture.Storage,landing,0,()=>true);
     }
 
     [Theory]
@@ -81,7 +81,7 @@ public sealed class CrossPosterTransferTests
         Assert.True(ContentLayoutPolicy.TryRead(f.State.Catalog.Posters.Single(p=>p.Poster.PosterId==setup.Target).Poster.ContentLayoutJson,setup.Target,out var layout,out _));
         Assert.Equal(1,Assert.Single(layout!.Placements).PinnedIndex);
         Assert.False(MappedDirectoryIngress.Pending(f.Store));
-        var scan=new MappedDirectoryService(f.Store).Reconcile();Assert.Empty(scan.Notices);
+        var scan=ContentTestServices.Mapping(f.Store).Reconcile();Assert.Empty(scan.Notices);
         Assert.True(f.Store.Initialize().Succeeded); // Stored relations/assets survive a schema verification/reopen boundary.
     }
     [Fact] public async Task CancellationDoesNotInventCardsAndRetryWorks()
@@ -104,7 +104,7 @@ public sealed class CrossPosterTransferTests
     [Fact] public async Task RecordedFileResultRecoversIndexWithoutReplayingShell()
     {
         using var f=new F();var setup=Setup(f,false,true);var fake=new Fake(Move);
-        var service=new CrossPosterTransfer(f.Store,fake){Checkpoint=at=>{if(at=="FileRecorded")throw new IOException("simulated exit after result");}};
+        var service=ContentTestServices.CrossPoster(f.Store,fake,at=>{if(at=="FileRecorded")throw new IOException("simulated exit after result");});
         var result=await Run(f,setup,service:service);Assert.Equal(0,result.Completed);Assert.NotEmpty(result.Errors);
         Assert.True(MappedDirectoryIngress.Pending(f.Store));Assert.Equal(setup.Source,Assert.Single(f.State.ContentCatalog.PosterItems).PosterId);
         Assert.Empty(new CrossPosterTransfer(f.Store).Reconcile());Assert.Equal(1,fake.Calls);
@@ -120,9 +120,9 @@ public sealed class CrossPosterTransferTests
     [Fact] public async Task ReplacedSourceAndStaleTargetRefuseBeforeExecution()
     {
         using var f=new F();var setup=Setup(f,false,true);var fake=new Fake(Move);var intent=Capture(f,setup.Source);
-        await Assert.ThrowsAsync<IOException>(()=>new CrossPosterTransfer(f.Store,fake).Execute(intent,setup.Target,intent.Items.Select(i=>i.Path).ToArray(),null,null,0,()=>true,expectedTargetVersion:999));
+        await Assert.ThrowsAsync<IOException>(()=>ContentTestServices.CrossPoster(f.Store,fake).Execute(intent,setup.Target,intent.Items.Select(i=>i.Path).ToArray(),null,null,0,()=>true,expectedTargetVersion:999));
         string source=intent.Items.Single().Path;File.Move(source,source+".old");File.WriteAllText(source,"replacement");
-        await Assert.ThrowsAsync<IOException>(()=>new CrossPosterTransfer(f.Store,fake).Execute(intent,setup.Target,[source],null,null,0,()=>true));
+        await Assert.ThrowsAsync<IOException>(()=>ContentTestServices.CrossPoster(f.Store,fake).Execute(intent,setup.Target,[source],null,null,0,()=>true));
         Assert.Equal(0,fake.Calls);Assert.Equal("replacement",File.ReadAllText(source));Assert.Single(f.State.ContentCatalog.PosterItems);
     }
     [Fact] public async Task ActualShellConflictRenameUsesReturnedNameNotGuessedName()
@@ -137,7 +137,7 @@ public sealed class CrossPosterTransferTests
         using var f=new F();var setup=Setup(f,false,true);
         string directory=f.State.ContentCatalog.Collections.Single(c=>c.Kind==ContentCollectionKind.Mapped).StorageLocator!;
         File.WriteAllText(Path.Combine(directory,"sample.txt"),"old-target");
-        var clock=new ManualTimeProvider();var mapping=new MappedDirectoryService(f.Store,clock);mapping.Reconcile();clock.Advance(TimeSpan.FromSeconds(3));mapping.Reconcile();
+        var clock=new ManualTimeProvider();var mapping=ContentTestServices.Mapping(f.Store,clock);mapping.Reconcile();clock.Advance(TimeSpan.FromSeconds(3));mapping.Reconcile();
         var fake=new Fake((s,d)=>{string target=Path.Combine(d,Path.GetFileName(s));File.Move(s,target,true);return new(target,false,0);});
         var result=await Run(f,setup,fake);Assert.Empty(result.Errors);Assert.Equal(setup.Target,Assert.Single(f.State.ContentCatalog.PosterItems).PosterId);
         Assert.Null(ContentSingleOwnerPolicy.Validate(f.State.ContentCatalog));Assert.Equal("owned-content",File.ReadAllText(Path.Combine(directory,"sample.txt")));
@@ -152,7 +152,7 @@ public sealed class CrossPosterTransferTests
     {
         using var f=new F();var setup=Setup(f,false,false);
         var before=f.State;
-        new ContentCreationService(f.Store).Create(setup.Target,new(setup.Storage,before.ContentVersion,before.Catalog.Posters.Single(p=>p.Poster.PosterId==setup.Target).EntityVersion),NewContentKind.TextFile,"neighbor.txt");
+        new ContentCreationFixture(f.Store).Create(setup.Target,new(setup.Storage,before.ContentVersion,before.Catalog.Posters.Single(p=>p.Poster.PosterId==setup.Target).EntityVersion),NewContentKind.TextFile,"neighbor.txt");
         var state=f.State;var poster=state.Catalog.Posters.Single(p=>p.Poster.PosterId==setup.Target);
         var neighbor=state.ContentCatalog.PosterItems.Single(p=>p.PosterId==setup.Target);
         Assert.True(ContentLayoutPolicy.TryRead(poster.Poster.ContentLayoutJson,setup.Target,out var layout,out _));
@@ -168,7 +168,7 @@ public sealed class CrossPosterTransferTests
     [Fact] public async Task ReplacementAfterRecordedResultIsNotClaimedOrDeletedOnRecovery()
     {
         using var f=new F();var setup=Setup(f,false,true);var fake=new Fake(Move);
-        var service=new CrossPosterTransfer(f.Store,fake){Checkpoint=at=>{if(at=="FileRecorded")throw new IOException("interrupted");}};
+        var service=ContentTestServices.CrossPoster(f.Store,fake,at=>{if(at=="FileRecorded")throw new IOException("interrupted");});
         await Run(f,setup,service:service);
         string path=Path.Combine(f.State.ContentCatalog.Collections.Single(c=>c.Kind==ContentCollectionKind.Mapped).StorageLocator!,"sample.txt");
         File.Move(path,path+".original");File.WriteAllText(path,"unrelated replacement");
@@ -178,13 +178,13 @@ public sealed class CrossPosterTransferTests
     [Fact] public async Task LateTargetEditKeepsFileResultButDoesNotApplyOldHoverPosition()
     {
         using var f=new F();var setup=Setup(f,false,true);
-        var service=new CrossPosterTransfer(f.Store,new Fake(Move)){Checkpoint=at=>
+        var service=ContentTestServices.CrossPoster(f.Store,new Fake(Move),at=>
         {
             if(at!="FileRecorded")return;
             var s=f.State;var p=s.Catalog.Posters.Single(p=>p.Poster.PosterId==setup.Target);
             var result=f.Repository.Execute(new("late-target","late-target",s.Revision,StateReadSet.ForPoster(setup.Target,p.EntityVersion)),
                 _=>new(){Updates=[p.Poster with {Title="Edited during Shell operation"}]});Assert.Equal(StateCommandStatus.Committed,result.Status);
-        }};
+        });
         var result=await Run(f,setup,landing:new(new(360,480),0,0,0),service:service);Assert.Empty(result.Errors);
         var target=f.State.Catalog.Posters.Single(p=>p.Poster.PosterId==setup.Target).Poster;
         Assert.Equal("Edited during Shell operation",target.Title);ContentLayoutPolicy.TryRead(target.ContentLayoutJson,setup.Target,out var layout,out _);

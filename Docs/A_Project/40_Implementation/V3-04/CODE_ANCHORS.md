@@ -1,5 +1,173 @@
 # V3-04 代码锚点
 
+## 2026-10-20 基础架构正式收口与当前图（当前）
+
+- 本轮USER ACCEPTED / CLOSED；[收口记录与图稿边界](../Architecture/FOUNDATION_REMAINDER_PLAN.md#31-本轮基础架构正式收口与当前架构图2026-10-20)。本轮没有新的产品代码或依赖变化，下方第30节源码锚点继续适用。
+- [当前图源](../../20_Architecture/ArchitectureReview/Foundation-Closed/current.architecture.json)：9个职责节点、8条主要运行协作关系；内置场景明确为编译期，不把未来热度/模板/AI/更新器画成已实现。
+- [交付及源码证据](../../20_Architecture/ArchitectureReview/Foundation-Closed/delivery.receipt.json)：24份实际工作区源码摘要；HEAD仅为基础检查点，包含未提交变化，未伪造远程源码链接。箭头不是全量程序集引用图。
+- [HTML产物](../../../../out/architecture-foundation-closed-20261020/current.architecture.html)确定性检查9/9通过；浏览器/视觉复验未完成，详见VERIFICATION。R4图源不再作为当前图。
+
+## 2026-10-20 最终架构与成本复审（历史复审，代码锚点仍有效）
+
+R1～R8/P1～P3 USER PASS / CLOSED；本轮只更新记录，未修改下列实现。完整目标对照、依赖方向及后续处理条件见[第30节](../Architecture/FOUNDATION_REMAINDER_PLAN.md#30-p2p3收口后的最终架构与成本复审2026-10-20)。
+
+- App/Bootstrap/App.ContentServices.cs、ApplicationComposition.cs：实际用例与适配接线/资源所有者；App/App.Lifetime.cs按屏障顺序停止并排空。
+- Application/Features/Content/FileActions/MappedContentCreationUseCase.cs、ContentOperationLifetime.cs：业务顺序及文件/宿主操作生命周期，不将完整流程留在存储端口内。
+- Application/Features/Content/Layout/PosterContentSession.cs、ContentPresentationLayout.cs；App/Presentation/PosterContentPresenter.cs、Views/Poster/PosterVisualWindow.ContentPublication.cs：状态/保护、纯帧、UI资源、同代原生发布各自所有者。
+- Infrastructure/ContentObservation/SqliteContentStartupSteps.cs：现有持久收尾兼容桥；总体启动顺序归Application/Features/Content/Observation/ContentStartupUseCase.cs，桥不得承接新政策。
+- Infrastructure/Persistence/State/SqliteStateStore.cs的ExecuteRead/Write：全局_gate、连接与校验成本仍在；不是已定因的历史执行锁冲突。
+- Application/Features/Content/Observation/ManagedContentSyncUseCase.cs与Infrastructure/ContentObservation/SqliteManagedContentObservationStorage.cs：无卡片变化也可能SaveEvidence写事务，完整扫描/全局版本稳定见证及提交前复核保持；是否优化先测量。
+- Application/Features/Content/Open/ContentActionService.cs、Ports/Content/IContentOpenJournal.cs：现有成功事实写入；尚无生产热度消费游标/评分器，本轮不新增。
+- tests/DesktopUp.Contracts.Tests/ArchitectureTests.cs、scripts/check-architecture.ps1：职责规则与实际编译集合；检查通过不等同规模性能认证。
+
+## 2026-10-20 P3按目录观察与有界公平调度（历史交付，现已人工通过）
+
+- Infrastructure/ContentObservation/DirectoryObservationQueue.cs：内部路由有界队列，去重FIFO/每批最多4根由monitor调用、独立兜底入队、失联退避与扫描期间事件保护；不持有文件权限或状态证据。
+- Infrastructure/ManagedContentMonitor.cs：单worker/timer，RefreshTargets与完整Invalidate分离；替换旧全局dirty位，按根注册/退避，串行调用范围核对，退出取消与watcher释放。App/App.Transfers.cs投影发布改用RefreshTargets，避免自己的提交触发所有根扫描。
+- Application/Ports/Content/ContentObservationPorts.cs、Features/Content/Observation/{ContentObservationService,ManagedContentSyncUseCase,MappedDirectoryUseCase}.cs：可选路径范围仅匹配新鲜登记/绑定，逐根重试反馈；提交安全逻辑不变，默认null仍完整核对。
+- Infrastructure/ContentObservation/SqliteMappedDirectoryStorage.ReadObservation：本批目录证据准备；全局语义和跨根关系仍验证，提交后重读与提交前新鲜保护保留。
+- tests/DesktopUp.Contracts.Tests/DirectoryObservationQueueTests、ContentMonitorDiscoveryTests及现有MappedObservationReadTests/ManagedContentSyncTests：新增调度/范围风险并复用旧安全覆盖。SessionFixture/DirectoryObservationCostFixture.cs为同一新旧测量入口--architecture-directory-cost；脚本start-architecture-observation-review.ps1新增-Batch P3，旧批入口不变。
+- 当前CODE/AUTO、集中人工待验，详细证据/摘要/两组步骤归[第29节](../Architecture/FOUNDATION_REMAINDER_PLAN.md#29-p3按目录观察与有界公平调度2026-10-20)。无本批目录移动/分支合并，P2人工仍待确认；下方为历史。
+
+## 2026-10-20 P2目标发现与无变化投影（历史）
+
+- Infrastructure/ManagedContentMonitor.cs：目标失效与内容脏位分离；启动/显式失效/监听错误/独立周期读取目标；缺失watcher按原tick重挂接，递归模式变化替换，不新增计时器。失败保留有效监听并停止本轮核对。
+- App/App.Transfers.cs InvalidateObservationTargets、App/App.xaml.cs ApplyStateProjection：利用既有投影发布与IContentMonitor.Invalidate通知目录相关变化；系统恢复和启动入口保留。没有具体存储依赖外溢。
+- Application/StateProjectionCoordinator.cs：本批未修改。未变化对象复用已存在，完整新鲜读取/同Revision损坏拒绝保留，不另建跨轮投影缓存。
+- tests/DesktopUp.Contracts.Tests/ContentMonitorDiscoveryTests.cs、ReadObservationCostTests.cs：4项实际worker/FSW边界与7项已验证读取保护，本批11项PASS。SessionFixture/ReadObservationCostFixture.cs新增63秒发现观测模式，保留旧33秒默认；没有生产计数钩子。
+- scripts/start-architecture-observation-review.ps1 -Batch P2：正常候选/实际monitor探针，R1/R7/P1默认不变。状态及唯一详细证据：[第28节](../Architecture/FOUNDATION_REMAINDER_PLAN.md#28-p2目标发现与无变化投影成本2026-10-20)，CODE/AUTO、集中人工待验；下方为历史。
+
+## 2026-10-20 P1同轮安全共享读取（历史）
+
+- Application/Ports/Content/ContentObservationPorts.cs：MappedObservationRead/Entry为本轮脱离事务的数据及逐目录错误；IMappedDirectoryStorage.ReadObservation接受取消令牌。
+- Infrastructure/ContentObservation/SqliteMappedDirectoryStorage：沿ExecuteRead完整校验，在短事务共享ReadSnapshot、ReadStorageLocations和目录证据；Root关系检查复用，原新鲜入口仍服务创建/动作/提交。
+- Application/Features/Content/Observation/MappedDirectoryUseCase.Reconcile：移除逐目录重复读取；保留租约/二次扫描/新鲜Evidence/CAS，提交后重建上下文，无持久缓存。
+- Infrastructure/MappedDirectoryStore：形状错误/null成员转局部IOException，不把坏证据当空目录；全局校验未放宽。
+- tests/DesktopUp.Contracts.Tests/MappedObservationReadTests、ReadObservationCostTests：新的读边界/目录隔离/版本与证据变化/锁拒绝；共22项最终定向范围见第26节。
+- scripts/measure-architecture-shared-read.ps1：保留旧fixture03和新candidate02，三对交错、全新隔离目录、记录摘要/环境、失败停止。start-architecture-observation-review.ps1 -Batch P1复用原真实monitor探针并准备两组人工，不改R1/R7默认路径。
+- 状态、摘要与证据：[第26节](../Architecture/FOUNDATION_REMAINDER_PLAN.md#26-p1-同轮安全共享读取2026-10-20)，两组集中人工USER PASS / CLOSED；本轮无代码入口变化。后续P2/P3见第27节，尚未开始；下方为归因阶段历史。
+
+## 2026-10-20 P1读取归因（历史，仅测试诊断）
+
+- tests/DesktopUp.SessionFixture/Program.cs：--architecture-attribution进入ReadValidationCostFixture；原R7 --architecture-cost保留。
+- ReadObservationCostFixture.SeedMappings：R7原内联准备改为共享方法，P1不再复制样例构造流程；CostPortProxy可选包围计时只用于单独归因，不改变原计数模式。
+- ReadValidationCostFixture：原方法反射委托、暖态读基线、单独端口/SQL回调计数、真实隔离提交。先落盘读取证据，失败保存原异常并停止；不重试。
+- SqliteExecutionCounter：fixture进程的SQLite auto-extension/trace_v2回调；普通开始、注释/子程序事件分开，只记分类次数，退出解绑自身回调。
+- 产品热点位置未改：Persistence/State/SqliteStateStore.VerifyCurrentSchema、SqliteStateCommandRepository.ReadSnapshot；ContentObservation/SqliteMappedDirectoryStorage.ValidateRoot/Evidence及Application/Features/Content/Observation/MappedDirectoryUseCase.Reconcile。完整证据/安全读计划见[第25节](../Architecture/FOUNDATION_REMAINDER_PLAN.md#25-p1-读取与校验成本归因2026-10-20)，不要在窗口添加缓存或跳过校验。
+
+## 2026-10-20 R8目录与最终复审（当前生产路径，已USER PASS）
+
+- App/Runtime/Posters：PosterSpatialRuntime各partial及WinUiPosterSession；原生宿主/交互采集与应用用例接线，不持有SQLite。App/Views/Poster：PosterVisualWindow各partial；布局/卡片仍在Application/Features/Content/Layout与App/Presentation，不因目录移动复制实现。
+- Infrastructure/Persistence/State：SqliteStateStore、SqliteStateCommandRepository及内容/海报/空间仓储；Persistence/Transfers：SqliteTransferJournal与SqliteStorageRelocationJournal各partial。Persistence/Migrations资源及逻辑名称未改。
+- ContentDeletionService已删；CrossPosterTransfer/MappedDirectoryIngress仅保留存储适配，旧Execute/Checkpoint测试入口删除。tests/Shared/ContentTestServices直接组装Application用例；ContentDeletionTests在本测试内直接组装删除用例，无替代生产包装。
+- ArchitectureTests路径锚点、运行宿主非空检查与Worker递归检查防止移动后漏查；scripts/check-architecture.ps1仍核对实际生产/Review编译集合。
+- scripts/start-architecture-file-actions-review.ps1 -Batch R8：独立candidate01和样例，不复跑旧Probe；R1/R5/R6路径/默认保留。
+- 详细职责/成本后续见[第24节](../Architecture/FOUNDATION_REMAINDER_PLAN.md#24-r8-目录整理与最终架构复审2026-10-20)，纯移动映射见[R8_MOVES.json](../Architecture/R8_MOVES.json)。下方历史根路径按该映射查找，不改写旧图/证据。
+
+## 2026-10-20 R7读取与观察成本
+
+- Application/Ports/Content/ContentObservationPorts.cs：IContentWatchTargetSource只提供当前监听目标，不暴露数据库连接；ContentObservationService只组合两类核对用例并转交发现读取。
+- Infrastructure/ContentObservation/SqliteContentWatchTargetSource.cs：一次ExecuteRead共享完整ReadSnapshot与受管登记，保留全部旧解析/校验；SqliteTransferJournal.Recovery.cs的ReadStorageLocations只接受同事务快照。
+- Bootstrap/App.ContentObservation.cs：唯一profile monitor接新的读端口；ManagedContentMonitor调度、Managed/Mapped Reconcile、StateProjectionCoordinator均未改。ManagedContentSyncUseCase旧ActivePaths已删，Mapped.ActivePaths仍供跨海报检查。
+- tests/DesktopUp.SessionFixture/ReadObservationCostFixture.cs：--architecture-cost同进程旧/新读取对照、1/6/12映射及真实Watcher样例；tests/DesktopUp.Contracts.Tests/ReadObservationCostTests.cs守语义校验、登记解析与目标更新。均非产品诊断框架。
+- 集中入口scripts/start-architecture-observation-review.ps1 -Batch R7；默认R1包/配置不变。候选candidate02、最终数据final01和余项统一见[第23节](../Architecture/FOUNDATION_REMAINDER_PLAN.md#23-r7-读取与观察成本2026-10-20)。没有文件移动；不将撤回的窄读取实验计为成果。
+
+## 2026-10-20 R6操作生命周期
+
+- Application/Features/Content/ContentOperationLifetime.cs：文件活动范围、停止令牌、UI任务登记/排空；窗口/文件服务不在其中执行。
+- App/PosterSpatialRuntime.Transfers、FileActions、Incoming、NativeExit、ContentReturn、RealContent：唯一所有者接线，finally释放、源端交接及重复完成防护；原分散字段/ObserveForShutdown删除。
+- PosterVisualWindow.FileActions/FileDialogs/NewContent/RealContent：停止后的入场保护及会话忙态撤回；App.Lifetime退出顺序不变。
+- ContentOperationLifetimeTests、Review/PosterSpatialRuntime.OperationLifetimeProbe：定向异常/取消/排空及真实创建后刷新失败；仅Review编译。启动start-architecture-file-actions-review.ps1 -Batch R6。证据、携带项和人工见[第22节](../Architecture/FOUNDATION_REMAINDER_PLAN.md#22-r6-操作生命周期与异常安全2026-10-20)。
+
+## 2026-10-20 R5映射动作与测试入口退役
+
+- Application/Features/Content/FileActions/MappedContentCreationUseCase.cs：映射新建次序与未知提交清理决定；ContentCreationUseCase显式路由。
+- Application/Features/Content/Observation/MappedDirectoryUseCase.Actions.cs：位置解析、替代对象校验、拖入/Win新建结果登记。
+- Infrastructure/ContentActions/LocalOwnedContentCreationFiles.cs：物理创建见证、固定句柄及精确清理；SqliteContentRenameJournal接旧schema核验；原MappedDirectoryService删除。
+- tests/Shared/ContentCreationFixture、ContentTestServices及Contracts.Tests/Support三Fixture：测试专用构造/故障注入，不编入产品；生产旧四包装删除。MappedContentCreationUseCaseTests与ArchitectureTests守新边界。
+- Bootstrap/App.ContentServices接新用例；Review IncomingProbe新增R5限定分支，复用InlineNamingProbe；启动入口start-architecture-file-actions-review.ps1 -Batch R5。进度/纯移动/证据归[第21节](../Architecture/FOUNDATION_REMAINDER_PLAN.md#21-复审修订与r5至r8实施计划)。
+
+## 2026-10-19 R4组装与Worker边界（USER PASS / CLOSED）
+
+- App/Bootstrap/ApplicationComposition.cs：显式按需组装及唯一数据库/Worker；App.Startup.cs：正常/维护分流、宿主与用例接线。
+- App.Lifetime.cs / App.DesktopEnvironment.cs：资源停止顺序／原生环境调度；原App主文件不再混放整套环境恢复流程。
+- Windows/Content/LocalContentReferenceProbe.cs：共享本机元数据；ContentWorker/Infrastructure项目显式引用，取消旧Compile链接。
+- ArchitectureTests与check-architecture.ps1：项目方向、完整生产partial边界、产品/Review隔离；Source/Offline复用原探针。集中入口start-architecture-presentation-review.ps1 -Batch R4。
+- 当前图源ArchitectureReview/R4-Closed/current.architecture.json与[目标对照/源码映射](../../20_Architecture/ArchitectureReview/R4-Closed/README.md)；R4目录保留为待验时快照。证据与基础出口见[第19～20节](../Architecture/FOUNDATION_REMAINDER_PLAN.md#r4-composition-boundary)。
+
+## 2026-10-19 R3呈现与同代命中
+
+- Application/Features/Content/Layout/ContentPresentationLayout.cs：纯布局准备、缓存/代次、锚点及空间候选组合；ContentPresentationFrame供绘制/命中共享。
+- 同目录ContentInputGeometry.cs、ContentLayoutTileIdentity.cs：标题/动作/内容/留白/导航/编辑区域决策及循环副本身份；Contracts.cs的PosterInputLayoutSnapshot新增内容代次标签。
+- App/Presentation/PosterContentPresenter.cs：稳定卡片树、CardPaint差异、选择/命名外观和暖位图；ContentRasterBinding.cs：需求、缓存、请求和订阅生命周期。
+- PosterVisualWindow.Content.cs / ContentAssets.cs / ContentPublication.cs：事实及线程适配、原生接纳后绘制；PosterVisualWindow.cs：整帧准备/批次失败保留，不再拥有卡片差异或输入几何算法。场景仍通过SurfacePaint原端口。
+- ContentPresentationLayoutTests、ArchitectureTests职责项；IncrementalRenderProbe及ContentHeatRuntimeProbe复用既有增量/悬停/收展并补同代失败检查；入口scripts/start-architecture-presentation-review.ps1。详细证据/人工见[第18节](../Architecture/FOUNDATION_REMAINDER_PLAN.md#r3-presentation-boundary)。
+
+## 2026-10-19 R2会话边界
+
+- Application/Features/Content/Layout/PosterContentSession.cs：每代海报草稿、历史、交互保护、热度/主题与发布票据；复用ContentHeatSession，不含UI/持久化/定时器。
+- 同目录PosterSourceRefresh.cs：每次来源绑定独立的线程安全合并标记；旧通知不能消耗新绑定的工作。
+- App/WinUiPosterSession.cs：构造并关闭内容会话；PosterVisualWindow.ContentProposals.cs只负责Dispatcher接线、结果绘制/反馈，不再拼接多个partial私有Busy字段。
+- ContentEditing/ContentMarquee/Transfers/Transition/FileActions/InlineRename/ContentSource：在原开始/结束点接会话状态，原生资源和图片预算保持；ContentGesture.Proposal及窗口旧草稿/缓冲/排队字段已删除。
+- PosterContentSessionTests.cs、原ContentHeatSession/Registry/架构测试；App.ContentHeatRuntimeProbe扩展中心释放分支并复用App.ContentSourceProbe；入口scripts/start-architecture-session-review.ps1。详情见[第17节](../Architecture/FOUNDATION_REMAINDER_PLAN.md#r2-session-boundary)。
+
+## 2026-10-19 R1来源修复与遗留入口清理
+
+- Application/Features/Content/FileActions/ContentReferenceRepairUseCase.cs：捕获目标与版本、来源预览、提交前复核和宿主守卫，再复用现有命令；不搬动真实文件。
+- Application/Ports/Content/IContentReferenceSource.cs：来源元数据端口与原LocalReferencePreview；Infrastructure/LocalContentReferenceSource.cs复用LocalContentReferenceProbe，原身份检查保持。
+- ControlCenterWindow.References.cs：仅保留RepairSelectedReference交互；无调用的添加/DEMO转换分支删除。RemoveSelectedReference仍供键盘使用，不误删。
+- PosterSpatialRuntime.Transfers.cs：产品只保留启动/忙态/资源边界，删除具体存储、RunTransfer与失效确认回调；App.Transfers.cs的partial接线只在Review提供实现。
+- tools/review/App/PosterSpatialRuntime.LegacyOutgoingProbe.cs：原Outgoing文件先字节一致迁出，旧模拟拖出仅编入Review；正常原生收/出/跨海报用例不变。
+- ContentReferenceRepairTests.cs、ArchitectureTests.cs和scripts/start-architecture-reference-review.ps1：定向边界与隔离候选入口；证据统一见[第16节](../Architecture/FOUNDATION_REMAINDER_PLAN.md#r1-reference-cleanup)。
+
+## 2026-10-19 R1配置与图标入口
+
+- Application/Features/Configuration/PortableProfileUseCase：预览、文件复核、备份与守卫后一次提交；Ports/Configuration/ProfileStoragePorts：文件IO、离线恢复端口及结果。
+- App/PortableProfileController.cs已删除；ControlCenterWindow.Portable保留交互/文案，App.Portable保留重启和单实例生命周期，Bootstrap/App.Configuration创建具体适配器。
+- ContentIconImport.LoadAsync及IContentIconSource：图标检查/解码复用原Worker；LocalContentIconSource复用原本地检查。窗口不再读元数据或强转StateProjectionCoordinator，使用已有命令接口。
+- StateBackupRecovery实现应用端口，内部原子安全步骤保持；StateRecoveryWindow只依赖端口。未完成的来源修复入口及职责清单见[第15节](../Architecture/FOUNDATION_REMAINDER_PLAN.md#r1-configuration-icons)。
+- scripts/start-architecture-configuration-review.ps1：正常产品两组隔离人工，不与Review探针混装。
+
+## 2026-10-19 R1位置迁移与旧入口退役
+
+- Application/Features/Content/Storage：StorageLocationUseCase负责位置/首次创建/预览/结果；StorageRelocationUseCase负责阶段和失败收尾顺序。Ports/Storage承载位置DTO与窄接口。
+- Infrastructure/StorageLocation：SqliteStorageLocationStorage、LocalStorageRelocationExecution、SqliteTransferLocationNotices；原复制/证明/锁/原子提交和Recovery保留。ManagedStorageService及StorageRelocationFiles.Execute旧入口已删除。
+- Bootstrap/App.ContentObservation共享位置用例，App.xaml首次收纳、SqliteContentStartupSteps和ControlCenterWindow.Transfers均接用例。ControlCenterService及中心位置文件不依赖Infrastructure/SQLite；无用forceChoose/SqliteTransferJournalNotice删除。
+- 原ManagedStorageServiceTests/StorageRelocationFilesTests及StorageCopyCrashFixture已转接新用例；scripts/start-architecture-storage-review.ps1对应当前正常候选。职责、精简验证与人工见[第13节](../Architecture/FOUNDATION_REMAINDER_PLAN.md#r1-storage-location)，以下“位置待迁出”为历史。
+
+## 2026-10-19 R1归还／卸载用例
+
+- Application/Features/Content/Lifecycle：ContentReturnUseCase（删海报/单项归还/重启观察）、UninstallContentUseCase（卸载库存与批次）、UninstallPreparation（保留/静默/报告）；Ports/Content/ContentLifecyclePorts为类型化事实与窄存储、文件及配置端口。
+- Infrastructure/ContentLifecycle：SqliteContentReturnStorage及Uninstall分部保留原子提交/身份与归属；LocalContentReturnFiles保留目的地限制；LocalUninstallProfile保留既有配置打开与清单写盘。PosterContentReturn兼容入口无另一份循环。
+- Bootstrap/App.ContentLifecycle组装；PosterSpatialRuntime.ContentReturn、ControlCenterService删除前核对、SqliteContentStartupSteps.ReconcileReturns、App.Uninstall调用应用边界。位置/配置入口仍待R1。
+- 复用PosterContentReturnTests、UninstallContentTests与ContentReturnProbe；新增准备边界3项和依赖1项。scripts/start-architecture-lifecycle-review.ps1绑定独立正常候选；职责/精简证据/人工步骤见[第12节](../Architecture/FOUNDATION_REMAINDER_PLAN.md#r1-lifecycle)。
+- 后台观察成本证据：ManagedContentMonitor → ContentObservationService → 两类Observation用例；[OPT-CONTENT-SYNC-01](../../30_Plans/ON_DEMAND_OPTIMIZATIONS.md)仅核实记录，调度/扫描源码本批未改。
+
+## 2026-10-19 R1映射、观察与启动接线
+
+- Application/Features/Content/Observation：MappedDirectoryUseCase、MappedDirectoryCreation、ManagedContentSyncUseCase、ContentObservationService、ContentStartupUseCase；Ports/Content/ContentObservationPorts及ContentStartupPorts提供类型化事实/原子操作。
+- Infrastructure/ContentObservation：SqliteMappedDirectoryStorage、SqliteManagedContentObservationStorage、LocalContentObservationFiles、SqliteContentStartupSteps；原MappedDirectoryService/ManagedContentSynchronizer复用同一用例，ManagedContentMonitor只依赖IContentObservation。
+- App/Bootstrap/App.ContentObservation与App.ContentServices：生产组装；App.Transfers和PosterSpatialRuntime.MappedPosterCreation/MappingStatus不再直接引用Infrastructure。
+- ContentObservationUseCaseTests / ArchitectureTests及既有映射/同步用例；tools/review/App/App.ContentObservationProbe使用真实生产监视器，scripts/start-architecture-observation-review.ps1绑定独立候选。职责、证据与待验两组见[第11节](../Architecture/FOUNDATION_REMAINDER_PLAN.md#11-r1-映射创建观察同步与启动接线2026-10-19)，下方例外为历史范围。
+
+## 2026-10-19 迁移身份与文本规则
+
+- src/DesktopUp.Infrastructure/Persistence/Migrations：001.sql～025.sql、catalog.xml固定SQL字节/身份/已核实历史指纹；SqliteMigrationCatalog严格加载嵌入资源。SqliteStateStore沿原事务/备份路径调用，不再散列业务类raw string。
+- .editorconfig / .gitattributes / scripts/validate-source-text.ps1 / Directory.Build.targets：编辑、检出、共同构建和发布的编码/BOM/EOL检查；package-preview.ps1前置检查及源绑定。
+- tests/DesktopUp.Contracts.Tests/MigrationFingerprintTests.cs、tests/Packaging/Test-SourceTextPolicy.ps1：只针对迁移与字节策略的隔离回归。证据及发布边界见[修复记录](PREVIEW_INSTALLER_DELIVERY.md#2026-10-19-迁移指纹与统一编码修复)。
+
+## 2026-10-16 基础架构余项入口
+
+当前 R1 文件动作、拖放两片均 USER PASS，职责及证据见[余项计划第8～9节](../Architecture/FOUNDATION_REMAINDER_PLAN.md)。源码 b3bfdc6 已同步，继续 impl/architecture-foundation；下一片为 PosterSpatialRuntime.MappedPosterCreation、App.Transfers 与 ManagedContentMonitor/ManagedContentSynchronizer 的创建和同步调用链。生命周期等其余 R1、R2～R4 仍待做，真实热度 HOLD；拉取接续见该计划第10节。
+
+- Application/Features/Content/FileActions：ContentFileActionService、Creation/Rename/DeletionUseCase、ContentFileActionPlans，分别承接操作编排和原索引规则；Ports/Content 为请求结果与窄事务/系统端口。
+- Infrastructure/ContentActions：实际文件系统、创建/删除事务、改名回执和上下文适配；原三个Service只兼容转接；ShellCreatedContentService仍负责原子登记。
+- App/Bootstrap/App.ContentServices.cs：本片生产组装；PosterSpatialRuntime.FileActions、PosterVisualWindow.FileActions/NewContent/InlineRename 仅接应用边界。MappedPosterCreation原方法体独立移动，仍为后续R1例外。
+- ContentFileActionUseCaseTests、ArchitectureTests；tools/review/App/App.IncomingProbe.cs 的 --r1-file-actions-probe 只复用行内命名检查，不附带历史拖放矩阵。
+- Application/Features/Content/Transfers：ManagedIngressUseCase、MappedIngressUseCase、CrossPosterTransferUseCase、NativeShellExitUseCase；Ports/Content/ContentTransferPorts为原回执及窄准备/提交/观察端口。
+- Infrastructure/ContentTransfers/SqliteManagedIngressStorage及CrossPosterTransfer/MappedDirectoryIngress attempt适配原账本、文件身份与原子提交；NativeShellExitJournal实现观察端口。Bootstrap统一组装，运行器Incoming/NativeExit与窗口Transfers无具体存储依赖。
+- ContentTransferUseCaseTests、ArchitectureTests.TransferVerticalSlice；App.IncomingProbe的--r1-transfers-probe只复用本片窗口接线，不附带历史交互矩阵。
+
 ## 2026-10-16 架构C热度运行入口
 
 - 展开闪烁修订：App/PosterVisualWindow.ContentAssets.cs将收起暂停加载与真正释放分开；tools/review/App/PosterVisualWindow.IncrementalRenderProbe.cs逐合成回调检查保留图像；smoke-content-heat-runtime.ps1 -PostureOnly只跑收展路径。C及修订视觉复验均已确认通过，详见下方C记录。

@@ -31,7 +31,7 @@ internal sealed partial class PosterVisualWindow
                 _contentOpenIntentCount, _authoritativePoster?.ContentLayoutJson,
                 ContentLayoutPolicy.Serialize(document), document);
         }
-        bool Released() => _contentGesture is null && _contentDraft is null && _contentDraftProjection is null &&
+        bool Released() => _contentGesture is null && _contentSession.Draft is null && _contentSession.DraftProjection is null &&
             _contentMotionTimer is null && _contentMotionLease is null && _contentLatestMotion is null && !_contentMotionPending;
         void CancelOwnedGesture()
         {
@@ -170,7 +170,7 @@ internal sealed partial class PosterVisualWindow
                     : "Direct item input began with editing mode off.");
             var surface = inputRouter.ReadSurface(inputSession) ?? throw new InvalidOperationException("No actual input surface.");
             var region = surface.Layout.Regions.Single(r => r.Kind == kind && r.ContentItemId == itemId);
-            Require(region.ContentSnapshotGeneration == _contentSnapshot!.ViewportGeneration, "The press uses the currently presented generation.");
+            Require(region.ContentSnapshotGeneration == _contentLayout.Snapshot!.ViewportGeneration, "The press uses the currently presented generation.");
             var capture = new PosterInputCapture(Guid.NewGuid(), new(inputSession, surface.Layout.Revision, surface.Frame, region));
             var press = new DirectContentProtocolPress(capture, new(
                 surface.Frame.X + region.Bounds.X + region.Bounds.Width / 2,
@@ -183,8 +183,8 @@ internal sealed partial class PosterVisualWindow
         }
         ContentLayoutTile[] VisibleTiles()
         {
-            var snapshot = _contentSnapshot ?? throw new InvalidOperationException("No presented snapshot.");
-            var viewport = _contentViewport ?? throw new InvalidOperationException("No current viewport.");
+            var snapshot = _contentLayout.Snapshot ?? throw new InvalidOperationException("No presented snapshot.");
+            var viewport = _contentLayout.Viewport ?? throw new InvalidOperationException("No current viewport.");
             return ContentLayoutFlow.ProjectTiles(snapshot, viewport).Where(t =>
                 !t.Clip.IsEmpty && Math.Abs(t.Clip.Width - t.Bounds.Width) < .01 &&
                 Math.Abs(t.Clip.Height - t.Bounds.Height) < .01).OrderBy(t => t.ReadOrder).ToArray();
@@ -215,9 +215,9 @@ internal sealed partial class PosterVisualWindow
             var gesture = _contentGesture!;
             inputs.Add(new { Event = "production-motion-flush", Revision = _stateRevision,
                 StoredRaw = _authoritativePoster?.ContentLayoutJson, gesture.LastEdit, gesture.LastMapping,
-                Proposal = gesture.Proposal is null ? null : ContentLayoutPolicy.Serialize(gesture.Proposal) });
-            Require(gesture.Proposal is not null, "The real preview produced an accepted proposal.");
-            Require(ContentLayoutEditing.SameState(gesture.Document, gesture.Proposal!) != changed,
+                Proposal = _contentSession.Draft is null ? null : ContentLayoutPolicy.Serialize(_contentSession.Draft) });
+            Require(_contentSession.Draft is not null, "The real preview produced an accepted proposal.");
+            Require(ContentLayoutEditing.SameState(gesture.Document, _contentSession.Draft!) != changed,
                 changed ? "The preview exercises a real author change." : "The return-origin preview is an exact author no-op.");
             Feedback("preview", changed ? null : "未改变");
         }
@@ -238,14 +238,14 @@ internal sealed partial class PosterVisualWindow
             inputs.Add(new { Event = redo ? "formal-redo" : "formal-undo", Before = before, After = State() });
         }
 
-        Require(!_disposed && !_contentPresentationSuspended && _monitor is not null && _inputIsland is not null &&
+        Require(!_disposed && !_contentSession.IsSuspended && _monitor is not null && _inputIsland is not null &&
             !_geometry.IsCollapsed && !_geometry.IsLocked && _transitionLayout is null && !spatial.IsSpatialBusy,
             "The actual expanded unlocked poster is idle and ready.");
         Require(PosterId is { } posterId && !spatial.HasCenterDraft(posterId) && nativeBasis is null && Released(),
             "There is no existing center draft, content gesture or native capture.");
         RefreshContentSurface();
         var initial = State();
-        Require(!IsEditing && !_contentReadOnly && _contentSnapshot is { SpaceStatus: ContentLayoutSpaceStatus.Normal } &&
+        Require(!IsEditing && !_contentReadOnly && _contentLayout.Snapshot is { SpaceStatus: ContentLayoutSpaceStatus.Normal } &&
             !initial.Document.LoopScroll && initial.Document.Mode == ContentLayoutMode.Automatic,
             "The finite ordinary automatic fixture is editable without organize mode.");
         Require(initial.Document.Regions.Count == 1 && initial.Document.ReservedSpaces.All(r => r.Kind != ContentReservedKind.Explicit) &&
@@ -394,10 +394,10 @@ internal sealed partial class PosterVisualWindow
                 var pair = Pair(); var press = Begin(pair.Source.ItemId);
                 Preview(press, Destination(press, pair.Source, pair.Destination), true);
                 var owner = _contentGesture;
-                var proposal = owner!.Proposal;
+                var proposal = _contentSession.Draft;
                 string? error = SelectContentItem(pair.Destination.ItemId);
                 Require(error is not null && ReferenceEquals(owner, _contentGesture) &&
-                    ReferenceEquals(proposal, _contentGesture!.Proposal) && _selectedContentItem == pair.Source.ItemId,
+                    ReferenceEquals(proposal, _contentSession.Draft) && _selectedContentItem == pair.Source.ItemId,
                     "Central selection was refused without cancelling, replacing or selecting through the live content owner.");
                 inputs.Add(new { Event = "formal-center-selection-refused", Error = error, Revision = _stateRevision });
                 Send(press, PosterInputEventKind.GestureCancelled, press.Point, TitleNativeEndReason.CancelMode);
@@ -405,7 +405,7 @@ internal sealed partial class PosterVisualWindow
             });
             await Case("enter-manual-captures-complete-presented-picture", before =>
             {
-                var picture = _contentSnapshot!;
+                var picture = _contentLayout.Snapshot!;
                 Require(EditContent(new(ContentLayoutEditKind.Mode) { Mode = ContentLayoutMode.Manual }) is null,
                     "The formal mode edit entered manual layout.");
                 OneCommit(before);
@@ -451,10 +451,10 @@ internal sealed partial class PosterVisualWindow
             await Case("selected-span-handle-in-editing-and-history", before =>
             {
                 Require(SetEditing(true), "The production editing entry point enabled span resizing.");
-                bool vertical = _contentSnapshot!.FlowAxis == ContentFlowAxis.Vertical;
+                bool vertical = _contentLayout.Snapshot!.FlowAxis == ContentFlowAxis.Vertical;
                 var source = VisibleTiles().First(t =>
                 {
-                    var slot = _contentSnapshot.Items.Single(p => p.ItemId == t.ItemId);
+                    var slot = _contentLayout.Snapshot.Items.Single(p => p.ItemId == t.ItemId);
                     return (vertical ? slot.ColumnSpan : slot.RowSpan) > 2;
                 });
                 Require(SelectContentItem(source.ItemId) is null, "The card was selected through the formal selection port.");

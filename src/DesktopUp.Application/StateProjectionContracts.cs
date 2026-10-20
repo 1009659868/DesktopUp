@@ -184,6 +184,8 @@ public interface IStateProjectionCoordinator
 
 public interface IStateCommandService
 {
+    StateCommandResult ExecutePortable(PortableImportCommand command) => throw new NotSupportedException("Portable commands are unavailable.");
+    StateCommandResult Execute(ContentIconCommand command, CancellationToken cancellation) => throw new NotSupportedException("Icon commands are unavailable.");
     StateCommandResult Execute(ContentReferenceCommand command) => throw new NotSupportedException("Reference commands are unavailable.");
     StateCommandResult Execute(ContentDetachCommand command) => throw new NotSupportedException("Content detach commands are unavailable.");
     StateCommandResult Execute(RegisterTemplateCommand command) => throw new NotSupportedException("Template registration is not supported by this adapter.");
