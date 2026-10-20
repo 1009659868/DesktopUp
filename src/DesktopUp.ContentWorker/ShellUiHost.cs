@@ -1,7 +1,7 @@
+using DesktopUp.Windows;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using DesktopUp.Application;
-using DesktopUp.Infrastructure;
 
 namespace DesktopUp.ContentWorker;
 

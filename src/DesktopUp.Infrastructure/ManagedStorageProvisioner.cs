@@ -8,16 +8,7 @@ using DesktopUp.Domain;
 
 namespace DesktopUp.Infrastructure;
 
-public sealed record StorageProvisionIntent(int FormatVersion,string ProfileIdentity,ManagedStorageRoot Root,Guid CollectionId);
-public sealed class StorageProvisionPreview
-{
-    internal StorageProvisionPreview(StorageProvisionIntent intent,long contentVersion)
-    { Intent=intent;ContentVersion=contentVersion;Fingerprint=StateRequestFingerprint.Compute(new {intent,contentVersion}); }
-    public StorageProvisionIntent Intent { get; }
-    public long ContentVersion { get; }
-    public string Fingerprint { get; }
-    public string CollectionPath => Path.Combine(Intent.Root.Locator,"collection-"+Intent.CollectionId.ToString("N"));
-}
+
 public enum StorageProvisionCheckpoint { IntentWritten,RootClaimed,DirectoryCreated,ChildClaimed,Registered }
 
 // Root metadata is exclusive to a physical profile directory. Copying a DB/profile does

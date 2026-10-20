@@ -129,6 +129,8 @@ internal static class StateCommandPolicy
         if (command.ReadSet.CatalogVersion is null || !command.ReadSet.Posters.ContainsKey(command.PosterId))
             return Invalid("Removal requires the confirmed target and catalog versions.");
         if (Find(state, command.PosterId) is null) return Missing();
+        if (ContentReturnPolicy.ManagedCards(state.ContentCatalog, command.PosterId).Count > 0)
+            return Invalid("此海报仍有收纳文件，请先完成安全归还；未删除海报或文件。");
         // Configuration only: this port has no filesystem operations.
         return new() { Removes = new[] { command.PosterId }, ResultPosterId = command.PosterId };
     }

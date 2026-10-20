@@ -9,10 +9,13 @@ internal sealed partial class ControlCenterService(
     Action toggleDynamicEffectsPaused,
     IStateProjectionCoordinator state, IStateCommandService commands, PosterInputRouter inputRouter,
     Func<PosterSurfaceProjection, EffectivePosterLayout?> effectiveLayout,
-    Func<PosterSpatialRuntime?>? spatialRuntime = null, PortableProfileController? portable = null,
-    DesktopUp.Infrastructure.SqliteStateStore? transferStore = null,
-    DesktopUp.Infrastructure.ManagedStorageService? storageLocation = null,
-    Func<ILocalContentWorker?>? iconWorker = null) : IDisposable
+    Func<PosterSpatialRuntime?>? spatialRuntime = null, PortableProfileUseCase? portable = null,
+    ITransferLocationNotices? transferLocations = null,
+    StorageLocationUseCase? storageLocation = null,
+    Func<ILocalContentWorker?>? iconWorker = null,
+    ContentReturnUseCase? contentReturns = null,
+    Action? requestRecovery = null, IContentIconSource? iconSource = null,
+    ContentReferenceRepairUseCase? referenceRepair = null, StartupRegistrationService? startup = null) : IDisposable
 {
     private ControlCenterWindow? _window;
     private IDisposable? _lease;
@@ -69,16 +72,24 @@ internal sealed partial class ControlCenterService(
                     });
                 stage = "apply-projection";
                 pendingWindow.ConfigureContentLayout(() => spatialRuntime?.Invoke());
-                pendingWindow.ConfigureReferences(command => { var result = commands.Execute(command); ShowCommandResult(result); return result; });
-                if (iconWorker is not null && state is StateProjectionCoordinator iconCoordinator)
-                    pendingWindow.ConfigureContentIcons(iconWorker, (command, cancellation) =>
-                    { var result = iconCoordinator.Execute(command, cancellation); ShowCommandResult(result); return result; });
+                if (referenceRepair is not null) pendingWindow.ConfigureReferenceRepair(referenceRepair, ShowCommandResult);
+                if (iconWorker is not null && iconSource is not null)
+                    pendingWindow.ConfigureContentIcons(iconSource, iconWorker, (command, cancellation) =>
+                    { var result = commands.Execute(command, cancellation); ShowCommandResult(result); return result; });
                 pendingWindow.ConfigureCenterTheme(theme =>
                 {
                     if (!state.TryGetCurrent(out var current) || current is null) return;
                     ShowCommandResult(commands.Execute(new SettingsStateCommand(Guid.NewGuid().ToString("N"),
                         StateCommandSource.ControlCenter, SettingsStateCommandKind.SetCenterTheme, current.Revision,
                         current.ControlCenter.Settings.Settings with { CenterTheme = theme })));
+                });
+                if (startup is not null) pendingWindow.ConfigureStartup(startup, enabled =>
+                {
+                    if (!state.TryGetCurrent(out var current) || current is null) return Unavailable("startup", 0);
+                    return commands.Execute(new SettingsStateCommand(Guid.NewGuid().ToString("N"),
+                        StateCommandSource.ControlCenter, SettingsStateCommandKind.SetLaunchAtStartupRequested, current.Revision,
+                        current.ControlCenter.Settings.Settings with { LaunchAtStartupRequested = enabled })
+                    { ReadSet = StateReadSet.ForSettings(current.ControlCenter.Settings.EntityVersion) });
                 });
                 pendingWindow.ConfigureTemplateRegistration((source, targetId, revision) =>
                 {
@@ -98,8 +109,9 @@ internal sealed partial class ControlCenterService(
                     edit => spatialRuntime?.Invoke()?.PreviewControlCenterSetting(edit) == true,
                     () => spatialRuntime?.Invoke()?.CancelControlCenterVisuals(),
                     id => spatialRuntime?.Invoke()?.LocateControlCenterPoster(id) ?? "桌面尚未就绪。", ledger);
-                if (portable is not null) pendingWindow.ConfigurePortable(portable, ledger, log);
-                if (transferStore is not null) pendingWindow.ConfigureTransfers(transferStore, () => state.Refresh(), storageLocation);
+                if (portable is not null && requestRecovery is not null)
+                    pendingWindow.ConfigurePortable(portable, ledger, log, requestRecovery);
+                if (transferLocations is not null) pendingWindow.ConfigureTransfers(transferLocations, () => state.Refresh(), storageLocation);
                 if (_selection.BuildView(_sessions, _environmentPending, _globallyHidden) is { } initialView)
                 {
                     pendingWindow.ApplyView(initialView, _commandError);
@@ -270,6 +282,16 @@ internal sealed partial class ControlCenterService(
         try
         {
             if (!OriginCurrent()) return;
+            if (contentReturns is not null)
+            {
+                // Settle recorded results before freezing this deletion's consent. No file replay.
+                var notices = await Task.Run(contentReturns.Reconcile);
+                if (notices.Count > 0)
+                {
+                    _commandError = string.Join("\n", notices); Show(); Present(); return;
+                }
+                if (_disposed || !OriginCurrent()) return;
+            }
             var preview = state.PrepareRemoval(request.PosterId);
             if (preview is null || _removal.Begin(request, preview) is not { } ticket)
             {
@@ -289,10 +311,13 @@ internal sealed partial class ControlCenterService(
             state.Refresh();
             if (_removal.Complete(ticket.Id, confirmed) is { } command)
             {
-                var result = commands.Execute(command);
-                ShowCommandResult(result);
-                log.Write(result.Succeeded ? "info" : "warning", "poster.removal_completed",
-                    new { command.PosterId, command.RequestId, Status = result.Status.ToString(), result.Error });
+                if (spatialRuntime?.Invoke() is { } runtime)
+                {
+                    var result = await runtime.ReturnAndRemovePoster(command, WinRT.Interop.WindowNative.GetWindowHandle(_window!));
+                    if (!result.Removed) { _commandError = string.Join("\n", result.Errors); Present(); }
+                    log.Write(result.Removed ? "info" : "warning", "poster.removal_completed", new { command.PosterId, result.Removed, result.Returned });
+                }
+                else ShowCommandResult(Unavailable(command.RequestId, command.ExpectedRevision));
             }
             else log.Write("info", "poster.removal_confirmation_dismissed", new { request.PosterId, confirmed });
         }

@@ -7,6 +7,6 @@
   <ItemGroup>
     <FrameworkReference Update="Microsoft.NETCore.App" RuntimeFrameworkVersion="$(DesktopUpPreviewRuntimeVersion)" Condition="'$(DesktopUpPreviewRuntimeVersion)' != ''" />
     <ProjectReference Include="../DesktopUp.Application/DesktopUp.Application.csproj" />
-    <Compile Include="../DesktopUp.Infrastructure/LocalContentReferenceProbe.cs" Link="LocalContentReferenceProbe.cs" />
+    <ProjectReference Include="../DesktopUp.Windows/DesktopUp.Windows.csproj" />
   </ItemGroup>
 </Project>

@@ -5,7 +5,7 @@ using DesktopUp.Application;
 
 namespace DesktopUp.Infrastructure;
 
-public sealed class ShellUiClient(string executable, IResourceLedger ledger)
+public sealed class ShellUiClient(string executable, IResourceLedger ledger) : IShellUiClient
 {
     // Independent interactive lifetime: a property dialog must not consume icon extraction slots.
     public async Task<ShellUiResult> RunAsync(ShellUiRequest request, CancellationToken stopping)

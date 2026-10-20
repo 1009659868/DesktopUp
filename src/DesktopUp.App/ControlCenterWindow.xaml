@@ -187,6 +187,9 @@
       <TextBlock Text="收纳位置" VerticalAlignment="Center"/>
       <Button Grid.Column="1" Content="查看 / 更改…" Click="ManagedStorage_Click" Style="{StaticResource UiCAction}"/>
      </Grid>
+     <ToggleSwitch x:Name="StartupToggle" Header="开机自启动" OnContent="已登记" OffContent="未登记" IsEnabled="False" Toggled="StartupToggle_Toggled" AutomationProperties.AutomationId="LaunchAtStartup"/>
+     <TextBlock x:Name="StartupStatusText" TextWrapping="Wrap" FontSize="12" Opacity="0.8"/>
+     <HyperlinkButton Content="Windows 启动应用" Click="StartupSettings_Click" Padding="0"/>
     </StackPanel></Flyout></DropDownButton.Flyout>
    </DropDownButton>
    </StackPanel>

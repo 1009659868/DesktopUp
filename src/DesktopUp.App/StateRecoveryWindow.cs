@@ -1,4 +1,4 @@
-using DesktopUp.Infrastructure;
+using DesktopUp.Application;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
@@ -12,7 +12,7 @@ namespace DesktopUp;
 /// </summary>
 public sealed class StateRecoveryWindow : Window
 {
-    private readonly StateBackupRecovery _recovery;
+    private readonly IStateBackupRecovery _recovery;
     private readonly Action _requestNormalRestart;
     private readonly Action _exit;
     private readonly Grid _root = new() { Padding = new Thickness(24), RowSpacing = 14 };
@@ -37,7 +37,7 @@ public sealed class StateRecoveryWindow : Window
     private bool _closed;
     private bool _restartReady = true;
 
-    public StateRecoveryWindow(StateBackupRecovery recovery, string reason, Action requestNormalRestart, Action exit)
+    public StateRecoveryWindow(IStateBackupRecovery recovery, string reason, Action requestNormalRestart, Action exit)
     {
         _recovery = recovery;
         _requestNormalRestart = requestNormalRestart;

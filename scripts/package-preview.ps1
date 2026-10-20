@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 param(
     [ValidatePattern('^\d{8}\.\d+$')][string]$ReleaseId,
     [string]$OutputRoot,
@@ -12,6 +12,10 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $pkgRepo = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..')).TrimEnd('\')
+$pkgChannel = 'Preview'
+$pkgApplicationId = 'DesktopUp.V3.Preview'
+$pkgDataRoot = '%LOCALAPPDATA%\DesktopUp\' + $pkgChannel
+$pkgStorageBase = '%LOCALAPPDATA%\DesktopUp\Storage\preview'
 if (!$SettingsPath) { $SettingsPath = Join-Path $pkgRepo 'packaging/preview/package-settings.json' }
 $pkgSettingsText = Get-Content -LiteralPath $SettingsPath -Raw -Encoding UTF8
 $pkgSettings = $pkgSettingsText | ConvertFrom-Json
@@ -37,6 +41,7 @@ $pkgAllowed = Join-Path $pkgRepo 'out'
 if (!$pkgOutput.StartsWith($pkgAllowed+'\', [StringComparison]::OrdinalIgnoreCase)) { throw 'OutputRoot must be a new directory below repository/out.' }
 if (Test-Path -LiteralPath $pkgOutput) { throw 'Preserve old builds: choose a new OutputRoot.' }
 . (Join-Path $PSScriptRoot 'toolchain.ps1')
+& (Join-Path $PSScriptRoot 'validate-source-text.ps1') -RepositoryRoot $pkgRepo
 $pkgToolInfo = Get-DesktopUpToolchain -MakeNsis $MakeNsis
 $pkgExplicitNsis = $MakeNsis
 $MakeNsis = $pkgToolInfo.MakeNsis
@@ -56,7 +61,7 @@ function Get-SourceBinding {
         Get-ChildItem -LiteralPath (Join-Path $pkgRepo $pkgArea) -Recurse -File |
             Where-Object { $_.FullName -notmatch '\\(bin|obj)\\' } |
             ForEach-Object { [ordered]@{ Path=$_.FullName.Substring($pkgRepo.Length+1).Replace('\','/'); SHA256=(Get-FileHash -LiteralPath $_.FullName).Hash } }
-    }; foreach ($pkgName in @('Directory.Build.props','Directory.Build.targets','Directory.Packages.props','DesktopUp.sln','global.json','NuGet.Config','Package-Preview.cmd','LICENSE','THIRD_PARTY_NOTICES.md')) {
+    }; foreach ($pkgName in @('.editorconfig','.gitattributes','Directory.Build.props','Directory.Build.targets','Directory.Packages.props','DesktopUp.sln','global.json','NuGet.Config','Package-Preview.cmd','LICENSE','THIRD_PARTY_NOTICES.md')) {
         [ordered]@{ Path=$pkgName; SHA256=(Get-FileHash -LiteralPath (Join-Path $pkgRepo $pkgName)).Hash }
     }) | Sort-Object { $_.Path }
 }
@@ -65,7 +70,7 @@ $pkgTools = Enter-DesktopUpToolchain -ForPackaging -MakeNsis $pkgExplicitNsis -O
 try {
 $pkgResolved.SdkPresent = $true
 $pkgResolved.NsisPresent = $true
-$pkgBuildOptions = @()
+$pkgBuildOptions = @('-p:DesktopUpReviewTools=false')
 if ($Offline) { $pkgBuildOptions += @("-p:RestoreConfigFile=$($pkgTools.OfflineConfig)", '-p:NuGetAudit=false') }
 $pkgPayload = Join-Path $pkgOutput 'payload'
 $pkgApp = Join-Path $pkgPayload 'app'
@@ -127,7 +132,7 @@ try {
     Copy-Item -LiteralPath (Join-Path $pkgRepo 'THIRD_PARTY_NOTICES.md') -Destination $pkgLicenses
     $pkgDependencies | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $pkgLicenses 'packages.json') -Encoding utf8
     $pkgWinAppSdk = @($pkgPackages | Where-Object { $_ -match '^microsoft.windowsappsdk/' })[0].Split('/')[1]
-    [ordered]@{ Release=$ReleaseId; Channel='Preview'; Architecture='AMD64'; MinimumOS='Windows 11'; DotNet=$RuntimeVersion; WindowsAppSDK=$pkgWinAppSdk; SourceCommit=$pkgHead; IncludesUncommittedChanges=($pkgStatus.Count -gt 0); DataRoot='%LOCALAPPDATA%\DesktopUp\Preview'; DefaultStorageBase='%LOCALAPPDATA%\DesktopUp\Storage\preview'; ApplicationId='DesktopUp.V3.Preview'; DefaultTemplate=$DefaultTemplate; BackgroundOpacityPercent=$BackgroundOpacityPercent; CustomInstallDirectory=$true; Content='Real content; empty initial profile; no demo cards'; Signed=$false } |
+    [ordered]@{ Release=$ReleaseId; Channel=$pkgChannel; Architecture='AMD64'; MinimumOS='Windows 11'; DotNet=$RuntimeVersion; WindowsAppSDK=$pkgWinAppSdk; SourceCommit=$pkgHead; IncludesUncommittedChanges=($pkgStatus.Count -gt 0); DataRoot=$pkgDataRoot; DefaultStorageBase=$pkgStorageBase; ApplicationId=$pkgApplicationId; DefaultTemplate=$DefaultTemplate; BackgroundOpacityPercent=$BackgroundOpacityPercent; CustomInstallDirectory=$true; Content='Real content; empty initial profile; no demo cards'; Signed=$false } |
         ConvertTo-Json | Set-Content (Join-Path $pkgApp 'preview-build.json') -Encoding utf8
     $pkgFiles = @(Get-ChildItem -LiteralPath $pkgPayload -Recurse -File | Sort-Object FullName)
     $pkgManifest = @(foreach ($pkgFile in $pkgFiles) {

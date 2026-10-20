@@ -67,8 +67,9 @@ public sealed class IncomingDropSession
     {
         Leave(); generation++;
         if (input is null || input.Count is < 1 or > 100 ||
-            input.Any(x => string.IsNullOrWhiteSpace(x) || x.Length > 8192 || x.Any(char.IsControl)) ||
-            input.Distinct(StringComparer.OrdinalIgnoreCase).Count() != input.Count) return null;
+            input.Any(x => !LocalContentCompatibility.TryNormalize(x, false, out _, out _)) ||
+            input.Select(x => { LocalContentCompatibility.TryNormalize(x, false, out var value, out _); return value; })
+                .Distinct(StringComparer.OrdinalIgnoreCase).Count() != input.Count) return null;
         paths = input.ToArray();
         return Over(surface, point, keys, offeredEffects);
     }

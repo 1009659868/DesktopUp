@@ -217,7 +217,10 @@ public sealed record PosterInputLayoutSnapshot(
     int FrameWidth,
     int FrameHeight,
     IReadOnlyList<PosterInputRegion> Regions,
-    int OuterCornerRadius = 0);
+    int OuterCornerRadius = 0)
+{
+    public long ContentSnapshotGeneration { get; init; }
+}
 
 public enum PosterInputEventKind
 {

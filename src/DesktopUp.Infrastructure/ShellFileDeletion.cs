@@ -1,12 +1,7 @@
 using System.Runtime.InteropServices;
+using DesktopUp.Application;
 
 namespace DesktopUp.Infrastructure;
-
-public sealed record ShellDeleteResult(bool Cancelled, int HResult);
-public interface IShellFileDeletion
-{
-    Task<ShellDeleteResult> Recycle(string path, nint owner, Func<bool> current, CancellationToken token);
-}
 
 public sealed partial class ShellDirectoryTransfer : IShellFileDeletion
 {

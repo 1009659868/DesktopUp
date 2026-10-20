@@ -1,3 +1,4 @@
+using DesktopUp.Windows;
 using DesktopUp.Application;
 using DesktopUp.Domain;
 
@@ -23,7 +24,8 @@ public sealed class ShellCreatedContentService(SqliteStateStore store)
         if (poster.Poster.IsLocked) throw new IOException("海报已锁定；新建对象仍保留在目录中。");
         if (location.Mapping is { } expected)
         {
-            var mapped = new MappedDirectoryService(store);
+            var mapped = new MappedDirectoryUseCase(
+                new SqliteMappedDirectoryStorage(store), new LocalContentObservationFiles());
             if (mapped.ResolveNewContent(posterId) != expected) throw new IOException("映射目录已变化。");
             mapped.CommitIncoming(posterId, [created.Path], null, poster.EntityVersion);
             return;
@@ -32,28 +34,14 @@ public sealed class ShellCreatedContentService(SqliteStateStore store)
         ManagedStorageProvisioner.ValidateRegistration(store, storage.Root, storage.Collection);
         var observed = LocalContentReferenceProbe.Inspect(created.Path).Item ?? throw new IOException("新建对象暂不可读取。");
         if (store.ProtectedTransferPath(created.Path)) throw new IOException("不能把受保护路径作为新建结果。");
-        var catalog = state.ContentCatalog;
-        var occupied = catalog.PosterItems.FirstOrDefault(p => ContentSingleOwnerPolicy.Key(
-            ContentRelationPolicy.Resolve(catalog,p.PosterId,p.LayoutItemId)!.Item) == ContentSingleOwnerPolicy.Key(observed));
-        if (occupied is not null)
-        {
-            if (occupied.PosterId == posterId) return; // Same callback/result is idempotent.
-            throw new IOException("此对象已属于另一海报；未改变原有关联。");
-        }
-        observed = observed with { Capabilities = observed.Capabilities & ~ContentCapability.Move };
-        var staged = catalog with { Items = catalog.Items.Append(observed).ToArray(),
-            Memberships = catalog.Memberships.Append(new(Guid.NewGuid(), storage.Collection.Id, observed.Id, ContentMembershipOrigin.Source)).ToArray() };
-        var reads = StateReadSet.ForPoster(posterId, poster.EntityVersion) with { ContentVersion = state.ContentVersion };
-        string operation = "shell-created-" + Guid.NewGuid().ToString("N");
-        var plan = ContentReferencePolicy.Prepare(new(operation, StateCommandSource.ControlCenter, state.Revision, reads,
-            posterId, [new(observed, ContentReferenceChoice.Reuse, observed.Id)], true), state with { ContentCatalog = staged });
-        if (plan.Rejection is not null) throw new IOException(plan.Error);
+        var plan = ContentFileActionPlans.ShellCreated(state, posterId, poster.EntityVersion, storage.Collection.Id, observed, created);
+        if (plan is null) return;
         var result = store.ExecuteWrite((c,t) =>
         {
             var committed = SqliteStateCommandRepository.ExecuteInTransaction(c,t,
-                new(operation, StateRequestFingerprint.Compute(created), state.Revision, reads), _ => plan);
+                plan.Request, _ => plan.Mutation);
             if (committed.Status == StateCommandStatus.Committed)
-                ManagedContentObservationStore.Capture(c,t,committed.Snapshot.ContentCatalog,[observed.Id]);
+                ManagedContentObservationStore.Capture(c,t,committed.Snapshot.ContentCatalog,plan.ObservedIds);
             return committed;
         });
         if (result.Status != StateCommandStatus.Committed) throw new IOException(result.Error);

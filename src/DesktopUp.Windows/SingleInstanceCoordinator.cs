@@ -21,7 +21,7 @@ public sealed class SingleInstanceCoordinator : IDisposable
 
     public event Action<StartupIntent>? IntentReceived;
 
-    public bool TryAcquireOrForward(StartupIntent intent, TimeSpan? timeout = null)
+    public bool TryAcquireOrForward(StartupIntent intent, TimeSpan? timeout = null, bool forwardExisting = true)
     {
         ObjectDisposedException.ThrowIf(_disposed != 0, this);
         _mutex = new Mutex(initiallyOwned: true, _names.MutexName, out bool createdNew);
@@ -34,7 +34,7 @@ public sealed class SingleInstanceCoordinator : IDisposable
 
         _mutex.Dispose();
         _mutex = null;
-        Forward(intent, timeout ?? TimeSpan.FromSeconds(3));
+        if (forwardExisting) Forward(intent, timeout ?? TimeSpan.FromSeconds(3));
         return false;
     }
 

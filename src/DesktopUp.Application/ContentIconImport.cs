@@ -6,6 +6,15 @@ namespace DesktopUp.Application;
 public enum ContentIconFileFormat { Png, Jpeg, Ico }
 public static class ContentIconImport
 {
+    // File metadata may block; never inspect it on the window thread. Decode keeps the existing worker budget.
+    public static async ValueTask<ContentIconAsset> LoadAsync(IContentIconSource source,
+        ILocalContentWorker worker, string path, CancellationToken cancellation)
+    {
+        var image = await Task.Run(() => source.Inspect(path), cancellation).ConfigureAwait(false);
+        cancellation.ThrowIfCancellationRequested();
+        return await DecodeAsync(worker, image, cancellation).ConfigureAwait(false);
+    }
+
     public const int MaximumInputBytes = 8 * 1024 * 1024;
     public const uint MaximumSourceDimension = 4096;
     public const long MaximumSourcePixels = 16 * 1024 * 1024;

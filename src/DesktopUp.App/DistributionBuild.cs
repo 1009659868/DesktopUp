@@ -8,6 +8,7 @@ internal static class DistributionBuild
 {
     public static PosterDefinition ApplyCreationDefaults(PosterDefinition seed) => CreationDefaults?.ApplyToNew(seed) ?? seed;
 #if DESKTOPUP_PREVIEW
+    public const bool IsInstallable = true;
     public const string ApplicationId = "DesktopUp.V3.Preview";
     public const string DisplayName = "DesktopUp Preview";
     public const string TrayName = "DesktopUp Preview";
@@ -36,6 +37,7 @@ internal static class DistributionBuild
         }
     }
 #else
+    public const bool IsInstallable = false;
     public const string ApplicationId = "DesktopUp.V3";
     public const string DisplayName = "DesktopUp";
     public const string TrayName = "DesktopUp V3";

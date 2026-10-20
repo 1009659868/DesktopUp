@@ -9,7 +9,7 @@ internal sealed record StorageCopyCollection(Guid Id,string MetadataName,Storage
 internal sealed record StorageCopyManifest(int FormatVersion,string ProfileIdentity,Guid OperationId,string Fingerprint,StorageCopyCollection[] Collections);
 internal sealed record StorageCreatedObject(string RelativePath,LocalTransferObject Object);
 internal sealed record StorageVerifiedCopies(StorageBundleClaim Claim,LocalTransferObject[] Targets);
-internal sealed record StorageRelocationResult(bool Committed,bool Cleaned,string[] RetainedPaths,string? Reason);
+
 
 // Immutable, write-through operational evidence, not part of portable settings. The DB intent
 // precedes this directory; the existing external-file-history guard prevents restoring a DB

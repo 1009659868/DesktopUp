@@ -37,7 +37,7 @@ public static class ContentReferenceIntegrity
                 return "Reference commands may not silently detach existing relations.";
             if (catalog.PosterItems.Any(p => p.IconAssetId is not null &&
                 before.ContentCatalog.PosterItems.All(old => old.Id != p.Id) &&
-                !(plan.TransferReceiptId is not null && detached.Any(old=>old.IconAssetId==p.IconAssetId &&
+                !((plan.TransferReceiptId is not null || plan.ExternalSyncReceiptId is not null) && detached.Any(old=>old.IconAssetId==p.IconAssetId &&
                     before.ContentCatalog.Memberships.Single(m=>m.Id==old.MembershipId).ContentItemId==
                     catalog.Memberships.Single(m=>m.Id==p.MembershipId).ContentItemId))))
                 return "New card icon import requires an explicit atomic construction contract.";

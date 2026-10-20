@@ -1,23 +1,22 @@
 using System.Diagnostics;
 using DesktopUp.Application;
-using DesktopUp.Infrastructure;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace DesktopUp;
 
 public partial class App
 {
-    private PortableProfileController? _portableController;
-    private StateBackupRecovery? _offlineRecovery;
+    private PortableProfileUseCase? _portableController;
+    private IStateBackupRecovery? _offlineRecovery;
     private StateRecoveryWindow? _recoveryWindow;
     private IDisposable? _recoveryWindowLease;
     private bool _storageInitialized;
     private bool _restartRequested, _restartForRecovery;
+    private string? _restartDataRoot;
 
     private bool TryEnterOfflineRecovery()
     {
-        var paths = _services!.GetRequiredService<IUserDataPaths>();
-        _offlineRecovery = new(paths, () => _isPrimary && !_storageInitialized);
+        var paths = _composition!.Paths;
+        _offlineRecovery = CreateOfflineRecovery(paths);
         if (_offlineRecovery.HasPendingRecovery)
         {
             OpenOfflineRecovery("检测到上次未收尾的恢复记录。已阻止打开状态库；请明确处理该记录。");
@@ -39,23 +38,13 @@ public partial class App
         _log?.Write("info", "state_recovery.opened", new { reason, pending = _offlineRecovery!.HasPendingRecovery });
     }
 
-    private void ConfigurePortableProfiles()
-    {
-        var services = _services ?? throw new InvalidOperationException("Application services are not ready.");
-        var coordinator = services.GetRequiredService<StateProjectionCoordinator>();
-        bool Guard(PortableImportPlan plan) => Volatile.Read(ref _exiting) == 0 &&
-            _spatialRuntime?.CanApplyPortable(plan) == true;
-        coordinator.BindPortableRuntime(Guard);
-        _portableController = new(services.GetRequiredService<IStateCommandRepository>(), coordinator,
-            services.GetRequiredService<IStateStore>(), services.GetRequiredService<IUserDataPaths>(),
-            () => _spatialRuntime?.PortableTopology(), Guard, () => RequestReplacement(true));
-    }
 
     private void RequestReplacement(bool recovery)
     {
         if (_recoveryWindow?.IsBusy == true || Volatile.Read(ref _exiting) != 0) return;
         if (!recovery && _offlineRecovery?.HasPendingRecovery == true) return;
         _restartRequested = true; _restartForRecovery = recovery;
+        _restartDataRoot = Environment.GetEnvironmentVariable("DESKTOPUP_V3_TEST_DATA_ROOT");
         ExitApplication();
     }
 
@@ -69,6 +58,7 @@ public partial class App
             var start = new ProcessStartInfo(Environment.ProcessPath!)
             { UseShellExecute = false, CreateNoWindow = true, WorkingDirectory = AppContext.BaseDirectory };
             start.ArgumentList.Add(_restartForRecovery ? "--recover-state" : "--show-control-center");
+            if (!string.IsNullOrWhiteSpace(_restartDataRoot)) start.Environment["DESKTOPUP_V3_TEST_DATA_ROOT"] = _restartDataRoot;
             Process.Start(start)?.Dispose();
         }
         catch (Exception error)

@@ -1,4 +1,14 @@
 <Project>
+  <!-- Common gate: direct dotnet/VS builds and no-build publishing still check source text. -->
+  <Target Name="ValidateSourceText" BeforeTargets="PrepareForBuild;CoreCompile;Publish"
+          Condition="'$(DesignTimeBuild)' != 'true'">
+    <Exec Command="powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File &quot;$(MSBuildThisFileDirectory)scripts/validate-source-text.ps1&quot; -RepositoryRoot &quot;$(MSBuildThisFileDirectory).&quot;" />
+  </Target>
+  <Target Name="ValidateReviewBuildBoundary" BeforeTargets="PrepareForBuild"
+          Condition="'$(MSBuildProjectName)' == 'DesktopUp.App'">
+    <Error Condition="'$(DesktopUpReviewTools)' == 'true' or '$(DesktopUpStartupReview)' == 'true'"
+           Text="This release checkout does not include development review executors or channels." />
+  </Target>
   <!-- Optional trusted sources are discovered at build evaluation, never loaded from user data. -->
   <ItemGroup Condition="'$(MSBuildProjectName)' == 'DesktopUp.Domain'">
     <Compile Include="$(MSBuildThisFileDirectory)Modules/*/Domain/*.cs" Link="Modules/%(RecursiveDir)%(Filename)%(Extension)" />
