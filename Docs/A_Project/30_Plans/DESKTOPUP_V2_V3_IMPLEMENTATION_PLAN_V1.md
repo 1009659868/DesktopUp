@@ -1,6 +1,6 @@
 # DesktopUp V2 V3 制作计划 V1
 
-2026-10-20 当前：**本轮基础架构整理 USER ACCEPTED / CLOSED；R1～R8、P1～P3均已验。** 用户已授权正式收口，[当前架构图、收口范围与交付限制](../40_Implementation/Architecture/FOUNDATION_REMAINDER_PLAN.md#31-本轮基础架构正式收口与当前架构图2026-10-20)已记录。图稿showcase 9/9通过，浏览器/视觉复验未完成；不与业务验收混记。剩余规模成本和历史锁冲突继续携带，动态模板/AI/更新器等未实现。当前impl/architecture-foundation及未提交成果保留，本轮不改产品、不提交/推送/合并；真实热度实施HOLD，发布/登录自启仍暂停。下方为阶段历史。
+2026-10-20 当前：**本轮基础架构整理 USER ACCEPTED / CLOSED；R1～R8、P1～P3均已验。** 用户已授权正式收口，[当前架构图、收口范围与交付限制](../40_Implementation/Architecture/FOUNDATION_REMAINDER_PLAN.md#31-本轮基础架构正式收口与当前架构图2026-10-20)已记录。图稿showcase 9/9通过，浏览器/视觉复验未完成；不与业务验收混记。剩余规模成本和历史锁冲突继续携带，动态模板/AI/更新器等未实现。后续Git授权已执行：架构3c2417e推送并合入develop@bbbe417；精简main@fe5741d已同步，完成限定构建/打包/隔离运行验证，最终回develop。详细交接以HANDOFF和发布记录为准；一次卸载中断重试成功但首因未定，独立保留。真实热度HOLD，真实登录自启和其他未验环境继续保留。下方为阶段历史。
 
 2026-10-16 当前：**基础架构整改 IN PROGRESS，真实热度准入 HOLD**。工作分支 `impl/architecture-foundation`；R1 文件动作及拖放两片均 USER PASS，源码检查点 `b3bfdc6` 已推送，本次同步验收与接续记录，不合入 develop。下一片为映射创建／同步，再收清 R1 生命周期及配置入口，之后 R2 会话 → R3 呈现与同代命中 → R4 组装／平台依赖；详见[余项计划及拉取接续入口](../40_Implementation/Architecture/FOUNDATION_REMAINDER_PLAN.md#10-拉取后的接续入口)。此前 main 发布草稿因迁移 SQL 换行哈希兼容问题暂存，未发布、未修复，自启真实登录仍未验；详见当前 HANDOFF。下方为阶段历史，不覆盖本段。
 

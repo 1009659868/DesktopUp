@@ -1,5 +1,11 @@
 # V3-04 代码锚点
 
+## 2026-10-20 已验架构Git集成与发布对齐（当前）
+
+- 开发产品锚点继续沿用本轮收口内容：架构`3c2417e`已进入develop`bbbe417`；发布`fe5741d`来自相同业务源码，不把开发资料裁剪回灌。
+- 发布入口：`scripts/build.ps1`、`scripts/package-preview.ps1`、`scripts/validate-source-text.ps1`、`packaging/preview/installer.nsi`；最终包源码绑定干净`74e5088`，之后仅README验证说明。迁移资源、默认配置、内置模块与运行依赖保留。
+- 发布分支仅剔除开发执行器/测试通道、诊断回调/读回和友元测试声明；ControlCenterService的发布CurrentWindow对应开发WindowForPortableProbe，调用接线同步，未替换用例或存储逻辑。比较/构建/运行及保留问题见[发布验证](PREVIEW_INSTALLER_DELIVERY.md#2026-10-20-架构已验成果集成与发布同步)。
+
 ## 2026-10-20 基础架构正式收口与当前图（当前）
 
 - 本轮USER ACCEPTED / CLOSED；[收口记录与图稿边界](../Architecture/FOUNDATION_REMAINDER_PLAN.md#31-本轮基础架构正式收口与当前架构图2026-10-20)。本轮没有新的产品代码或依赖变化，下方第30节源码锚点继续适用。

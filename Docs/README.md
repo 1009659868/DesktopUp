@@ -1,6 +1,6 @@
 # DesktopUp V2 文档入口
 
-2026-10-20 当前：**本轮基础架构整理 USER ACCEPTED / CLOSED；R1～R8、P1～P3均已验。** 用户已授权正式收口，[当前架构图、收口范围与交付限制](A_Project/40_Implementation/Architecture/FOUNDATION_REMAINDER_PLAN.md#31-本轮基础架构正式收口与当前架构图2026-10-20)已记录。图稿showcase 9/9通过，浏览器/视觉复验未完成；不与业务验收混记。剩余规模成本和历史锁冲突继续携带，动态模板/AI/更新器等未实现。当前impl/architecture-foundation及未提交成果保留，本轮不改产品、不提交/推送/合并；真实热度实施HOLD，发布/登录自启仍暂停。下方为阶段历史。
+2026-10-20 当前：**本轮基础架构整理 USER ACCEPTED / CLOSED；R1～R8、P1～P3均已验。** 用户已授权正式收口，[当前架构图、收口范围与交付限制](A_Project/40_Implementation/Architecture/FOUNDATION_REMAINDER_PLAN.md#31-本轮基础架构正式收口与当前架构图2026-10-20)已记录。图稿showcase 9/9通过，浏览器/视觉复验未完成；不与业务验收混记。剩余规模成本和历史锁冲突继续携带，动态模板/AI/更新器等未实现。后续Git授权已执行：架构3c2417e推送并合入develop@bbbe417；精简main@fe5741d已同步，完成限定构建/打包/隔离运行验证，最终回develop。详细交接以HANDOFF和发布记录为准；一次卸载中断重试成功但首因未定，独立保留。真实热度HOLD，真实登录自启和其他未验环境继续保留。下方为阶段历史。
 
 2026-10-19 当前：迁移指纹与统一编码修复已在impl/architecture-foundation完成定向验证，未提交/推送；[实现、旧库副本与构建证据](A_Project/40_Implementation/V3-04/PREVIEW_INSTALLER_DELIVERY.md#2026-10-19-迁移指纹与统一编码修复)。发布同步仍暂停，安装与真实登录自启未复验。基础架构仍IN PROGRESS、真实热度HOLD，R1下一片仍映射创建/同步；下方“问题未修”是此前快照。
 

@@ -2,7 +2,7 @@
 
 ## OPT-CONTENT-SYNC-01：后台内容观察的规模化开销（2026-10-19）
 
-2026-10-20 当前：**本轮基础架构整理 USER ACCEPTED / CLOSED；R1～R8、P1～P3均已验。** 用户已授权正式收口，[当前架构图、收口范围与交付限制](../40_Implementation/Architecture/FOUNDATION_REMAINDER_PLAN.md#31-本轮基础架构正式收口与当前架构图2026-10-20)已记录。图稿showcase 9/9通过，浏览器/视觉复验未完成；不与业务验收混记。剩余规模成本和历史锁冲突继续携带，动态模板/AI/更新器等未实现。当前impl/architecture-foundation及未提交成果保留，本轮不改产品、不提交/推送/合并；真实热度实施HOLD，发布/登录自启仍暂停。下方为阶段历史。
+2026-10-20 当前：**本轮基础架构整理 USER ACCEPTED / CLOSED；R1～R8、P1～P3均已验。** 用户已授权正式收口，[当前架构图、收口范围与交付限制](../40_Implementation/Architecture/FOUNDATION_REMAINDER_PLAN.md#31-本轮基础架构正式收口与当前架构图2026-10-20)已记录。图稿showcase 9/9通过，浏览器/视觉复验未完成；不与业务验收混记。剩余规模成本和历史锁冲突继续携带，动态模板/AI/更新器等未实现。后续Git授权已执行：架构3c2417e推送并合入develop@bbbe417；精简main@fe5741d已同步，完成限定构建/打包/隔离运行验证，最终回develop。详细交接以HANDOFF和发布记录为准；一次卸载中断重试成功但首因未定，独立保留。真实热度HOLD，真实登录自启和其他未验环境继续保留。下方为阶段历史。
 
 2026-10-20 R7更新：MEASURED / DISCOVERY-READS-REDUCED / BROADER-COST-OPEN。按新授权先测量后优化，监听目标发现从两份完整读取改为同事务共享一份，1/6/12映射场景分配约减半；原先“未测量”仅为10月19日快照。没有改2秒/30秒调度。最终证据及退出范围见[基础架构§23](../40_Implementation/Architecture/FOUNDATION_REMAINDER_PLAN.md#23-r7-读取与观察成本2026-10-20)。
 

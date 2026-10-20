@@ -1,5 +1,32 @@
 # Windows 11 x64 独立预览安装包
 
+## 2026-10-20 架构已验成果集成与发布同步
+
+按本次明确授权恢复发布同步，不增加真实热度或其他功能，不重跑已验业务的历史全量矩阵。R1～R8/P1～P3保持 USER ACCEPTED / CLOSED；剩余成本、P1 final02 / R6 probe02锁冲突未定因继续保留。
+
+### Git 与发布边界
+
+- `impl/architecture-foundation@3c2417e`：已验源码、移位、测试、收口资料/图源提交推送；`impl/develop@bbbe417`：非快进合入并推送。
+- `impl/main@3b39231`：从已验 develop 进行正常合并并单独裁剪开发资料/测试/工具；不是将发布删除反向合入开发线。保留六个产品工程、内置模块、运行配置、许可证、构建/打包入口、统一文本门和25项冻结迁移资源。
+- main `74e5088`：README/随包自启动和卸载说明同步；最终安装包基于该干净提交。main `fe5741d`：仅补 README 的最终验证与未定因中断记录，497项编译/载荷输入与最终包清单一致，已推送。最终返回 develop，并同步相同的随包说明，不带入发布裁剪。
+- 旧发布 stash `0d082b90b9ef500b519162444bce869a28b49757`、旧失败包/安装/配置均保留，未 pop/apply/drop。未改日常配置、真实收纳文件、Run登记或桌面快捷方式。
+
+### 最终交付与限定验证
+
+- 成品：`out/releases/main-20261020-foundation02/DesktopUp-Preview-20261020.1-win-x64-Setup.exe`，67,393,219字节，SHA256 `855E6984FBDBC8F5067B0E16CDC71E52F1AF35B297F577DD0BC733C1F1567A92`。`preview-build.json` SourceCommit=`74e50885941a8ed724b00fe14f1a993ec7511400`、IncludesUncommittedChanges=false。包及原始证据只在本地 out，不上传Git。
+- 精简Release源码构建、发布预检包和最终自包含构建均通过，最终0警告0错误；文本门488文件/25项冻结迁移；Windows PowerShell5.1的打包CheckOnly通过。开发提交前文本门964文件、架构生产108/Review177、四门PASS、diff-check通过，未重复全量合同测试。
+- `main-20261020-foundation-smoke03/results.json`：同包七个自动检查通过；中文含空格自选目录、HKCU Registry64安装/卸载登记、806项清单声明文件摘要（另有清单自身，共807项载荷）、桌面快捷方式关闭、全新schema25零海报默认基础收纳、安装目录自带.NET加载、`--autostart`静默/重复单实例、显式中心、两次退出资源0、登记卸载、未知文件及配置摘要保留；旧Preview/V3、Run登记和桌面快捷方式前后相同。临时安装/登记已正常卸载，样例仅在out。
+- `foundation-package-migration02/result.json`：仅复制保留的旧schema21数据库，用最终包内Infrastructure组件初始化到25、再次初始化Ready；旧21项账本逐字段相同，原始数据库SHA256仍`72A5B4ECC0B35ABA9E2526A688784E8F2BC19261E10501C30DFD8E8F08E09DA3`。未在原配置启动或改写旧记录。最终Infrastructure DLL SHA256=`317C9A04425A935CB28A0D8EDD000493D13950D36CBF942F6E4A21638C118797`。
+- 过程证据：`foundation-main-build01/02.log`保留发布裁剪的残留诊断引用编译失败，修订仅涉及发布入口；`foundation-main-build03.log`为0警告0错误。`foundation-package-preflight.log`、`foundation-package-final.log`、`foundation-package-final02.log`及smoke01/02/03均保留，未用后续成功覆盖失败。preflight/01不是最终分发路径。
+
+### 一次卸载中断：保留未定因
+
+最终包smoke02首次卸载在部分程序文件清理后停止：806项声明文件中730项已移除，首个剩余为`app/wuceffectsi.dll`；日志显示内容保留准备完成且App正常退出，但首次卸载子进程返回码未捕获。后续该文件可独占只读打开，不能据此断言曾由谁持锁，也不能归咎于历史P1/R6锁冲突。
+
+通过同一登记的原卸载器 `/S /CONTENT=keep` 重试完成，数据库与未知文件摘要未变，没有手动删除程序文件/改登记；`main-20261020-foundation-smoke02/uninstall-retry.json`保留事实。之后同一包在新隔离目录smoke03完整首轮通过。**此异常首因仍未知，不标记已修，不宣称所有卸载首轮可靠性已经验证。** 后续再现时优先捕获实际卸载子进程退出码、第一失败文件及占用者；不预先改为强删、终止进程、跳过失败文件或循环重试。
+
+本轮运行于高完整性环境；不替代普通权限原生拖放/安装向导人工点击/真实登录自启/跨机/多DPI/满盘/长时验收。未签名预览状态不变。架构图浏览器/视觉证据限制和第30.4节剩余成本照旧携带，真实热度HOLD。
+
 ## 2026-10-19 迁移指纹与统一编码修复
 
 **CODE / 定向验证完成；发布同步仍 PAUSED，真实登录自启仍未验。** 用户随后授权按补全方案处理，本轮仅在 impl/architecture-foundation 修复并验证，不恢复发布合并、安装或自启操作。下方“暂停修复/问题未修”是此前现场快照。
