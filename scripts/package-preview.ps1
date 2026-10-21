@@ -154,8 +154,7 @@ try {
         $pkgInstall.Add('SetOutPath "$INSTDIR\'+$pkgSubdir+'"')
         $pkgInstall.Add('File "'+$pkgFile.FullName+'"')
         $pkgInstall.Add('IfErrors installation_failed')
-        $pkgUninstall.Add('Delete "$INSTDIR\'+$pkgRelative+'"')
-        $pkgUninstall.Add('IfErrors uninstall_failed')
+        $pkgUninstall.Add('!insertmacro DeleteInstalledFile "'+$pkgRelative+'"')
     }
     Get-ChildItem -LiteralPath $pkgPayload -Recurse -Directory | Sort-Object { $_.FullName.Length } -Descending | ForEach-Object {
         $pkgGuards.Add('StrCpy $GuardPath "$INSTDIR\'+$_.FullName.Substring($pkgPayload.Length+1)+'"')
