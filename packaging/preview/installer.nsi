@@ -39,13 +39,7 @@ Var UninstallProfile
 Var UninstallLease
 Var UninstallFailureFile
 
-; Keep NSIS Delete semantics and fail-stop behavior. Do not read GetLastError here:
-; NSIS may have called other Win32 APIs before returning from Delete.
-!macro DeleteInstalledFile RelativePath
-  StrCpy $UninstallFailureFile "${RelativePath}"
-  Delete "$INSTDIR\${RelativePath}"
-  IfErrors uninstall_failed
-!macroend
+!include "${__FILEDIR__}\uninstall-evidence.nsh"
 
 !define MUI_WELCOMEPAGE_TEXT "Windows 11 x64 独立预览版。$\r$\n$\r$\n自带运行库，使用独立配置，不读取或迁移日常版配置，不设置开机启动。首次为空白工作区，无演示卡片；拖入收纳会移动真实文件，请先用无价值文件体验。$\r$\n$\r$\n下一步可自选安装目录。卸载可归还收纳内容或保留原位，配置保留。"
 !insertmacro MUI_PAGE_WELCOME
@@ -527,12 +521,16 @@ Section "Uninstall"
   DeleteRegKey HKCU "${UNINSTALL_KEY}"
   Goto uninstall_done
   uninstall_failed:
+    Call un.WriteCleanupEvidence
     ; Best-effort diagnosis in the existing, ownership-checked installation marker.
     ; Failure to write this record must never authorize further deletion or change exit 24.
     WriteINIStr "$INSTDIR\app\preview-install.ini" "LastCleanupFailure" "File" "$UninstallFailureFile"
     WriteINIStr "$INSTDIR\app\preview-install.ini" "LastCleanupFailure" "ExitCode" "24"
-    DetailPrint "程序文件清理失败：$INSTDIR\$UninstallFailureFile（卸载退出码 24；不是 Win32 错误码）"
-    MessageBox MB_OK|MB_ICONSTOP "无法删除程序文件：$\r$\n$INSTDIR\$UninstallFailureFile$\r$\n$\r$\n保留卸载入口和配置；未跳过该文件继续删除。请检查文件占用或访问权限后重试。诊断位置：app\preview-install.ini（LastCleanupFailure）。" /SD IDOK
+    WriteINIStr "$INSTDIR\app\preview-install.ini" "LastCleanupFailure" "Api" "$CleanupStage"
+    WriteINIStr "$INSTDIR\app\preview-install.ini" "LastCleanupFailure" "Win32Error" "$CleanupError"
+    WriteINIStr "$INSTDIR\app\preview-install.ini" "LastCleanupFailure" "Report" "$CleanupReport"
+    DetailPrint "程序文件清理失败：$INSTDIR\$UninstallFailureFile（$CleanupStage，Win32 $CleanupError；卸载退出码24）"
+    MessageBox MB_OK|MB_ICONSTOP "无法删除程序文件：$\r$\n$INSTDIR\$UninstallFailureFile$\r$\n$CleanupStage：Windows 错误 $CleanupError（卸载退出码24）$\r$\n$\r$\n保留卸载入口、配置及剩余文件，未继续删除。请检查占用或访问权限后再试。诊断位置：$\r$\n$CleanupReport$\r$\n若报告不可写，请保留此提示；app\preview-install.ini 中也会尽力记录。" /SD IDOK
     SetErrorLevel 24
     Quit
   uninstall_done:

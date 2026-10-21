@@ -141,11 +141,17 @@ public sealed class ManagedStorageServiceTests
         using var f=new F();string repo=f.DirectoryRoot;
         while(!File.Exists(Path.Combine(repo,"DesktopUp.sln")))repo=Path.GetDirectoryName(repo)!;
         string installer=File.ReadAllText(Path.Combine(repo,"packaging/preview/installer.nsi"));
-        Assert.DoesNotContain("RMDir /r",installer,StringComparison.OrdinalIgnoreCase);
+        string evidence=File.ReadAllText(Path.Combine(repo,"packaging/preview/uninstall-evidence.nsh"));
+        string cleanupSource=installer+"\n"+evidence;
+        Assert.DoesNotContain("RMDir /r",cleanupSource,StringComparison.OrdinalIgnoreCase);
         Assert.Contains("${UNINSTALL_FILES}",installer);
+        Assert.Contains("DeleteFileW(w \"$INSTDIR\\$UninstallFailureFile\") i.r2 ?e",evidence);
+        Assert.Single(evidence.Split('\n').Where(line=>line.Contains("::DeleteFileW(")));
+        Assert.DoesNotContain("/REBOOTOK",cleanupSource,StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("::RmShutdown",evidence,StringComparison.OrdinalIgnoreCase);
         // The directory page may explain where user data lives; only executable cleanup
         // statements are forbidden from targeting it.
-        var cleanup = string.Join("\n", installer.Split('\n').Where(line =>
+        var cleanup = string.Join("\n", cleanupSource.Split('\n').Where(line =>
             System.Text.RegularExpressions.Regex.IsMatch(line, @"^\s*(Delete|RMDir)\s", System.Text.RegularExpressions.RegexOptions.IgnoreCase)));
         Assert.DoesNotContain("DesktopUp\\Storage",cleanup,StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("$LOCALAPPDATA",cleanup,StringComparison.OrdinalIgnoreCase);
