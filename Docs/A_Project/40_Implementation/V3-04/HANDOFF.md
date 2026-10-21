@@ -1,8 +1,10 @@
 # V3-04 当前交接
 
-## 2026-10-21 当前：海报优化已验收口，开始授权集成
+## 2026-10-21 当前：海报优化已验收口，Git/发布同步完成
 
-工作分支 impl/poster-scale-and-hover，基于 develop@d9ea0d9；candidate01 两组和 candidate02 追加人工均 USER PASS，本批 CLOSED。对应证据见[本批记录](POSTER_SCALE_AND_HOVER.md)。用户授权提交推送、非快进合入 develop，再同步精简 main 并进行打包验证，最终回 develop；完成后在此记录实际结果。旧包、配置和收纳文件保留，真实热度 HOLD，历史卸载首因、P1/R6锁冲突及剩余成本照旧携带。下方为历史。
+candidate01 两组和 candidate02 追加人工均 USER PASS，本批 CLOSED。功能 impl/poster-scale-and-hover@5dcf4fb 已推送，非快进合入并推送 develop@9e793f8；精简发布合并472e8ff、README记录6cec0b8已推送，已回 impl/develop。本交接为返回后的文档提交，不反向合入发布删除。源/候选证据见[本批记录](POSTER_SCALE_AND_HOVER.md)，安装包及验证见[发布记录](PREVIEW_INSTALLER_DELIVERY.md#2026-10-21-海报优化集成与发布同步)。
+
+20261021.3从干净main@472e8ff打包，构建0警告0错误，499项源码/载荷输入一致；隔离安装、schema26启动、退出资源0与独立smoke02卸载通过。smoke01曾在app/DesktopUp.dll删除时停止，已保留现场摘要并显式重试成功；首因仍未定，不将该轮记为首轮通过。最终测试安装/登记均清理，日常配置、Run及桌面/开始菜单入口前后相同。旧候选、收纳文件和历史stash保留；真实登录自启未验，历史卸载首因、P1/R6锁冲突及剩余成本照旧携带。真实热度HOLD，没有开下一功能分支。下方为历史。
 
 ## 2026-10-21 已验卸载诊断Git集成与发布同步（完成）
 

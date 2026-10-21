@@ -2,7 +2,7 @@
 
 ## 2026-10-21 当前插入批：海报连续尺寸与悬停
 
-candidate01 两组与 candidate02“可撑开/受阻后可手动调框”追加集中人工均 USER PASS，本批 CLOSED。用户授权本批提交推送、合入 develop、同步精简 main 并验证打包，最后回 develop；实际结果见当前交接。
+candidate01 两组与 candidate02“可撑开/受阻后可手动调框”追加集中人工均 USER PASS，本批 CLOSED。功能5dcf4fb → develop9e793f8 → 精简main6cec0b8已推送，20261021.3完成打包/限定复验，已回develop；本轮一次普通卸载中断及首因未定单独保留，实际结果见当前交接。不自动开始以下系列计划。
 
 按用户授权从远端一致的 impl/develop@d9ea0d9 派生 impl/poster-scale-and-hover，完成整体/单项连续缩放、动态交叉轴下限、局部悬停背景及尺度联动扩框；实施、隔离迁移与集中验收见[本批记录](../40_Implementation/V3-04/POSTER_SCALE_AND_HOVER.md)。保持文件动作与既有业务保护，不推进真实热度；以下系列计划仍未开工。
 

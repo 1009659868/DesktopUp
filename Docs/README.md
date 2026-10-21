@@ -1,6 +1,6 @@
 # DesktopUp V2 文档入口
 
-2026-10-21 当前：海报连续尺寸、动态下限、悬停及尺度联动扩框两轮集中人工均已通过，本批 CLOSED。已获功能分支 → impl/develop → 精简 impl/main 的 Git 同步及打包验证授权；执行结果见[交接](A_Project/40_Implementation/V3-04/HANDOFF.md)，验收见[本批记录](A_Project/40_Implementation/V3-04/POSTER_SCALE_AND_HOVER.md)。旧候选与配置保留，真实热度 HOLD。
+2026-10-21 当前：海报优化两轮人工通过并收口；功能5dcf4fb → develop9e793f8 → 精简main6cec0b8均已推送，20261021.3打包/隔离运行及独立卸载复验完成，已回impl/develop。本轮一次普通卸载中断和首因未定继续保留，详见[交接](A_Project/40_Implementation/V3-04/HANDOFF.md)；验收见[本批记录](A_Project/40_Implementation/V3-04/POSTER_SCALE_AND_HOVER.md)。旧候选与配置保留，真实热度HOLD。
 
 2026-10-21：已验卸载诊断完成开发/精简发布同步与限定打包验证，已回 `impl/develop`；首因未定项保留、真实热度HOLD。当前结果见[交接](A_Project/40_Implementation/V3-04/HANDOFF.md)，[系列计划](A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md#2026-10-21-发布同步后的系列计划建议未开工)仅作后续建议。
 

@@ -1,6 +1,6 @@
 # DesktopUp V2 — Poster Redesign V3
 
-2026-10-21 当前：海报整体 0.4～3 连续尺度、单项小数尺寸、动态交叉轴下限、局部悬停及尺度联动扩框两轮人工均通过，本批收口；无法安全扩框时尺度回弹且可继续手动调整外框。按授权同步功能分支、impl/develop 与精简 impl/main，打包结果见[当前交接](Docs/A_Project/40_Implementation/V3-04/HANDOFF.md)。不推进真实热度，历史未定因与未验环境继续保留。下方为阶段历史。
+2026-10-21 当前：海报整体 0.4～3 连续尺度、单项小数尺寸、动态交叉轴下限、局部悬停及尺度联动扩框两轮人工均通过，本批收口。功能5dcf4fb已合入develop9e793f8并同步精简main6cec0b8，均已推送；20261021.3完成构建/安装运行与独立卸载复验，已回impl/develop。本轮一次卸载中断已保留证据、显式重试成功，首因仍未定；详情见[当前交接](Docs/A_Project/40_Implementation/V3-04/HANDOFF.md)。不推进真实热度，剩余成本和未验环境继续保留。下方为阶段历史。
 
 2026-10-21 当前：已验卸载诊断功能c8a6714已合入develop940ff96并同步精简发布main4e79035；20261021.2实际打包/隔离运行卸载验证通过，最终回到 `impl/develop`。历史卸载中断首因及P1/R6锁冲突仍未定，不推进真实热度。见[发布交接](Docs/A_Project/40_Implementation/V3-04/HANDOFF.md)与[后续系列计划](Docs/A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md#2026-10-21-发布同步后的系列计划建议未开工)；下方为此前里程碑。
 

@@ -1,5 +1,17 @@
 # Windows 11 x64 独立预览安装包
 
+## 2026-10-21 海报优化集成与发布同步
+
+- 两轮集中人工已验收口：功能5dcf4fb推送 → 非快进develop9e793f8推送 → 精简发布合并472e8ff及README6cec0b8推送，最终回develop补本次交接。main无Docs/tests/tools/out跟踪文件；完整资料/测试留在develop，历史stash不动。本次30个生产路径与已验develop比较，差异仅为原有发布诊断裁剪，未修改业务逻辑。
+- 预检包通过后，从干净提交 `472e8ffa072b69f716716dbdcd38c34c667d1166` 生成最终 `20261021.3`（IncludesUncommittedChanges=false）。两次构建0警告0错误，main文本门490文件/26迁移通过，001～025未修改。499项编译/载荷输入摘要一致，807个载荷文件，无开发探针、测试数据或调试符号。
+- 最终包：`out/releases/main-scale-final01/DesktopUp-Preview-20261021.3-win-x64-Setup.exe`，67,344,227字节，SHA256 `642BAF5C301DD907EFF13FE07F1B4461A6284401C6561DBD76AF3ADBF1AA609C`。main后续6cec0b8只补README，不改变这些输入；包和运行证据留本地out，不上传Git。
+- Windows PowerShell5.1隔离验证：自选中文空格目录安装；安装目录自带运行库启动，新库schema26、默认basic-box，退出activeResources=0。复用已验卸载脚本，不移动真实内容；smoke02的受控占用退出24/释放后显式重试0/重装后普通首轮卸载0均通过。证据 `out/releases/main-scale-smoke02/results.json`、`out/releases/scale-main-validation/main-scale-smoke02/package-audit.json`。
+- 保留失败：smoke01重装后的普通卸载在 `app/DesktopUp.dll` 停止，marker记录24、566项声明文件仍在。稍后DeleteSharingError=0、Restart Manager空，不足以解释失败时状态；未把“暂时无占用”当作首因。现场marker/ACL/剩余状态和时间保存在 `scale-main-validation/ordinary-stop-*`，原卸载器显式重试0后清理完成。与既有卸载中断首因未定事项关联保留，不称根治，不覆盖首次证据。
+- 审计夹具修正也独立记录：初次PS5.1 ConvertFrom-Json数组套层导致源摘要审计在安装前停止；另一次finally的隔离断言遮盖上游错误，已补错误保存再重抛。只修改out验证脚本，不改产品源码/包。首次after.json保留当时测试登记，最终 `final-audit.json` 对最初before与smoke02结束状态重新比对一致。
+- 最终测试安装/登记和进程均为0；日常Preview/V3配置、Run登记、DesktopUp桌面及开始菜单入口前后相同。无桌面样例遗留、未知文件/测试配置按合同留在out。包未签名；仅本机高完整性定向验证，不替代普通权限GUI、真实登录自启、多屏DPI、跨机、满盘或长测。用户已验的是对应开发候选，不冒称本包重新人工验收。
+
+历史卸载首因、P1/R6锁冲突及剩余读取/观察成本继续保留，真实热度HOLD。本轮不追加根因修复或下一功能；自然再现时先取证，再按授权定向处理。
+
 ## 2026-10-21 已验卸载诊断集成与发布同步
 
 - 功能提交 `c8a6714` 已推送；以 `--no-ff` 合入 `impl/develop@940ff96` 并推送。发布合并 `9e84ad2` 保留来源，仅改README、安装器和打包入口；`impl/main@4e79035` 补发布验证记录后已推送。最终返回develop，另补本次交接；未将发布精简反向合回。

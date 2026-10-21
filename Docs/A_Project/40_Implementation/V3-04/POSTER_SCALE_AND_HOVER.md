@@ -2,6 +2,8 @@
 
 2026-10-21：本批 USER ACCEPTED / CLOSED。candidate01 两组及 candidate02 尺度联动扩框追加验收均由用户确认通过。按本轮授权提交推送 impl/poster-scale-and-hover、合入 impl/develop，再同步精简 impl/main 并做打包验证，最终回 develop；实际提交及发布证据以当前交接为准。真实热度仍 HOLD。
 
+集成完成：功能5dcf4fb → develop9e793f8 → 精简main6cec0b8均已推送，已回develop。20261021.3绑定干净发布源码472e8ff；构建/安装运行和独立卸载复验通过，一次普通卸载中断已保留证据并显式重试收尾。详见[发布记录](PREVIEW_INSTALLER_DELIVERY.md#2026-10-21-海报优化集成与发布同步)，未将异常或未验范围销项。
+
 ## 2026-10-21 人工通过及追加修订
 
 用户确认两组验证均符合预期：连续尺寸/动态下限及重开保持、悬停和既有手势通过。保留 candidate01 与 review01，不重开原两组验收。
