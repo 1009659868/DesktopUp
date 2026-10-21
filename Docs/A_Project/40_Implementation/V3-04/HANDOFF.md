@@ -1,5 +1,9 @@
 # V3-04 当前交接
 
+## 2026-10-21 当前：卸载中断即时取证（USER PASS / CLOSED）
+
+工作分支impl/09-uninstall-immediate-evidence，来源develop@45e2a3a。用户确认20261021.4集中人工三段均通过，本批即时取证交付收口，不宣称历史根因已修复。本轮只核对记录并执行授权清理：测试安装/登记已正常卸载，六个测试目录和重复build输出已清理，首次证据归档且可恢复，已验包保留，日常配置/入口未变。结果、恢复位置及限制见[本批记录](UNINSTALL_IMMEDIATE_EVIDENCE.md#人工结果与授权清理2026-10-21)。未提交/推送/合并，真实热度HOLD；历史中断首因、P1/R6锁冲突与剩余成本继续保留，下一步待明确授权。下方为历史集成记录。
+
 ## 2026-10-21 当前：海报优化已验收口，Git/发布同步完成
 
 candidate01 两组和 candidate02 追加人工均 USER PASS，本批 CLOSED。功能 impl/poster-scale-and-hover@5dcf4fb 已推送，非快进合入并推送 develop@9e793f8；精简发布合并472e8ff、README记录6cec0b8已推送，已回 impl/develop。本交接为返回后的文档提交，不反向合入发布删除。源/候选证据见[本批记录](POSTER_SCALE_AND_HOVER.md)，安装包及验证见[发布记录](PREVIEW_INSTALLER_DELIVERY.md#2026-10-21-海报优化集成与发布同步)。

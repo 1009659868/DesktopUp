@@ -1,5 +1,11 @@
 # V3-04 代码锚点
 
+## 2026-10-21 卸载即时取证
+
+- packaging/preview/uninstall-evidence.nsh：替代旧DeleteInstalledFile宏的清单单路径删除边界，原始API错误即时捕获；失败后有界只读RM快照、不可覆盖的profile报告。installer.nsi只接入include及错误提示/marker，不改内容归还、维护租约和归属保护。
+- tests/Packaging/Test-UninstallEvidence.ps1及Fixtures/uninstall-evidence.nsi：六个自建文件直接风险边界；Test-UninstallFailure.ps1复用实际包原三段并保存首次实际退出与报告，不新增多轮人工矩阵。
+- 当前候选、结果和未定因限制见[本批记录](UNINSTALL_IMMEDIATE_EVIDENCE.md)；下方“原Delete宏”是被本批替代的历史入口。
+
 ## 2026-10-21 连续尺寸与悬停
 
 追加修订：Application/ContentScaleExpansion 复用 ControlCenterSpatial 规划并由 StateCommandPolicy 在同一事务内复核尺度+几何；Runtime/PosterSpatialRuntime.Usability 提供当前空间及预览/提交接线；PosterVisualWindow.ControlCenter 保存同版/同代原框供取消恢复；ControlCenterSettingsSession.RejectPreview 的 discard 分支仅释放被拒绝的滑块草稿，精细文字草稿保护不变。缩放步长同时修正运行时初始化覆盖 XAML 的旧 0.01 值为 0.001。
