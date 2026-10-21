@@ -1,6 +1,6 @@
 # DesktopUp V2 当前执行入口
 
-2026-10-21 当前：`impl/09-uninstall-interruption` 从develop@e1cb600派生；复用A卸载保留/归还决定 → B卸载安全合同 → C[卸载中断排查及人工收尾](../A_Project/40_Implementation/V3-04/UNINSTALL_INTERRUPTION.md)。诊断补强自动与集中人工均通过，本批诊断交付收口，测试安装已清理；历史首因仍未定，未提交/推送/合并，真实热度HOLD。下方为已完成架构集成及历史。
+2026-10-21 当前：卸载诊断自动/人工已验收，功能c8a6714 → develop940ff96 → 精简main4e79035均已推送；最终20261021.2包定向验证通过，已回 `impl/develop`。A卸载保留/归还决定 → B卸载安全合同 → C[发布记录](../A_Project/40_Implementation/V3-04/PREVIEW_INSTALLER_DELIVERY.md#2026-10-21-已验卸载诊断集成与发布同步)。历史首因仍未定，真实热度HOLD；[后续计划仅为建议](../A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md#2026-10-21-发布同步后的系列计划建议未开工)，未开新功能。下方为历史。
 
 2026-10-20 当前：**本轮基础架构整理 USER ACCEPTED / CLOSED；R1～R8、P1～P3均已验。** 用户已授权正式收口，[当前架构图、收口范围与交付限制](../A_Project/40_Implementation/Architecture/FOUNDATION_REMAINDER_PLAN.md#31-本轮基础架构正式收口与当前架构图2026-10-20)已记录。图稿showcase 9/9通过，浏览器/视觉复验未完成；不与业务验收混记。剩余规模成本和历史锁冲突继续携带，动态模板/AI/更新器等未实现。后续Git授权已执行：架构3c2417e推送并合入develop@bbbe417；精简main@fe5741d已同步，完成限定构建/打包/隔离运行验证，最终回develop。详细交接以HANDOFF和发布记录为准；一次卸载中断重试成功但首因未定，独立保留。真实热度HOLD，真实登录自启和其他未验环境继续保留。下方为阶段历史。
 

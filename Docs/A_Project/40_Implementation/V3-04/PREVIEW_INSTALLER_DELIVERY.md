@@ -1,5 +1,17 @@
 # Windows 11 x64 独立预览安装包
 
+## 2026-10-21 已验卸载诊断集成与发布同步
+
+- 功能提交 `c8a6714` 已推送；以 `--no-ff` 合入 `impl/develop@940ff96` 并推送。发布合并 `9e84ad2` 保留来源，仅改README、安装器和打包入口；`impl/main@4e79035` 补发布验证记录后已推送。最终返回develop，另补本次交接；未将发布精简反向合回。
+- main仍无Docs/tests/tools/out跟踪文件，旧发布stash `0d082b90b9ef500b519162444bce869a28b49757` 未动。统一文本门/25项冻结迁移、运行依赖及许可证完整保留；完整开发资料/已验测试仍在develop。正常发布通道没有增加验收入口。
+- 预检包验证合并后的精简构建/打包，随后从干净发布提交 `9e84ad201ab2c3f051b1a297a421d7d94cbe17a7` 生成最终 `20261021.2` 包（IncludesUncommittedChanges=false）。两次构建均0警告0错误；main文本门488文件/25项迁移通过。只验证本轮影响，没有再跑历史业务全量。
+- 最终包：`out/releases/main-uninstall-final01/DesktopUp-Preview-20261021.2-win-x64-Setup.exe`，67,333,895字节，SHA256 `7CBCA6CB91B320CBA8346B9C2360EB094492BBE31AD928341368913C18F69787`。807个载荷文件，无探针/夹具/用户数据库/调试符号；497项编译/载荷输入与源码匹配。main后续4e79035只补根README，不改变这些输入。
+- 最终包在Windows PowerShell5.1完成定向隔离验证：自选中文空格目录安装；安装目录内自带运行库实际启动，schema25/默认basic-box，正常退出activeResources=0；受控禁止删除共享返回24，首个失败路径准确、后续删除停止；释放自己的句柄后原卸载器显式再次执行返回0；重装后的普通首轮卸载返回0。三项结果见 `out/releases/main-uninstall-smoke01/results.json`，日志/快照保留，不把受控占用当作历史归因。
+- 测试复用已验脚本的out副本，仅调整仓库/辅助脚本定位，不将脚本加入发布树。源为功能提交c8a6714的 `tests/Packaging/Test-UninstallFailure.ps1`；副本和只读审计在 `out/releases/uninstall-main-validation`。最终安装/登记已由原卸载器清理，测试内容仅留out；日常Preview/V3摘要、Run登记及桌面快捷方式前后相同，DesktopUp进程0。
+- 限定：本机高完整性自动验证，不替代普通权限GUI、系统设置卸载入口点击、真实登录自启、跨机、多DPI、满盘或长测。历史卸载中断首因仍OPEN，与P1/R6锁冲突分开保留；剩余读取/观察成本不销项，不推进真实热度。开发候选的集中人工通过继续保留，但不冒称本发布包重新进行了GUI人工。
+
+本次只同步已验诊断补强；自然复现时仍先保留失败文件、实际执行码和当时占用/权限证据，再决定定向修复，不用强删或自动重试掩盖首因。后续顺序见[建议系列计划](../../30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md#2026-10-21-发布同步后的系列计划建议未开工)。
+
 ## 2026-10-20 架构已验成果集成与发布同步
 
 按本次明确授权恢复发布同步，不增加真实热度或其他功能，不重跑已验业务的历史全量矩阵。R1～R8/P1～P3保持 USER ACCEPTED / CLOSED；剩余成本、P1 final02 / R6 probe02锁冲突未定因继续保留。

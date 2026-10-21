@@ -2,6 +2,8 @@
 
 ## 2026-10-21 卸载失败定位
 
+已验功能c8a6714已进入develop940ff96；发布main4e79035同源同步，最终包编译基点9e84ad2。实际打包/卸载验证及源码绑定见[发布记录](PREVIEW_INSTALLER_DELIVERY.md#2026-10-21-已验卸载诊断集成与发布同步)，以下锚点不变。
+
 - `packaging/preview/installer.nsi`：DeleteInstalledFile宏、uninstall_failed记录/提示；原Delete/失败即停语义不变。
 - `scripts/package-preview.ps1`：按原清单顺序生成上述宏调用。
 - `tests/Packaging/Test-UninstallFailure.ps1`：受控占用、实际执行码、释放后再次执行及普通卸载；-ReviewFailure只将受控失败段交人工核对。根因未定边界和证据见[本批记录](UNINSTALL_INTERRUPTION.md)。
