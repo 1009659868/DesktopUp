@@ -26,8 +26,8 @@ public sealed record IncomingContentPlacement(ContentLayoutViewport Viewport, in
         var s = ContentLayoutSolver.Resolve(committed, Viewport);
         var added = s.Items.Single(x => x.ItemId == addedId);
         return this with { ReadOrder = added.ReadOrder + 1,
-            Column = committed.FlowAxis == ContentFlowAxis.Vertical ? Column : added.Column + added.ColumnSpan,
-            Row = committed.FlowAxis == ContentFlowAxis.Vertical ? added.Row + added.RowSpan : Row };
+            Column = committed.FlowAxis == ContentFlowAxis.Vertical ? Column : added.Column + (int)Math.Ceiling(added.ColumnSpan),
+            Row = committed.FlowAxis == ContentFlowAxis.Vertical ? added.Row + (int)Math.Ceiling(added.RowSpan) : Row };
     }
 
     public ContentLayoutDocument Apply(ContentLayoutDocument withNewMember, string id)

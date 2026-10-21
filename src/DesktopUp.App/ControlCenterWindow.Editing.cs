@@ -34,7 +34,7 @@ public sealed partial class ControlCenterWindow
     private void InitializeEditing()
     {
         var geometry = Section("位置与尺寸 · 当前显示器工作区内 DIP");
-        foreach (var (key, label) in new[] { ("X", "X 位置"), ("Y", "Y 位置"), ("Width", "宽度（≥240）"), ("Height", "保存展开高度（≥240）") })
+        foreach (var (key, label) in new[] { ("X", "X 位置"), ("Y", "Y 位置"), ("Width", "宽度（下限随内容）"), ("Height", "保存展开高度（下限随内容）") })
             AddField(geometry, _geometryFields, key, label, false);
         geometry.Children.Add(new TextBlock { Text = "收起时只可移动，锁定时不可编辑几何。受限的当前高度不覆盖保存高度；小数按物理像素取整。", TextWrapping = TextWrapping.Wrap });
         geometry.Children.Add(_geometryStatus);

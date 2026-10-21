@@ -122,8 +122,10 @@ public sealed partial class ControlCenterWindow
         bool Integer(string text, int maximum, out int value) => int.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out value) && value >= 1 && value <= maximum;
         if (draft.Group == ContentFieldGroup.Span)
         {
-            if (!Integer(draft.First, ContentLayoutPolicy.MaximumSpan, out int columns) || !Integer(draft.Second, ContentLayoutPolicy.MaximumSpan, out int rows))
-                return "列跨度和行跨度都需要 1～32 的整数；未应用的原文已保留。";
+            bool Span(string text, out double value) => double.TryParse(text, NumberStyles.AllowDecimalPoint,
+                CultureInfo.InvariantCulture, out value) && ContentLayoutPolicy.ValidSpan(value);
+            if (!Span(draft.First, out double columns) || !Span(draft.Second, out double rows))
+                return "宽度和高度需要 0.5～64 的数值，支持小数；未应用的原文已保留。";
             edit = new(ContentLayoutEditKind.Resize, draft.ItemId) { ColumnSpan = columns, RowSpan = rows };
         }
         else if (draft.Group == ContentFieldGroup.Order)
@@ -162,7 +164,7 @@ public sealed partial class ControlCenterWindow
             bool orderAvailable = automatic && placement is { FixedPosition: false };
             ContentOrderGroup.Visibility = automatic ? Visibility.Visible : Visibility.Collapsed;
             ContentPositionGroup.Visibility = automatic ? Visibility.Collapsed : Visibility.Visible;
-            SetContentFieldText(ContentFieldGroup.Span, slot?.ColumnSpan.ToString(CultureInfo.InvariantCulture) ?? "", slot?.RowSpan.ToString(CultureInfo.InvariantCulture) ?? "");
+            SetContentFieldText(ContentFieldGroup.Span, slot?.ColumnSpan.ToString("0.####", CultureInfo.InvariantCulture) ?? "", slot?.RowSpan.ToString("0.####", CultureInfo.InvariantCulture) ?? "");
             SetContentFieldText(ContentFieldGroup.Order, slot is null ? "" : (slot.ReadOrder + 1).ToString(CultureInfo.InvariantCulture), "");
             SetContentFieldText(ContentFieldGroup.Position, slot is null ? "" : (slot.Column - slot.RegionColumn + 1).ToString(CultureInfo.InvariantCulture),
                 slot is null ? "" : (slot.Row - slot.RegionRow + 1).ToString(CultureInfo.InvariantCulture));

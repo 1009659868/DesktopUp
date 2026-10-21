@@ -1,4 +1,5 @@
 using DesktopUp.Application;
+using DesktopUp.Domain;
 namespace DesktopUp;
 
 internal sealed partial class PosterSpatialRuntime
@@ -8,7 +9,11 @@ internal sealed partial class PosterSpatialRuntime
         if (_suspended || IsPosterSpatialBusy(edit.PosterId)) return "海报正在恢复或交互，请先完成或取消当前操作。";
         if (!state.TryGetCurrent(out var current) || current!.PostersById.GetValueOrDefault(edit.PosterId)?.EntityVersion != edit.Basis.EntityVersion)
             return "海报版本已变化，请重新开始这次调节。";
-        return _windows.TryGetValue(edit.PosterId, out var target) ? target.ValidateCenterPresentation(edit) : null;
+        if (!_windows.TryGetValue(edit.PosterId, out var target)) return null;
+        if (edit.Setting != PosterSetting.Scale) return target.ValidateCenterPresentation(edit);
+        var command = edit.Command("scale-preview-validation");
+        if (!TryPlanScale(command, target, out var plan, out _, out _, out var error)) return error;
+        return target.ValidateCenterPresentation(edit, ScalePreviewBounds(target, plan!));
     }
     public string LocateControlCenterPoster(string id)
     {
@@ -25,11 +30,68 @@ internal sealed partial class PosterSpatialRuntime
         if (_suspended || IsPosterSpatialBusy(edit.PosterId) || edit.Setting is PosterSetting.AutoDelay or PosterSetting.AutoEnabled ||
             !state.TryGetCurrent(out var current) || current!.PostersById.GetValueOrDefault(edit.PosterId)?.EntityVersion != edit.Basis.EntityVersion ||
             !_windows.TryGetValue(edit.PosterId, out var target)) return false;
-        foreach (var peer in _windows.Values) if (!ReferenceEquals(peer, target)) peer.ClearCenterPresentation();
-        return target.PreviewCenterPresentation(edit);
+        foreach (var peer in _windows.Values.ToArray()) if (!ReferenceEquals(peer, target)) peer.ClearCenterPresentation();
+        if (edit.Setting != PosterSetting.Scale) return target.PreviewCenterPresentation(edit);
+        var command = edit.Command("scale-preview");
+        return TryPlanScale(command, target, out var plan, out _, out _, out _) &&
+            target.PreviewCenterPresentation(edit, ScalePreviewBounds(target, plan!));
+    }
+    private static DesktopPixelRect ScalePreviewBounds(PosterVisualWindow target, ControlCenterGeometryPlan plan) =>
+        plan.Changes.Count == 0 ? target.CenterPresentationBaseline!.Value : Pixels(plan.Changes[0].After);
+
+    private bool TryPlanScale(PosterStateCommand command, PosterVisualWindow target, out ControlCenterGeometryPlan? plan,
+        out SpatialSnapshot? scene, out DesktopUpProjection? current, out string? error)
+    {
+        plan = null; scene = null; current = null;
+        error = "桌面、海报版本或空间已变化，本次尺度未保存。";
+        if (_suspended || IsSpatialBusy || target.CenterPresentationBaseline is not { } baseline ||
+            !TrySnapshot(target, out var observed, out current) ||
+            current!.PostersById.GetValueOrDefault(command.PosterId) is not { } basis ||
+            command.ReadSet?.Posters.GetValueOrDefault(command.PosterId) != basis.EntityVersion) return false;
+        // Native readback above is fresh; only our own transient frame is replaced by its
+        // original same-version/generation bounds. Peers remain their actual current geometry.
+        scene = new(observed!.Environment, observed.Posters.Select(p => p.PosterId == command.PosterId
+            ? p with { Bounds = Rect(baseline) } : p));
+        plan = ContentScaleExpansion.Plan(basis.Poster, command.DesiredState, scene, out error);
+        return plan is not null;
+    }
+
+    public StateCommandResult ApplyControlCenterPresentation(PosterStateCommand command)
+    {
+        if (!state.TryGetCurrent(out var current) ||
+            current!.PostersById.GetValueOrDefault(command.PosterId) is not { } basis ||
+            !ContentScaleExpansion.ChangesScale(basis.Poster, command.DesiredState) ||
+            !_windows.TryGetValue(command.PosterId, out var target)) return commands.Execute(command);
+        try
+        {
+            if (!TryPlanScale(command, target, out var plan, out var scene, out current, out var error))
+                return Failure(command, error!);
+            if (!target.PreviewCenterPresentation(command, ScalePreviewBounds(target, plan!)))
+                return Failure(command, "无法安全撑开海报，已恢复原尺度。");
+            if (plan!.Changes.Count != 0)
+                command = command with
+                {
+                    DesiredState = plan.Desired,
+                    ReadSet = command.ReadSet! with
+                    {
+                        Posters = current!.Posters.ToDictionary(p => p.Poster.PosterId, p => p.EntityVersion),
+                        CatalogVersion = current.CatalogVersion
+                    },
+                    ContentScaleExpansion = new(scene!, command.DesiredState)
+                };
+            return commands.Execute(command);
+        }
+        finally { target.ClearCenterPresentation(); }
     }
     public void CancelControlCenterVisuals()
     {
-        foreach (var window in _windows.Values) { window.StopLocate(); window.ClearCenterPresentation(); }
+        foreach (var window in _windows.Values.ToArray()) { window.StopLocate(); window.ClearCenterPresentation(); }
+    }
+    internal void CenterPresentationRestoreFailed(PosterVisualWindow window)
+    {
+        _suspended = true;
+        window.SuspendInput();
+        log.Write("error", "control_center.preview_restore_failed", new { window.PosterId });
+        RecoveryRequired?.Invoke();
     }
 }

@@ -138,7 +138,8 @@ public partial class App : Microsoft.UI.Xaml.Application
         }
         if (command.Kind is PosterStateCommandKind.Move or PosterStateCommandKind.Resize)
             _spatialRuntime?.BeforeManualIntent(command.PosterId);
-        StateCommandResult result = _stateCommands.Execute(command);
+        StateCommandResult result = command.Kind == PosterStateCommandKind.SetPresentation && _spatialRuntime is not null
+            ? _spatialRuntime.ApplyControlCenterPresentation(command) : _stateCommands.Execute(command);
         _controlCenter?.ShowCommandResult(result);
         LogCommandResult("control-center-poster", result);
         _log?.Write("info", "control_center.command_completed", new

@@ -21,6 +21,7 @@ internal sealed record ContentRenderFrame(ContentLayoutDocument Document, Conten
 internal sealed class PosterContentPresenter(Action<Border, bool, Grid?> paintSceneCard)
 {
     private ContentRenderFrame? _frame;
+    private string? _hoverTile;
     public ContentRenderFrame? Frame => _frame;
     public Canvas? Surface { get; private set; }
     public Dictionary<string, FrameworkElement> Cards { get; } = new(StringComparer.Ordinal);
@@ -29,7 +30,7 @@ internal sealed class PosterContentPresenter(Action<Border, bool, Grid?> paintSc
     public IReadOnlyDictionary<string, ContentAssetKey> VisibleKeys { get; set; } =
         new Dictionary<string, ContentAssetKey>();
     private sealed record CardPaint(ContentItemView View, ContentImageFit Fit, double Width, double Height,
-        int Columns, int Rows, int WantedColumns, int WantedRows, bool Fixed, ContentPinAdornment Pin, int? PinIndex,
+        double Columns, double Rows, double WantedColumns, double WantedRows, bool Fixed, ContentPinAdornment Pin, int? PinIndex,
         bool Selected, bool Handle, bool Spans, bool Real, ResolvedPosterPresentation Presentation, ContentAssetKey? Asset);
     public void Present(Grid itemsGrid, ContentRenderFrame frame)
     {
@@ -107,6 +108,7 @@ internal sealed class PosterContentPresenter(Action<Border, bool, Grid?> paintSc
             }
             // Tile bounds are already viewport-relative and carry the loop offset.
             card.Opacity = 1;
+            if (card is Grid grid) grid.Background = key == _hoverTile ? HoverBrush() : null;
             Canvas.SetLeft(card, tile.Bounds.X); Canvas.SetTop(card, tile.Bounds.Y);
             UpdateImage(tile.ItemId, card);
         }
@@ -233,7 +235,25 @@ internal sealed class PosterContentPresenter(Action<Border, bool, Grid?> paintSc
         return cell;
     }
     public string ItemForTile(string key) => Paints[key].View.ItemId;
-    public void ClearVisuals() { Surface = null; Cards.Clear(); Paints.Clear(); _frame = null; }
+    public void ClearVisuals() { Surface = null; Cards.Clear(); Paints.Clear(); _frame = null; _hoverTile = null; }
+    public void SetHover(string? tile)
+    {
+        if (tile == _hoverTile) return;
+        if (_hoverTile is not null && Cards.GetValueOrDefault(_hoverTile) is Grid old) old.Background = null;
+        _hoverTile = tile;
+        if (tile is not null && Cards.GetValueOrDefault(tile) is Grid next) next.Background = HoverBrush();
+    }
+    public void HoverAt(double x, double y)
+    {
+        // The host already admitted the current native hit. Inspect only retained visible tiles,
+        // without solving/projecting every Item, allocating geometry, or refreshing its image.
+        foreach (var (key, card) in Cards)
+            if (card.Opacity > 0 && x >= Canvas.GetLeft(card) && x < Canvas.GetLeft(card) + card.Width &&
+                y >= Canvas.GetTop(card) && y < Canvas.GetTop(card) + card.Height)
+            { SetHover(key); return; }
+        SetHover(null);
+    }
+    private SolidColorBrush HoverBrush() => ColorBrush(_frame!.Presentation.Parameters.Theme.Foreground, 36);
     public void SetNameVisible(string itemId, bool visible)
     {
         foreach (var entry in Cards)

@@ -10,7 +10,7 @@ public sealed class SqliteStateStore : IStateStore
     private const int ApplicationId = 0x44555033; // "DUP3"
     private const int BusyTimeoutMilliseconds = 5_000;
     // Historical SQL and approved ledger identities are frozen in Persistence/Migrations.
-    private const int CurrentSchemaVersion = 25;
+    private const int CurrentSchemaVersion = 26;
     private const string DatabaseFileName = "desktopup.sqlite3";
     private static readonly SqliteMigration[] Migrations = SqliteMigrationCatalog.Load(CurrentSchemaVersion);
 
@@ -404,10 +404,14 @@ public sealed class SqliteStateStore : IStateStore
         foreach (SqliteMigration migration in Migrations.Where(item => item.Version > previousVersion))
         {
             using SqliteTransaction transaction = connection.BeginTransaction(deferred: false);
-            using (SqliteCommand schema = connection.CreateCommand())
+            // Explicit resource boundaries, not a semicolon parser. Earlier frozen scripts remain
+            // one batch. Schema-rewrite migrations execute each step separately so a failed copy
+            // cannot be hidden by later DDL preparing against the changed schema.
+            foreach (string step in migration.Sql.Split("\n-- statement-break\n", StringSplitOptions.None))
             {
+                using SqliteCommand schema = connection.CreateCommand();
                 schema.Transaction = transaction;
-                schema.CommandText = migration.Sql;
+                schema.CommandText = step;
                 schema.ExecuteNonQuery();
             }
 
@@ -659,7 +663,7 @@ public sealed class SqliteStateStore : IStateStore
     {
         foreach (string sql in new[]
         {
-            "SELECT purpose, is_visible, stack_order, collection_id, theme_instance_id, entity_version FROM posters LIMIT 0;",
+            "SELECT purpose, is_visible, stack_order, collection_id, theme_instance_id, entity_version, width_dip, expanded_height_dip FROM posters LIMIT 0;",
             "SELECT operation_id, request_sha256, result_poster_id FROM poster_catalog_operations LIMIT 0;"
         })
         {

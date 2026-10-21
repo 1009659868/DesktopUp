@@ -56,4 +56,5 @@
   <migration version="25" name="content-return-provenance" file="025.sql" sha256="2BC0C725B1ED31A5FA0BC656B01D7986955CEFF3E3533357F44289355803451C">
     <legacy sha256="C77625B89B5B4521AC31E97FC51A698412C44202F268FC455F6D19AD81E9214C" evidence="package-20261016.101;architecture-r1-transfers-product01" />
   </migration>
+  <migration version="26" name="content-driven-frame-minimum" file="026.sql" sha256="55CC3DA4564923E04B0802DFC64072D79B7393C1EB10364F6B54046D5B2D4E9B" />
 </migrations>

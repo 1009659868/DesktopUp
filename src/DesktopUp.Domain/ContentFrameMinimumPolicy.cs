@@ -21,10 +21,14 @@ public static class ContentFrameMinimumPolicy
         if (!Enum.IsDefined(snapshot.FlowAxis) || !double.IsFinite(snapshot.MinimumCrossAxisDip) || snapshot.MinimumCrossAxisDip < 0 ||
             !double.IsFinite(horizontalChromeDip) || horizontalChromeDip < 0 || !double.IsFinite(verticalChromeDip) || verticalChromeDip < 0)
             throw new ArgumentException("Invalid content minimum or frame chrome.");
-        return new(Math.Max(PosterFrameGeometryPolicy.MinimumWidthDip,
-                snapshot.FlowAxis == ContentFlowAxis.Vertical ? snapshot.MinimumCrossAxisDip + horizontalChromeDip : 0),
-            Math.Max(PosterFrameGeometryPolicy.MinimumExpandedHeightDip,
-                snapshot.FlowAxis == ContentFlowAxis.HorizontalLoop ? snapshot.MinimumCrossAxisDip + verticalChromeDip : 0));
+        // Keep the old main-axis/empty operating space. Only the populated cross axis shrinks
+        // to its largest complete card, plus chrome; never auto-resize the saved poster.
+        const double usualMinimum = 240;
+        bool populated = snapshot.Items.Count > 0;
+        return new(populated && snapshot.FlowAxis == ContentFlowAxis.Vertical
+                ? Math.Max(PosterFrameGeometryPolicy.MinimumWidthDip, snapshot.MinimumCrossAxisDip + horizontalChromeDip) : usualMinimum,
+            populated && snapshot.FlowAxis == ContentFlowAxis.HorizontalLoop
+                ? Math.Max(PosterFrameGeometryPolicy.MinimumExpandedHeightDip, snapshot.MinimumCrossAxisDip + verticalChromeDip) : usualMinimum);
     }
 
     // Transaction validation recomputes from authoritative content/presentation; a UI cannot
