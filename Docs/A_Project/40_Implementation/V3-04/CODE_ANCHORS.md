@@ -1,5 +1,11 @@
 # V3-04 代码锚点
 
+## 2026-10-21 卸载失败定位
+
+- `packaging/preview/installer.nsi`：DeleteInstalledFile宏、uninstall_failed记录/提示；原Delete/失败即停语义不变。
+- `scripts/package-preview.ps1`：按原清单顺序生成上述宏调用。
+- `tests/Packaging/Test-UninstallFailure.ps1`：受控占用、实际执行码、释放后再次执行及普通卸载；-ReviewFailure只将受控失败段交人工核对。根因未定边界和证据见[本批记录](UNINSTALL_INTERRUPTION.md)。
+
 ## 2026-10-20 已验架构Git集成与发布对齐（当前）
 
 - 开发产品锚点继续沿用本轮收口内容：架构`3c2417e`已进入develop`bbbe417`；发布`fe5741d`来自相同业务源码，不把开发资料裁剪回灌。
