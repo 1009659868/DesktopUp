@@ -1,5 +1,7 @@
 # DesktopUp V2 文档入口
 
+2026-10-21 当前：海报连续尺寸、动态下限、悬停及尺度联动扩框两轮集中人工均已通过，本批 CLOSED。已获功能分支 → impl/develop → 精简 impl/main 的 Git 同步及打包验证授权；执行结果见[交接](A_Project/40_Implementation/V3-04/HANDOFF.md)，验收见[本批记录](A_Project/40_Implementation/V3-04/POSTER_SCALE_AND_HOVER.md)。旧候选与配置保留，真实热度 HOLD。
+
 2026-10-21：已验卸载诊断完成开发/精简发布同步与限定打包验证，已回 `impl/develop`；首因未定项保留、真实热度HOLD。当前结果见[交接](A_Project/40_Implementation/V3-04/HANDOFF.md)，[系列计划](A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md#2026-10-21-发布同步后的系列计划建议未开工)仅作后续建议。
 
 2026-10-20 当前：**本轮基础架构整理 USER ACCEPTED / CLOSED；R1～R8、P1～P3均已验。** 用户已授权正式收口，[当前架构图、收口范围与交付限制](A_Project/40_Implementation/Architecture/FOUNDATION_REMAINDER_PLAN.md#31-本轮基础架构正式收口与当前架构图2026-10-20)已记录。图稿showcase 9/9通过，浏览器/视觉复验未完成；不与业务验收混记。剩余规模成本和历史锁冲突继续携带，动态模板/AI/更新器等未实现。后续Git授权已执行：架构3c2417e推送并合入develop@bbbe417；精简main@fe5741d已同步，完成限定构建/打包/隔离运行验证，最终回develop。详细交接以HANDOFF和发布记录为准；一次卸载中断重试成功但首因未定，独立保留。真实热度HOLD，真实登录自启和其他未验环境继续保留。下方为阶段历史。

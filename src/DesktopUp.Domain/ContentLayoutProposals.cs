@@ -47,7 +47,8 @@ public static class ContentLayoutProposals
             int tier = Quantize(h.RelativeScale, previousTiers is not null && previousTiers.TryGetValue(p.ItemId, out int old) ? old : null);
             tiers[p.ItemId] = tier;
             if (authorIntent.Mode == ContentLayoutMode.Manual) return p;
-            int Scale(int span) => Math.Clamp((int)Math.Round(span * TierScales[tier], MidpointRounding.AwayFromZero), 1, ContentLayoutPolicy.MaximumSpan);
+            // The legacy injected heat proposal remains tiered; the real heat producer is deferred.
+            double Scale(double span) => Math.Clamp(Math.Round(span * TierScales[tier], MidpointRounding.AwayFromZero), 1, ContentLayoutPolicy.MaximumSpan);
             bool resize = authorIntent.AllowHeatDrivenSize && !p.ManualSize;
             return p with { Order = h.Rank, ColumnSpan = resize ? Scale(p.ColumnSpan) : p.ColumnSpan,
                 RowSpan = resize ? Scale(p.RowSpan) : p.RowSpan };

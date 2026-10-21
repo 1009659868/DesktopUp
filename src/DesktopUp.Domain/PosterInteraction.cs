@@ -75,8 +75,9 @@ public readonly record struct PosterFrameGeometry(
 
 public static class PosterFrameGeometryPolicy
 {
-    public const double MinimumWidthDip = 240;
-    public const double MinimumExpandedHeightDip = 240;
+    // Absolute chrome safety floor. ContentFrameMinimumPolicy adds axis-specific Item geometry.
+    public const double MinimumWidthDip = 96;
+    public const double MinimumExpandedHeightDip = 96;
     public const double CollapsedHeightDip = 60;
 
     public static PosterFrameGeometry Move(

@@ -93,7 +93,7 @@ public sealed class MappedDirectoryIngressTests
         using var f=new F();f.File("keep.txt");Map(f);var before=f.State;
         var checksum=f.Sql("SELECT checksum_sha256 FROM schema_migrations WHERE version=23");
         f.Sql(StorageSchemaFixture.Drop24+"UPDATE state_head SET schema_version=23;PRAGMA user_version=23;");
-        var result=f.Store.Initialize();Assert.True(result.Succeeded,result.Error);Assert.Equal(23,result.PreviousSchemaVersion);Assert.Equal(25,result.Head!.SchemaVersion);
+        var result=f.Store.Initialize();Assert.True(result.Succeeded,result.Error);Assert.Equal(23,result.PreviousSchemaVersion);Assert.Equal(26,result.Head!.SchemaVersion);
         Assert.NotNull(result.PreMigrationBackupFileName);Assert.Equal(checksum,f.Sql("SELECT checksum_sha256 FROM schema_migrations WHERE version=23"));
         f.Sql("INSERT INTO mapped_directory_ingress(operation_id,body_json) VALUES('interrupted','{}');");
         Assert.Equal(1,new MappedDirectoryIngress(f.Store).SettleInterrupted());Assert.False(MappedDirectoryIngress.Pending(f.Store));

@@ -15,8 +15,8 @@ public sealed class ContentLayoutSolverTests
             Assert.True(item.Bounds.Width >= 48 && item.Bounds.Height >= 48);
             int cross = snapshot.FlowAxis == ContentFlowAxis.Vertical ? item.Column : item.Row;
             int main = snapshot.FlowAxis == ContentFlowAxis.Vertical ? item.Row : item.Column;
-            int crossSpan = snapshot.FlowAxis == ContentFlowAxis.Vertical ? item.ColumnSpan : item.RowSpan;
-            int mainSpan = snapshot.FlowAxis == ContentFlowAxis.Vertical ? item.RowSpan : item.ColumnSpan;
+            double crossSpan = snapshot.FlowAxis == ContentFlowAxis.Vertical ? item.ColumnSpan : item.RowSpan;
+            double mainSpan = snapshot.FlowAxis == ContentFlowAxis.Vertical ? item.RowSpan : item.ColumnSpan;
             Assert.InRange(cross, 0, ContentLayoutPolicy.MaximumColumns - 1);
             Assert.InRange(main, 0, ContentLayoutPolicy.MaximumRow);
             Assert.True(cross + crossSpan <= ContentLayoutPolicy.MaximumColumns && main + mainSpan <= ContentLayoutPolicy.MaximumRow + 1);
@@ -85,7 +85,7 @@ public sealed class ContentLayoutSolverTests
         {
             "capacity" => Doc(1001), "future" => d with { EngineVersion = 2 },
             _ => d with { Placements = items.Select((p,i) => i != 0 ? p : kind switch {
-                "span" => p with { ColumnSpan = 33 }, "foreign" => p with { ItemId = "B:x" },
+                "span" => p with { ColumnSpan = ContentLayoutPolicy.MaximumSpan + 1 }, "foreign" => p with { ItemId = "B:x" },
                 "duplicate" => p with { ItemId = items[1].ItemId }, _ => p with { Column = -1, Row = 0 } }).ToArray() }
         };
         Assert.Throws<ContentLayoutException>(() => ContentLayoutSolver.Resolve(d, View()));
@@ -97,7 +97,7 @@ public sealed class ContentLayoutSolverTests
         var d = Doc(1) with { BaseCellDip = 16, BaseGapDip = 0 };
         d = d with { Placements = [d.Placements[0] with { ColumnSpan = 1, RowSpan = 1 }] };
         var s = ContentLayoutSolver.Resolve(d, View() with { Scale = .8 });
-        Assert.Equal(4, s.Items[0].ColumnSpan); Assert.Equal(1, d.Placements[0].ColumnSpan);
+        Assert.Equal(3.75, s.Items[0].ColumnSpan); Assert.Equal(1, d.Placements[0].ColumnSpan);
         Assert.Contains("readable-minimum", s.Items[0].Diagnostic); Safe(s);
         Assert.Throws<ContentLayoutException>(() => ContentLayoutSolver.Resolve(d with { MaximumColumns = 2 }, View() with { Scale = .8 }));
     }

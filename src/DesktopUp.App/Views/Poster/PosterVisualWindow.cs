@@ -417,6 +417,7 @@ internal sealed partial class PosterVisualWindow(
             log,
             ReassertCurrentClusterBottom, inputRouter, inputSession, _windowHandle);
         _inputIsland.Input += OnInput;
+        _inputIsland.ContentHover += OnContentHover;
         _inputIsland.TitleInput += OnTitleInput;
         _inputIsland.ContextRequested += OnContentContextRequested;
         PosterInputLayoutSnapshot inputLayout = BuildInputLayout(_bounds);
@@ -1900,6 +1901,7 @@ internal sealed partial class PosterVisualWindow(
         {
             Cleanup(() => { _fileDrop?.Dispose(); _fileDrop = null; });
             _inputIsland.Input -= OnInput;
+            _inputIsland.ContentHover -= OnContentHover;
             _inputIsland.TitleInput -= OnTitleInput;
             _inputIsland.ContextRequested -= OnContentContextRequested;
             Cleanup(() => { _inputIsland.Dispose(); _inputIsland = null; });

@@ -44,6 +44,8 @@ public sealed record PosterStateCommand(
     public SpatialPostureCommit? SpatialPosture { get; init; }
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public ControlCenterGeometryProof? ControlCenterGeometry { get; init; }
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public ContentScaleExpansionProof? ContentScaleExpansion { get; init; }
 }
 
 public sealed record SettingsStateCommand(

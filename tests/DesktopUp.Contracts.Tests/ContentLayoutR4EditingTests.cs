@@ -34,7 +34,7 @@ public sealed class ContentLayoutR4EditingTests
             { Mode = ContentLayoutMode.Manual }, viewport, displayed);
 
         Assert.True(result.Accepted, result.Error);
-        Assert.Equal(3, result.Document.SchemaVersion);
+        Assert.Equal(ContentLayoutPolicy.SupportedSchemaVersion, result.Document.SchemaVersion);
         Assert.Equal(ContentLayoutMode.Anchored, result.Document.SavedAutomaticMode);
         Assert.Equal(author.Placements.Count, result.Document.Placements.Count);
         foreach (var placement in result.Document.Placements)
@@ -87,7 +87,7 @@ public sealed class ContentLayoutR4EditingTests
             { TargetReadOrder = 0 }, View());
         Assert.True(result.Accepted, result.Error);
         Assert.Equal(ContentLayoutMode.Automatic, result.Document.Mode);
-        Assert.Equal(3, result.Document.SchemaVersion);
+        Assert.Equal(ContentLayoutPolicy.SupportedSchemaVersion, result.Document.SchemaVersion);
         Assert.Equal(1, result.Document.Placements[2].PinnedIndex);
         Assert.All(result.Document.Placements, p => { Assert.False(p.FixedPosition); Assert.Null(p.Column); Assert.Null(p.Row); });
         Assert.Equal(author.Placements[0], result.Document.Placements[0]);
@@ -156,7 +156,7 @@ public sealed class ContentLayoutR4EditingTests
         var moved = ContentLayoutEditing.Apply(author, new(ContentLayoutEditKind.Move, "r4:item-1")
             { Column = 120, Row = 0 }, View());
         Assert.True(moved.Accepted, moved.Error);
-        Assert.Equal(3, moved.Document.SchemaVersion); Assert.Equal(120, moved.Document.Placements[1].Column);
+        Assert.Equal(ContentLayoutPolicy.SupportedSchemaVersion, moved.Document.SchemaVersion); Assert.Equal(120, moved.Document.Placements[1].Column);
         Assert.True(ContentLayoutPolicy.TryRead(ContentLayoutPolicy.Serialize(moved.Document), "r4", out var read, out var error), error);
         Assert.Equal(120, read!.Placements[1].Column);
     }

@@ -1,5 +1,7 @@
 # DesktopUp V2 — Poster Redesign V3
 
+2026-10-21 当前：海报整体 0.4～3 连续尺度、单项小数尺寸、动态交叉轴下限、局部悬停及尺度联动扩框两轮人工均通过，本批收口；无法安全扩框时尺度回弹且可继续手动调整外框。按授权同步功能分支、impl/develop 与精简 impl/main，打包结果见[当前交接](Docs/A_Project/40_Implementation/V3-04/HANDOFF.md)。不推进真实热度，历史未定因与未验环境继续保留。下方为阶段历史。
+
 2026-10-21 当前：已验卸载诊断功能c8a6714已合入develop940ff96并同步精简发布main4e79035；20261021.2实际打包/隔离运行卸载验证通过，最终回到 `impl/develop`。历史卸载中断首因及P1/R6锁冲突仍未定，不推进真实热度。见[发布交接](Docs/A_Project/40_Implementation/V3-04/HANDOFF.md)与[后续系列计划](Docs/A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md#2026-10-21-发布同步后的系列计划建议未开工)；下方为此前里程碑。
 
 2026-10-20 当前：**本轮基础架构整理 USER ACCEPTED / CLOSED（R1～R8、P1～P3）**。现有业务职责、操作/会话生命周期、呈现与同代命中、Worker及观察读取边界已收口；详见[最终复审与收口](Docs/A_Project/40_Implementation/Architecture/FOUNDATION_REMAINDER_PLAN.md#30-p2p3收口后的最终架构与成本复审2026-10-20)。架构成果 `3c2417e` 已提交推送并合入 `impl/develop@bbbe417`，精简发布线 `impl/main@fe5741d` 已同步推送，完成限定打包/隔离安装运行验证，最终回到 `impl/develop`；一次卸载中断重试成功但首因未定，另行保留记录；执行结果见[当前交接](Docs/A_Project/40_Implementation/V3-04/HANDOFF.md)。剩余读取/观察成本与 P1/R6 锁冲突未定因继续保留；真实登录自启及未验环境不补 PASS。真实热度不实施，动态模板、AI 和独立更新器未实现。以下为阶段历史。

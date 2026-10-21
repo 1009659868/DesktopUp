@@ -146,7 +146,7 @@ public sealed class PosterContentReturnTests
         f.Sql(StorageSchemaFixture.Drop25 + "UPDATE state_head SET schema_version=24; PRAGMA user_version=24;");
         var history=f.Sql("SELECT group_concat(checksum_sha256) FROM schema_migrations ORDER BY version");
         var result=f.Store.Initialize(); Assert.True(result.Succeeded,result.Error); Assert.Equal(24,result.PreviousSchemaVersion);
-        Assert.Equal(25,result.Head!.SchemaVersion); Assert.NotNull(result.PreMigrationBackupFileName);
+        Assert.Equal(26,result.Head!.SchemaVersion); Assert.NotNull(result.PreMigrationBackupFileName);
         Assert.Equal(history,f.Sql("SELECT group_concat(checksum_sha256) FROM schema_migrations WHERE version<=24 ORDER BY version"));
         var service=new ContentReturnFixture(f.Store); Assert.Empty(service.Reconcile()); Assert.Equal(original,service.OriginalPath(item.Id));
         Assert.True(File.Exists(item.Target.Locator)); Assert.False(File.Exists(original));

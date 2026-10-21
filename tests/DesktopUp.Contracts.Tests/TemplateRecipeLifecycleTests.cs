@@ -200,7 +200,7 @@ public sealed class TemplateRecipeLifecycleTests
             command.ExecuteNonQuery();
         }
         using var upgraded = new SqliteStateStore(new UserDataPaths(f.Path)); var result = upgraded.Initialize();
-        Assert.True(result.Succeeded, result.Error); Assert.Equal(11, result.PreviousSchemaVersion); Assert.Equal(25, result.Head!.SchemaVersion);
+        Assert.True(result.Succeeded, result.Error); Assert.Equal(11, result.PreviousSchemaVersion); Assert.Equal(26, result.Head!.SchemaVersion);
         Assert.Equal(before.Revision, result.Head.Revision);
         var snapshot = new SqliteStateCommandRepository(upgraded).Read();
         Assert.Equal(before.PostersById["A"].Poster, snapshot.Catalog.Posters.Single().Poster);

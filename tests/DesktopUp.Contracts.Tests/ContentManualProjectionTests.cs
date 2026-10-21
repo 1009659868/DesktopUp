@@ -233,9 +233,9 @@ public sealed class ContentManualProjectionTests
         snapshot.FlowAxis == ContentFlowAxis.Vertical ? item.Column : item.Row;
     private static int MainCell(ContentLayoutSnapshot snapshot, ContentResolvedPlacement item) =>
         snapshot.FlowAxis == ContentFlowAxis.Vertical ? item.Row : item.Column;
-    private static int CrossSpan(ContentLayoutSnapshot snapshot, ContentResolvedPlacement item) =>
+    private static double CrossSpan(ContentLayoutSnapshot snapshot, ContentResolvedPlacement item) =>
         snapshot.FlowAxis == ContentFlowAxis.Vertical ? item.ColumnSpan : item.RowSpan;
-    private static int MainSpan(ContentLayoutSnapshot snapshot, ContentResolvedPlacement item) =>
+    private static double MainSpan(ContentLayoutSnapshot snapshot, ContentResolvedPlacement item) =>
         snapshot.FlowAxis == ContentFlowAxis.Vertical ? item.RowSpan : item.ColumnSpan;
 
     private static void Positions(ContentLayoutSnapshot snapshot, params (string Key, int Cross, int Main)[] expected)

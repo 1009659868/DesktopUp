@@ -461,8 +461,8 @@ internal sealed partial class PosterVisualWindow
                 var press = Begin(source.ItemId, PosterInputTargetKind.ContentSpanHandle);
                 var gesture = _contentGesture!;
                 double pitch = gesture.Snapshot.CellDip + gesture.Snapshot.GapDip;
-                int columns = gesture.Slot.ColumnSpan - (vertical ? 1 : 0);
-                int rows = gesture.Slot.RowSpan - (vertical ? 0 : 1);
+                double columns = gesture.Slot.ColumnSpan - (vertical ? 1 : 0);
+                double rows = gesture.Slot.RowSpan - (vertical ? 0 : 1);
                 var end = vertical
                     ? press.Point with { X = press.Point.X - (int)Math.Round(pitch * gesture.ScaleX) }
                     : press.Point with { Y = press.Point.Y - (int)Math.Round(pitch * gesture.ScaleY) };

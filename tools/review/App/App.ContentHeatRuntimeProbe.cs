@@ -40,6 +40,11 @@ public partial class App
             var spatial = _spatialRuntime!;
             var window = spatial.BackdropWindowForProbe(id);
             await window.CaptureRenderIdentityForProbe();
+            if (_startupIntent.Arguments.Contains("--scale-expansion-probe"))
+            {
+                await VerifyScaleExpansionForProbe(window, cancellation.Token);
+                return;
+            }
             bool presentationProbe = _startupIntent.Arguments.Contains("--r3-presentation-probe");
             if (presentationProbe)
             {

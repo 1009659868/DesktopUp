@@ -1,5 +1,9 @@
 # V3-04 当前交接
 
+## 2026-10-21 当前：海报优化已验收口，开始授权集成
+
+工作分支 impl/poster-scale-and-hover，基于 develop@d9ea0d9；candidate01 两组和 candidate02 追加人工均 USER PASS，本批 CLOSED。对应证据见[本批记录](POSTER_SCALE_AND_HOVER.md)。用户授权提交推送、非快进合入 develop，再同步精简 main 并进行打包验证，最终回 develop；完成后在此记录实际结果。旧包、配置和收纳文件保留，真实热度 HOLD，历史卸载首因、P1/R6锁冲突及剩余成本照旧携带。下方为历史。
+
 ## 2026-10-21 已验卸载诊断Git集成与发布同步（完成）
 
 按本轮明确授权，功能 `c8a6714` 提交推送 → 非快进集成 `impl/develop@940ff96` 推送 → 精简发布 `impl/main@4e79035` 同步推送，已切回develop。最终包20261021.2基于干净源码9e84ad2；构建、打包和安装后的定向卸载验证通过，测试安装/登记已清理。详细产物、证据、裁剪和未验范围见[发布记录](PREVIEW_INSTALLER_DELIVERY.md#2026-10-21-已验卸载诊断集成与发布同步)；本交接为回到develop后的文档同步，不带回发布删除。

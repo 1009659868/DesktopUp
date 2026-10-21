@@ -27,14 +27,14 @@ public sealed record ContentReservedSpace(int Column, int Row, int ColumnSpan, i
 }
 /// <summary>Automatic author intent retained only while editing a manual composition. It is not a
 /// cache of a prior manual picture, rendered heat proposal, or separate persistent document.</summary>
-public sealed record ContentAutomaticSizeBasis(int ColumnSpan, int RowSpan);
-public sealed record ContentAutomaticPlacementState(int Order, int ColumnSpan, int RowSpan,
+public sealed record ContentAutomaticSizeBasis(double ColumnSpan, double RowSpan);
+public sealed record ContentAutomaticPlacementState(int Order, double ColumnSpan, double RowSpan,
     bool ManualSize, int? PinnedIndex, int? Column = null, int? Row = null, bool FixedPosition = false)
 {
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public ContentAutomaticSizeBasis? AutomaticSizeBasis { get; init; }
 }
-public sealed record ContentPlacement(string ItemId, int Order, int ColumnSpan = 4, int RowSpan = 4)
+public sealed record ContentPlacement(string ItemId, int Order, double ColumnSpan = 4, double RowSpan = 4)
 {
     public long Version { get; init; } = 1;
     public string RegionId { get; init; } = "main";
@@ -121,7 +121,7 @@ public sealed record ContentScrollAnchor(string ItemId, double InsideOffsetDip, 
 public sealed record ContentLayoutViewport(double WidthDip, double HeightDip, double ScrollXDip = 0, double ScrollYDip = 0,
     long Generation = 0, double Scale = 1, double Spacing = 1, long ThemeMetricsVersion = 1);
 public sealed record ContentResolvedPlacement(string ItemId, int SourceIndex, int ReadOrder, int Column, int Row,
-    int ColumnSpan, int RowSpan, ContentRect Bounds, ContentRect Clip, string? Diagnostic = null)
+    double ColumnSpan, double RowSpan, ContentRect Bounds, ContentRect Clip, string? Diagnostic = null)
 {
     public int RegionColumn { get; init; }
     public int RegionRow { get; init; }
@@ -153,13 +153,16 @@ public sealed record ContentLayoutSnapshot(string PosterId, long DocumentVersion
 
 public static class ContentLayoutPolicy
 {
-    public const int MaximumItems = 1000, MaximumSpan = 32, MaximumColumns = 64, MaximumRow = 65535;
+    public const int MaximumItems = 1000, MaximumSpan = 64, MaximumColumns = 64, MaximumRow = 65535;
+    public const double MinimumSpan = .5;
     public const int MaximumJsonBytes = 1048576, MaximumRegions = 8;
+    // Includes the name line: smaller artwork must not consume the label's hit/readable space.
     public const double MinimumReadableCardDip = 48;
     /// <summary>v1 = pre-axis documents (read-only compatible, flow defaults to vertical). v2 adds
     /// the flow axis and reserved-space kind/name. v3 adds automatic return intent and symmetric
     /// long main-axis coordinates; older automatic documents keep their original pin semantics.</summary>
-    public const int SupportedSchemaVersion = 3, MinimumSupportedSchemaVersion = 1;
+    // v4 adds fractional sizes. Positions and collision occupancy remain grid-aligned.
+    public const int SupportedSchemaVersion = 4, MinimumSupportedSchemaVersion = 1;
     public const int MaximumReservedSpaces = 32, MaximumReservedNameLength = 64;
     private static readonly JsonSerializerOptions Json = new()
     {
@@ -203,15 +206,21 @@ public static class ContentLayoutPolicy
         {
             if (p is null || string.IsNullOrWhiteSpace(p.ItemId) || p.ItemId.Length > 192 || !p.ItemId.StartsWith(d.PosterId + ":", StringComparison.Ordinal) || !ids.Add(p.ItemId) || p.Version < 1 || p.Order < 0 || !regions.Contains(p.RegionId) || !Enum.IsDefined(p.ImageFit))
                 return "Invalid, foreign or duplicate placement identity.";
-            if (p.ColumnSpan is < 1 or > MaximumSpan || p.RowSpan is < 1 or > MaximumSpan || p.Column < 0 || p.Column > maximumColumn || p.Row is < 0 or > MaximumRow || p.Column.HasValue != p.Row.HasValue || p.FixedPosition && !p.Column.HasValue)
+            if (!ValidSpan(p.ColumnSpan) || !ValidSpan(p.RowSpan) || p.Column < 0 || p.Column > maximumColumn || p.Row is < 0 or > MaximumRow || p.Column.HasValue != p.Row.HasValue || p.FixedPosition && !p.Column.HasValue)
                 return "Invalid span or logical position.";
+            bool LegacySpan(double span) => span is >= 1 and <= 32 && span == Math.Truncate(span);
+            if (d.SchemaVersion < 4 && (!LegacySpan(p.ColumnSpan) || !LegacySpan(p.RowSpan) ||
+                p.AutomaticSizeBasis is { } basis && (!LegacySpan(basis.ColumnSpan) || !LegacySpan(basis.RowSpan)) ||
+                p.SavedAutomaticState is { } prior && (!LegacySpan(prior.ColumnSpan) || !LegacySpan(prior.RowSpan) ||
+                    prior.AutomaticSizeBasis is { } priorBasis && (!LegacySpan(priorBasis.ColumnSpan) || !LegacySpan(priorBasis.RowSpan)))))
+                return "Fractional or extended sizes require content layout schema four.";
             if (p.PinnedIndex is { } pin && (pin < 1 || pin > d.Placements.Count || !pins.Add(pin))) return "Invalid or duplicate order anchor.";
             if (!ValidSizeBasis(p.AutomaticSizeBasis, p.ManualSize)) return "Invalid automatic size basis.";
             if (hasReturnState != (p.SavedAutomaticState is not null))
                 return "Automatic return intent must cover the complete manual member set.";
             if (p.SavedAutomaticState is { } saved)
             {
-                if (saved.Order < 0 || saved.ColumnSpan is < 1 or > MaximumSpan || saved.RowSpan is < 1 or > MaximumSpan ||
+                if (saved.Order < 0 || !ValidSpan(saved.ColumnSpan) || !ValidSpan(saved.RowSpan) ||
                     saved.Column is < 0 or > MaximumRow || saved.Row is < 0 or > MaximumRow ||
                     saved.Column.HasValue != saved.Row.HasValue || saved.FixedPosition && !saved.Column.HasValue)
                     return "Invalid saved automatic placement intent.";
@@ -223,7 +232,8 @@ public static class ContentLayoutPolicy
         return null;
     }
     private static bool ValidSizeBasis(ContentAutomaticSizeBasis? basis, bool manualSize) => basis is null ||
-        manualSize && basis.ColumnSpan is >= 1 and <= MaximumSpan && basis.RowSpan is >= 1 and <= MaximumSpan;
+        manualSize && ValidSpan(basis.ColumnSpan) && ValidSpan(basis.RowSpan);
+    public static bool ValidSpan(double span) => double.IsFinite(span) && span >= MinimumSpan && span <= MaximumSpan;
     public static ContentLayoutDocument Freeze(ContentLayoutDocument d) => d with
     {
         Placements = Array.AsReadOnly(d.Placements.ToArray()), Regions = Array.AsReadOnly(d.Regions.ToArray()),

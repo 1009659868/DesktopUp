@@ -7,16 +7,16 @@ public sealed record PosterItemVisualMetrics(PosterItemVisualInput Item, PosterC
 
 public static class PosterContentPreferencePolicy
 {
-    public const double MinimumScale = .8, MaximumScale = 1.5;
+    public const double MinimumScale = .4, MaximumScale = 3;
     public const double MinimumSpacing = .5, MaximumSpacing = 1.5;
     public const int KeyboardSettleMilliseconds = 350;
-    public static IReadOnlyList<double> ScalePresets { get; } = Array.AsReadOnly(new[] { .8, 1d, 1.5 });
+    public static IReadOnlyList<double> ScalePresets { get; } = Array.AsReadOnly(new[] { MinimumScale, 1d, MaximumScale });
     public static IReadOnlyList<double> SpacingPresets { get; } = Array.AsReadOnly(new[] { .5, 1d, 1.5 });
 
     public static string? Validate(PosterContentPreferences? value) => value is null ? null :
         value.MappingVersion != 1 ? "Unknown content preference mapping version." :
         !In(value.Scale, MinimumScale, MaximumScale) || !In(value.Spacing, MinimumSpacing, MaximumSpacing)
-            ? "Content scale must be 0.8–1.5 and spacing 0.5–1.5." : null;
+            ? "Content scale must be 0.4–3.0 and spacing 0.5–1.5." : null;
 
     public static PosterContentParameters Resolve(PosterContentParameters basis, PosterContentPreferences? preferences,
         double relativeScale = 1)

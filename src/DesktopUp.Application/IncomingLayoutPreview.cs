@@ -13,7 +13,7 @@ public static class ContentMemberPlacement
         if (layout.Mode == ContentLayoutMode.Manual)
         {
             bool vertical = layout.FlowAxis == ContentFlowAxis.Vertical;
-            int end = placements.Select(p => vertical ? (p.Row ?? 0) + p.RowSpan : (p.Column ?? 0) + p.ColumnSpan)
+            int end = placements.Select(p => vertical ? (p.Row ?? 0) + (int)Math.Ceiling(p.RowSpan) : (p.Column ?? 0) + (int)Math.Ceiling(p.ColumnSpan))
                 .Concat(layout.ReservedSpaces.Select(s => vertical ? s.Row + s.RowSpan : s.Column + s.ColumnSpan)).DefaultIfEmpty(0).Max();
             placement = placement with { Column = vertical ? 0 : end, Row = vertical ? end : 0,
                 SavedAutomaticState = layout.SavedAutomaticMode is null ? null : new(order, placement.ColumnSpan, placement.RowSpan, false, null) };

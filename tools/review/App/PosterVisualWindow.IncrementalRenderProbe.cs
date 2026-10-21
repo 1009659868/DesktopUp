@@ -39,6 +39,20 @@ internal sealed partial class PosterVisualWindow
         var surface = inputRouter.ReadSurface(inputSession);
         if (surface is null || surface.Layout.ContentSnapshotGeneration != Presenter.Frame!.Snapshot.ViewportGeneration)
             throw new IOException("Recovery did not publish the same generation.");
+        var retained = RenderIdentity();
+        var tile = Presenter.Cards.First(p => p.Value.Opacity > 0);
+        var cell = (Grid)tile.Value;
+        var selection = SelectedContentIds().ToArray();
+        for (int i = 0; i < 60; i++)
+        {
+            Presenter.HoverAt(Canvas.GetLeft(cell) + cell.Width / 2, Canvas.GetTop(cell) + cell.Height / 2);
+            if (cell.Background is null) throw new IOException("No local hover feedback.");
+            Presenter.SetHover(null);
+            if (cell.Background is not null) throw new IOException("Hover did not clear.");
+        }
+        RequireRetainedRenderForProbe(retained);
+        if (!selection.SequenceEqual(SelectedContentIds())) throw new IOException("Hover changed selection.");
+        log.Write("info", "contract.content_hover_passed", new { repeats = 60, newRasterRequests = 0, selectionUnchanged = true });
         log.Write("info", "contract.r3_frame_publication_passed", new { stale = true, nativeReject = true, batchReject = true });
     }
 
