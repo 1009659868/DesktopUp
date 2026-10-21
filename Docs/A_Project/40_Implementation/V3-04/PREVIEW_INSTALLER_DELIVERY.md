@@ -1,5 +1,18 @@
 # Windows 11 x64 独立预览安装包
 
+## 2026-10-21 即时取证集成与发布同步
+
+- 功能9b0f112已推送，非快进合入develop80d8d0b并推送。发布合并78e5ff7、README记录ed5146d已推送；最终返回develop补交接。main跟踪内容无Docs/tests/tools/out，开发资料与测试只在开发线；发布相对前版仅README、installer.nsi及uninstall-evidence.nsh变化。既有STARTUP_REVIEW裁剪保持，不改变普通业务。
+- 先验证合并工作区预检包，再从干净`78e5ff70f64c149dfe8b801c431c98aa01b9ea6c`生成最终20261021.5（IncludesUncommittedChanges=false）。Release/自包含打包0警告0错误，文本门491文件/26项冻结迁移，500项编译/载荷输入摘要核对一致；807个载荷文件，无调试符号、探针/夹具或用户数据。后续README不改变这些构建输入。
+- 最终包：`out/releases/main-immediate-final01/DesktopUp-Preview-20261021.5-win-x64-Setup.exe`；67,337,513字节，SHA256 `C65C216163E28B6BC90181A761E67FE72664906D17AB2463C61FE91F0BE75A94`。包和大体积证据仅保留本地out，不上传Git。
+- Windows PowerShell5.1、本机高完整性定向验证：在独立中文空格目录实际安装，包内运行库启动（新schema26、默认basic-box）、无error、正常退出activeResources=0。复用已验Test-UninstallFailure的隔离副本，仅调整repo/辅助脚本路径；不搬动真实内容、不开桌面快捷方式，不重跑历史业务矩阵。
+- 三段PASS：受控占用app/wuceffectsi.dll时DeleteFileW/Windows32、实际执行PID48196/退出24、保留后续文件和卸载入口，报告`cleanup-134370467806088350-48196.ini`；释放自建句柄后另一次显式卸载0，配置/未知样例/首次报告保持；重装后普通首轮卸载0。没有产品自动重试，没有自然故障复现，HistoricalCauseEstablished=false。
+- 隔离前后Preview/V3配置、Run、DesktopUp桌面/开始菜单入口及原有安装登记完全相同；无剩余DesktopUp进程。证据摘要`out/releases/immediate-main-validation/main-immediate-smoke01/{package-audit,isolation-audit,before,after}.json`；未操作真实文件、旧候选或历史stash。
+- 授权清理：确认临时安装已正常卸载且登记消失后，仅移除`main-immediate-smoke01`、`main-immediate-final01/build`和`main-immediate-preflight01`三个精确目录，共2311文件、1,135,130,405字节。删除前确认绝对路径在out/releases内、无重解析点/在用进程，重新核对逐项摘要。2247项与保留的最终payload文件完全一致，64项独有证据/测试样例/预检产物归档并逐项解压流校验；不是清空整个out。
+- 归档：`out/releases/immediate-main-validation/closed-release-tests.zip`，SHA256 `DE9BA67452EF3CB4BA467C4DB5396187309E5D5DD2F8B28C58AC3171E19E9159`；同目录cleanup-manifest.json列出每项恢复来源，cleanup-result.json确认3目标均已移除、ProtectedStateUnchanged=true。上述原始smoke路径从归档读取，不能再当活跃安装；正式包、最终payload和构建日志保留。
+
+限定结论：验证的是当前机器的构建/打包/实际安装运行及卸载安全边界，不替代普通权限GUI、真实登录自启、跨机、多DPI、满盘或长测；包仍未签名。历史自然卸载首因和P1/R6锁冲突继续独立OPEN；剩余读取/观察成本按原计划先测量，成功测试不销项。真实热度仅进入设计准备，本次不实现。
+
 ## 2026-10-21 海报优化集成与发布同步
 
 - 两轮集中人工已验收口：功能5dcf4fb推送 → 非快进develop9e793f8推送 → 精简发布合并472e8ff及README6cec0b8推送，最终回develop补本次交接。main无Docs/tests/tools/out跟踪文件；完整资料/测试留在develop，历史stash不动。本次30个生产路径与已验develop比较，差异仅为原有发布诊断裁剪，未修改业务逻辑。

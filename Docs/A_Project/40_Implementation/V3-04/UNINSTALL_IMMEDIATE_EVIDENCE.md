@@ -79,4 +79,6 @@ powershell.exe -NoProfile -File "G:\A_\Tools\DesktopUp_V2\tests\Packaging\Test-U
 
 cleanup-manifest.json保存恢复位置，cleanup-result.json保存清理结果；cleanup-before/after.json证明日常Preview/V3配置、DesktopUp Run登记及桌面/开始菜单快捷方式在清理前后相同。用户截图另保存在同目录manual-review-20261021.png。已验20261021.4安装包、最终payload与构建/验证日志保留供集成复核，旧包和其他批次现场未清理。不把必要证据和已验交付物混同临时测试残留。
 
-本批USER PASS / CLOSED，仍在impl/09-uninstall-immediate-evidence，未提交/推送/合并。历史中断首因继续OPEN；后续自然发生时先保存首报告、实际执行码和当时进程身份，再区分共享拒绝/权限/其他错误并定向核查，单凭RM空列表或成功重试不得定因。P1 final02、R6 probe02锁冲突为独立未定因项，剩余成本沿架构30.4节安排，真实热度HOLD。
+当时状态：本批USER PASS / CLOSED，仍在impl/09-uninstall-immediate-evidence，未提交/推送/合并。历史中断首因继续OPEN；后续自然发生时先保存首报告、实际执行码和当时进程身份，再区分共享拒绝/权限/其他错误并定向核查，单凭RM空列表或成功重试不得定因。P1 final02、R6 probe02锁冲突为独立未定因项，剩余成本沿架构30.4节安排。
+
+后续授权已执行：9b0f112提交推送 → develop80d8d0b集成推送 → 精简main78e5ff7/ed5146d发布同步；20261021.5实际包定向验证及新测试清理完成，最终回develop。见[发布记录](PREVIEW_INSTALLER_DELIVERY.md#2026-10-21-即时取证集成与发布同步)。真实热度由HOLD转入设计准备，不代表已实施；历史首因与锁冲突仍OPEN。

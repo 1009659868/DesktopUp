@@ -1,5 +1,7 @@
 # DesktopUp V2 当前执行入口
 
+2026-10-21 最新：即时取证已验成果完成Git集成及精简发布同步，已回impl/develop；结果见[发布交接](../A_Project/40_Implementation/V3-04/HANDOFF.md)。下一入口为真实热度设计准备：A[活跃度与布局第6～10节](../A_Project/10_Requirements/CONTENT_ITEM_ACTIVITY_LAYOUT_V1.md) → B既有打开成功事实/单一归属/会话保护合同 → C[主计划第7.1节](../A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md#71-2026-10-21-真实热度准备未实施)。本轮只说明方案，不开新分支、不实现热度；历史卸载首因及P1/R6锁冲突独立保留。下方为历史。
+
 2026-10-21 当前：impl/09-uninstall-immediate-evidence从develop@45e2a3a派生。A卸载数据保留决定 → B GENERAL_CONTENT_MULTI_POSTER_CONTRACT_V1卸载安全合同不变 → C[即时取证USER PASS / CLOSED及清理](../A_Project/40_Implementation/V3-04/UNINSTALL_IMMEDIATE_EVIDENCE.md#人工结果与授权清理2026-10-21)。人工三段通过，本批测试残留清理/首次证据归档完成；历史中断首因与锁冲突继续未定，不宣称根因修复。不合并、不推进真实热度，下一步待授权。下方为历史。
 
 2026-10-21 当前：海报优化两轮集中人工 USER PASS / CLOSED。A[连续尺寸及扩框决定](../A_Project/10_Requirements/REQUIREMENTS_RISKS_AND_OPEN_QUESTIONS.md) → B[连续尺寸/一次提交合同](../A_Project/20_Architecture/CONTENT_LAYOUT_OPERATION_SPACE_REVIEW_V1.md) → C[本批收口](../A_Project/40_Implementation/V3-04/POSTER_SCALE_AND_HOVER.md)。功能5dcf4fb → develop9e793f8 → main6cec0b8均推送，20261021.3打包及限定复验完成，已回develop；一次普通卸载中断显式重试收尾但首因未定，详细结果见HANDOFF。真实热度HOLD，未开下一功能。下方为历史。

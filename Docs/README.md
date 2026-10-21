@@ -1,5 +1,7 @@
 # DesktopUp V2 文档入口
 
+2026-10-21 最新：即时取证功能9b0f112 → develop80d8d0b → 精简main78e5ff7/ed5146d已推送，20261021.5打包/隔离安装及三段卸载通过，测试清理完成，已回impl/develop；见[交接](A_Project/40_Implementation/V3-04/HANDOFF.md)。历史卸载首因与P1/R6锁冲突保持OPEN；用户要求准备真实热度，当前仅[方案与接续安排](A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md#71-2026-10-21-真实热度准备未实施)，未实施。下方“不合并/HOLD”为历史。
+
 2026-10-21 当前：impl/09-uninstall-immediate-evidence即时取证集中人工三段通过，USER PASS / CLOSED；本批测试残留已清理、首次证据归档，已验包保留，详见[验收与清理](A_Project/40_Implementation/V3-04/UNINSTALL_IMMEDIATE_EVIDENCE.md#人工结果与授权清理2026-10-21)。历史卸载首因、P1/R6锁冲突继续OPEN，真实热度HOLD；未提交/推送/合并，以下为历史批次。
 
 2026-10-21 当前：海报优化两轮人工通过并收口；功能5dcf4fb → develop9e793f8 → 精简main6cec0b8均已推送，20261021.3打包/隔离运行及独立卸载复验完成，已回impl/develop。本轮一次普通卸载中断和首因未定继续保留，详见[交接](A_Project/40_Implementation/V3-04/HANDOFF.md)；验收见[本批记录](A_Project/40_Implementation/V3-04/POSTER_SCALE_AND_HOVER.md)。旧候选与配置保留，真实热度HOLD。

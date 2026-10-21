@@ -1,5 +1,11 @@
 # V3-04 代码锚点
 
+## 2026-10-21 集成后真实热度准备锚点（仅核对，未实施）
+
+- Application/Features/Content/Open/ContentActionService、ContentOpenContract → Infrastructure/Persistence/Content/SqliteContentOpenJournal：已有可信打开交接、ActivationId幂等事实；尚无生产统计聚合/消费游标。
+- Domain/ContentLayoutProposals：已有带版本提案，但注入路径仍五档Quantize/Math.Round；不能当作已实现的真实连续热度。Application/Features/Content/Layout/ContentHeatSession及PosterContentSession提供最新提案、会话/交互保护与作者意图区分。
+- 当前生产源仍为本批已验集成，无热度代码变化；方案、待决规则和接续顺序见[主计划第7.1节](../../30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md#71-2026-10-21-真实热度准备未实施)。发布及清理记录归PREVIEW_INSTALLER_DELIVERY，不在此复制证据。
+
 ## 2026-10-21 卸载即时取证
 
 - packaging/preview/uninstall-evidence.nsh：替代旧DeleteInstalledFile宏的清单单路径删除边界，原始API错误即时捕获；失败后有界只读RM快照、不可覆盖的profile报告。installer.nsi只接入include及错误提示/marker，不改内容归还、维护租约和归属保护。
