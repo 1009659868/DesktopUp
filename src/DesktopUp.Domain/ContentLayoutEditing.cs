@@ -5,8 +5,8 @@ public sealed record ContentLayoutEdit(ContentLayoutEditKind Kind, string? ItemI
 {
     public int? Column { get; init; }
     public int? Row { get; init; }
-    public int? ColumnSpan { get; init; }
-    public int? RowSpan { get; init; }
+    public double? ColumnSpan { get; init; }
+    public double? RowSpan { get; init; }
     public int? PinnedIndex { get; init; }
     /// <summary>Zero-based final read position for automatic dragging; persisted pins are one-based.</summary>
     public int? TargetReadOrder { get; init; }
@@ -76,7 +76,7 @@ public static class ContentLayoutEditing
                     }
                     break;
                 case ContentLayoutEditKind.Resize:
-                    if (edit.ColumnSpan is null || edit.RowSpan is null) throw new ContentLayoutException("Resize requires both integer spans.");
+                    if (edit.ColumnSpan is null || edit.RowSpan is null) throw new ContentLayoutException("Resize requires both finite spans.");
                     items[index] = source! with { ColumnSpan = edit.ColumnSpan.Value, RowSpan = edit.RowSpan.Value, ManualSize = true,
                         AutomaticSizeBasis = document.Mode != ContentLayoutMode.Manual && !source!.ManualSize
                             ? new(source.ColumnSpan, source.RowSpan) : source!.AutomaticSizeBasis };
@@ -211,8 +211,8 @@ public static class ContentLayoutEditing
             if (!ids.Add(slot.ItemId) || slot.SourceIndex < 0 || slot.SourceIndex >= document.Placements.Count ||
                 document.Placements[slot.SourceIndex].ItemId != slot.ItemId ||
                 slot.ReadOrder < 0 || slot.ReadOrder >= snapshot.Items.Count || !orders.Add(slot.ReadOrder) ||
-                slot.Column < 0 || slot.Row < 0 || slot.ColumnSpan is < 1 or > ContentLayoutPolicy.MaximumSpan ||
-                slot.RowSpan is < 1 or > ContentLayoutPolicy.MaximumSpan)
+                slot.Column < 0 || slot.Row < 0 || !ContentLayoutPolicy.ValidSpan(slot.ColumnSpan) ||
+                !ContentLayoutPolicy.ValidSpan(slot.RowSpan))
                 throw new ContentLayoutException("The presented composition has invalid member geometry or read order.");
             var source = document.Placements[slot.SourceIndex];
             var region = document.Regions.Single(r => r.Id == source.RegionId);
@@ -235,7 +235,7 @@ public static class ContentLayoutEditing
         string sourceId, ContentLayoutViewport viewport)
     {
         double cell = candidate.BaseCellDip * viewport.Scale, gap = candidate.BaseGapDip * viewport.Spacing;
-        int minimum = (int)Math.Ceiling((ContentLayoutPolicy.MinimumReadableCardDip + gap) / (cell + gap));
+        double minimum = (ContentLayoutPolicy.MinimumReadableCardDip + gap) / (cell + gap);
         bool vertical = candidate.FlowAxis == ContentFlowAxis.Vertical;
         var previousById = previous.Items.ToDictionary(p => p.ItemId, StringComparer.Ordinal);
         var regions = candidate.Regions.ToDictionary(r => r.Id, StringComparer.Ordinal);
@@ -246,13 +246,13 @@ public static class ContentLayoutEditing
             ? new(x, y, width, height) : new(y, x, height, width);
         var held = candidate.ReservedSpaces.Where(s => s.Kind == ContentReservedKind.Explicit)
             .Select(s => Normalize(s.Column, s.Row, s.ColumnSpan, s.RowSpan)).ToList();
-        int maximumCrossSpan = candidate.Placements.Select(p => Math.Max(minimum, vertical ? p.ColumnSpan : p.RowSpan)).DefaultIfEmpty(0).Max();
+        double maximumCrossSpan = candidate.Placements.Select(p => Math.Max(minimum, vertical ? p.ColumnSpan : p.RowSpan)).DefaultIfEmpty(0).Max();
         bool onePerBand = maximumCrossSpan > 0 && previous.AvailableCrossAxisDip <= maximumCrossSpan * (cell + gap) - gap + 1e-7;
         ContentRect Rect(ContentPlacement p)
         {
             var r = regions[p.RegionId]; var old = previousById[p.ItemId];
             return Normalize(r.Column + (p.Column ?? old.Column - old.RegionColumn), r.Row + (p.Row ?? old.Row - old.RegionRow),
-                Math.Max(minimum, p.ColumnSpan), Math.Max(minimum, p.RowSpan));
+                Math.Ceiling(Math.Max(minimum, p.ColumnSpan)), Math.Ceiling(Math.Max(minimum, p.RowSpan)));
         }
         void RequireBounds(ContentRect rect, ContentPlacement p)
         {

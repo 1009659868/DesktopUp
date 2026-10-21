@@ -18,7 +18,7 @@ public static class ContentLayoutSolver
         var axis = new Axis(document.FlowAxis == ContentFlowAxis.Vertical);
         double cell = document.BaseCellDip * viewport.Scale, gap = document.BaseGapDip * viewport.Spacing;
         double pitch = cell + gap;
-        int readable = (int)Math.Ceiling((ContentLayoutPolicy.MinimumReadableCardDip + gap) / pitch);
+        double readable = (ContentLayoutPolicy.MinimumReadableCardDip + gap) / pitch;
         bool responsiveManual = document.Mode == ContentLayoutMode.Manual && document.Regions.Count == 1 &&
             document.Regions[0] is { Column: 0, Row: 0, Columns: 0 } &&
             document.Placements.All(p => p.Column.HasValue && !p.FixedPosition) &&
@@ -33,7 +33,7 @@ public static class ContentLayoutSolver
         int minimumCells = candidates.Select(c => axis.Cross(c.Width, c.Height)).DefaultIfEmpty(0).Max();
         if (minimumCells > document.MaximumColumns)
             throw new ContentLayoutException("The configured cross-axis capacity cannot accommodate the largest readable card.");
-        double minimumDip = minimumCells == 0 ? 0 : minimumCells * pitch - gap;
+        double minimumDip = candidates.Select(c => axis.Cross(c.VisualWidth, c.VisualHeight) * pitch - gap).DefaultIfEmpty(0).Max();
         double availableDip = axis.Cross(viewport.WidthDip, viewport.HeightDip);
         int availableCells = Math.Clamp((int)Math.Floor((availableDip + gap + 1e-9) / pitch), 0, document.MaximumColumns);
         int crossCells = Math.Max(minimumCells, availableCells);
@@ -165,8 +165,8 @@ public static class ContentLayoutSolver
         {
             Include(cross, main, axis.Cross(c.Width, c.Height), axis.Main(c.Width, c.Height));
             int x = axis.Vertical ? cross : main, y = axis.Vertical ? main : cross;
-            result.Add(new(c.Item.ItemId, sourceIndices[c.Item.ItemId], orders[c.Item.ItemId], x, y, c.Width, c.Height,
-                new(x * pitch, y * pitch, c.Width * pitch - gap, c.Height * pitch - gap), default, c.Diagnostic)
+            result.Add(new(c.Item.ItemId, sourceIndices[c.Item.ItemId], orders[c.Item.ItemId], x, y, c.VisualWidth, c.VisualHeight,
+                new(x * pitch, y * pitch, c.VisualWidth * pitch - gap, c.VisualHeight * pitch - gap), default, c.Diagnostic)
             { RegionColumn = region.Column, RegionRow = region.Row });
         }
         // A global order pin cannot be honoured merely by sorting the returned array: preserved
@@ -241,7 +241,8 @@ public static class ContentLayoutSolver
     {
         if (viewport is null || !In(viewport.WidthDip, 0, MaximumViewportDip) || !In(viewport.HeightDip, 0, MaximumViewportDip) ||
             !In(viewport.ScrollXDip, -16_000_000, 16_000_000) || !In(viewport.ScrollYDip, -16_000_000, 16_000_000) ||
-            !In(viewport.Scale, .8, 1.5) || !In(viewport.Spacing, .5, 1.5) || viewport.Generation < 0 || viewport.ThemeMetricsVersion < 1)
+            !In(viewport.Scale, PosterContentPreferencePolicy.MinimumScale, PosterContentPreferencePolicy.MaximumScale) ||
+            !In(viewport.Spacing, .5, 1.5) || viewport.Generation < 0 || viewport.ThemeMetricsVersion < 1)
             throw new ContentLayoutException("Invalid content viewport or metric version.");
     }
     private static bool In(double value, double min, double max) => double.IsFinite(value) && value >= min && value <= max;
@@ -252,7 +253,13 @@ public static class ContentLayoutSolver
         public double Cross(double x, double y) => Vertical ? x : y;
         public double Main(double x, double y) => Vertical ? y : x;
     }
-    private sealed record Candidate(ContentPlacement Item, int Width, int Height, bool Positioned, string? Diagnostic);
+    // Integer cells are collision reservations only. Never round the persistent or painted size.
+    // This retains the bounded bitset solver and existing grid-aligned movement without overlaps.
+    private sealed record Candidate(ContentPlacement Item, double VisualWidth, double VisualHeight, bool Positioned, string? Diagnostic)
+    {
+        public int Width => (int)Math.Ceiling(VisualWidth);
+        public int Height => (int)Math.Ceiling(VisualHeight);
+    }
 
     private sealed class Occupancy
     {

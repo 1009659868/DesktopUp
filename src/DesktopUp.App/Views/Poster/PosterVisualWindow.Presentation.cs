@@ -20,7 +20,7 @@ internal sealed partial class PosterVisualWindow
         if (_centerPresentation is not null)
         {
             if (_centerPresentationVersion == _posterEntityVersion) next = _centerPresentation;
-            else _centerPresentation = null;
+            else { _centerPresentation = null; _centerBounds = null; _centerGenerations = null; }
         }
         var previous = _presentation;
         bool paintOnlyTemplate = TemplatePresentationRefreshPolicy.CanPaint(previous, next,

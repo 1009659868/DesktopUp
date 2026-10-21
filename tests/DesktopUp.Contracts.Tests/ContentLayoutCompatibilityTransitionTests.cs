@@ -78,7 +78,7 @@ public sealed partial class ContentLayoutPersistenceTests
         var edit = ContentLayoutEditing.Apply(before, new(ContentLayoutEditKind.Resize, before.Placements[0].ItemId)
             { ColumnSpan = 3, RowSpan = 2 }, TransitionViewport());
         Assert.True(edit.Accepted, edit.Error);
-        Assert.Equal(3, edit.Document.SchemaVersion);
+        Assert.Equal(ContentLayoutPolicy.SupportedSchemaVersion, edit.Document.SchemaVersion);
         Assert.Equal(StateCommandStatus.Committed, ExecuteTransition(f, before, edit.Document, "compatibility-resize").Status);
         var resized = ReadTransition(f);
         history.Record(before, resized);

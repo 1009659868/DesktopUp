@@ -4,7 +4,7 @@ using DesktopUp.Domain;
 namespace DesktopUp.Application;
 
 // File-local membership keys only: no machine poster IDs, document/CAS versions or source paths.
-public sealed record PortableContentPlacement(string Key, int Order, int ColumnSpan, int RowSpan,
+public sealed record PortableContentPlacement(string Key, int Order, double ColumnSpan, double RowSpan,
     string RegionId, int? Column, int? Row, bool FixedPosition, bool ManualSize, int? PinnedIndex, ContentImageFit ImageFit)
 {
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

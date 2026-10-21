@@ -58,7 +58,7 @@ public sealed class ContentDragPolicyTests
     public void Subcell_motion_and_return_to_origin_are_noops_even_after_a_valid_candidate(ContentDragKind kind)
     {
         var capture = Capture(Document(ContentLayoutMode.Automatic, ContentFlowAxis.Vertical), View(ContentFlowAxis.Vertical));
-        Assert.True(Map(capture, kind, 20, -20).NoChange);
+        Assert.Equal(kind == ContentDragKind.Move, Map(capture, kind, 20, -20).NoChange);
         Assert.True(Map(capture, kind, 96, 0).Accepted);
         Assert.True(Map(capture, kind, 0, 0).NoChange);
         Assert.Null(capture.Document.Placements[0].PinnedIndex);

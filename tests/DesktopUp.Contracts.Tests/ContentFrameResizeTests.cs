@@ -7,6 +7,27 @@ namespace DesktopUp.Contracts.Tests;
 public sealed class ContentFrameResizeTests
 {
     [Theory]
+    [InlineData(ContentFlowAxis.Vertical, 96u)]
+    [InlineData(ContentFlowAxis.Vertical, 144u)]
+    [InlineData(ContentFlowAxis.HorizontalLoop, 96u)]
+    [InlineData(ContentFlowAxis.HorizontalLoop, 144u)]
+    public void Populated_cross_axis_can_resize_below_legacy_240_without_clipping(ContentFlowAxis axis, uint dpi)
+    {
+        var doc = ContentLayoutSamples.Equal("A", 2) with { FlowAxis = axis };
+        doc = doc with { Placements = doc.Placements.Select(p => p with
+            { ColumnSpan = 2.125, RowSpan = 2.375 }).ToArray() };
+        var poster = Seed() with { ContentLayoutJson = ContentLayoutPolicy.Serialize(doc) };
+        Assert.True(ContentFrameMinimumPolicy.TryForPoster(poster, out var minimum, out var error), error);
+        var pixels = minimum!.Pixels(dpi, dpi);
+        double width = pixels.Width * 96d / dpi, height = pixels.Height * 96d / dpi;
+        Assert.True((axis == ContentFlowAxis.Vertical ? width : height) < 240);
+        var plan = ControlCenterSpatial.Plan(poster, Scene(poster, dpi), new(0, 0, width, height), out error);
+        Assert.NotNull(plan);
+        Assert.Null(error);
+        Assert.Equal(poster.ContentLayoutJson, plan.Desired.ContentLayoutJson);
+    }
+
+    [Theory]
     [InlineData(ContentFlowAxis.Vertical, 96u)] [InlineData(ContentFlowAxis.Vertical, 120u)]
     [InlineData(ContentFlowAxis.Vertical, 144u)] [InlineData(ContentFlowAxis.HorizontalLoop, 96u)]
     [InlineData(ContentFlowAxis.HorizontalLoop, 120u)] [InlineData(ContentFlowAxis.HorizontalLoop, 144u)]

@@ -277,7 +277,7 @@
        </Expander>
        </Border>
        <Grid x:Name="MacroPair" ColumnSpacing="24"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
-        <StackPanel x:Name="ScaleHost" Spacing="0" HorizontalAlignment="Stretch"><TextBlock x:Name="ScaleLabel" Text="内容尺度"/><Grid><Slider x:Name="ScaleSlider" Minimum="0.8" Maximum="1.5" StepFrequency="0.01" TickPlacement="None" AutomationProperties.AutomationId="ContentScale" AutomationProperties.Name="内容尺度"/><Canvas x:Name="ScaleMarks" IsHitTestVisible="False"/></Grid><Canvas x:Name="ScaleLabels" Height="20" IsHitTestVisible="False"/></StackPanel>
+        <StackPanel x:Name="ScaleHost" Spacing="0" HorizontalAlignment="Stretch"><TextBlock x:Name="ScaleLabel" Text="内容尺度"/><Grid><Slider x:Name="ScaleSlider" Minimum="0.4" Maximum="3" StepFrequency="0.001" TickPlacement="None" AutomationProperties.AutomationId="ContentScale" AutomationProperties.Name="内容尺度"/><Canvas x:Name="ScaleMarks" IsHitTestVisible="False"/></Grid><Canvas x:Name="ScaleLabels" Height="20" IsHitTestVisible="False"/></StackPanel>
         <StackPanel Grid.Column="1" x:Name="SpacingHost" Spacing="0" HorizontalAlignment="Stretch"><TextBlock x:Name="SpacingLabel" Text="内容疏密"/><Grid><Slider x:Name="SpacingSlider" Minimum="0.5" Maximum="1.5" StepFrequency="0.01" TickPlacement="None" AutomationProperties.AutomationId="ContentSpacing" AutomationProperties.Name="内容疏密"/><Canvas x:Name="SpacingMarks" IsHitTestVisible="False"/></Grid><Canvas x:Name="SpacingLabels" Height="20" IsHitTestVisible="False"/></StackPanel>
        </Grid>
         <Grid ColumnSpacing="10"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
@@ -312,12 +312,12 @@
 
          <Grid ColumnSpacing="10">
           <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
-          <TextBox x:Name="ContentColumns" Header="列跨度" Tag="span" MaxLength="8" TextChanging="ContentField_TextChanging" KeyDown="ContentField_KeyDown" AutomationProperties.AutomationId="ContentColumnSpan"/>
-          <TextBox Grid.Column="1" x:Name="ContentRows" Header="行跨度" Tag="span" MaxLength="8" TextChanging="ContentField_TextChanging" KeyDown="ContentField_KeyDown" AutomationProperties.AutomationId="ContentRowSpan"/>
+          <TextBox x:Name="ContentColumns" Header="宽度（格，支持小数）" Tag="span" MaxLength="12" TextChanging="ContentField_TextChanging" KeyDown="ContentField_KeyDown" AutomationProperties.AutomationId="ContentColumnSpan"/>
+          <TextBox Grid.Column="1" x:Name="ContentRows" Header="高度（格，支持小数）" Tag="span" MaxLength="12" TextChanging="ContentField_TextChanging" KeyDown="ContentField_KeyDown" AutomationProperties.AutomationId="ContentRowSpan"/>
          </Grid>
          <Grid ColumnSpacing="10">
           <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
-          <Button x:Name="ContentSpanApply" Content="应用跨度" Tag="span" Click="ContentFieldApply_Click" HorizontalAlignment="Left" Style="{StaticResource UiCAction}"/>
+          <Button x:Name="ContentSpanApply" Content="应用尺寸" Tag="span" Click="ContentFieldApply_Click" HorizontalAlignment="Left" Style="{StaticResource UiCAction}"/>
           <Button Grid.Column="1" x:Name="ContentSpanCancel" Content="取消" Tag="span" Click="ContentFieldCancel_Click" HorizontalAlignment="Left" Style="{StaticResource UiCAction}"/>
          </Grid>
 

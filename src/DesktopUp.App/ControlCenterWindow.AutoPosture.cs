@@ -43,7 +43,8 @@ public sealed partial class ControlCenterWindow
         ScaleSlider.Maximum = PosterContentPreferencePolicy.MaximumScale;
         SpacingSlider.Minimum = PosterContentPreferencePolicy.MinimumSpacing;
         SpacingSlider.Maximum = PosterContentPreferencePolicy.MaximumSpacing;
-        ScaleSlider.StepFrequency = SpacingSlider.StepFrequency = .01;
+        ScaleSlider.StepFrequency = .001;
+        SpacingSlider.StepFrequency = .01;
         _settingsTimer = DispatcherQueue.CreateTimer();
         _settingsTimer.IsRepeating = false;
         _settingsTimer.Interval = TimeSpan.FromMilliseconds(PosterContentPreferencePolicy.KeyboardSettleMilliseconds);
@@ -106,7 +107,7 @@ public sealed partial class ControlCenterWindow
         bool valid = _settings.Update(new(target, setting, number, text, Recipe: setting == PosterSetting.Template
             ? _templateCatalog.FirstOrDefault(r => r.Id == text) : null));
         if (valid && _settings.Preview is { } preview && _contentRuntime?.Invoke()?.ValidateControlCenterSetting(preview) is { } error)
-        { _settings.RejectPreview(error); valid = false; }
+        { RejectSettingsPreview(error); valid = false; }
         if (valid && setting is not (PosterSetting.AutoEnabled or PosterSetting.AutoDelay)) QueueVisualPreview();
         if (valid && finish) FinishSettings();
         else if (valid && !_settingsHeld) { _settingsTimer?.Stop(); _settingsTimer?.Start(); }
@@ -136,7 +137,14 @@ public sealed partial class ControlCenterWindow
             _previewScheduled = false;
             if (_editingClosed || !_settings.IsPreviewValid || _settings.Preview is not { } edit) return;
             if (_previewSetting?.Invoke(edit) != true)
-                CommonSettingsNotice.Text = "当前宿主未就绪或正在交互；结束输入后仍会校验并保存配置。";
+            {
+                if (edit.Setting is PosterSetting.Scale or PosterSetting.Spacing)
+                {
+                    RejectSettingsPreview("当前宿主无法安全呈现这次调整，已恢复原值。");
+                    RenderSettings(); SettingsInteractionChanged?.Invoke();
+                }
+                else CommonSettingsNotice.Text = "当前宿主未就绪或正在交互；结束输入后仍会校验并保存配置。";
+            }
         });
     }
     private void SettingsSettled(DispatcherQueueTimer sender, object args) { if (!_settingsHeld) FinishSettings(); }
@@ -144,10 +152,18 @@ public sealed partial class ControlCenterWindow
     {
         _settingsTimer?.Stop();
         if (_settings.Preview is { } edit && _contentRuntime?.Invoke()?.ValidateControlCenterSetting(edit) is { } error)
-            _settings.RejectPreview(error);
+            RejectSettingsPreview(error);
         _settings.Finish();
         DrainSettings();
         RenderSettings(); SettingsInteractionChanged?.Invoke();
+    }
+    private void RejectSettingsPreview(string error)
+    {
+        // Sliders have no editable invalid text to preserve. A rejected value must not keep
+        // owning the poster and silently disable its manual frame menu.
+        bool discard = _settings.Preview?.Setting is PosterSetting.Scale or PosterSetting.Spacing;
+        _settings.RejectPreview(error, discard);
+        if (discard) { _settingsTimer?.Stop(); _cancelVisuals?.Invoke(); }
     }
     private void DrainSettings()
     {
@@ -186,7 +202,7 @@ public sealed partial class ControlCenterWindow
             var prefs = target?.Presentation.Parameters.Preferences ?? new();
             ScaleSlider.Value = active?.Setting == PosterSetting.Scale ? active.Number : prefs.Scale;
             SpacingSlider.Value = active?.Setting == PosterSetting.Spacing ? active.Number : prefs.Spacing;
-            ScaleLabel.Text = $"内容尺度 · {ScaleSlider.Value:0.00}×";
+            ScaleLabel.Text = $"内容尺度 · {ScaleSlider.Value:0.###}×";
             SpacingLabel.Text = $"内容疏密 · 间距 {SpacingSlider.Value:0.00}×";
             AutoPostureSwitch.IsOn = active?.Setting == PosterSetting.AutoEnabled ? active.Number == 1 : target?.AutoPosture.Enabled == true;
             if (active?.Setting != PosterSetting.AutoDelay)

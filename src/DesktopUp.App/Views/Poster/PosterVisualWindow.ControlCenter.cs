@@ -14,6 +14,10 @@ internal sealed partial class PosterVisualWindow
     private IDisposable? _locateLease;
     private ResolvedPosterPresentation? _centerPresentation;
     private long _centerPresentationVersion;
+    private DesktopPixelRect? _centerBounds;
+    private DesktopRecoveryGenerationPair? _centerGenerations;
+    internal DesktopPixelRect? CenterPresentationBaseline => _centerBounds is null ? _bounds :
+        _centerGenerations == CurrentGenerationPair && _centerPresentationVersion == _posterEntityVersion ? _centerBounds : null;
 
     internal void AddLocateOutline(Grid root)
     {
@@ -40,44 +44,55 @@ internal sealed partial class PosterVisualWindow
         _locateLease?.Dispose(); _locateLease = null;
         if (_locateOutline is not null) _locateOutline.Visibility = Visibility.Collapsed;
     }
-    internal string? ValidateCenterPresentation(PosterSettingEdit edit)
+    internal string? ValidateCenterPresentation(PosterSettingEdit edit, DesktopPixelRect? bounds = null)
     {
         if (_disposed || _window is null || _contentSession.ActiveCommand is not null || edit.Basis.EntityVersion != _posterEntityVersion ||
-            edit.PosterId != PosterId) return "海报版本或宿主已变化，请重新开始这次调节。";
+            edit.PosterId != PosterId || CenterPresentationBaseline is null) return "海报版本或宿主已变化，请重新开始这次调节。";
         try
         {
             var next = PosterPresentationPolicy.Resolve(edit.Command("validate-preview-only").DesiredState);
             if (edit.Setting is not (PosterSetting.Scale or PosterSetting.Spacing or PosterSetting.Content or PosterSetting.Template)) return null;
             var preferences = next.Parameters.Preferences ?? new();
             ContentLayoutCommandPolicy.ValidateAuthoring(ContentDocument, preferences.Scale, preferences.Spacing);
-            if (_authoritativePoster?.IsVisible == true && _monitor is not null && _bounds.IsUsable)
-                RequireWritableContentProjection(EffectiveContentDocument, ContentViewportFor(_bounds) with
+            var frame = bounds ?? _bounds;
+            if (_authoritativePoster?.IsVisible == true && !_geometry.IsCollapsed && _monitor is not null && frame.IsUsable)
+                RequireWritableContentProjection(EffectiveContentDocument, ContentViewportFor(frame) with
                     { Scale = preferences.Scale, Spacing = preferences.Spacing,
-                      HeightDip = Math.Max(0, ContentViewportFor(_bounds).HeightDip + _presentation.MetaHeightDip - next.MetaHeightDip
+                      HeightDip = Math.Max(0, ContentViewportFor(frame).HeightDip + _presentation.MetaHeightDip - next.MetaHeightDip
                           + _presentation.HeaderHeightDip - next.HeaderHeightDip) });
             return null;
         }
         catch (ArgumentException error) { return error.Message; }
     }
-    internal bool PreviewCenterPresentation(PosterSettingEdit edit)
+    internal bool PreviewCenterPresentation(PosterSettingEdit edit, DesktopPixelRect? bounds = null)
     {
-        if (ValidateCenterPresentation(edit) is not null || _authoritativePoster?.IsVisible != true) return false;
-        var next = PosterPresentationPolicy.Resolve(edit.Command("visual-preview-only").DesiredState);
-        _centerPresentation = next;
+        if (ValidateCenterPresentation(edit, bounds) is not null) return false;
+        return PreviewCenterPresentation(edit.Command("visual-preview-only"), bounds ?? _bounds);
+    }
+    internal bool PreviewCenterPresentation(PosterStateCommand command, DesktopPixelRect bounds)
+    {
+        if (_disposed || _authoritativePoster?.IsVisible != true || CenterPresentationBaseline is null ||
+            command.ReadSet?.Posters.GetValueOrDefault(PosterId!) != _posterEntityVersion) return false;
+        _centerBounds ??= _bounds;
+        _centerGenerations ??= CurrentGenerationPair;
+        _centerPresentation = PosterPresentationPolicy.Resolve(command.DesiredState);
         _centerPresentationVersion = _posterEntityVersion;
         ApplyPresentation(_centerPresentation);
-        // The existing frame and input layout are reconciled at exactly the same bounds.
-        // No position/size intention, no activation, no state revision.
-        return ApplyFrame(_bounds);
+        // Native bounds and content/input are published together; no persisted revision yet.
+        if (ApplyFrame(bounds)) return true;
+        ClearCenterPresentation();
+        return false;
     }
     internal void ClearCenterPresentation()
     {
-        if (_centerPresentation is null) return;
+        if (_centerPresentation is null && _centerBounds is null) return;
+        var restore = CenterPresentationBaseline ?? _bounds;
         _centerPresentation = null;
+        _centerBounds = null; _centerGenerations = null;
         if (!_disposed && _window is not null && _authoritativePoster is not null)
         {
             ApplyPresentation(PosterPresentationPolicy.Resolve(_authoritativePoster));
-            ApplyFrame(_bounds);
+            if (!ApplyFrame(restore)) spatial.CenterPresentationRestoreFailed(this);
         }
     }
 }

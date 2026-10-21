@@ -25,7 +25,7 @@ public sealed class UxContentPreferenceTests
     }
 
     [Theory]
-    [InlineData(.8, .5)] [InlineData(1, 1)] [InlineData(1.5, 1.5)] [InlineData(1.17, .83)]
+    [InlineData(.4, .5)] [InlineData(1, 1)] [InlineData(3, 1.5)] [InlineData(1.1735, .83)]
     public void Repeated_macro_changes_never_multiply_saved_base_or_drift(double scale, double spacing)
     {
         var p = PosterPresentationPolicy.Defaults("basic-box"); var basis = p.Content;
@@ -43,7 +43,7 @@ public sealed class UxContentPreferenceTests
     }
 
     [Theory]
-    [InlineData(.79, 1)] [InlineData(1.51, 1)] [InlineData(1, .49)] [InlineData(1, 1.51)]
+    [InlineData(.39, 1)] [InlineData(3.01, 1)] [InlineData(1, .49)] [InlineData(1, 1.51)]
     [InlineData(double.NaN, 1)] [InlineData(double.PositiveInfinity, 1)]
     public void Invalid_preferences_cannot_be_serialized(double scale, double spacing) =>
         Assert.Throws<ArgumentException>(() => PosterPresentationPolicy.Serialize(PosterPresentationPolicy.Defaults() with { Preferences = new(scale, spacing) }));

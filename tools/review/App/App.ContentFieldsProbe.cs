@@ -170,7 +170,7 @@ public partial class App
                         Require(position.Column == (slot.Column - slot.RegionColumn + 1).ToString(CultureInfo.InvariantCulture) &&
                             position.Row == (slot.Row - slot.RegionRow + 1).ToString(CultureInfo.InvariantCulture), "Manual controls do not show the selected slot's local one-based position.");
                         // Put this card beyond the existing authored tail; no extra solver/oracle is used.
-                        manualRow = manual.Placements.Max(p => (p.Row ?? 0) + p.RowSpan) + 2;
+                        manualRow = (int)Math.Ceiling(manual.Placements.Max(p => (p.Row ?? 0) + p.RowSpan)) + 2;
                         CaptureBasis(current); window.SetContentFieldsForProbe("position", "1", (manualRow + 1).ToString(CultureInfo.InvariantCulture)); Next(10); break;
                     case 10:
                         NoWrite(current, "Manual position fields committed before completion.");

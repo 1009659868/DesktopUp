@@ -58,14 +58,11 @@ public static class ContentDragPolicy
                 if (vertical) deltaY %= period; else deltaX %= period;
             }
             double pitch = pressSnapshot.CellDip + pressSnapshot.GapDip;
-            int stepX = checked((int)Math.Round(deltaX / pitch, MidpointRounding.AwayFromZero));
-            int stepY = checked((int)Math.Round(deltaY / pitch, MidpointRounding.AwayFromZero));
-            if (stepX == 0 && stepY == 0) return new(null);
-
             if (kind == ContentDragKind.Resize)
             {
-                int columns = checked(slot.ColumnSpan + stepX), rows = checked(slot.RowSpan + stepY);
-                if (columns is < 1 or > ContentLayoutPolicy.MaximumSpan || rows is < 1 or > ContentLayoutPolicy.MaximumSpan)
+                double columns = slot.ColumnSpan + deltaX / pitch, rows = slot.RowSpan + deltaY / pitch;
+                if (deltaX == 0 && deltaY == 0) return new(null);
+                if (!ContentLayoutPolicy.ValidSpan(columns) || !ContentLayoutPolicy.ValidSpan(rows))
                     throw new ContentLayoutException("The requested drag size is outside the supported span range.");
                 bool positioned = document.Mode == ContentLayoutMode.Manual || source.FixedPosition;
                 // An automatic card may wrap after growing; its old row/column is not a hard
@@ -74,6 +71,10 @@ public static class ContentDragPolicy
                     positioned ? slot.Row - slot.RegionRow : 0, columns, rows);
                 return new(new(ContentLayoutEditKind.Resize, source.ItemId) { ColumnSpan = columns, RowSpan = rows });
             }
+
+            int stepX = checked((int)Math.Round(deltaX / pitch, MidpointRounding.AwayFromZero));
+            int stepY = checked((int)Math.Round(deltaY / pitch, MidpointRounding.AwayFromZero));
+            if (stepX == 0 && stepY == 0) return new(null);
 
             if (document.Mode == ContentLayoutMode.Manual || source.FixedPosition)
             {
@@ -121,11 +122,11 @@ public static class ContentDragPolicy
     }
 
     private static void RequirePlacement(ContentLayoutDocument document, ContentLayoutSnapshot snapshot,
-        ContentResolvedPlacement slot, int column, int row, int columns, int rows)
+        ContentResolvedPlacement slot, int column, int row, double columns, double rows)
     {
         bool vertical = snapshot.FlowAxis == ContentFlowAxis.Vertical;
-        int readable = (int)Math.Ceiling((ContentLayoutPolicy.MinimumReadableCardDip + snapshot.GapDip) / (snapshot.CellDip + snapshot.GapDip));
-        int width = Math.Max(readable, columns), height = Math.Max(readable, rows);
+        double readable = (ContentLayoutPolicy.MinimumReadableCardDip + snapshot.GapDip) / (snapshot.CellDip + snapshot.GapDip);
+        int width = (int)Math.Ceiling(Math.Max(readable, columns)), height = (int)Math.Ceiling(Math.Max(readable, rows));
         long x = (long)slot.RegionColumn + column, y = (long)slot.RegionRow + row;
         long crossEnd = vertical ? x + width : y + height, mainEnd = vertical ? y + height : x + width;
         var region = document.Regions.Single(r => r.Id == document.Placements[slot.SourceIndex].RegionId);

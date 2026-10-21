@@ -125,7 +125,7 @@ public sealed class ManagedTransferPersistenceTests
         using var f=new Fixture();var state=f.State;
         f.Journal.Register(f.Root,f.Collection,new(new Dictionary<string,long>(),ContentVersion:state.ContentVersion));
         Assert.Single(f.State.ContentCatalog.Collections);Assert.Empty(f.State.ContentCatalog.Bindings);
-        Assert.Equal(state.Revision,f.State.Revision);Assert.Equal(25L,f.Sql("PRAGMA user_version"));
+        Assert.Equal(state.Revision,f.State.Revision);Assert.Equal(26L,f.Sql("PRAGMA user_version"));
     }
     [Fact] public void StaleStateBeforeExecutionRequiresNewPreview()
     {

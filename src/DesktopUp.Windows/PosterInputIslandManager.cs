@@ -120,6 +120,8 @@ public sealed class PosterInputIslandManager : IInputRegionHost
     public bool IsNativeInputTransparent => new NativeDesktopMenuPlatform().IsInputTransparent(WindowHandle);
 
     public event EventHandler<PosterInputEventArgs>? Input;
+    // Local native movement only; no global hook, timer, capture or authored selection.
+    public event Action<PointerScreenPoint?>? ContentHover;
     public event EventHandler<PosterContentContextEventArgs>? ContextRequested;
     public event EventHandler<TitleNativeInputEventArgs>? TitleInput;
     private bool _titleClaimed;
@@ -156,6 +158,7 @@ public sealed class PosterInputIslandManager : IInputRegionHost
 
     private void DisableRoutingNative()
     {
+        ContentHover?.Invoke(null);
         _dropReception?.Suspend();
         _contextPress = null; _contextPressPoint = null;
         _router.Invalidate(_session);
@@ -400,7 +403,7 @@ public sealed class PosterInputIslandManager : IInputRegionHost
             _trackingPointerLeave = false;
             _contextPress = null; _contextPressPoint = null;
         }
-        if (message == WmMouseMove && !_trackingPointerLeave && _router.HasPointerObservers)
+        if (message == WmMouseMove && !_trackingPointerLeave && (_router.HasPointerObservers || ContentHover is not null))
         {
             var tracking = new PointerLeaveTracking { Size = (uint)Marshal.SizeOf<PointerLeaveTracking>(), Flags = 2, Window = windowHandle };
             _trackingPointerLeave = TrackMouseEvent(ref tracking);
@@ -413,6 +416,9 @@ public sealed class PosterInputIslandManager : IInputRegionHost
                 _log.Write("warning", "poster.pointer_observation_failed", new { error.Message });
             }
         }
+        if (message == WmMouseMove) RefreshContentHover();
+        else if (message is WmMouseLeave or WmLButtonDown or WmRButtonDown or WmCaptureChanged or WmCancelMode)
+            ContentHover?.Invoke(null);
         switch (message)
         {
             case WmMouseActivate:
@@ -490,6 +496,20 @@ public sealed class PosterInputIslandManager : IInputRegionHost
         }
 
         return DefWindowProc(windowHandle, message, wParam, lParam);
+    }
+
+    public void RefreshContentHover()
+    {
+        if (ContentHover is null) return;
+        PointerScreenPoint? point = null;
+        if (!_disposed && !_routingSuspended && _router.Capture is null && GetCapture() == 0 &&
+            (GetAsyncKeyState(VkLButton) & 0x8000) == 0 &&
+            _contextNative.TryReadCursor(out var current) && _contextNative.ReceiverRoot(current) == WindowHandle &&
+            _router.Resolve(current.X, current.Y, [_session])?.Region.Kind is
+                PosterInputTargetKind.ContentItem or PosterInputTargetKind.ContentSpanHandle)
+            point = current;
+        try { ContentHover.Invoke(point); }
+        catch (Exception error) { _log.Write("warning", "poster.hover_paint_failed", new { error.Message }); }
     }
 
     private void BeginContentContext(nint messagePoint)

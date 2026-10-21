@@ -1,5 +1,16 @@
 # V3-04 代码锚点
 
+## 2026-10-21 连续尺寸与悬停
+
+追加修订：Application/ContentScaleExpansion 复用 ControlCenterSpatial 规划并由 StateCommandPolicy 在同一事务内复核尺度+几何；Runtime/PosterSpatialRuntime.Usability 提供当前空间及预览/提交接线；PosterVisualWindow.ControlCenter 保存同版/同代原框供取消恢复；ControlCenterSettingsSession.RejectPreview 的 discard 分支仅释放被拒绝的滑块草稿，精细文字草稿保护不变。缩放步长同时修正运行时初始化覆盖 XAML 的旧 0.01 值为 0.001。
+
+- Domain：PosterContentPreferences 整体 0.4～3；ContentLayout/Editing/DragPolicy 小数尺寸及 JSON v4；Solver 保守整数占位与精确绘制；ContentFrameMinimumPolicy 动态交叉轴。
+- Application：PortableContentLayout 保留小数；IncomingContentPlacement/IncomingLayoutPreview 使用整数占位推进下一落点，不改变文件移动。
+- App：ControlCenterWindow 的尺度、尺寸字段及动态下限文案；PosterContentPresenter 保留卡片局部悬停；PosterVisualWindow.Content 同代几何校验。
+- Windows：PosterInputIslandManager 复用鼠标移动/离开事件，无新增计时器。
+- Persistence：Migrations/026.sql 与 catalog.xml；SqliteStateStore 只按显式 statement-break 分步执行新迁移，共享事务；001～025 原字节不变。
+- 直接风险验证、隔离迁移、候选/脚本与验收入口统一见[本批记录](POSTER_SCALE_AND_HOVER.md)，不增设每小步验收。
+
 ## 2026-10-21 卸载失败定位
 
 已验功能c8a6714已进入develop940ff96；发布main4e79035同源同步，最终包编译基点9e84ad2。实际打包/卸载验证及源码绑定见[发布记录](PREVIEW_INSTALLER_DELIVERY.md#2026-10-21-已验卸载诊断集成与发布同步)，以下锚点不变。

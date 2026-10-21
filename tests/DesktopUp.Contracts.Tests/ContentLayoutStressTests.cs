@@ -216,7 +216,7 @@ public sealed class ContentLayoutStressTests
             Assert.True(p.Bounds.Width >= 48 && p.Bounds.Height >= 48);
             bool vertical = s.FlowAxis == ContentFlowAxis.Vertical;
             int cross = vertical ? p.Column : p.Row, main = vertical ? p.Row : p.Column;
-            int crossSpan = vertical ? p.ColumnSpan : p.RowSpan, mainSpan = vertical ? p.RowSpan : p.ColumnSpan;
+            double crossSpan = vertical ? p.ColumnSpan : p.RowSpan, mainSpan = vertical ? p.RowSpan : p.ColumnSpan;
             Assert.InRange(cross, 0, ContentLayoutPolicy.MaximumColumns - 1);
             Assert.InRange(main, 0, ContentLayoutPolicy.MaximumRow);
             Assert.True(cross + crossSpan <= ContentLayoutPolicy.MaximumColumns && main + mainSpan <= ContentLayoutPolicy.MaximumRow + 1);

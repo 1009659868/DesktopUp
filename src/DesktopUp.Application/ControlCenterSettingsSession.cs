@@ -106,10 +106,11 @@ public sealed class ControlCenterSettingsSession
     }
 
     public void CancelPreview() { Preview = null; _previewValidationError = Error = ErrorPosterId = null; }
-    public void RejectPreview(string error)
+    public void RejectPreview(string error, bool discard = false)
     {
         if (Preview is not { } edit) return;
         _previewValidationError = Error = error; ErrorPosterId = edit.PosterId;
+        if (discard) { Preview = null; _previewValidationError = null; }
     }
     // Completed valid input stays bound to its original target even across selection/close.
     public void Close() { CancelPreview(); _closed = true; }

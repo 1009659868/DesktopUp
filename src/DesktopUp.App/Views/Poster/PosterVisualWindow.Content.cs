@@ -107,6 +107,7 @@ internal sealed partial class PosterVisualWindow
             SelectedContentIds(), _contentSelection.ShowHighlight, IsEditing, _selectedContentItem,
             _geometry.IsLocked, _contentReadOnly, IsRealContent, _presentation, _inlineRenameItem,
             _contentParseReadOnly, _contentLayout.HasFault, ghost));
+        _inputIsland?.RefreshContentHover();
         _itemColumnCount = snapshot.Columns;
         string kind = !TestContentFeedbackEnabled || IsRealContent || doc.Placements.Count == 0 ? "ITEMS" : "DEMO ITEMS";
         if (_footer?.Children.OfType<TextBlock>().FirstOrDefault() is { } count) count.Text = $"{doc.Placements.Count} {kind}";
@@ -116,6 +117,21 @@ internal sealed partial class PosterVisualWindow
     }
 
     private static string TileKey(ContentLayoutTile tile) => ContentLayoutTileIdentity.Key(tile);
+
+    private void OnContentHover(PointerScreenPoint? point)
+    {
+        if (point is { } p && !_disposed && !_geometry.IsCollapsed && !_contentSession.IsSuspended &&
+            !HasContentGesture && !HasFileAction && _transitionLayout is null && _incomingLayout is null &&
+            _monitor is { } monitor && Presenter.Frame is { } frame &&
+            inputRouter.ReadSurface(inputSession)?.Layout.ContentSnapshotGeneration == frame.Snapshot.ViewportGeneration)
+        {
+            double x = (p.X - _bounds.X) / monitor.ScaleX - ContentLeftDip;
+            double y = (p.Y - _bounds.Y) / monitor.ScaleY - ContentTopDip;
+            Presenter.HoverAt(x, y);
+            return;
+        }
+        Presenter.SetHover(null);
+    }
 
     private void RebuildItemGrid(double widthDip)
     {
