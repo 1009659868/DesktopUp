@@ -90,6 +90,12 @@ Windows 桌面内容收纳工具。此 `impl/main` 分支只保留发布相关�
 
 ## 本轮发布验证
 
+2026-10-21 海报优化发布验证：源为干净合并提交 `472e8ffa072b69f716716dbdcd38c34c667d1166`，同步 develop@9e793f8 / 功能5dcf4fb。精简 Release 构建及自包含 `20261021.3` 打包均0警告0错误；499项编译/载荷输入摘要一致，807个载荷文件，无开发测试、探针和用户数据。统一文本门490文件/26项冻结迁移通过。Windows PowerShell5.1同包自选中文空格目录安装、安装目录内运行库启动（schema26、默认basic-box）、正常退出资源0通过；配置与未知文件保留，测试安装/登记清理，日常Preview/V3配置、Run登记及DesktopUp桌面/开始菜单入口前后相同。
+
+最终包 `out/releases/main-scale-final01/DesktopUp-Preview-20261021.3-win-x64-Setup.exe`，67,344,227字节，SHA256 `642BAF5C301DD907EFF13FE07F1B4461A6284401C6561DBD76AF3ADBF1AA609C`。`main-scale-smoke02` 的受控占用/释放后显式重试/普通卸载三项均通过；完整证据在 `out/releases/scale-main-validation`。本README记录不改变编译/载荷输入。开发候选两轮集中人工通过，不冒称安装包另做了普通权限GUI、真实登录或多屏人工验证；包仍未签名。
+
+保留异常：`main-scale-smoke01` 的重装后普通卸载在 `app/DesktopUp.dll` 停止，LastCleanupFailure记录24，566项声明文件仍在。稍后只读检查允许删除共享、Restart Manager未列出占用，不能由此确定失败当时的首因。保留marker/ACL/剩余文件与时间证据，原卸载器显式重试返回0；独立smoke02普通首轮卸载返回0。首轮审计在finally的隔离断言遮盖了上游错误，后续已补错误保留；初次PS5.1数组展开问题也仅限out审计脚本，发生于安装前。未修改产品卸载逻辑，不删除失败证据、不把重试记为首轮通过。历史卸载中断、P1/R6锁冲突及剩余成本继续携带，真实热度HOLD。
+
 2026-10-21 卸载诊断发布验证：精简源码及自包含 `20261021.2` 构建/打包0警告0错误；497项编译/载荷输入与干净发布提交 `9e84ad201ab2c3f051b1a297a421d7d94cbe17a7` 一致，807个载荷文件，不携带开发测试、探针或用户数据。Windows PowerShell5.1同包隔离安装及安装目录自带运行库启动通过（新schema25、默认basic-box，退出资源0）；受控占用时退出24并记录准确失败文件、停止后续删除，释放后显式再次卸载返回0，同包重装后的普通首轮卸载返回0。配置与未知文件保留，临时安装/登记清理；原Preview/V3配置、Run登记及桌面快捷方式前后相同。
 
 最终包 `out/releases/main-uninstall-final01/DesktopUp-Preview-20261021.2-win-x64-Setup.exe`，67,333,895字节，SHA256 `7CBCA6CB91B320CBA8346B9C2360EB094492BBE31AD928341368913C18F69787`。原始证据在 `out/releases/main-uninstall-smoke01` 与 `uninstall-main-validation`；验证脚本为开发分支已验脚本的隔离副本，不进入发布源码/安装包。此为本机高完整性定向验证，不替代普通权限GUI、真实登录、自启或跨机验收；本README验证记录不改变上述编译/载荷输入。历史卸载中断首因仍未定，与P1/R6锁冲突分别携带；未推进真实热度。
