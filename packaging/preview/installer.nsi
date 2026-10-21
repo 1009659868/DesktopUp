@@ -37,6 +37,15 @@ Var ContentReturnRadio
 Var ContentKeepRadio
 Var UninstallProfile
 Var UninstallLease
+Var UninstallFailureFile
+
+; Keep NSIS Delete semantics and fail-stop behavior. Do not read GetLastError here:
+; NSIS may have called other Win32 APIs before returning from Delete.
+!macro DeleteInstalledFile RelativePath
+  StrCpy $UninstallFailureFile "${RelativePath}"
+  Delete "$INSTDIR\${RelativePath}"
+  IfErrors uninstall_failed
+!macroend
 
 !define MUI_WELCOMEPAGE_TEXT "Windows 11 x64 独立预览版。$\r$\n$\r$\n自带运行库，使用独立配置，不读取或迁移日常版配置，不设置开机启动。首次为空白工作区，无演示卡片；拖入收纳会移动真实文件，请先用无价值文件体验。$\r$\n$\r$\n下一步可自选安装目录。卸载可归还收纳内容或保留原位，配置保留。"
 !insertmacro MUI_PAGE_WELCOME
@@ -508,8 +517,7 @@ Section "Uninstall"
   Call un.RemoveOwnedDesktopShortcut
   ; Empty-directory removals may fail for unknown user files: leave these untouched.
   ClearErrors
-  Delete "$INSTDIR\app\preview-install.ini"
-  IfErrors uninstall_failed
+  !insertmacro DeleteInstalledFile "app\preview-install.ini"
   RMDir "$INSTDIR\app"
   Delete "$INSTDIR\Uninstall.exe"
   RMDir "$INSTDIR"
@@ -519,7 +527,12 @@ Section "Uninstall"
   DeleteRegKey HKCU "${UNINSTALL_KEY}"
   Goto uninstall_done
   uninstall_failed:
-    MessageBox MB_OK|MB_ICONSTOP "部分程序文件仍被占用或不可写。保留卸载入口和配置；关闭占用程序后重试。" /SD IDOK
+    ; Best-effort diagnosis in the existing, ownership-checked installation marker.
+    ; Failure to write this record must never authorize further deletion or change exit 24.
+    WriteINIStr "$INSTDIR\app\preview-install.ini" "LastCleanupFailure" "File" "$UninstallFailureFile"
+    WriteINIStr "$INSTDIR\app\preview-install.ini" "LastCleanupFailure" "ExitCode" "24"
+    DetailPrint "程序文件清理失败：$INSTDIR\$UninstallFailureFile（卸载退出码 24；不是 Win32 错误码）"
+    MessageBox MB_OK|MB_ICONSTOP "无法删除程序文件：$\r$\n$INSTDIR\$UninstallFailureFile$\r$\n$\r$\n保留卸载入口和配置；未跳过该文件继续删除。请检查文件占用或访问权限后重试。诊断位置：app\preview-install.ini（LastCleanupFailure）。" /SD IDOK
     SetErrorLevel 24
     Quit
   uninstall_done:
