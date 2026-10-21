@@ -92,6 +92,10 @@ Windows 桌面内容收纳工具。此 `impl/main` 分支只保留发布相关�
 
 ## 本轮发布验证
 
+2026-10-21 即时取证发布验证：干净源码 `78e5ff70f64c149dfe8b801c431c98aa01b9ea6c`，Release/自包含 `20261021.5` 构建打包0警告0错误；500项编译/载荷输入摘要一致，807个载荷文件，文本门491文件/26项冻结迁移通过。安装至独立中文空格目录后，新schema26、默认basic-box及正常退出资源0通过。受控占用首轮准确记录DeleteFileW/Windows32、卸载24和首次报告；释放自建句柄后单独重试0，重装后普通卸载0。日常Preview/V3配置、Run、桌面/开始菜单入口及既有安装登记前后相同；没有剩余DesktopUp进程。
+
+最终包 `out/releases/main-immediate-final01/DesktopUp-Preview-20261021.5-win-x64-Setup.exe`，67,337,513字节，SHA256 `C65C216163E28B6BC90181A761E67FE72664906D17AB2463C61FE91F0BE75A94`。已清理临时安装/登记、独立测试目录及重复构建/预检输出；64个独有文件归档、2247个相同文件可由保留载荷恢复，清理审计/首次证据位于 `out/releases/immediate-main-validation`。本README后续记录不改变编译/载荷输入。此为本机高完整性定向验证，不替代普通权限GUI、真实登录或跨机验收；包仍未签名。历史卸载首因和P1/R6锁冲突仍未定；真实热度只进入设计准备，未实施。
+
 2026-10-21 海报优化发布验证：源为干净合并提交 `472e8ffa072b69f716716dbdcd38c34c667d1166`，同步 develop@9e793f8 / 功能5dcf4fb。精简 Release 构建及自包含 `20261021.3` 打包均0警告0错误；499项编译/载荷输入摘要一致，807个载荷文件，无开发测试、探针和用户数据。统一文本门490文件/26项冻结迁移通过。Windows PowerShell5.1同包自选中文空格目录安装、安装目录内运行库启动（schema26、默认basic-box）、正常退出资源0通过；配置与未知文件保留，测试安装/登记清理，日常Preview/V3配置、Run登记及DesktopUp桌面/开始菜单入口前后相同。
 
 最终包 `out/releases/main-scale-final01/DesktopUp-Preview-20261021.3-win-x64-Setup.exe`，67,344,227字节，SHA256 `642BAF5C301DD907EFF13FE07F1B4461A6284401C6561DBD76AF3ADBF1AA609C`。`main-scale-smoke02` 的受控占用/释放后显式重试/普通卸载三项均通过；完整证据在 `out/releases/scale-main-validation`。本README记录不改变编译/载荷输入。开发候选两轮集中人工通过，不冒称安装包另做了普通权限GUI、真实登录或多屏人工验证；包仍未签名。
