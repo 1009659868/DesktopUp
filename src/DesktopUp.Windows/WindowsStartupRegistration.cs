@@ -35,8 +35,10 @@ public sealed class WindowsStartupRegistration(string appDirectory, bool install
             release.Any(c => !char.IsAsciiDigit(c) && c != '.') ||
             !SamePath(fields.GetValueOrDefault("Path"), root)) throw new IOException("安装标记与运行位置不一致。");
         using var user = RegistryKey.OpenBaseKey(RegistryHive.CurrentUser, RegistryView.Registry64);
-        using var registration = user.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Uninstall\DesktopUp.Preview." + release);
-        if (!SamePath(registration?.GetValue("InstallLocation") as string, root))
+        using var registration = user.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Uninstall\DesktopUp") ??
+            user.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Uninstall\DesktopUp.Preview." + release);
+        if (!SamePath(registration?.GetValue("InstallLocation") as string, root) ||
+            registration?.GetValue("DisplayVersion") as string != release)
             throw new IOException("当前用户的安装登记与运行位置不一致；未修改启动项。");
         foreach (string file in new[] { Path.Combine(root, "DesktopUp.exe"), Path.Combine(root, "Uninstall.exe"), Path.Combine(app, "DesktopUp.exe") })
         { CheckPlainPath(file); if (!File.Exists(file)) throw new IOException("安装文件不完整。"); }

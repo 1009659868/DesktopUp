@@ -1,5 +1,16 @@
 # V3-04 代码锚点
 
+## 2026-10-23 唯一安装与迁移升级
+
+两组集中人工USER PASS / CLOSED；本次授权开发/发布同步，结果统一记录于HANDOFF及发布交付，不将历史未定因事项销项。
+
+- `DesktopUp.Setup/InstallationIdentity.cs`：枚举固定/历史登记后验证唯一身份，Run 值只按已知原命令切换，不改 StartupApproved。
+- `InstallationMetadata.cs`：固定 DesktopUp 卸载身份、历史键兼容、快捷方式及用户安装事务目录。
+- `UpgradeTransaction.cs`：新装/原位/跨路径统一事务；旧根本卷备份、新根本卷准备、全局 pending 索引、旧 schema1 恢复兼容；不读取数据库或搬收纳内容。
+- `Program.cs` 与 `packaging/preview/installer.nsi`、`upgrade.nsh`：安装/卸载维护租约、唯一安装发现、用户可选择目标目录；撤原 NSIS 独立新装写登记双路径。
+- `WindowsStartupRegistration.cs`：固定登记优先、旧版回读，同时检查版本与路径。
+- `InstallerUpgradeTests` 及 `tests/Packaging/New-SingleInstallFixture.ps1`、`Review-SingleInstall.ps1`：本批定向和独立身份的安装器/集中人工夹具；不对日常安装运行升级或卸载。实际状态见 [本批记录](SINGLE_INSTALL_MIGRATION.md)。
+
 ## 2026-10-23 安装包原位升级（USER PASS / CLOSED）
 
 - `src/DesktopUp.Setup/InstallationFiles.cs`：清单、摘要与路径归属；`InstallationMetadata.cs`：版本登记及自有快捷方式适配；`UpgradeTransaction.cs`：暂存/备份/替换/回退/明确恢复，精确清理；`Program.cs`：维护租约、独立诊断及进程入口，不调用内容/数据库业务。

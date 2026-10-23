@@ -1,73 +1,74 @@
-; Same-channel, current-user discovery only. The helper revalidates identity and hashes
-; immediately before replacement; this UI hint never authorizes deletion by itself.
+; Discover all registrations; destination selection cannot opt out of migration.
 !include "WordFunc.nsh"
-Var UpgradeMode
-Var UpgradeRelease
+Var UpgradeRoot
 Var UpgradeTarget
 Var UpgradeResult
 Var UpgradeMessage
 Var ShortcutExplicit
 
 Function SelectUpgradeDefault
+  StrCpy $UpgradeRoot ""
+  IfFileExists "$LOCALAPPDATA\DesktopUp\Installer\pending.ini" pending
   StrCpy $2 0
-  StrCpy $3 "0.0"
-  StrCpy $4 ""
+  StrCpy $8 0
   loop:
     EnumRegKey $0 HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall" $2
     StrCmp $0 "" done
     IntOp $2 $2 + 1
+    StrCmp $0 "DesktopUp" found
     StrCpy $1 $0 18
     StrCmp $1 "DesktopUp.Preview." 0 loop
+  found:
+    IntOp $8 $8 + 1
+    ${If} $8 > 1
+      MessageBox MB_OK|MB_ICONSTOP "当前用户有多份 DesktopUp 安装登记。请先核对并处理旧安装；不会任意选择一份或新增安装。" /SD IDOK
+      SetErrorLevel 18
+      Quit
+    ${EndIf}
     ReadRegStr $5 HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\$0" "DisplayVersion"
-    StrCpy $1 $0 "" 18
-    StrCmp $1 $5 0 loop
     ReadRegStr $6 HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\$0" "InstallLocation"
-    ReadINIStr $7 "$6\app\preview-install.ini" "Install" "Channel"
-    StrCmp $7 "DesktopUp.Preview" 0 loop
-    ReadINIStr $7 "$6\app\preview-install.ini" "Install" "Path"
-    StrCmp $7 $6 0 loop
-    ReadINIStr $7 "$6\app\preview-install.ini" "Install" "Release"
-    StrCmp $7 $5 0 loop
-    ${VersionCompare} $5 $3 $7
-    StrCmp $7 1 0 loop
-    StrCpy $3 $5
-    StrCpy $4 $6
+    StrCmp $6 "" invalid
+    StrCmp $5 "" invalid
+    StrCmp $0 "DesktopUp" marker
+    StrCpy $1 $0 "" 18
+    StrCmp $1 $5 0 invalid
+  marker:
+    FindFirst $1 $7 "$6\.desktopup-upgrade-*"
+    FindClose $1
+    StrCmp $7 "" +3
+    StrCpy $UpgradeRoot $6
     Goto loop
+    ReadINIStr $7 "$6\app\preview-install.ini" "Install" "Channel"
+    StrCmp $7 "DesktopUp.Preview" 0 invalid
+    ReadINIStr $7 "$6\app\preview-install.ini" "Install" "Path"
+    StrCmp $7 $6 0 invalid
+    ReadINIStr $7 "$6\app\preview-install.ini" "Install" "Release"
+    StrCmp $7 $5 0 invalid
+    StrCpy $UpgradeRoot $6
+    Goto loop
+  pending:
+    ReadINIStr $UpgradeRoot "$LOCALAPPDATA\DesktopUp\Installer\pending.ini" "Install" "Path"
+    StrCmp $UpgradeRoot "" invalid
   done:
-  ; A command-line /D choice has already initialized INSTDIR. Do not replace it.
-  ${If} $INSTDIR == "$LOCALAPPDATA\Programs\DesktopUp Preview\${RELEASE_ID}"
-  ${AndIf} $4 != ""
-    StrCpy $INSTDIR $4
-  ${EndIf}
-  ${If} $ShortcutExplicit != "1"
-    ReadINIStr $0 "$INSTDIR\app\preview-install.ini" "Install" "Release"
-    ${If} $0 != ""
+    ${If} $INSTDIR == "$LOCALAPPDATA\Programs\DesktopUp"
+    ${AndIf} $UpgradeRoot != ""
+      StrCpy $INSTDIR $UpgradeRoot
+    ${EndIf}
+    ${If} $ShortcutExplicit != "1"
+    ${AndIf} $UpgradeRoot != ""
+      ReadINIStr $0 "$UpgradeRoot\app\preview-install.ini" "Install" "Release"
+      ReadINIStr $1 "$UpgradeRoot\app\preview-install.ini" "Install" "DesktopShortcutCreated"
       StrCpy $DesktopShortcutEnabled ${BST_UNCHECKED}
-      ReadINIStr $1 "$INSTDIR\app\preview-install.ini" "Install" "DesktopShortcutCreated"
       ${If} $1 == "1"
         IfFileExists "$DESKTOP\DesktopUp Preview $0.lnk" 0 +2
         StrCpy $DesktopShortcutEnabled ${BST_CHECKED}
       ${EndIf}
     ${EndIf}
-  ${EndIf}
-FunctionEnd
-
-Function DetectUpgradeTarget
-  StrCpy $UpgradeMode 0
-  StrCpy $UpgradeRelease ""
-  StrCpy $2 0
-  loop:
-    EnumRegKey $0 HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall" $2
-    StrCmp $0 "" done
-    IntOp $2 $2 + 1
-    StrCpy $1 $0 18
-    StrCmp $1 "DesktopUp.Preview." 0 loop
-    ReadRegStr $1 HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\$0" "InstallLocation"
-    StrCmp $1 $INSTDIR 0 loop
-    StrCpy $UpgradeMode 1
-    StrCpy $UpgradeRelease $0 "" 18
     Return
-  done:
+  invalid:
+    MessageBox MB_OK|MB_ICONSTOP "DesktopUp 安装登记、目录或标记不一致。已停止，不会覆盖或并行安装；请保留现场。" /SD IDOK
+    SetErrorLevel 18
+    Quit
 FunctionEnd
 
 Function RunUpgrade
