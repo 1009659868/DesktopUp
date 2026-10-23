@@ -1,5 +1,9 @@
 # DesktopUp V2 当前执行入口
 
+2026-10-23 当前：安装包覆盖升级两组集中人工USER PASS / CLOSED，授权集成develop、精简同步main并验证发布包，沿用preview-20261023.1更新源码指向/附件，不新增tag。A原目录更新和内容保留 → B安装事务与内容生命周期隔离 → C[收口及发布接续](../A_Project/40_Implementation/V3-04/INSTALLER_UPGRADE_DELIVERY.md#2026-10-23-人工通过与本轮收口)。最终回develop，历史未定因继续保留，真实热度HOLD；以下待验/不合并为阶段历史。
+
+2026-10-23 当前：`impl/09-installer-upgrade` 从 develop@907710d 派生，安装包原位升级已实现，18项定向测试及最终候选实际升级/运行/卸载通过，待两组集中人工。A本次升级决定 → B程序替换与内容生命周期隔离 → C[实施、候选、验收及清理](../A_Project/40_Implementation/V3-04/INSTALLER_UPGRADE_DELIVERY.md)。保留数据、自启和既有保护，未提交/推送/合并，不推进真实热度；历史未定因项和本轮原始失败不因后续成功销项。下方为历史。
+
 2026-10-23 最新：新增海报回车确认＋浏览方向切换外框下限两项 USER PASS / CLOSED，功能 `52529a1`、开发集成 `508d7ec` 和精简发布 `7160078` 均已推送。新预发布 `preview-20261023.1` 已绑定安装包对应提交，旧版保留；实际发布验证、清理及接续见[交接](../A_Project/40_Implementation/V3-04/HANDOFF.md)。最终停留 `impl/develop`，不推进真实热度，历史未定因项保留。A本轮交互修正 → B[方向切换与外框下限一致](../A_Project/20_Architecture/CONTENT_LAYOUT_OPERATION_SPACE_REVIEW_V1.md#2026-10-23-增量合同方向切换与外框下限一致) → C[本批验收记录](../A_Project/40_Implementation/V3-04/CONTROL_CENTER_USABILITY_DELIVERY.md#2026-10-23-浏览方向与外框下限统一)与[发布记录](../A_Project/40_Implementation/V3-04/PREVIEW_INSTALLER_DELIVERY.md#2026-10-23-两项海报修复与新预发布)。下方为历史。
 
 2026-10-21 最新：即时取证已验成果完成Git集成及精简发布同步，已回impl/develop；结果见[发布交接](../A_Project/40_Implementation/V3-04/HANDOFF.md)。下一入口为真实热度设计准备：A[活跃度与布局第6～10节](../A_Project/10_Requirements/CONTENT_ITEM_ACTIVITY_LAYOUT_V1.md) → B既有打开成功事实/单一归属/会话保护合同 → C[主计划第7.1节](../A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md#71-2026-10-21-真实热度准备未实施)。本轮只说明方案，不开新分支、不实现热度；历史卸载首因及P1/R6锁冲突独立保留。下方为历史。

@@ -1,5 +1,11 @@
 # V3-04 代码锚点
 
+## 2026-10-23 安装包原位升级（USER PASS / CLOSED）
+
+- `src/DesktopUp.Setup/InstallationFiles.cs`：清单、摘要与路径归属；`InstallationMetadata.cs`：版本登记及自有快捷方式适配；`UpgradeTransaction.cs`：暂存/备份/替换/回退/明确恢复，精确清理；`Program.cs`：维护租约、独立诊断及进程入口，不调用内容/数据库业务。
+- `packaging/preview/upgrade.nsh`：同通道识别、原路径选择、辅助进程与恢复UI；`installer.nsi`：复用新装路径保护，旧安装转升级，不调用旧卸载器。`scripts/package-preview.ps1`：独立发布Setup，共用包内运行时，保持源码/载荷绑定。
+- `InstallerUpgradeTests` 与 `tests/Packaging/Test-InstallerUpgrade.ps1`：本批直接风险；`scripts/start-installer-upgrade-review.ps1`：两组隔离人工及可恢复清理。[实现/证据范围](INSTALLER_UPGRADE_DELIVERY.md)；未替换历史卸载即时取证及其安全保护。
+
 ## 2026-10-23 新增海报默认确认
 
 - 发布绑定：功能 `52529a1` → 集成 `508d7ec` → 精简 main/tag `7160078` / `preview-20261023.1`，已推送发布；两项产品源码一致，回归与打包证据见[发布记录](PREVIEW_INSTALLER_DELIVERY.md#2026-10-23-两项海报修复与新预发布)。开发文档/测试不进入发布树。
