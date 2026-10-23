@@ -9,6 +9,7 @@ namespace DesktopUp.Setup;
 internal sealed record RegistryValue(string Name, RegistryValueKind Kind, string[] Data);
 internal interface IInstallRegistry
 {
+    IReadOnlyList<string> Ids();
     List<RegistryValue>? Read(string release);
     void Write(string release, List<RegistryValue> values);
     void Remove(string release);
@@ -16,12 +17,26 @@ internal interface IInstallRegistry
 
 internal sealed class WindowsInstallRegistry : IInstallRegistry
 {
-    private const string Prefix = @"Software\Microsoft\Windows\CurrentVersion\Uninstall\DesktopUp.Preview.";
+    internal const string StableId = "DesktopUp";
+    private const string Uninstall = @"Software\Microsoft\Windows\CurrentVersion\Uninstall\";
+    private const string LegacyPrefix = "DesktopUp.Preview.";
+    private static string Key(string id)
+    {
+        if (id != StableId) _ = InstallationFiles.Release(id);
+        return Uninstall + (id == StableId ? id : LegacyPrefix + id);
+    }
+    public IReadOnlyList<string> Ids()
+    {
+        using var user = RegistryKey.OpenBaseKey(RegistryHive.CurrentUser, RegistryView.Registry64);
+        using var root = user.OpenSubKey(Uninstall);
+        var names = root?.GetSubKeyNames() ?? [];
+        return names.Where(n => n.Equals(StableId, StringComparison.OrdinalIgnoreCase) || n.StartsWith(LegacyPrefix, StringComparison.OrdinalIgnoreCase))
+            .Select(n => n.Equals(StableId, StringComparison.OrdinalIgnoreCase) ? StableId : n[LegacyPrefix.Length..]).Order(StringComparer.Ordinal).ToArray();
+    }
     public List<RegistryValue>? Read(string release)
     {
-        _ = InstallationFiles.Release(release);
         using var user = RegistryKey.OpenBaseKey(RegistryHive.CurrentUser, RegistryView.Registry64);
-        using var key = user.OpenSubKey(Prefix + release);
+        using var key = user.OpenSubKey(Key(release));
         if (key is null) return null;
         if (key.SubKeyCount != 0) throw new IOException("卸载登记有未知子项，未修改。");
         return key.GetValueNames().Order(StringComparer.Ordinal).Select(name =>
@@ -42,9 +57,9 @@ internal sealed class WindowsInstallRegistry : IInstallRegistry
     }
     public void Write(string release, List<RegistryValue> values)
     {
-        _ = InstallationFiles.Release(release);
         using var user = RegistryKey.OpenBaseKey(RegistryHive.CurrentUser, RegistryView.Registry64);
-        using var key = user.CreateSubKey(Prefix + release);
+        using var key = user.CreateSubKey(Key(release));
+        foreach (string name in key.GetValueNames().Except(values.Select(v => v.Name), StringComparer.OrdinalIgnoreCase)) key.DeleteValue(name);
         foreach (var value in values)
         {
             object data = value.Kind switch
@@ -62,9 +77,8 @@ internal sealed class WindowsInstallRegistry : IInstallRegistry
     }
     public void Remove(string release)
     {
-        _ = InstallationFiles.Release(release);
         using var user = RegistryKey.OpenBaseKey(RegistryHive.CurrentUser, RegistryView.Registry64);
-        user.DeleteSubKey(Prefix + release, throwOnMissingSubKey: false);
+        user.DeleteSubKey(Key(release), throwOnMissingSubKey: false);
     }
 }
 
@@ -96,10 +110,12 @@ internal sealed class WindowsInstallationLinks : IInstallationLinks
     }
 }
 
-internal sealed record InstallationLocations(string Desktop, string Programs)
+internal sealed record InstallationLocations(string Desktop, string Programs, string StateDirectory)
 {
     public static InstallationLocations Current => new(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
-        Environment.GetFolderPath(Environment.SpecialFolder.Programs));
+        Environment.GetFolderPath(Environment.SpecialFolder.Programs),
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DesktopUp", "Installer"));
+    public string Pending => Path.Combine(StateDirectory, "pending.ini");
     public string Resolve(string root, string release, FileChange file)
     {
         _ = InstallationFiles.Release(release);

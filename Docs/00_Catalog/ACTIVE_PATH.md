@@ -1,5 +1,9 @@
 # DesktopUp V2 当前执行入口
 
+2026-10-23 当前：唯一安装与迁移升级两组USER PASS / CLOSED，按授权执行功能提交推送→develop非快进集成→精简main同步与打包验证→更新现有preview-20261023.1→返回develop；[收口与携带项](../A_Project/40_Implementation/V3-04/SINGLE_INSTALL_MIGRATION.md#2026-10-23-人工通过与收口)。卸载首因和锁冲突继续未定，不推进真实热度。下方禁止合并及待验均为阶段历史。
+
+2026-10-23 当前：从 develop@e0f3a1b 派生 `impl/09-single-install-migration`。A 同用户唯一安装但可更换路径 → B 程序迁移与配置/收纳隔离、固定登记及自启动/卸载一致 → C [实施与集中验收](../A_Project/40_Implementation/V3-04/SINGLE_INSTALL_MIGRATION.md)。原位与换路径共用事务，历史多登记保守停止；不提交/推送/合并，不改发布，真实热度 HOLD。下方允许并行安装为旧规则。
+
 2026-10-23 最新：覆盖升级USER PASS / CLOSED，功能eee8e56、develop51419c4、精简main e3bb8c8均已推送。既有preview-20261023.1按授权更新为包内20261023.3及准确源码，未新增tag；打包/实际升级/启动/卸载/下载校验和测试清理完成，最终回develop。A原目录更新保留数据 → B安装事务/内容隔离 → C[最终发布交接](../A_Project/40_Implementation/V3-04/PREVIEW_INSTALLER_DELIVERY.md#2026-10-23-覆盖升级收口发布同步与现有预发布更新)。历史未定因和剩余成本保留，真实热度HOLD。下方为阶段历史。
 
 2026-10-23 当前：安装包覆盖升级两组集中人工USER PASS / CLOSED，授权集成develop、精简同步main并验证发布包，沿用preview-20261023.1更新源码指向/附件，不新增tag。A原目录更新和内容保留 → B安装事务与内容生命周期隔离 → C[收口及发布接续](../A_Project/40_Implementation/V3-04/INSTALLER_UPGRADE_DELIVERY.md#2026-10-23-人工通过与本轮收口)。最终回develop，历史未定因继续保留，真实热度HOLD；以下待验/不合并为阶段历史。
