@@ -1,5 +1,31 @@
 # Windows 11 x64 独立预览安装包
 
+## 2026-10-23 覆盖升级收口、发布同步与现有预发布更新
+
+### 验收、集成与源码绑定
+
+- 用户确认取消保护、原位升级后内容/设置/入口保持两组均通过；覆盖升级USER PASS / CLOSED，复用18项定向结果，不扩跑历史业务矩阵。[功能验收记录](INSTALLER_UPGRADE_DELIVERY.md#2026-10-23-人工通过与本轮收口)。
+- 功能 `impl/09-installer-upgrade@eee8e56bbc9024eba39aebaa10ab9b02826d996a` 提交推送，非快进合入并推送 `impl/develop@51419c4c4ecef4405fa9f62956c143264113a938`。精简发布非快进合并为 `impl/main@e3bb8c89c2bbd096ca51ced0b8956daa38d064f9`，已推送，README同步。完整开发资料和测试保留在develop；main不保留Docs/tests/tools/out或验收脚本，Setup中的测试友元与内存故障检查点仅在发布树裁剪，不改变正常事务流程。未反向合入发布删除。
+- 最终包由干净main@e3bb8c8构建，`IncludesUncommittedChanges=false`；独立Release和自包含打包均0警告/0错误，文本门497文件/26冻结迁移通过。506项产品输入摘要与构建源一致，载荷811文件，不携带测试、探针、用户配置或调试符号。
+- 成品 `out/releases/main-upgrade-final01/DesktopUp-Preview-20261023.3-win-x64-Setup.exe`，67,398,393字节，SHA256 `9516BD5049813274EF75A324D5729ADCC839B71253ADF5EDDF24A69A2F98FCB7`。SHA256SUMS.txt 114字节，文件SHA256 `E11119310137F19962E4BC3D1DCF3BD2EDFC517460CE6952EF7A14D30142E0FE`。
+
+### 最小发布包验证与收尾
+
+- 隔离中文空格安装目录，用旧公开20261023.1包实际安装，再用本轮精简main包升级为20261023.3。旧版运行中升级返回41并保持登记，正常退出后升级0；数据库、未知文件与自建收纳文件摘要保持，810项安装文件摘要匹配，旧登记、自有菜单入口及升级备份清理。
+- 新旧程序均经安装根启动器与包内运行库正常启动、退出资源0，无error日志；新包正常卸载0。仅这轮直接风险路径，不追加历史拖放/架构/卸载故障矩阵。原目录更新保持Run/StartupApproved快照，不宣称再次验证真实登录；无/D自动选择本轮不操作日常安装，仍为源码核对。
+- 日常Preview/V3配置、Run与禁用状态、桌面/开始菜单入口、既有安装登记前后相同。本机唯一日常登记为 `F:\DesktopUp\DesktopUp Preview\20261021.5`，未更新或卸载。测试登记/进程归零。
+- 清理精确范围：`out/installer-upgrade/main-upgrade-smoke01`、`out/releases/main-upgrade-final01/build` 与 `setup-build`。18项记录/配置/样例逐项摘要归档，932项可重建重复输出移除。归档 `out/releases/upgrade-main-validation/closed-package-test.zip` SHA256 `B226FB725539E1DE0FFA82646F0E9CED693EE7724EA911E114E89C2E34049ABE`。原始记录与清理清单在同目录，最终安装器/payload/构建证据保留。
+
+### 现有预发布更新（明确授权，不新增tag）
+
+- 沿用 [preview-20261023.1](https://github.com/1009659868/DesktopUp/releases/tag/preview-20261023.1)，Release ID仍为421411390，Pre-release保持。包内版本递增到20261023.3，让旧公开版/20261023.2验收版识别为较新版本；标签名称不再等于包内版本，下载以附件及发布标题为准。
+- 标签由旧对象 `f073e5093aa8c571bbad6fff7d8c02fee91c3d46` / 源码7160078改为对象 `cf50d1401b0c07c6d81c13742254cd59ce58830b` / 源码e3bb8c8。仅此标签按旧对象显式force-with-lease更新，不强推分支、不覆盖未经核对的远端变化。
+- 更新前保存原release/tag元数据，核对旧附件与本地旧包一致。先暂存并校验新附件，再切换标签，替换旧安装包/校验文件并恢复公开。GitHub暂存时将发布暂挂untagged草稿，校验及时停止，后续明确绑定原tag完成；Release ID不变，未创建额外Git标签，旧公开安装器仍有本地可恢复副本。
+- 发布说明保留完整功能介绍，加入原位更新、配置/收纳/自启保留及原目录升级操作，不纳入开发测试内容。最终仅安装器和SHA256SUMS.txt两项附件；服务端摘要及实际下载流摘要与本地均匹配。`preview-20261021.5` 的标签、说明与附件核对未变。
+- `out/releases/upgrade-main-validation/{before,stage-receipt,inspect-receipt,publish-receipt}.json` 记录过程与结果。已经拉取旧tag的开发环境如需更新，应核对新对象后显式更新该tag，不把本次移动描述为新增版本标签。
+
+最终回到impl/develop，交接文档随独立提交同步；历史自然卸载首因、上一轮升级41首因、P1/R6锁冲突与剩余读取/观察成本继续保留，不因本次成功销项。真实热度不推进。
+
 ## 2026-10-23 两项海报修复与新预发布
 
 ### 集成与发布绑定

@@ -1,5 +1,7 @@
 # DesktopUp V2 当前执行入口
 
+2026-10-23 最新：覆盖升级USER PASS / CLOSED，功能eee8e56、develop51419c4、精简main e3bb8c8均已推送。既有preview-20261023.1按授权更新为包内20261023.3及准确源码，未新增tag；打包/实际升级/启动/卸载/下载校验和测试清理完成，最终回develop。A原目录更新保留数据 → B安装事务/内容隔离 → C[最终发布交接](../A_Project/40_Implementation/V3-04/PREVIEW_INSTALLER_DELIVERY.md#2026-10-23-覆盖升级收口发布同步与现有预发布更新)。历史未定因和剩余成本保留，真实热度HOLD。下方为阶段历史。
+
 2026-10-23 当前：安装包覆盖升级两组集中人工USER PASS / CLOSED，授权集成develop、精简同步main并验证发布包，沿用preview-20261023.1更新源码指向/附件，不新增tag。A原目录更新和内容保留 → B安装事务与内容生命周期隔离 → C[收口及发布接续](../A_Project/40_Implementation/V3-04/INSTALLER_UPGRADE_DELIVERY.md#2026-10-23-人工通过与本轮收口)。最终回develop，历史未定因继续保留，真实热度HOLD；以下待验/不合并为阶段历史。
 
 2026-10-23 当前：`impl/09-installer-upgrade` 从 develop@907710d 派生，安装包原位升级已实现，18项定向测试及最终候选实际升级/运行/卸载通过，待两组集中人工。A本次升级决定 → B程序替换与内容生命周期隔离 → C[实施、候选、验收及清理](../A_Project/40_Implementation/V3-04/INSTALLER_UPGRADE_DELIVERY.md)。保留数据、自启和既有保护，未提交/推送/合并，不推进真实热度；历史未定因项和本轮原始失败不因后续成功销项。下方为历史。

@@ -1,5 +1,7 @@
 # DesktopUp V2 文档入口
 
+2026-10-23 最新：覆盖升级已验收口并完成开发/发布同步，功能eee8e56、集成51419c4、精简main e3bb8c8均推送；原preview-20261023.1页面/tag更新为20261023.3包及准确源码，未新增tag。实际打包升级/运行/卸载、下载摘要和测试清理完成，最终回develop；见[最终交接](A_Project/40_Implementation/V3-04/HANDOFF.md)。历史未定因与剩余成本继续保留，暂不推进真实热度。
+
 2026-10-23 当前：安装包覆盖升级两组人工通过并收口，按授权执行开发集成、精简发布同步与打包验证；现有preview-20261023.1更新，不新增标签。执行进度见[交接](A_Project/40_Implementation/V3-04/HANDOFF.md)，范围与验收见[升级收口](A_Project/40_Implementation/V3-04/INSTALLER_UPGRADE_DELIVERY.md#2026-10-23-人工通过与本轮收口)。历史未定因继续保留，暂不推进真实热度。
 
 2026-10-23 最新：两项海报修复已推送功能线 `52529a1` / 开发集成 `508d7ec`，精简发布线 `7160078` 与新预发布 `preview-20261023.1` 同步完成；旧版不改。发布构建、隔离安装/启动/退出/卸载通过，测试清理及证据归档完成，最终保持 `impl/develop`。[交接](A_Project/40_Implementation/V3-04/HANDOFF.md)与[发布记录](A_Project/40_Implementation/V3-04/PREVIEW_INSTALLER_DELIVERY.md#2026-10-23-两项海报修复与新预发布)为当前入口。历史未定因及剩余成本继续保留，未实施真实热度。

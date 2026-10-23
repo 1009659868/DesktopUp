@@ -1,5 +1,7 @@
 # DesktopUp V2 — Poster Redesign V3
 
+2026-10-23 最新：原位覆盖升级已验集成并发布。功能eee8e56 → develop51419c4 → 精简main e3bb8c8均已推送，独立打包与实际升级/运行/卸载验证、测试清理完成。现有[preview-20261023.1](https://github.com/1009659868/DesktopUp/releases/tag/preview-20261023.1)更新为20261023.3安装包及准确源码，未新增标签；旧preview-20261021.5不变。最终保持impl/develop，[发布记录](Docs/A_Project/40_Implementation/V3-04/PREVIEW_INSTALLER_DELIVERY.md#2026-10-23-覆盖升级收口发布同步与现有预发布更新)保留指纹、验证范围与清理证据；历史未定因、剩余成本继续保留，暂不推进真实热度。
+
 2026-10-23 当前：安装包原位覆盖升级两组人工通过，支持识别旧安装、安全替换程序、更新登记及自有入口，保留配置、收纳内容和自启动设置。已授权开发集成、精简发布同步及打包验证，并沿用preview-20261023.1更新发布；执行结果见[交接](Docs/A_Project/40_Implementation/V3-04/HANDOFF.md)。手动选择空目录仍可并行安装，不自动删除其他安装。历史未定因继续保留，真实热度HOLD。
 
 2026-10-23 最新：新增海报回车确认、浏览方向切换后外框可缩回两项已验修复 `52529a1` / 集成 `508d7ec` 已推送；精简发布线 `7160078` 已同步并完成安装包验证。新预发布 [preview-20261023.1](https://github.com/1009659868/DesktopUp/releases/tag/preview-20261023.1) 已发布，安装包及 SHA256 校验文件可下载，旧版 `preview-20261021.5` 原样保留。临时安装和重复输出已清理，证据归档；最终保持 `impl/develop`。详见[本轮发布记录](Docs/A_Project/40_Implementation/V3-04/PREVIEW_INSTALLER_DELIVERY.md#2026-10-23-两项海报修复与新预发布)。历史未定因项继续保留，本轮不推进真实热度；下方为历史。
