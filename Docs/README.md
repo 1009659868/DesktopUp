@@ -1,5 +1,7 @@
 # DesktopUp V2 文档入口
 
+2026-10-23 当前：安装包覆盖升级两组人工通过并收口，按授权执行开发集成、精简发布同步与打包验证；现有preview-20261023.1更新，不新增标签。执行进度见[交接](A_Project/40_Implementation/V3-04/HANDOFF.md)，范围与验收见[升级收口](A_Project/40_Implementation/V3-04/INSTALLER_UPGRADE_DELIVERY.md#2026-10-23-人工通过与本轮收口)。历史未定因继续保留，暂不推进真实热度。
+
 2026-10-23 最新：两项海报修复已推送功能线 `52529a1` / 开发集成 `508d7ec`，精简发布线 `7160078` 与新预发布 `preview-20261023.1` 同步完成；旧版不改。发布构建、隔离安装/启动/退出/卸载通过，测试清理及证据归档完成，最终保持 `impl/develop`。[交接](A_Project/40_Implementation/V3-04/HANDOFF.md)与[发布记录](A_Project/40_Implementation/V3-04/PREVIEW_INSTALLER_DELIVERY.md#2026-10-23-两项海报修复与新预发布)为当前入口。历史未定因及剩余成本继续保留，未实施真实热度。
 
 2026-10-21 最新：即时取证功能9b0f112 → develop80d8d0b → 精简main78e5ff7/ed5146d已推送，20261021.5打包/隔离安装及三段卸载通过，测试清理完成，已回impl/develop；见[交接](A_Project/40_Implementation/V3-04/HANDOFF.md)。历史卸载首因与P1/R6锁冲突保持OPEN；用户要求准备真实热度，当前仅[方案与接续安排](A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md#71-2026-10-21-真实热度准备未实施)，未实施。下方“不合并/HOLD”为历史。

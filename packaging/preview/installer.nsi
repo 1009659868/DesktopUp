@@ -40,10 +40,11 @@ Var UninstallLease
 Var UninstallFailureFile
 
 !include "${__FILEDIR__}\uninstall-evidence.nsh"
+!include "${__FILEDIR__}\upgrade.nsh"
 
-!define MUI_WELCOMEPAGE_TEXT "Windows 11 x64 独立预览版。$\r$\n$\r$\n自带运行库，使用独立配置，不读取或迁移日常版配置，不设置开机启动。首次为空白工作区，无演示卡片；拖入收纳会移动真实文件，请先用无价值文件体验。$\r$\n$\r$\n下一步可自选安装目录。卸载可归还收纳内容或保留原位，配置保留。"
+!define MUI_WELCOMEPAGE_TEXT "Windows 11 x64 独立预览版。$\r$\n$\r$\n自带运行库，不读取或迁移日常版配置；各 Preview 版本共享预览配置。首次为空白工作区，无演示卡片；拖入收纳会移动真实文件。$\r$\n$\r$\n可自选安装目录。在原目录升级时保留配置、收纳内容与自启动状态，请先从托盘退出旧版。新装默认不设置开机启动。"
 !insertmacro MUI_PAGE_WELCOME
-!define MUI_DIRECTORYPAGE_TEXT_TOP "选择当前用户可写的本地目录，可以已有其他文件；已有内容会保留。若存在同名的程序文件或 app、licenses 目录，请改选目录。配置和收纳内容独立于安装目录，收纳位置可在控制中心修改。"
+!define MUI_DIRECTORYPAGE_TEXT_TOP "默认识别当前用户已有的 Preview 安装。在原目录安装将升级程序，保留配置、收纳内容及自启动状态；请先从托盘退出旧版。选择其他空目录则独立安装，不删除其他并行版本。未知同名文件不会覆盖。"
 !insertmacro MUI_PAGE_DIRECTORY
 Page custom InstallOptionsCreate InstallOptionsLeave
 !insertmacro MUI_PAGE_INSTFILES
@@ -69,7 +70,7 @@ Function InstallOptionsCreate
   Pop $DesktopShortcutCheckbox
   ${NSD_SetState} $DesktopShortcutCheckbox $DesktopShortcutEnabled
   ${NSD_OnClick} $DesktopShortcutCheckbox InstallOptionsChanged
-  ${NSD_CreateLabel} 0 30u 100% 32u "取消勾选后，仍可从开始菜单启动。不会设置开机启动，也不会覆盖已有同名桌面文件。"
+  ${NSD_CreateLabel} 0 30u 100% 32u "升级时替换本安装的旧入口，自启动状态保持。取消勾选仍可从开始菜单启动；不覆盖其他同名桌面文件。"
   Pop $0
   nsDialogs::Show
 FunctionEnd
@@ -230,6 +231,11 @@ Function ValidateDestination
     ${EndIf}
   ${EndIf}
   ; Reserve only owned names. Unrelated existing files are never overwritten.
+  Call DetectUpgradeTarget
+  ${If} $UpgradeMode == 1
+    StrCpy $GuardError 0
+    Return
+  ${EndIf}
   StrCpy $GuardError 16
   !insertmacro CheckOwnedName "DesktopUp.exe"
   !insertmacro CheckOwnedName "Uninstall.exe"
@@ -247,6 +253,7 @@ Function .onInit
   ClearErrors
   ${GetOptions} $0 "/DESKTOPSHORTCUT=" $1
   ${IfNot} ${Errors}
+    StrCpy $ShortcutExplicit "1"
     ${If} $1 != "0"
     ${AndIf} $1 != "1"
       MessageBox MB_OK|MB_ICONSTOP "DESKTOPSHORTCUT 仅接受 0（不创建）或 1（创建）。" /SD IDOK
@@ -268,11 +275,26 @@ Function .onInit
   ${EndIf}
   ReadRegStr $0 HKCU "${UNINSTALL_KEY}" "InstallLocation"
   ${If} $0 != ""
-    MessageBox MB_OK|MB_ICONSTOP "此版本已安装。请先从托盘退出并卸载同版本；配置会保留。" /SD IDOK
-    SetErrorLevel 13
-    Quit
+    ; A completed registration can coexist with an interrupted cleanup/rollback.
+    ; Let the helper validate that journal; never bypass its checks or reinstall blindly.
+    FindFirst $1 $2 "$0\.desktopup-upgrade-*"
+    FindClose $1
+    ${If} $2 == ""
+      MessageBox MB_OK|MB_ICONSTOP "此版本已安装。请先从托盘退出并卸载同版本；配置会保留。" /SD IDOK
+      SetErrorLevel 13
+      Quit
+    ${EndIf}
+    ${If} $INSTDIR == "$LOCALAPPDATA\Programs\DesktopUp Preview\${RELEASE_ID}"
+    ${OrIf} $INSTDIR == $0
+      StrCpy $INSTDIR $0
+    ${Else}
+      MessageBox MB_OK|MB_ICONSTOP "此版本存在待恢复的安装，请使用其原安装目录。" /SD IDOK
+      SetErrorLevel 13
+      Quit
+    ${EndIf}
   ${EndIf}
   ; Keep /D and the directory page selection. Never force a fixed installation path.
+  Call SelectUpgradeDefault
 FunctionEnd
 
 Function .onVerifyInstDir
@@ -291,6 +313,10 @@ Section "DesktopUp Preview"
   ${EndIf}
   SetShellVarContext current
   SetRegView 64
+  ${If} $UpgradeMode == 1
+    Call RunUpgrade
+    Goto installation_done
+  ${EndIf}
   ClearErrors
   !include "${INSTALL_FILES}"
   SetOutPath "$INSTDIR"
