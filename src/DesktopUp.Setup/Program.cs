@@ -13,6 +13,14 @@ internal static class Program
         try
         {
             string root = InstallationFiles.Root(args[0] == "--upgrade" ? args[2] : args[1]);
+            var locations = InstallationLocations.Current;
+            InstallationFiles.Plain(locations.StateDirectory); Directory.CreateDirectory(locations.StateDirectory);
+            string installationGate = Path.Combine(locations.StateDirectory, "transaction.lock");
+            InstallationFiles.Plain(installationGate);
+            using var installationLease = new FileStream(installationGate, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+            var registry = new WindowsInstallRegistry();
+            var knownRoots = registry.Ids().Select(id => InstallationMetadata.Text(registry.Read(id) ?? [], "InstallLocation"))
+                .Where(path => !string.IsNullOrWhiteSpace(path)).Select(path => InstallationFiles.Root(path!)).Append(root).ToArray();
             string profile = Environment.GetEnvironmentVariable("DESKTOPUP_V3_TEST_DATA_ROOT") ??
                 Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DesktopUp", "Preview");
             InstallationFiles.Plain(profile); Directory.CreateDirectory(profile);
@@ -23,10 +31,10 @@ internal static class Program
                 using (process)
                 {
                     string? executable = process.MainModule?.FileName;
-                    if (executable is null || InstallationFiles.Within(executable, root))
+                    if (executable is null || knownRoots.Any(path => InstallationFiles.Within(executable, path)))
                         throw new IOException("请先从托盘正常退出旧版，再执行升级。不会强制结束进程。");
                 }
-            var transaction = new UpgradeTransaction(new WindowsInstallRegistry(), new WindowsInstallationLinks(), InstallationLocations.Current);
+            var transaction = new UpgradeTransaction(registry, new WindowsInstallationLinks(), locations, new WindowsInstallationStartup());
             string message;
             if (args[0] == "--recover") { transaction.Recover(root); message = "已完成上一轮恢复/收尾。如已恢复旧版，可重新运行安装包；若新版已安装，则可正常使用。"; }
             else

@@ -10,11 +10,11 @@ Unicode true
   !error "Build using scripts/package-preview.ps1"
 !endif
 !define PRODUCT "DesktopUp Preview ${RELEASE_ID}"
-!define UNINSTALL_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\DesktopUp.Preview.${RELEASE_ID}"
+!define UNINSTALL_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\DesktopUp"
 Name "${PRODUCT}"
 OutFile "${SETUP_OUTPUT}"
 RequestExecutionLevel user
-InstallDir "$LOCALAPPDATA\Programs\DesktopUp Preview\${RELEASE_ID}"
+InstallDir "$LOCALAPPDATA\Programs\DesktopUp"
 SetCompressor /SOLID lzma
 ShowInstDetails show
 ShowUninstDetails show
@@ -38,13 +38,15 @@ Var ContentKeepRadio
 Var UninstallProfile
 Var UninstallLease
 Var UninstallFailureFile
+Var InstallationLease
+Var WizardLease
 
 !include "${__FILEDIR__}\uninstall-evidence.nsh"
 !include "${__FILEDIR__}\upgrade.nsh"
 
-!define MUI_WELCOMEPAGE_TEXT "Windows 11 x64 独立预览版。$\r$\n$\r$\n自带运行库，不读取或迁移日常版配置；各 Preview 版本共享预览配置。首次为空白工作区，无演示卡片；拖入收纳会移动真实文件。$\r$\n$\r$\n可自选安装目录。在原目录升级时保留配置、收纳内容与自启动状态，请先从托盘退出旧版。新装默认不设置开机启动。"
+!define MUI_WELCOMEPAGE_TEXT "Windows 11 x64 独立预览版。$\r$\n$\r$\n自带运行库，不读取或迁移日常版配置；各 Preview 版本共享预览配置。首次为空白工作区，无演示卡片；拖入收纳会移动真实文件。$\r$\n$\r$\n同一用户只保留一份安装。可自选目录：原位置覆盖升级，新位置迁移升级。保留配置、收纳内容与自启动状态，请先从托盘退出旧版。"
 !insertmacro MUI_PAGE_WELCOME
-!define MUI_DIRECTORYPAGE_TEXT_TOP "默认识别当前用户已有的 Preview 安装。在原目录安装将升级程序，保留配置、收纳内容及自启动状态；请先从托盘退出旧版。选择其他空目录则独立安装，不删除其他并行版本。未知同名文件不会覆盖。"
+!define MUI_DIRECTORYPAGE_TEXT_TOP "自动识别当前用户唯一安装。保留原目录将覆盖升级；选择新目录将迁移程序并清理旧程序和入口，不会并行安装。配置、收纳内容及自启动状态保留；未知文件不删除。"
 !insertmacro MUI_PAGE_DIRECTORY
 Page custom InstallOptionsCreate InstallOptionsLeave
 !insertmacro MUI_PAGE_INSTFILES
@@ -72,6 +74,12 @@ Function InstallOptionsCreate
   ${NSD_OnClick} $DesktopShortcutCheckbox InstallOptionsChanged
   ${NSD_CreateLabel} 0 30u 100% 32u "升级时替换本安装的旧入口，自启动状态保持。取消勾选仍可从开始菜单启动；不覆盖其他同名桌面文件。"
   Pop $0
+  ${If} $UpgradeRoot != ""
+    ${NSD_CreateLabel} 0 66u 100% 26u "原位置：$UpgradeRoot"
+    Pop $0
+  ${EndIf}
+  ${NSD_CreateLabel} 0 98u 100% 32u "目标位置：$INSTDIR"
+  Pop $0
   nsDialogs::Show
 FunctionEnd
 
@@ -83,27 +91,6 @@ FunctionEnd
 
 Function InstallOptionsLeave
   ${NSD_GetState} $DesktopShortcutCheckbox $DesktopShortcutEnabled
-FunctionEnd
-
-Function CreateOptionalDesktopShortcut
-  ${If} $DesktopShortcutEnabled != ${BST_CHECKED}
-    Return
-  ${EndIf}
-  InitPluginsDir
-  ClearErrors
-  CreateShortCut "$PLUGINSDIR\desktop-entry.lnk" "$INSTDIR\DesktopUp.exe"
-  IfErrors shortcut_skipped
-  ; CopyFile's fail-if-exists flag is atomic with respect to name collisions.
-  ; A pre-existing shortcut/file is never overwritten or claimed by this install.
-  System::Call 'kernel32::CopyFileW(w "$PLUGINSDIR\desktop-entry.lnk", w "$DESKTOP\${PRODUCT}.lnk", i 1) i.r0'
-  ${If} $0 == 0
-    Goto shortcut_skipped
-  ${EndIf}
-  WriteINIStr "$INSTDIR\app\preview-install.ini" "Install" "DesktopShortcutCreated" "1"
-  Return
-  shortcut_skipped:
-    DetailPrint "未创建桌面快捷方式（同名文件已存在或桌面不可写）；仍可从开始菜单启动。"
-    ClearErrors
 FunctionEnd
 
 Function un.RemoveOwnedDesktopShortcut
@@ -164,6 +151,29 @@ FunctionEnd
 !macroend
 !insertmacro ReparseGuard ""
 !insertmacro ReparseGuard "un."
+
+; The UI lease prevents concurrent wizards. The transaction lease is shared by
+; the helper and uninstaller, independent of the runtime profile override.
+!macro InstallerLease Prefix FunctionName FileName Variable
+Function ${Prefix}${FunctionName}
+  StrCpy $GuardPath "$LOCALAPPDATA\DesktopUp\Installer\${FileName}"
+  Call ${Prefix}CheckReparsePath
+  ${If} $GuardError != 0
+    SetErrorLevel 23
+    Quit
+  ${EndIf}
+  CreateDirectory "$LOCALAPPDATA\DesktopUp\Installer"
+  System::Call 'kernel32::CreateFileW(w "$GuardPath", i 0xC0000000, i 0, p 0, i 4, i 0, p 0) p.r1'
+  ${If} $1 == -1
+    MessageBox MB_OK|MB_ICONSTOP "另一个安装、升级或卸载正在进行，或安装状态目录不可写；请稍后重试。未修改安装。" /SD IDOK
+    SetErrorLevel 31
+    Quit
+  ${EndIf}
+  StrCpy ${Variable} $1
+FunctionEnd
+!macroend
+!insertmacro InstallerLease "" "AcquireWizardLease" "wizard.lock" "$WizardLease"
+!insertmacro InstallerLease "un." "AcquireInstallationLease" "transaction.lock" "$InstallationLease"
 
 !macro CheckOwnedName Name
   System::Call 'kernel32::GetFileAttributesW(w "$INSTDIR\${Name}") i.r0'
@@ -231,8 +241,7 @@ Function ValidateDestination
     ${EndIf}
   ${EndIf}
   ; Reserve only owned names. Unrelated existing files are never overwritten.
-  Call DetectUpgradeTarget
-  ${If} $UpgradeMode == 1
+  ${If} $UpgradeRoot == $INSTDIR
     StrCpy $GuardError 0
     Return
   ${EndIf}
@@ -273,27 +282,7 @@ Function .onInit
     SetErrorLevel 11
     Quit
   ${EndIf}
-  ReadRegStr $0 HKCU "${UNINSTALL_KEY}" "InstallLocation"
-  ${If} $0 != ""
-    ; A completed registration can coexist with an interrupted cleanup/rollback.
-    ; Let the helper validate that journal; never bypass its checks or reinstall blindly.
-    FindFirst $1 $2 "$0\.desktopup-upgrade-*"
-    FindClose $1
-    ${If} $2 == ""
-      MessageBox MB_OK|MB_ICONSTOP "此版本已安装。请先从托盘退出并卸载同版本；配置会保留。" /SD IDOK
-      SetErrorLevel 13
-      Quit
-    ${EndIf}
-    ${If} $INSTDIR == "$LOCALAPPDATA\Programs\DesktopUp Preview\${RELEASE_ID}"
-    ${OrIf} $INSTDIR == $0
-      StrCpy $INSTDIR $0
-    ${Else}
-      MessageBox MB_OK|MB_ICONSTOP "此版本存在待恢复的安装，请使用其原安装目录。" /SD IDOK
-      SetErrorLevel 13
-      Quit
-    ${EndIf}
-  ${EndIf}
-  ; Keep /D and the directory page selection. Never force a fixed installation path.
+  Call AcquireWizardLease
   Call SelectUpgradeDefault
 FunctionEnd
 
@@ -313,39 +302,7 @@ Section "DesktopUp Preview"
   ${EndIf}
   SetShellVarContext current
   SetRegView 64
-  ${If} $UpgradeMode == 1
-    Call RunUpgrade
-    Goto installation_done
-  ${EndIf}
-  ClearErrors
-  !include "${INSTALL_FILES}"
-  SetOutPath "$INSTDIR"
-  WriteUninstaller "$INSTDIR\Uninstall.exe"
-  WriteINIStr "$INSTDIR\app\preview-install.ini" "Install" "Channel" "DesktopUp.Preview"
-  WriteINIStr "$INSTDIR\app\preview-install.ini" "Install" "Release" "${RELEASE_ID}"
-  WriteINIStr "$INSTDIR\app\preview-install.ini" "Install" "Path" "$INSTDIR"
-  IfErrors installation_failed
-  CreateDirectory "$SMPROGRAMS\${PRODUCT}"
-  CreateShortCut "$SMPROGRAMS\${PRODUCT}\DesktopUp Preview.lnk" "$INSTDIR\DesktopUp.exe"
-  CreateShortCut "$SMPROGRAMS\${PRODUCT}\预览说明.lnk" "$INSTDIR\PREVIEW-README.txt"
-  WriteRegStr HKCU "${UNINSTALL_KEY}" "DisplayName" "${PRODUCT} (x64)"
-  WriteRegStr HKCU "${UNINSTALL_KEY}" "DisplayVersion" "${RELEASE_ID}"
-  WriteRegStr HKCU "${UNINSTALL_KEY}" "InstallLocation" "$INSTDIR"
-  WriteRegStr HKCU "${UNINSTALL_KEY}" "UninstallString" '"$INSTDIR\Uninstall.exe"'
-  WriteRegStr HKCU "${UNINSTALL_KEY}" "QuietUninstallString" '"$INSTDIR\Uninstall.exe" /S /CONTENT=keep'
-  WriteRegStr HKCU "${UNINSTALL_KEY}" "DisplayIcon" "$INSTDIR\DesktopUp.exe"
-  WriteRegDWORD HKCU "${UNINSTALL_KEY}" "NoModify" 1
-  WriteRegDWORD HKCU "${UNINSTALL_KEY}" "NoRepair" 1
-  WriteRegDWORD HKCU "${UNINSTALL_KEY}" "EstimatedSize" ${PAYLOAD_KB}
-  IfErrors installation_failed
-  Call CreateOptionalDesktopShortcut
-  IfErrors installation_failed
-  Goto installation_done
-  installation_failed:
-    MessageBox MB_OK|MB_ICONSTOP "写入安装文件失败，安装未完成。请检查目录权限和剩余空间；保留现场，不会删除其他文件。" /SD IDOK
-    SetErrorLevel 15
-    Quit
-  installation_done:
+  Call RunUpgrade
 SectionEnd
 
 Function un.RequireSafeDirectory
@@ -361,6 +318,7 @@ Function un.onInit
   SetShellVarContext current
   SetRegView 64
   StrCpy $UninstallLease 0
+  Call un.AcquireInstallationLease
   StrCpy $ContentDisposition "return"
   IfSilent 0 +2
     StrCpy $ContentDisposition "keep"
@@ -387,6 +345,11 @@ Function un.onInit
   ${OrIf} $INSTDIR != $0
     Goto unsafe_uninstall
   ${EndIf}
+  ReadRegStr $0 HKCU "${UNINSTALL_KEY}" "DisplayVersion"
+  ${If} $0 != "${RELEASE_ID}"
+    Goto unsafe_uninstall
+  ${EndIf}
+  IfFileExists "$LOCALAPPDATA\DesktopUp\Installer\pending.ini" unsafe_uninstall
   StrCpy $GuardPath $INSTDIR
   Call un.RequireSafeDirectory
   !include "${UNINSTALL_GUARDS}"
