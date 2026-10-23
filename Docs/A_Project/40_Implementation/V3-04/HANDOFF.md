@@ -1,5 +1,9 @@
 # V3-04 当前交接
 
+## 2026-10-23 两项修复 USER PASS / CLOSED，本地集成完成
+
+用户确认 candidate02 的新增海报回车确认和方向切换外框缩回两项均通过，本轮收口。保留最大 Item 交叉轴及操作/可读空间保护，不改循环；沿用 42/42 定向验证及正常构建证据，不重复人工或历史矩阵。[实现、候选及验收记录](CONTROL_CENTER_USABILITY_DELIVERY.md#2026-10-23-浏览方向与外框下限统一)。修复提交 `impl/poster-create-enter@52529a1`，本合并以 `--no-ff` 纳入 `impl/develop`，无冲突、生产源码与已验修复一致，最终停留 develop；本次不推送远程、不改 `impl/main@ed5146d`/发布包。日常数据和已验候选保留，三个未使用自建样例可恢复归档；历史未定因项保留，未推进真实热度。
+
 ## 2026-10-21 最新：即时取证已验集成、发布验证及清理完成
 
 用户授权已执行：功能impl/09-uninstall-immediate-evidence@9b0f112提交推送 → 非快进合入并推送impl/develop@80d8d0b → 精简发布合并78e5ff7及README记录ed5146d推送。已回impl/develop，本交接作为独立文档提交同步；没有反向合入发布删除，完整资料/测试和历史stash保持。
