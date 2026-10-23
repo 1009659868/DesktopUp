@@ -1,5 +1,10 @@
 # V3-04 代码锚点
 
+## 2026-10-23 新增海报默认确认
+
+- `src/DesktopUp.Domain/ContentFrameMinimumPolicy.cs`：有内容主轴使用 48 DIP 可读内容加装饰，交叉轴仍完整容纳最大 Item，空海报保持 240；拖框/控制中心/提交沿既有共享入口。`ContentFrameResizeTests` 覆盖方向切换后的双向往返及同一约束，不改循环策略。
+- `src/DesktopUp.App/ControlCenterWindow.Editing.cs / ShowCatalogDialog`：仅 create 的 DefaultButton 为 Primary；名称非空校验和原目录命令复用不变，其他分支保留原默认按钮。[本批验证（USER PASS / CLOSED）](CONTROL_CENTER_USABILITY_DELIVERY.md#2026-10-23-新增海报回车确认)。
+
 ## 2026-10-21 集成后真实热度准备锚点（仅核对，未实施）
 
 - Application/Features/Content/Open/ContentActionService、ContentOpenContract → Infrastructure/Persistence/Content/SqliteContentOpenJournal：已有可信打开交接、ActivationId幂等事实；尚无生产统计聚合/消费游标。

@@ -1,5 +1,35 @@
 # V3-04-04 UX：首版可用性实施记录
 
+## 2026-10-23 浏览方向与外框下限统一
+
+状态：**USER PASS / CLOSED**。用户明确确认 candidate02 的两项集中验证均通过：新增海报 Enter 默认确认及取消行为；方向切换后外框拉大再缩回原合法尺寸。两项修复一并收口，授权提交本轮成果并合入 `impl/develop`，本次不推送远程、不同步 `impl/main` 或重发安装包。实际集成结果归当前 HANDOFF。历史锁冲突、卸载首因及其他未验环境不随本轮销项，真实热度未实施。
+
+用户更正现象为切换横向后宽度拓宽就不能缩回，而非滚动失效。发布 DLL 隔离复现：垂直合法宽度 172 DIP，切换横向后保持 172，首次向外拖 10 却被固定下限夹到 240，再向内不能回到 172；400→300 仍可缩，已确认是主轴固定下限与方向切换不一致。
+
+本批在 `impl/poster-create-enter` 完成，两项人工通过后按本次授权合入开发集成线。只替换共享 `ContentFrameMinimumPolicy` 的有内容主轴 240 DIP：非滚动轴仍取最大完整 Item 加外框装饰，滚动轴取现有最小可读内容 48 DIP 加外框装饰，两轴同时遵守已有 96 DIP 壳安全下限。空海报保持 240；不自动改框、不存新状态、不改方向提交校验或循环滚动。拖边预览、控制中心精细尺寸和提交前检查继续读同一策略；不增加另一套 UI 例外。
+
+验证限于方向切换后扩大/缩回（横纵对称、DPI/小数）、原内容边界/标题操作区及尺度联动扩框。完成后保留旧候选，正常新候选与新增海报 Enter 一起集中验收；不重跑文件业务或历史全矩阵。
+
+实现、自动验证和集中人工均已完成：共享策略已替换，无新的持久状态、窗口补丁或循环代码变化。新增方向切换反例在旧策略 4/4 失败（`axis-minimum-before.trx`），新策略下 `ContentFrameResizeTests` 与 `Scale_expansion` 39/39，通过既有受阻扩框保护 3/3，共 42 项；前者涵盖横纵方向、96/144 DPI、小数 Item、拖边往返、中心计划和原生提交校验，另保留标题按钮/可读空间及最大 Item/空海报/未知布局保护。TRX 在 `out/fixes/poster-create-enter/tests`；正常 candidate02 构建 0 警告/0 错误，日志 `candidate02-build.log`。本轮没有做安装包或修改迁移；收口复用已有有效证据，不重复构建或测试矩阵。
+
+已验候选 `out/fixes/poster-create-enter/candidate02/app` 及 `review01/profile` 隔离配置保留，日常安装/配置不动，candidate01 保留。重开入口为 `out/fixes/poster-create-enter/start-review.ps1`，会拒绝同时运行旧进程。收口时按 `review01/sample-manifest.json` 核对三个未使用自建样例，移入 `evidence/unused-samples-closed` 可恢复归档；不删用户验收中新建的内容，不清空收纳根。本批没有向桌面投放样例。
+
+集中两点均由用户确认通过：①新增普通海报输入名称 Enter 创建，Esc/取消不创建、空白不能确认；②海报内右键空白区新建几项测试文本，垂直缩至单列→切横向→拉宽再缩回原合法宽度；横向扁框切纵向后高度同理，内容超过可视区仍按原循环开关浏览。未扩展为外部文件拖放或其他环境的验收。
+
+用户确认旧候选退出后，已核对无 DesktopUp 进程并通过同一重开入口启动 candidate02（PID 46892）。日志确认配置 Ready、schema26、control_center.shown，进程响应正常，启动未见 error/critical/fatal。当前子进程继承本机 High 权限，此次仅键盘与外框操作，不作为普通权限 Explorer 拖放验收；不修改 UAC/UIPI。隔离配置尚无海报，可在本轮新建海报后用空白区新建文本补充内容，不操作真实文件。
+
+## 2026-10-23 新增海报回车确认
+
+状态：**USER PASS / CLOSED**，与上节外框修订一并验收及集成。以下为实现过程记录。
+
+用户暂缓浏览方向/循环滚动问题，优先修复新增海报输入名称后 Enter 被当作取消。本地修复分支 `impl/poster-create-enter` 从已与远程一致的 `impl/develop@a1a54d6` 派生，不提交、推送或合并。
+
+根因是 `ControlCenterWindow.Editing.cs / ShowCatalogDialog` 将默认按钮固定设为 Close。仅 create 分支改为 Primary，直接复用 WinUI 默认按钮，不添加键盘拦截或另一条创建路径；空白名称禁用确认及提交前校验、Esc/取消、复制/重命名和删除等其他对话框保持原行为。
+
+独立正常 Release 构建零警告/零错误，源码文本门 975 文件/26 冻结迁移通过；构建记录 `out/fixes/poster-create-enter/build.log`。候选 `out/fixes/poster-create-enter/candidate01/app`，人工配置 `out/fixes/poster-create-enter/review01/profile`。用户确认旧安装版退出后，已按此隔离入口启动控制中心；未覆盖安装包、日常配置或收纳文件。仅集中核对一组：有效名称 Enter 创建一次，Esc/取消不创建，空白名称不能确认。尚未把构建成功记为键盘人工 PASS。
+
+此前“无法滚动”已由用户更正为外框缩不回；新增回车修复保留，与上节外框修订集中验收。发布 DLL 诊断在 `out/diagnostics/flow-switch-20261023`。历史锁冲突、卸载首因与其他未验事项保持，不推进真实热度。
+
 ## 2026-10-15 外观与布局统一修订（当前）
 
 分支 `impl/control-center-ui-optimization`，基点 `f2c9c6d`。2026-10-15用户确认下列1～3项均通过，本项 **CLOSED / USER PASS**，并授权提交/推送功能分支、合入及同步 `impl/develop`，再同步精简发布线 `impl/main`，最终返回develop。下方2026-09-15记录为历史，不作为本轮候选或验收结论。

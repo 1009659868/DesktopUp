@@ -100,7 +100,7 @@ public sealed class ContentFrameResizeTests
         var solved = ContentLayoutSolver.Resolve(d,view);
         var resolved = ContentFrameMinimumPolicy.FromSnapshot(solved,300,100);
         Assert.Equal(solved.Items[0].Bounds.Width + 300, resolved.WidthDip);
-        Assert.Equal(240,resolved.HeightDip);
+        Assert.Equal(ContentLayoutPolicy.MinimumReadableCardDip + 100,resolved.HeightDip);
     }
 
     [Theory] [InlineData("{\"schemaVersion\":999}")] [InlineData("broken")]
@@ -129,6 +129,84 @@ public sealed class ContentFrameResizeTests
         var bounds = new SpatialRect(env.WorkArea.X, env.WorkArea.Y,
             (int)Math.Round(poster.WidthDip * dpi / 96d), (int)Math.Round(poster.ExpandedHeightDip * dpi / 96d));
         return new(env, [new(poster.PosterId, bounds, bounds.Height, true, false, false, 1)]);
+    }
+
+    [Theory]
+    [InlineData(ContentFlowAxis.Vertical, 96u)] [InlineData(ContentFlowAxis.Vertical, 144u)]
+    [InlineData(ContentFlowAxis.HorizontalLoop, 96u)] [InlineData(ContentFlowAxis.HorizontalLoop, 144u)]
+    public void Axis_switch_then_widen_and_shrink_returns_to_original_narrow_frame(ContentFlowAxis from, uint dpi)
+    {
+        var document = ContentLayoutSamples.Equal("A", 3) with { FlowAxis = from, LoopScroll = true };
+        document = document with { Placements = document.Placements.Select(p => p with
+            { ColumnSpan = 2.125, RowSpan = 2.375 }).ToArray() };
+        var poster = Seed() with { ContentLayoutJson = ContentLayoutPolicy.Serialize(document) };
+        Assert.True(ContentFrameMinimumPolicy.TryForPoster(poster, out var oldMinimum, out var error), error);
+        var oldPixels = oldMinimum!.Pixels(dpi, dpi);
+        poster = from == ContentFlowAxis.Vertical
+            ? poster with { WidthDip = oldPixels.Width * 96d / dpi }
+            : poster with { ExpandedHeightDip = oldPixels.Height * 96d / dpi };
+        var axis = from == ContentFlowAxis.Vertical ? ContentFlowAxis.HorizontalLoop : ContentFlowAxis.Vertical;
+        var switched = ContentLayoutFlowPolicy.SetFlowAxis(document, axis);
+        Assert.True(switched.Accepted, switched.Error);
+        Assert.True(switched.Document.LoopScroll);
+        Assert.Equal(document.Placements, switched.Document.Placements);
+        poster = poster with { ContentLayoutJson = ContentLayoutPolicy.Serialize(switched.Document) };
+        Assert.True(ContentFrameMinimumPolicy.TryForPoster(poster, out var newMinimum, out error), error);
+        var minimum = newMinimum!.Pixels(dpi, dpi);
+        var scene = Scene(poster, dpi);
+        var initial = scene.Posters[0].Bounds;
+        var gesture = from == ContentFlowAxis.Vertical ? PosterGestureKind.ResizeRight : PosterGestureKind.ResizeBottom;
+        int dx = from == ContentFlowAxis.Vertical ? 30 : 0, dy = from == ContentFlowAxis.Vertical ? 0 : 30;
+        var start = new DesktopPixelRect(initial.X, initial.Y, initial.Width, initial.Height);
+        var area = scene.Environment.WorkArea;
+        var work = new DesktopPixelRect(area.X, area.Y, area.Width, area.Height);
+        var widened = PosterFrameResizePolicy.Resolve(gesture, start, dx, dy, work, minimum.Width, minimum.Height);
+        Assert.Equal(start.Width + dx, widened.Width);
+        Assert.Equal(start.Height + dy, widened.Height);
+        var returned = PosterFrameResizePolicy.Resolve(gesture, widened, -dx, -dy, work, minimum.Width, minimum.Height);
+        Assert.Equal(start, returned);
+
+        // Numeric editing and the final native gesture validation must accept the same return.
+        var widePoster = poster with { WidthDip = widened.Width * 96d / dpi, ExpandedHeightDip = widened.Height * 96d / dpi };
+        var wideScene = Scene(widePoster, dpi);
+        var plan = ControlCenterSpatial.Plan(widePoster, wideScene,
+            new(0, 0, poster.WidthDip, poster.ExpandedHeightDip), out error);
+        Assert.NotNull(plan); Assert.Null(error);
+        var trace = new SpatialGestureCommit(wideScene, initial,
+            [new("A", wideScene.Posters[0].Bounds, initial)], gesture, true);
+        var state = new DesktopStateSnapshot(new(1, 1, true, [new(1, 1, widePoster, DateTimeOffset.UnixEpoch) { LayoutGeneration = 1 }]),
+            new(1, 1, new(false, DesktopUpPerformanceMode.Automatic, false), DateTimeOffset.UnixEpoch));
+        var command = new PosterStateCommand("return-narrow", StateCommandSource.Poster, PosterStateCommandKind.Resize, 1, "A",
+            SpatialGestureCommitPolicy.Capture(widePoster, initial, wideScene.Environment, poster.ExpandedHeightDip))
+            { ReadSet = new(new Dictionary<string, long> { { "A", 1 } }, CatalogVersion: 1), SpatialGesture = trace };
+        Assert.Null(SpatialGestureCommitPolicy.Validate(command, state));
+    }
+
+    [Theory] [InlineData(ContentFlowAxis.Vertical)] [InlineData(ContentFlowAxis.HorizontalLoop)]
+    public void Main_axis_floor_preserves_readable_viewport_and_title_controls(ContentFlowAxis axis)
+    {
+        var doc = ContentLayoutSamples.Equal("A", 1) with { FlowAxis = axis };
+        doc = doc with { Placements = [doc.Placements[0] with { ColumnSpan = .5, RowSpan = .5 }] };
+        var poster = Seed() with { ContentLayoutJson = ContentLayoutPolicy.Serialize(doc) };
+        Assert.True(ContentFrameMinimumPolicy.TryForPoster(poster, out var minimum, out var error), error);
+        var presentation = PosterPresentationPolicy.Resolve(poster);
+        double chromeX = PosterPresentationPolicy.HorizontalPaddingDip * 2 + ContentFrameMinimumPolicy.EditingBorderDip;
+        double chromeY = presentation.Metrics.ReservedTopDip + presentation.Metrics.ReservedBottomDip + ContentFrameMinimumPolicy.EditingBorderDip;
+        Assert.True(minimum!.WidthDip - chromeX >= ContentLayoutPolicy.MinimumReadableCardDip);
+        Assert.True(minimum.HeightDip - chromeY >= ContentLayoutPolicy.MinimumReadableCardDip);
+        foreach (var kind in new[] { PosterTitleChromeKind.Basic, PosterTitleChromeKind.Cloud })
+        {
+            var title = PosterTitleChromePolicy.Resolve(minimum.WidthDip, false, kind);
+            Assert.True(title.Name.Width >= 0);
+            Assert.True(title.Collapse.X >= 0 && title.More.Right <= minimum.WidthDip);
+            Assert.True(title.Collapse.Right <= title.More.X);
+            Assert.Equal(PosterTitleChromeTarget.Collapse, title.HitTest(title.Collapse.X + 1, title.Collapse.Y + 1));
+            Assert.Equal(PosterTitleChromeTarget.More, title.HitTest(title.More.X + 1, title.More.Y + 1));
+        }
+        var tooSmall = axis == ContentFlowAxis.Vertical
+            ? new PosterGeometryIntent(0, 0, minimum.WidthDip, minimum.HeightDip - 1)
+            : new PosterGeometryIntent(0, 0, minimum.WidthDip - 1, minimum.HeightDip);
+        Assert.Null(ControlCenterSpatial.Plan(poster, Scene(poster), tooSmall, out _));
     }
 
     [Theory] [InlineData(ContentFlowAxis.Vertical)] [InlineData(ContentFlowAxis.HorizontalLoop)]

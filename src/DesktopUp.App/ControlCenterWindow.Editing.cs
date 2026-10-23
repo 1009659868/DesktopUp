@@ -218,7 +218,8 @@ public sealed partial class ControlCenterWindow
         body.Children.Add(new TextBlock { Text = kind == "clone" ? "仅复制配置，不复制文件/运行状态；在主显示器寻找空位。锁定、收起及自动设置按源配置保留。" :
             kind == "create" ? "创建普通 Box，在主显示器寻找完整空位。不会移动真实文件。" : "仅修改当前目标的名称，不应用其他草稿。", TextWrapping = TextWrapping.Wrap });
         var dialog = new ContentDialog { XamlRoot = Content.XamlRoot, Title = kind == "create" ? "新增海报" : kind == "clone" ? "复制配置" : "重命名",
-            Content = body, PrimaryButtonText = "确认", CloseButtonText = "取消", DefaultButton = ContentDialogButton.Close };
+            Content = body, PrimaryButtonText = "确认", CloseButtonText = "取消",
+            DefaultButton = kind == "create" ? ContentDialogButton.Primary : ContentDialogButton.Close };
         input.TextChanged += (_, _) => dialog.IsPrimaryButtonEnabled = !string.IsNullOrWhiteSpace(input.Text);
         ApplyPaperDialogStyle(dialog);
         _catalogDialog = dialog; SettingsInteractionChanged?.Invoke();

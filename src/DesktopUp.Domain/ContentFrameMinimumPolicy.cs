@@ -21,14 +21,17 @@ public static class ContentFrameMinimumPolicy
         if (!Enum.IsDefined(snapshot.FlowAxis) || !double.IsFinite(snapshot.MinimumCrossAxisDip) || snapshot.MinimumCrossAxisDip < 0 ||
             !double.IsFinite(horizontalChromeDip) || horizontalChromeDip < 0 || !double.IsFinite(verticalChromeDip) || verticalChromeDip < 0)
             throw new ArgumentException("Invalid content minimum or frame chrome.");
-        // Keep the old main-axis/empty operating space. Only the populated cross axis shrinks
-        // to its largest complete card, plus chrome; never auto-resize the saved poster.
-        const double usualMinimum = 240;
-        bool populated = snapshot.Items.Count > 0;
-        return new(populated && snapshot.FlowAxis == ContentFlowAxis.Vertical
-                ? Math.Max(PosterFrameGeometryPolicy.MinimumWidthDip, snapshot.MinimumCrossAxisDip + horizontalChromeDip) : usualMinimum,
-            populated && snapshot.FlowAxis == ContentFlowAxis.HorizontalLoop
-                ? Math.Max(PosterFrameGeometryPolicy.MinimumExpandedHeightDip, snapshot.MinimumCrossAxisDip + verticalChromeDip) : usualMinimum);
+        if (snapshot.Items.Count == 0) return new(240, 240);
+        // The cross axis must contain every complete Item. The scrolling axis needs only a
+        // readable viewport plus chrome, not the old 240-DIP floor: changing axes must not
+        // make a previously legal narrow cross axis impossible to restore after resizing.
+        // No authored geometry or scroll policy changes when computing this constraint.
+        double contentWidth = snapshot.FlowAxis == ContentFlowAxis.Vertical
+            ? snapshot.MinimumCrossAxisDip : ContentLayoutPolicy.MinimumReadableCardDip;
+        double contentHeight = snapshot.FlowAxis == ContentFlowAxis.HorizontalLoop
+            ? snapshot.MinimumCrossAxisDip : ContentLayoutPolicy.MinimumReadableCardDip;
+        return new(Math.Max(PosterFrameGeometryPolicy.MinimumWidthDip, contentWidth + horizontalChromeDip),
+            Math.Max(PosterFrameGeometryPolicy.MinimumExpandedHeightDip, contentHeight + verticalChromeDip));
     }
 
     // Transaction validation recomputes from authoritative content/presentation; a UI cannot
