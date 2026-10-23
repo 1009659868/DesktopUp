@@ -1,5 +1,30 @@
 # Windows 11 x64 独立预览安装包
 
+## 2026-10-23 唯一安装与迁移升级发布同步
+
+### 已验集成与精简发布
+
+- 用户确认原位升级与换路径迁移两组集中人工均通过，本批USER PASS / CLOSED；[验收记录](SINGLE_INSTALL_MIGRATION.md#2026-10-23-人工通过与收口)。复用42项定向，不重跑历史业务矩阵。
+- 功能 `impl/09-single-install-migration@f6a09c293ba8b6dc9391578b6593895f78500031` 已提交推送；非快进集成 `impl/develop@876293d220c97fe6f246d46b18f6c5ca59157531` 已推送。精简发布合并 `impl/main@ecb0c04834ef2238252bd89fa77b29837466c2dd` 已推送。发布树不含Docs/tests/tools/out；仅保留原有发布裁剪并移除Setup测试Checkpoint，不改变正常业务事务。README与包内用户说明同步为唯一安装/迁移规则；完整资料仍在develop，不反向合并发布删除。
+- 独立Release构建与合并提交前打包预检通过，再从干净main提交重建最终包；构建/NSIS 0警告0错误，统一文本498文件/26冻结迁移通过。最终507项源输入、810项载荷摘要核对，`IncludesUncommittedChanges=false`，不带用户配置、测试载荷或PDB。
+- 最终包：`out/releases/main-single-final01/DesktopUp-Preview-20261023.5-win-x64-Setup.exe`，67,384,679字节，SHA256 `538FC52E9D3011EA2554DA755F96228A4F041D5D76F4E8E9B46C8A5043B7B51D`。SHA256SUMS.txt文件SHA256 `0A125D1BB7D246BA6147AE4D76710E1690710E903D1C085C707ED854AFF414D6`。`package.json` Verified:false仍表示打包器不自行验收，不伪改该字段；本次证据为下述独立结果。
+
+### 限定安装验证与清理
+
+- 为避免修改日常安装，使用精简main源码和最终payload制作独立登记身份副本（测试编译仅改身份/入口名称与profile，不增加产品运行期开关）。实际安装、默认发现旧版、运行中拒绝、原位升级、同版G→C迁移、唯一固定登记、旧程序移除、Run目标更新、数据/未知文件保留及810项安装摘要通过。新旧App均实际启动/正常退出，error日志0、退出资源0。此为隔离身份验证，不冒充使用正式身份升级了日常安装。
+- 首次自动清理被测试脚本“Exit fixture normally first”进程守卫停止，**尚未调用卸载器**。保留原始`installed-validation.log`；后续只读核对已正常退出且无测试进程，再单独核对迁移终态并显式卸载，退出0，清理完成。未改产品、未强杀、未增加自动重试；不将该次脚本中断归因为历史卸载或数据库锁问题。最终限定结果为`out/releases/single-install-validation/installed-result.json`。
+- 日常配置、Run/StartupApproved、入口和登记快照前后相同，测试安装/固定登记/启动值/快捷方式/进程、C盘临时目标及测试profile均已清理。测试配置和样例逐项摘要归档：`out/single-install/review/closed-20261023-161718.zip`，SHA256 `A358C56186325300476D949D2B5607ECA237B4FE45B7632CE41E3BB6355B0767`。
+- 预提交包、重复构建与本轮测试夹具等4294项可重建文件已按精确路径清理，46项日志/生成源摘要归档：`out/releases/single-install-validation/build-evidence-20261023-161740.zip`，SHA256 `75FB2817B6568EE135A94230BB5239ED2C05629C24DC2FE06F2C80B30DF0B73F`。清理脚本末尾展示曾读错结果路径；归档和删除已完成，修正展示行后只读复核，未重复删除或覆盖原记录。最终包、必要证据和已验候选保留。
+
+### 更新现有预发布
+
+- 用户明确选择沿用 [preview-20261023.1](https://github.com/1009659868/DesktopUp/releases/tag/preview-20261023.1)，不新建tag。Release ID仍为421411390、Pre-release保持，标题及包内版本为20261023.5；标签名与包版本不同，以附件/标题为准。
+- 保全原发布与旧附件本地摘要后，暂存新附件；仅此标签按旧对象显式force-with-lease更新。旧对象 `cf50d1401b0c07c6d81c13742254cd59ce58830b` → 新对象 `e483cfcbc21e3d4eb3e9787feebe0f4ddac3d24e`，指向上述干净main提交ecb0c04。无分支强推。
+- 同一页面替换为安装包和SHA256SUMS.txt两项附件，服务端及实际下载流摘要均匹配。旧附件移出页面但本地仍可恢复；preview-20261021.5的标签、说明、附件核对不变。完整产品功能说明保留，新增唯一安装/原位与迁移升级，不加入开发测试或故障内容。
+- 过程与回执在`out/releases/single-install-validation/{before,stage-receipt,publish-receipt,package-audit}.json`。本轮最终回impl/develop，交接随文档提交推送。
+
+既有首次卸载24/Windows32持有者未知、历史卸载首因、升级41首因、P1/R6锁冲突及剩余成本继续保留；真实登录、其他权限/跨机环境不补PASS，真实热度未推进。
+
 ## 2026-10-23 覆盖升级收口、发布同步与现有预发布更新
 
 ### 验收、集成与源码绑定

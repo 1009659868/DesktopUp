@@ -1,6 +1,6 @@
 # DesktopUp V2 文档入口
 
-2026-10-23 当前：唯一安装与换路径迁移升级两组人工通过并收口；按授权执行功能提交推送、develop集成、精简main同步与打包验证，沿用preview-20261023.1更新标签及附件，最终回develop。[验收与授权](A_Project/40_Implementation/V3-04/SINGLE_INSTALL_MIGRATION.md#2026-10-23-人工通过与收口)。历史未定因继续保留，下方待验/不合并为阶段记录。
+2026-10-23 最新：唯一安装与迁移升级两组人工通过并收口，功能f6a09c2→develop876293d→精简main ecb0c04均推送，20261023.5打包/限定安装验证与清理完成，现有preview-20261023.1标签和页面已更新，下载摘要一致，已回develop。[最终交接](A_Project/40_Implementation/V3-04/HANDOFF.md)。卸载首因/锁冲突及成本继续保留；下方待验/不合并为阶段记录。
 
 2026-10-23 当前开发：`impl/09-single-install-migration`，补齐同用户唯一安装/固定卸载登记，支持原位升级及更换路径迁移。先计划后实现，待集中人工，不提交/推送/合并；[本批实施与验收](A_Project/40_Implementation/V3-04/SINGLE_INSTALL_MIGRATION.md)。保留日常数据和安全边界，旧任务“另选路径可并行安装”属于历史策略。
 

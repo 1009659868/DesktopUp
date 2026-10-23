@@ -1,6 +1,6 @@
 # DesktopUp V2 当前执行入口
 
-2026-10-23 当前：唯一安装与迁移升级两组USER PASS / CLOSED，按授权执行功能提交推送→develop非快进集成→精简main同步与打包验证→更新现有preview-20261023.1→返回develop；[收口与携带项](../A_Project/40_Implementation/V3-04/SINGLE_INSTALL_MIGRATION.md#2026-10-23-人工通过与收口)。卸载首因和锁冲突继续未定，不推进真实热度。下方禁止合并及待验均为阶段历史。
+2026-10-23 最新：唯一安装与迁移升级USER PASS / CLOSED，功能f6a09c2、集成876293d、精简main ecb0c04已推送；20261023.5限定打包/安装验证及清理完成，现有preview-20261023.1源码和附件更新、下载摘要通过，已回develop；[最终交接](../A_Project/40_Implementation/V3-04/HANDOFF.md)。卸载首因和锁冲突继续未定，不推进真实热度。下方禁止合并及待验均为阶段历史。
 
 2026-10-23 当前：从 develop@e0f3a1b 派生 `impl/09-single-install-migration`。A 同用户唯一安装但可更换路径 → B 程序迁移与配置/收纳隔离、固定登记及自启动/卸载一致 → C [实施与集中验收](../A_Project/40_Implementation/V3-04/SINGLE_INSTALL_MIGRATION.md)。原位与换路径共用事务，历史多登记保守停止；不提交/推送/合并，不改发布，真实热度 HOLD。下方允许并行安装为旧规则。
 

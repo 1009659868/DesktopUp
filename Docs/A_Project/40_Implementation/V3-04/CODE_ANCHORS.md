@@ -2,7 +2,7 @@
 
 ## 2026-10-23 唯一安装与迁移升级
 
-两组集中人工USER PASS / CLOSED；本次授权开发/发布同步，结果统一记录于HANDOFF及发布交付，不将历史未定因事项销项。
+两组集中人工USER PASS / CLOSED；功能f6a09c2→develop876293d→精简main ecb0c04已推送，preview-20261023.1准确绑定20261023.5包源码及附件，已回develop。发布只裁剪测试Checkpoint等既有非产品入口；证据统一见HANDOFF及发布交付，历史未定因不销项。
 
 - `DesktopUp.Setup/InstallationIdentity.cs`：枚举固定/历史登记后验证唯一身份，Run 值只按已知原命令切换，不改 StartupApproved。
 - `InstallationMetadata.cs`：固定 DesktopUp 卸载身份、历史键兼容、快捷方式及用户安装事务目录。
