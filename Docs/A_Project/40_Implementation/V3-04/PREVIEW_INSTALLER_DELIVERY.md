@@ -1,5 +1,28 @@
 # Windows 11 x64 独立预览安装包
 
+## 2026-10-23 两项海报修复与新预发布
+
+### 集成与发布绑定
+
+- 已验功能 `impl/poster-create-enter@52529a1`、开发集成 `508d7ec` 均推送。精简 main 非快进合入该集成点，冲突仅开发文档/测试保留删除及 README 人工协调；相对前版只改变 README、`ControlCenterWindow.Editing.cs`、`ContentFrameMinimumPolicy.cs`。普通业务源码与已验修复相同，冻结迁移、循环滚动与发布裁剪不改。
+- 干净 `impl/main@71600786c7068345db265affc7723b64c3430ec2` 制作 `20261023.1`，`IncludesUncommittedChanges=false`；该提交与新附注标签 `preview-20261023.1` 已推送。标签对象 `f073e5093aa8c571bbad6fff7d8c02fee91c3d46`。不移动旧标签，不将新包挂在旧源码下。
+- [GitHub Pre-release](https://github.com/1009659868/DesktopUp/releases/tag/preview-20261023.1)，Release ID `421411390`，发布于北京时间 2026-10-23 11:10:10。附件为安装包和 SHA256SUMS.txt；服务端摘要与实际下载流摘要均相同。旧版 `preview-20261021.5` 标签、说明及两项附件核对未变。发布说明包含完整功能介绍及两项新增改进，不包含开发测试说明。
+- 本地包：`out/releases/main-poster-fixes-final01/DesktopUp-Preview-20261023.1-win-x64-Setup.exe`，67,341,106 字节，SHA256 `6285A0713D8179444A7FFECB7BECDD5629612339BFBAE4E12748C899EE8DB48A`；SHA256SUMS.txt 为 114 字节，文件本身 SHA256 `A81BA7BF9A9C890AD7BFF9D3DDDAFDAE046E10AC67B58D7BB6B2AA2555E75EA6`。Git 不提交二进制包，GitHub 发行附件按授权上传。
+
+### 精简验证与边界
+
+- main 独立 Release 预检及自包含打包均 0 警告/0 错误，文本门491文件/26项冻结迁移，500项输入逐项摘要一致；807项载荷（806项清单声明文件及清单自身），不含测试夹具、探针、调试符号或用户配置。
+- Windows PowerShell5.1 64位、本机高完整性：以自选中文空格目录和独立 profile 实际安装，关闭创建桌面快捷方式；806项安装文件摘要逐项一致。通过安装根目录启动器使用包内运行库，首次新schema26、basic-box默认、控制中心显示、无error日志；正常退出资源0。原安装卸载器的隔离执行副本直接执行普通卸载，实际执行退出0，程序清单/临时登记移除，配置与自建未知文件摘要保持。没有故障注入或产品自动重试。
+- 两次测试脚本问题保留：smoke01在安装后遇PS5.1 JSON数组嵌套，未启动产品；修正脚本后由原卸载器清理该自建安装。smoke02产品安装/运行/卸载全部完成，但汇总对单结果 `.Count` 判断不兼容。改为明确集合计数，并对已保存的执行、日志、源输入与前后快照只读复核，不再次安装。最终 `out/releases/poster-fixes-validation/package-audit.json` 为 PASS；不得将夹具问题归为产品故障，原始失败文件未丢弃。
+- 首次测试前状态与最终状态一致：Preview/V3配置、Run登记、DesktopUp桌面/开始菜单快捷方式及原安装登记均相同；无遗留DesktopUp进程。没有移动真实内容，不覆盖现有安装或已验候选。两项交互复用此前42项定向及集中人工USER PASS，不扩跑历史矩阵。
+- 此为本机限定发布验证，不替代普通权限GUI、真实登录自启、多DPI、跨机及长测。历史自然卸载首因、P1/R6锁冲突与剩余读取/观察成本继续保留，真实热度未实施。
+
+### 测试收尾
+
+- 确认登记卸载完成后，清理精确目录 `out/releases/poster-fixes-smoke01`、`poster-fixes-smoke02`、`poster-fixes-preflight01` 以及 `main-poster-fixes-final01/build`，共1125文件、550,119,670字节。检查绝对路径范围、重解析点、进程并逐项复核摘要后清理，没有清空out或修改其他候选。
+- 两次测试中的配置、日志、执行器、样例及原始失败证据归档至 `out/releases/poster-fixes-validation/closed-test-evidence.zip`，逐项归档流哈希核对通过；SHA256 `08A37EFE08DC513FCBC4B6FBF8976A31A03AB991438EBAC618FEAED92104AB05`。预检/重复build为可重建产物，保留日志与逐项manifest，不保留重复副本。最终安装包、payload、生成清单及构建证据保留。
+- `poster-fixes-validation/{cleanup-manifest,cleanup-result,package-audit}.json` 记录明细；`github-release-preview-20261023.1/{stage,publish,verify}-receipt.json` 记录远端资产与旧版保留核对。原smoke路径已归档，不作为仍存在的安装入口。最终返回 `impl/develop` 补交接并推送，不反向合并发布精简删除。
+
 ## 2026-10-21 即时取证集成与发布同步
 
 - 功能9b0f112已推送，非快进合入develop80d8d0b并推送。发布合并78e5ff7、README记录ed5146d已推送；最终返回develop补交接。main跟踪内容无Docs/tests/tools/out，开发资料与测试只在开发线；发布相对前版仅README、installer.nsi及uninstall-evidence.nsh变化。既有STARTUP_REVIEW裁剪保持，不改变普通业务。

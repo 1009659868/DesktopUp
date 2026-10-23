@@ -2,6 +2,7 @@
 
 ## 2026-10-23 新增海报默认确认
 
+- 发布绑定：功能 `52529a1` → 集成 `508d7ec` → 精简 main/tag `7160078` / `preview-20261023.1`，已推送发布；两项产品源码一致，回归与打包证据见[发布记录](PREVIEW_INSTALLER_DELIVERY.md#2026-10-23-两项海报修复与新预发布)。开发文档/测试不进入发布树。
 - `src/DesktopUp.Domain/ContentFrameMinimumPolicy.cs`：有内容主轴使用 48 DIP 可读内容加装饰，交叉轴仍完整容纳最大 Item，空海报保持 240；拖框/控制中心/提交沿既有共享入口。`ContentFrameResizeTests` 覆盖方向切换后的双向往返及同一约束，不改循环策略。
 - `src/DesktopUp.App/ControlCenterWindow.Editing.cs / ShowCatalogDialog`：仅 create 的 DefaultButton 为 Primary；名称非空校验和原目录命令复用不变，其他分支保留原默认按钮。[本批验证（USER PASS / CLOSED）](CONTROL_CENTER_USABILITY_DELIVERY.md#2026-10-23-新增海报回车确认)。
 
