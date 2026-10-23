@@ -92,6 +92,15 @@ try {
     & $pkgTools.DotNet publish src/DesktopUp.App/DesktopUp.App.csproj @pkgBuildOptions --no-build -c Release -p:Platform=x64 -p:PublishProfile=Preview-x64 -p:DesktopUpPreview=true -p:SelfContained=true -p:DebugType=none -p:DebugSymbols=false "-p:DesktopUpPreviewRuntimeVersion=$RuntimeVersion" "-p:Version=$($pkgSettings.version)-preview.$ReleaseId" "-p:FileVersion=$($pkgSettings.fileVersion)" "-p:OutputPath=$pkgBuildPath" "-p:PublishDir=$pkgPublishPath" 2>&1 |
         Tee-Object -FilePath (Join-Path $pkgEvidence 'publish.log') | Out-Host
     if ($LASTEXITCODE -ne 0) { throw 'Publish failed; partial evidence preserved.' }
+    # The short-lived setup helper uses the same self-contained runtime directory.
+    # Publish separately; copy only its four identity files, never overwrite app dependencies.
+    $pkgSetupPublish = $pkgOutput.Replace('\','/') + '/setup-build/'
+    & $pkgTools.DotNet publish src/DesktopUp.Setup/DesktopUp.Setup.csproj @pkgBuildOptions -c Release -p:Platform=x64 -p:SelfContained=true -p:DebugType=none -p:DebugSymbols=false "-p:DesktopUpPreviewRuntimeVersion=$RuntimeVersion" "-p:PublishDir=$pkgSetupPublish" 2>&1 |
+        Tee-Object -FilePath (Join-Path $pkgEvidence 'setup-helper.log') | Out-Host
+    if ($LASTEXITCODE -ne 0) { throw 'Setup helper publish failed.' }
+    foreach ($pkgHelperName in @('DesktopUp.Setup.exe','DesktopUp.Setup.dll','DesktopUp.Setup.deps.json','DesktopUp.Setup.runtimeconfig.json')) {
+        Copy-Item -LiteralPath (Join-Path $pkgSetupPublish $pkgHelperName) -Destination $pkgApp
+    }
     $pkgRuntime = Get-Content -LiteralPath (Join-Path $pkgApp 'DesktopUp.runtimeconfig.json') -Raw | ConvertFrom-Json
     $pkgFramework = @($pkgRuntime.runtimeOptions.includedFrameworks | Where-Object name -eq 'Microsoft.NETCore.App')
     if ($pkgFramework.Count -ne 1 -or $pkgFramework[0].version -cne $RuntimeVersion) { throw 'Unexpected self-contained .NET version.' }

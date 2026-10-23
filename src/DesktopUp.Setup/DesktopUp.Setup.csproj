@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <AssemblyName>DesktopUp.Setup</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Update="Microsoft.NETCore.App" RuntimeFrameworkVersion="$(DesktopUpPreviewRuntimeVersion)" Condition="'$(DesktopUpPreviewRuntimeVersion)' != ''" />
+  </ItemGroup>
+</Project>

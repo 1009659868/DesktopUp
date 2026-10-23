@@ -15,12 +15,18 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DesktopUp.Windows", "src\De
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DesktopUp.ContentWorker", "src\DesktopUp.ContentWorker\DesktopUp.ContentWorker.csproj", "{C0D836B8-84D1-4C5B-A77B-9AF0D7F31006}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DesktopUp.Setup", "src\DesktopUp.Setup\DesktopUp.Setup.csproj", "{C0D836B8-84D1-4C5B-A77B-9AF0D7F31007}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
 		Release|x64 = Release|x64
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C0D836B8-84D1-4C5B-A77B-9AF0D7F31007}.Debug|x64.ActiveCfg = Debug|x64
+		{C0D836B8-84D1-4C5B-A77B-9AF0D7F31007}.Debug|x64.Build.0 = Debug|x64
+		{C0D836B8-84D1-4C5B-A77B-9AF0D7F31007}.Release|x64.ActiveCfg = Release|x64
+		{C0D836B8-84D1-4C5B-A77B-9AF0D7F31007}.Release|x64.Build.0 = Release|x64
 		{C0D836B8-84D1-4C5B-A77B-9AF0D7F31001}.Debug|x64.ActiveCfg = Debug|x64
 		{C0D836B8-84D1-4C5B-A77B-9AF0D7F31001}.Debug|x64.Build.0 = Debug|x64
 		{C0D836B8-84D1-4C5B-A77B-9AF0D7F31001}.Release|x64.ActiveCfg = Release|x64
