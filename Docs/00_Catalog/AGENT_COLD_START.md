@@ -2,9 +2,9 @@
 
 2026-10-25最新增量：用户认可实时热度更新效果，整体内容尺度改为0.4～1.8、标准1×图标区域48 DIP（热度关闭/标准疏密），热度独立叠加。偏好mapping v2，合法旧v1大值兼容限幅读取；SQLite仍schema27。最新候选与定向/原生/UI结果以[V3-06唯一记录](../A_Project/40_Implementation/V3-06/REAL_ACTIVITY_DELIVERY.md)为准，旧宏观上限3不再作为当前需求。
 
-## 当前基线与接续入口（2026-10-24）
+## 当前基线与接续入口（2026-10-26）
 
-当前工作分支 **`impl/06-real-activity`** 由本地`impl/develop@d922669`派生，状态为 **IN PROGRESS：生产链路与配置接线已写入，隔离生产链与UI保存/取消/重启验证已通过，待集中人工体验**。唯一热度C记录：[V3-06开发准备与实施](../A_Project/40_Implementation/V3-06/REAL_ACTIVITY_DELIVERY.md)。22份先前文档改动保留，新增源码/测试/文档尚未提交/推送；此前fetch连接重置未完成，已有远端跟踪引用一致不代表刚刚复核了远端实时状态。
+当前工作分支 **`impl/06-real-activity`** 由`impl/develop@d922669`派生，源码检查点`8156b73`已于2026-10-26推送同名远端并设置上游，用户明确要求**不合入develop**；main也未修改。状态为 **IN PROGRESS：实时更新已有正面体验反馈，新尺度与空间组合仍待集中人工确认**。唯一热度C记录：[V3-06开发准备与实施](../A_Project/40_Implementation/V3-06/REAL_ACTIVITY_DELIVERY.md)。既有文档及新增源码/测试已保存；此前直连失败，本轮使用系统已启用代理成功核对远端，不能继续按旧“未提交”接手。
 
 当前已有schema27增量聚合、`ContentActivityConsumer`/`ContentActivityProducer`、连续尺寸/空间限幅、会话安全发布及海报级配置。两批定向共211项通过，原生探针与UI保存/取消/重启通过，集中人工体验仍待完成，不能写成USER PASS或已收口。真实内容首版闭环、基础架构 R1～R8/P1～P3、连续尺寸/悬停及单安装/迁移升级已有实现和限定验收记录，不再从架构 R1 或 DEMO 阶段重做。[近期核对记录](../A_Project/40_Implementation/PROJECT_STATUS_AUDIT_2026-10-24.md)保留开工前审计，最新热度进度以C记录为准。
 
@@ -15,7 +15,7 @@
 ```text
 请在用户实际提供的 DesktopUp 仓库完成必要冷启动：先查 Git、适用 agent 指令与当前改动，再按本页阅读顺序核对源码和任务记录，不只复述历史摘要。
 项目是 .NET 10 / WinUI 3 的 Windows 多海报桌面收纳工具。开发集成线 impl/develop 的开工基线 d922669，发布线 impl/main 为 ecb0c04；以现场 refs 为准。热度工作树新增SQLite schema27，001～026迁移保持冻结，版本域相互独立；不据源码版本推定用户真实库已迁移。
-当前工作分支 impl/06-real-activity，基于本地 impl/develop@d922669；既有文档和新增源码/测试保留未提交。详读 Docs/A_Project/40_Implementation/V3-06/REAL_ACTIVITY_DELIVERY.md；当前IN PROGRESS，统计consumer/producer、连续热度/空间/配置接线已有，两批定向共211项通过，隔离生产链与UI保存/取消/重启验证已通过，待集中人工体验，不重复创建分支、不提前记USER PASS。此前远端fetch连接重置，后续不可只凭旧tracking引用宣称同步。
+当前工作分支 impl/06-real-activity，基于 impl/develop@d922669；源码检查点8156b73已推送同名远端，上游已设置，本次用户明确不合入develop，不修改main。详读 Docs/A_Project/40_Implementation/V3-06/REAL_ACTIVITY_DELIVERY.md；当前IN PROGRESS，统计consumer/producer、连续热度/空间/配置、实时更新和桌面标准尺度已实现并定向验证。实时更新获正面反馈，新尺度与空间组合仍待体验，不重复创建分支、不提前记整体USER PASS。接手时核对实际Git状态；本地out证据和体验配置不随拉取获得。
 真实文件/文件夹/实体快捷方式、原生拖入拖出/跨海报、文件操作、映射观察、归还/卸载保全已形成受支持本地范围的闭环；架构 R1～R8/P1～P3 已收口。连续尺寸、局部悬停及同用户唯一安装/原位和换路径升级已有交付。首次零海报，普通启动无海报开中心、有海报后台；新建基础收纳，不注入测试卡片。普通空白点击穿透按 DEC-043 撤销，单一有效卡片归属按 DEC-047 保持。
 V3-06已批准30天加入/14天最近打开双保护、7～28天连续半衰期和10%下限；同ContentItemId转移保留、重加不按路径继承；低样本平滑默认0.5～3/无数据1.5/K=20并可按海报配置。整体尺度与逐Item热度独立，手动整体尺度受阻回弹；热度可扩框/受阻限幅，用户resize重算上限，下限保留可读底线，同一目标不撑回。2026-10-25用户改为成功打开后实时入队：统计提交即通知相关海报，单计算合并最新请求，无交互时异步更新，不等收展/鼠标离开；交互保护释放后自动续作。最新验证和候选见C记录，旧收展探针不证明实时更新通过。不把旧Quantize五档、测试注入或局部测试等同于完成，不重开已批准规则或基础架构。
 保留用户改动/配置/真实文件/失败证据；历史卸载、升级41、P1/R6锁冲突与未验环境仍携带。依据当前任务授权行动，不把旧“本轮不合并/可清理”或历史PID当永久指令。若只有理解任务，报告后等待；有明确开发任务则在授权范围连续完成。
@@ -62,7 +62,7 @@ A定目标与验收，B定边界，C记实现/证据。历史时间线仅解释�
 
 共六个应用/运行时工程，加独立 Setup，当前七个源码 csproj。详细依赖见[src/README](../../src/README.md)；当前可用路径见[代码锚点](../A_Project/40_Implementation/V3-04/CODE_ANCHORS.md#2026-10-24-当前源码与热度接入锚点)。旧设计类名/旧路径不保证仍存在。
 
-核心链路：卡片打开 → `ContentActionService` → Worker/提供方交接 → `ContentOpenContract.Complete`判断可信成功 → `SqliteContentOpenJournal.Complete`原子落事实/排队 → `ContentActivityConsumer`/`SqliteContentActivityStore`有界聚合 → `ContentActivityProducer`/`ContentActivityPolicy`生成连续提案 → `RefreshActivityAtSafePoint`经共用空间规划和`ContentHeatSession`保护发布 → Canvas/原生命中同代。链路代码已有，App端到端验证仍进行中；`tools/review`隔离模拟确认必须标明，不能冒充真实打开提供方验收。
+核心链路：卡片打开 → `ContentActionService` → Worker/提供方交接 → `ContentOpenContract.Complete`判断可信成功 → `SqliteContentOpenJournal.Complete`原子落事实/排队 → `ContentActivityConsumer`/`SqliteContentActivityStore`有界聚合 → 提交后通知/`RequestActivityRefresh`合并请求 → `ContentActivityProducer`/`ContentActivityPolicy`生成连续提案 → `RefreshActivityAtSafePoint`经共用空间规划和`ContentHeatSession`保护发布 → Canvas/原生命中同代。隔离生产链已验证；`tools/review`模拟提供方确认必须标明，不能冒充真实打开提供方验收。
 
 ## 4. 不可误读的约束与携带项
 
@@ -70,7 +70,7 @@ A定目标与验收，B定边界，C记实现/证据。历史时间线仅解释�
 - DEC-043：普通留白由海报接收输入；不重开已撤销的空白点击穿透。隐藏释放输入、框外不拦截、前台遮挡约束继续有效。
 - DEC-047：一个对象一个有效卡片归属；有效拖放表达意图，不恢复额外确认/共享修复。失效引用确认、身份/账本/防覆盖和Windows冲突保护保持。
 - 文件夹、文件、快捷方式本体按[首版支持矩阵](../A_Project/40_Implementation/V3-05/CONTENT_COMPATIBILITY.md)执行，不搬快捷方式目标，不推定云/网络/虚拟Shell均已支持。测试只用授权隔离样例，未知文件/配置不自动删除。
-- 真实热度不能破坏手动构图/手工尺寸/顺位图钉，不能刚打开就跳动。按[2026-10-24确认的Item§10.4](../A_Project/10_Requirements/CONTENT_ITEM_ACTIVITY_LAYOUT_V1.md#104-独立倍率合成与空间上限2026-10-24用户确认未实施)共用空间规划：手动整体尺度受阻回弹，热度尝试必要扩框、受阻按现框限幅，外框变化重算热度显示上限，下限沿内容/热度设置与可读底线。目标/统计不被限幅覆盖；用户缩框时同一目标不能立刻把外框撑回。代码已接、原生仍在验；旧标题“未实施”属于需求基线锚点。保留现有自动/手动及动态缩放设置，不按模板重置；不恢复已撤刷新菜单或临时奖励。
+- 真实热度不能破坏手动构图/手工尺寸/顺位图钉；成功打开后实时入队，无交互保护时立即异步更新，交互期间合并等待、释放后续作，不恢复旧“等下次展开”。按[2026-10-24确认的Item§10.4](../A_Project/10_Requirements/CONTENT_ITEM_ACTIVITY_LAYOUT_V1.md#104-独立倍率合成与空间上限2026-10-24用户确认未实施)共用空间规划：手动整体尺度受阻回弹，热度尝试必要扩框、受阻按现框限幅，外框变化重算热度显示上限，下限沿内容/热度设置与可读底线。目标/统计不被限幅覆盖；用户缩框时同一目标不能立刻把外框撑回。定向及原生结果见C记录，组合人工仍待确认；旧标题“未实施”属于需求基线锚点。保留现有自动/手动及动态缩放设置，不按模板重置；不恢复已撤刷新菜单或临时奖励。
 - [架构§30.4](../A_Project/40_Implementation/Architecture/FOUNDATION_REMAINDER_PLAN.md#304-剩余成本和未定因项的处理计划)、[已知问题](../A_Project/40_Implementation/V3-04/KNOWN_ISSUES.md)继续携带成本、锁冲突及卸载/升级未定因。联合长稳、真实登录、自选多机/DPI等未验，不以新的局部PASS补齐。
 - 构造卡片、完整动态模板/热更新、在线AI和在线更新器仍属后续；已有内置模块、参数配方或Setup不代表这些平台已完成。
 

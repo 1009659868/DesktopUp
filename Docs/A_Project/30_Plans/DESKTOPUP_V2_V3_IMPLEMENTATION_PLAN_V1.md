@@ -1,5 +1,7 @@
 # DesktopUp V2 V3 制作计划 V1
 
+2026-10-26检查点：`impl/06-real-activity@8156b73`已推送同名远端，未合入develop或更新main。整体尺度0.4～1.8/标准图标48 DIP与实时热度已有实现和验证，集中人工未收口；本轮仅保存当前状态，后续按[细化工作流](V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md)接续。同步详情及旧记录适用范围见[V3-06实施记录](../40_Implementation/V3-06/REAL_ACTIVITY_DELIVERY.md)。
+
 2026-10-25增量：V3-06成功打开后的刷新节奏改为实时入队，无交互时立即异步更新，交互释放后自动续作；相关定向及原生验证已通过，待集中体验。详见[V3-06实施记录](../40_Implementation/V3-06/REAL_ACTIVITY_DELIVERY.md)，取代旧“下次展开才更新”，不改变既定公式、空间规则或阶段范围。
 
 ## 当前阶段（2026-10-24核对）

@@ -1,5 +1,7 @@
 # DesktopUp V2 当前执行入口
 
+2026-10-26最新检查点：`impl/06-real-activity@8156b73`已按用户授权推送同名远端，未合入develop，未改main。当前仍待尺度与空间组合体验，后续沿本功能分支继续，未开始联合长测或模板平台；[同步与交接详情](../A_Project/40_Implementation/V3-06/REAL_ACTIVITY_DELIVERY.md)。下方旧“未提交/远端未确认”不覆盖本条。
+
 2026-10-25体验追加：整体内容尺度0.4～1.8、标准1×图标区域48 DIP，热度独立叠加；最新尺度候选与验证以[V3-06记录](../A_Project/40_Implementation/V3-06/REAL_ACTIVITY_DELIVERY.md)为准。实时更新获正面体验反馈，尺度调整仍待用户体验；不据此记整个V3-06已收口。
 
 2026-10-25增量：V3-06已按用户要求改为成功打开后实时入队刷新；交互期间合并等待、释放后自动更新，不必收展或移开鼠标。相关定向/原生验证通过，候选和待体验范围见[唯一实施记录](../A_Project/40_Implementation/V3-06/REAL_ACTIVITY_DELIVERY.md)。分支仍为`impl/06-real-activity`，未提交/合并/推送；下方旧收展节奏已被取代。
