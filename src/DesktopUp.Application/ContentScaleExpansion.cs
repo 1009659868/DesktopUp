@@ -4,7 +4,9 @@ namespace DesktopUp.Application;
 
 // A single presentation+geometry transaction; the original presentation command is validated
 // unchanged, then the same bounded spatial plan is recomputed from authoritative rows.
-public sealed record ContentScaleExpansionProof(SpatialSnapshot Initial, PosterDefinition Presentation);
+public sealed record ContentScaleExpansionProof(SpatialSnapshot Initial, PosterDefinition Presentation,
+    [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    ContentHeatProposal? Heat = null);
 
 public static class ContentScaleExpansion
 {
@@ -13,14 +15,35 @@ public static class ContentScaleExpansion
         (PosterPresentationPolicy.Resolve(after).Parameters.Preferences ?? new()).Scale;
 
     public static ControlCenterGeometryPlan? Plan(PosterDefinition current, PosterDefinition presentation,
-        SpatialSnapshot scene, out string? error)
+        SpatialSnapshot scene, out string? error, ContentHeatProposal? heat = null)
     {
         error = null;
         var source = scene.Posters.FirstOrDefault(p => p.PosterId == current.PosterId);
-        if (source is null || !ContentFrameMinimumPolicy.TryForPoster(presentation, out var minimum, out error))
+        var metricsPoster = presentation;
+        if (heat is not null)
+        {
+            if (!ContentLayoutPolicy.TryRead(presentation.ContentLayoutJson, presentation.PosterId, out var author, out error)) return null;
+            try
+            {
+                var viewport = new ContentLayoutViewport(10000, 10000).WithPresentation(PosterPresentationPolicy.Resolve(presentation).Parameters);
+                var target = ContentHeatSizing.Project(author!, heat, viewport, false);
+                metricsPoster = presentation with { ContentLayoutJson = ContentLayoutPolicy.Serialize(target) };
+            }
+            catch (ArgumentException failure) { error = failure.Message; return null; }
+        }
+        if (source is null || !ContentFrameMinimumPolicy.TryForPoster(metricsPoster, out var minimum, out error))
         { error ??= "海报空间尚未就绪。"; return null; }
+        return PlanToMinimum(current, presentation, scene, minimum!, out error);
+    }
+
+    internal static ControlCenterGeometryPlan? PlanToMinimum(PosterDefinition current, PosterDefinition presentation,
+        SpatialSnapshot scene, ContentFrameMinimum minimum, out string? error)
+    {
+        error = null;
+        var source = scene.Posters.FirstOrDefault(p => p.PosterId == current.PosterId);
+        if (source is null) { error = "海报空间尚未就绪。"; return null; }
         var env = scene.Environment;
-        var min = minimum!.Pixels(env.DpiX, env.DpiY);
+        var min = minimum.Pixels(env.DpiX, env.DpiY);
         int width = Math.Max(source.Bounds.Width, min.Width);
         int height = Math.Max(current.IsCollapsed ? source.ExpandedHeight : source.Bounds.Height, min.Height);
         if (width == source.Bounds.Width && height == (current.IsCollapsed ? source.ExpandedHeight : source.Bounds.Height))
@@ -45,7 +68,7 @@ public static class ContentScaleExpansion
         var presentation = StateCommandPolicy.Prepare(command with
             { ContentScaleExpansion = null, DesiredState = proof.Presentation }, state);
         if (presentation.Rejection is not null) return presentation;
-        var plan = Plan(current, proof.Presentation, proof.Initial, out var error);
+        var plan = Plan(current, proof.Presentation, proof.Initial, out var error, proof.Heat);
         if (plan is null || plan.Desired != command.DesiredState)
             return StateMutationPlan.Reject(StateCommandStatus.InsufficientSpace, error ?? "Scale expansion proof does not match the command.");
         return presentation with { Updates = [plan.Desired] };

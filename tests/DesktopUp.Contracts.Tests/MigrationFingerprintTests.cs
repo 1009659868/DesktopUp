@@ -41,7 +41,7 @@ public sealed class MigrationFingerprintTests
     [Fact]
     public void AllResourcesMatchTheirPinsAndKnownReleasedIdentities()
     {
-        var migrations = SqliteMigrationCatalog.Load(26).Take(25).ToArray();
+        var migrations = SqliteMigrationCatalog.Load(27).Take(25).ToArray();
         foreach (var migration in migrations)
         {
             Assert.DoesNotContain("\r", migration.Sql);
@@ -93,7 +93,7 @@ public sealed class MigrationFingerprintTests
         using var fixture = new Fixture();
         using var store = new SqliteStateStore(fixture.Paths);
         Assert.True(store.Initialize().Succeeded);
-        Assert.Equal(SqliteMigrationCatalog.Load(26).Select(m => m.Checksum),
+        Assert.Equal(SqliteMigrationCatalog.Load(27).Select(m => m.Checksum),
             fixture.Query("SELECT checksum_sha256 FROM schema_migrations ORDER BY version;"));
     }
 
@@ -116,7 +116,7 @@ public sealed class MigrationFingerprintTests
     [Fact]
     public void MutatedResourceIsNotNormalizedIntoAcceptedBytes()
     {
-        var migration = SqliteMigrationCatalog.Load(26)[0];
+        var migration = SqliteMigrationCatalog.Load(27)[0];
         byte[] valid = Encoding.UTF8.GetBytes(migration.Sql);
         byte[][] invalid =
         [
@@ -140,7 +140,7 @@ public sealed class MigrationFingerprintTests
         {
             using var connection = new SqliteConnection($"Data Source={Database};Pooling=False");
             connection.Open();
-            foreach (var migration in SqliteMigrationCatalog.Load(26).Take(version))
+            foreach (var migration in SqliteMigrationCatalog.Load(27).Take(version))
             {
                 using var command = connection.CreateCommand();
                 command.CommandText = migration.Sql;

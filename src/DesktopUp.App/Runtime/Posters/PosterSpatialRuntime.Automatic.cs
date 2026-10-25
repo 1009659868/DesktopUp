@@ -68,7 +68,10 @@ internal sealed partial class PosterSpatialRuntime
             CancelPosture("automatic-invalidated", specific: run);
     }
 
-    private StateCommandResult CommitPosture(PosterStateCommand command) => command.Source == StateCommandSource.System
+    private StateCommandResult CommitPosture(PosterStateCommand command) => command.ContentHeatExpansion is not null
+        ? commands is IContentHeatExpansionCommitter heat ? heat.ExecuteContentHeatExpansion(command)
+            : Failure(command, "Activity expansion commit port is unavailable.")
+        : command.Source == StateCommandSource.System
         ? commands is IAutomaticPostureCommitter automatic ? automatic.ExecuteAutomaticPosture(command)
             : Failure(command, "Automatic posture commit port is unavailable.")
         : commands.Execute(command);

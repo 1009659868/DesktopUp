@@ -1,5 +1,19 @@
 # DesktopUp V2 当前执行入口
 
+2026-10-25体验追加：整体内容尺度0.4～1.8、标准1×图标区域48 DIP，热度独立叠加；最新尺度候选与验证以[V3-06记录](../A_Project/40_Implementation/V3-06/REAL_ACTIVITY_DELIVERY.md)为准。实时更新获正面体验反馈，尺度调整仍待用户体验；不据此记整个V3-06已收口。
+
+2026-10-25增量：V3-06已按用户要求改为成功打开后实时入队刷新；交互期间合并等待、释放后自动更新，不必收展或移开鼠标。相关定向/原生验证通过，候选和待体验范围见[唯一实施记录](../A_Project/40_Implementation/V3-06/REAL_ACTIVITY_DELIVERY.md)。分支仍为`impl/06-real-activity`，未提交/合并/推送；下方旧收展节奏已被取代。
+
+## 2026-10-24 当前接续：V3-06真实热度准备
+
+**当前为IN PROGRESS，已进入实现及验证。** 工作分支`impl/06-real-activity`由本地`impl/develop@d922669`派生，既有文档改动保留，新增代码与文档尚未提交/推送；此前fetch连接重置，不据旧tracking引用声称远端实时同步。热度唯一详细C入口为[开发准备与实施记录](../A_Project/40_Implementation/V3-06/REAL_ACTIVITY_DELIVERY.md)，后续沿此分支接续，不重建旧架构分支。
+
+同日用户决定已落实到规则及代码：[A独立倍率/空间上限](../A_Project/10_Requirements/CONTENT_ITEM_ACTIVITY_LAYOUT_V1.md#104-独立倍率合成与空间上限2026-10-24用户确认未实施) → [B统一空间规划与防反馈](../A_Project/20_Architecture/CONTENT_LAYOUT_OPERATION_SPACE_REVIEW_V1.md#2026-10-24-增量合同热度限幅与统一空间规划未实施) → 工作流§7.1～7.2。已批准30天加入/14天最近打开双保护、7～28天连续半衰期及10%下限；同ContentItemId转移保留统计、重加不按路径冒领；海报级低样本平滑可配置，默认0.5～3/无数据1.5/K=20。手动整体尺度受阻回弹；热度可扩框、受阻限幅；用户resize重新改变上限，下限沿内容/热度设置与可读底线。旧标题中的“未实施”保留为需求基线锚点，不代表当前代码状态。
+
+开发基线`impl/develop@d922669`，发布线`impl/main@ecb0c04`；此前文档审计见[本轮记录](../A_Project/40_Implementation/PROJECT_STATUS_AUDIT_2026-10-24.md)，最新热度实现以C记录为准，冷启动使用[更新后的提示词](AGENT_COLD_START.md)。当前工作树已新增schema27增量统计迁移、consumer/producer、连续热度与空间限幅、会话安全时点及控制中心配置接线。两批定向共211项通过，隔离生产链与UI保存/取消/重启验证已通过，待集中人工体验，未作USER PASS或完成结论。下一步完成集中原生验证与本批体验，保持A[活跃度需求](../A_Project/10_Requirements/CONTENT_ITEM_ACTIVITY_LAYOUT_V1.md) → B[src职责](../../src/README.md)/空间合同 → C[工作流§7.1～7.2](../A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md#71-2026-10-21-真实热度准备未实施)的追踪；不重开已收口架构R1。历史卸载/锁冲突、成本和未验环境不销项。
+
+以下为历史交付/执行时间线，不用旧“当前分支”“本轮不推进”覆盖本节；历史授权不转为新的提交/发布或数据操作授权。
+
 2026-10-23 最新：唯一安装与迁移升级USER PASS / CLOSED，功能f6a09c2、集成876293d、精简main ecb0c04已推送；20261023.5限定打包/安装验证及清理完成，现有preview-20261023.1源码和附件更新、下载摘要通过，已回develop；[最终交接](../A_Project/40_Implementation/V3-04/HANDOFF.md)。卸载首因和锁冲突继续未定，不推进真实热度。下方禁止合并及待验均为阶段历史。
 
 2026-10-23 当前：从 develop@e0f3a1b 派生 `impl/09-single-install-migration`。A 同用户唯一安装但可更换路径 → B 程序迁移与配置/收纳隔离、固定登记及自启动/卸载一致 → C [实施与集中验收](../A_Project/40_Implementation/V3-04/SINGLE_INSTALL_MIGRATION.md)。原位与换路径共用事务，历史多登记保守停止；不提交/推送/合并，不改发布，真实热度 HOLD。下方允许并行安装为旧规则。

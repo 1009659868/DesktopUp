@@ -1,10 +1,14 @@
 # DesktopUp V2 V3 技术路线与总体架构 V1
 
-状态：`DESIGN BASELINE — GENERAL CONTENT / MULTI-POSTER`；2026-10-09：SQLite14、portable5、content3、presentation6为不同版本域。[V3-05-05／06](../40_Implementation/V3-05/REAL_CONTENT_DISPLAY_AND_ACTIONS.md)已接独立有界Shell辅助进程、真实图标/默认打开/定位及同库打开收据/事实；05-04引用已获用户确认，本轮自动通过、人工待验。不做物理搬移/删除或真实热度消费。便携v5不含真实关系，有绑定时禁止导出及替换导入；本机备份包含关系/收据。进程隔离不是权限沙箱，目标拓扑不等于所有提供方已实现。
+状态：`DESIGN BASELINE / CURRENT IMPLEMENTATION MAPPING 2026-10-24`。本页保留设计目标和阶段增量；当前实现以[src职责地图](../../../src/README.md)、[架构收口](../40_Implementation/Architecture/FOUNDATION_REMAINDER_PLAN.md#31-本轮基础架构正式收口与当前架构图2026-10-20)及[近期核对](../40_Implementation/PROJECT_STATUS_AUDIT_2026-10-24.md)为入口。R1～R8/P1～P3已验收集成，SQLite当前26，portable/content/presentation是独立版本域。真实打开、受管搬运/跨海报/归还、文件动作和映射观察已在受支持本地范围实现；真实热度聚合/评分生产链仍未接入。
+
+当前组织为六个应用/运行时工程＋独立`DesktopUp.Setup`安装事务辅助程序；后者无业务工程引用，不读取配置库，不等于在线更新器。内置Lamp/Rain模块不等于任意动态模板/AI平台。普通空白点击穿透已按DEC-043撤销，单一有效卡片归属按DEC-047取代旧共享方案；相关历史设计不能反向恢复已撤需求。进程隔离不是权限沙箱，目标拓扑不代表所有提供方已实现。
+
+历史快照（2026-10-09）：SQLite14、portable5、content3、presentation6及真实图标/默认打开/定位首批交付，见[V3-05-05／06](../40_Implementation/V3-05/REAL_CONTENT_DISPLAY_AND_ACTIONS.md)。当时“未做物理搬移/删除、人工待验”只描述该批，不作为当前状态；便携导入导出边界继续按其专项合同判断，不由SQLite版本推断。
 
 建立日期：2026-09-03
 
-适用分支：`impl/poster-redesign-V3`
+适用分支：`impl/develop`及其功能分支；`impl/main`为已确认成果的精简发布源码，旧`impl/poster-redesign-V3`是历史来源。
 
 ## 0. 本次扩展合同
 
@@ -22,7 +26,7 @@
 
 本文把 DesktopUp V2 的冻结需求投影为一套可实施、可替换、可验证的 Windows 原生架构。V3 不继承旧 Qt、WebView、QPainter、Qt Quick、旧 WorkerW 探针或 Axiom 原型代码，而以 DeskBox 的成熟实现为主要工程参考。
 
-“基于 DeskBox”表示允许直接借鉴窗口生命周期、WinUI 组织方式、文件收纳、Shell 交互、托盘、状态恢复和原生边界，也允许在许可证允许的条件下移植代码；但 DesktopUp 仍必须实现自身的海报层级、透明空白穿透、活跃度排版、主题热更新和 AI 变更控制。
+“基于 DeskBox”表示允许直接借鉴窗口生命周期、WinUI 组织方式、文件收纳、Shell 交互、托盘、状态恢复和原生边界，也允许在许可证允许的条件下移植代码；但 DesktopUp 仍须实现自身有效需求中的海报层级/输入归属、活跃度排版、主题热更新和 AI 变更控制。原透明空白点击穿透目标已被DEC-043取代，历史实验仍保留。
 
 ## 2. 输入与优先级
 

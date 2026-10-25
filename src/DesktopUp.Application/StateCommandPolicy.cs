@@ -14,6 +14,7 @@ internal static class StateCommandPolicy
         if (current is null) return Missing();
         if (current.PlacementPending && command.Kind is PosterStateCommandKind.Move or PosterStateCommandKind.Resize or PosterStateCommandKind.SetCollapsed)
             return StateMutationPlan.Reject(StateCommandStatus.PermissionDenied, "Poster is waiting for placement; geometry and posture cannot change yet.");
+        if (command.ContentHeatExpansion is not null) return ContentHeatExpansion.Prepare(command, state);
         if (command.ContentScaleExpansion is not null) return ContentScaleExpansion.Prepare(command, state);
         if (command.ControlCenterGeometry is not null) return ControlCenterSpatial.Prepare(command, state);
         if (command.Kind == PosterStateCommandKind.SetAutoPosture)

@@ -88,7 +88,7 @@ public static class SpatialGestureCommitPolicy
         int minHeight = Math.Min(env.WorkArea.Height, Math.Max(1, (int)Math.Round(240 * env.DpiY / 96d)));
         if (command.Kind == PosterStateCommandKind.Resize)
         {
-            if (!ContentFrameMinimumPolicy.TryForPoster(current, out var minimum, out var error)) return error;
+            if (!ContentFrameMinimumPolicy.TryForPoster(current, out var minimum, out var error, heatLowerBound: true)) return error;
             (minWidth, minHeight) = minimum!.Pixels(env.DpiX, env.DpiY);
             if (gesture.Final.Width < minWidth || gesture.Final.Height < minHeight)
                 return "Active resize cannot clip the largest complete content item.";

@@ -455,10 +455,19 @@ public static class PosterPresentationPolicy
     private static PosterContentPreferences ReadPreferences(JsonElement node)
     {
         Members(node, "mappingVersion", "scale", "spacing");
-        if (!node.TryGetProperty("mappingVersion", out var version) || !version.TryGetInt32(out int v) || v != 1 ||
+        if (!node.TryGetProperty("mappingVersion", out var version) || !version.TryGetInt32(out int v) || v is not (1 or 2) ||
             !node.TryGetProperty("scale", out _) || !node.TryGetProperty("spacing", out _))
             throw new ArgumentException("Unknown or incomplete preference mapping.");
-        return new(Number(node, "scale", 1), Number(node, "spacing", 1), v);
+        double scale = Number(node, "scale", 1), spacing = Number(node, "spacing", 1);
+        // Recognized v1 values above the new ceiling remain readable. Normalize in memory;
+        // the saved raw document is untouched until the user's next normal settings commit.
+        if (v == 1)
+        {
+            if (scale is < .4 or > 3 || spacing is < .5 or > 1.5)
+                throw new ArgumentException("Invalid legacy content preferences.");
+            scale = Math.Min(scale, PosterContentPreferencePolicy.MaximumScale);
+        }
+        return new(scale, spacing);
     }
     private static void Unique(JsonElement node)
     {

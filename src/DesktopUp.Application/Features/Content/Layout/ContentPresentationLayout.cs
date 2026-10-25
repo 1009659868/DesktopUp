@@ -48,6 +48,7 @@ public sealed class ContentPresentationLayout
         bool geometryChanged = HasFault || !ReferenceEquals(solvedDocument, document) ||
             Viewport?.WidthDip != viewport.WidthDip || Viewport?.HeightDip != viewport.HeightDip ||
             Viewport?.Scale != viewport.Scale || Viewport?.Spacing != viewport.Spacing ||
+            Viewport?.BaseMetricsScale != viewport.BaseMetricsScale ||
             Viewport?.ThemeMetricsVersion != viewport.ThemeMetricsVersion;
         viewport = viewport with { Generation = checked(++generation) };
         ContentLayoutSnapshot next;

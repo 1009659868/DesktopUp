@@ -1,5 +1,9 @@
 # DesktopUp V2 文档入口
 
+## 当前入口（2026-10-24核对）
+
+从[冷启动提示词](00_Catalog/AGENT_COLD_START.md)及[ACTIVE_PATH](00_Catalog/ACTIVE_PATH.md)进入。[近期状态核对](A_Project/40_Implementation/PROJECT_STATUS_AUDIT_2026-10-24.md)集中说明最近功能、代码依据、文档修正和下一里程碑：架构/真实内容首版/安装升级已有交付，下一步是V3-06真实热度设计准备，统计与评分尚未实施；当前数据库26。验收范围仍查各任务C记录，不以文档更新补PASS。以下为历史时间线，不沿用旧工作分支或旧“下一步”。
+
 2026-10-23 最新：唯一安装与迁移升级两组人工通过并收口，功能f6a09c2→develop876293d→精简main ecb0c04均推送，20261023.5打包/限定安装验证与清理完成，现有preview-20261023.1标签和页面已更新，下载摘要一致，已回develop。[最终交接](A_Project/40_Implementation/V3-04/HANDOFF.md)。卸载首因/锁冲突及成本继续保留；下方待验/不合并为阶段记录。
 
 2026-10-23 当前开发：`impl/09-single-install-migration`，补齐同用户唯一安装/固定卸载登记，支持原位升级及更换路径迁移。先计划后实现，待集中人工，不提交/推送/合并；[本批实施与验收](A_Project/40_Implementation/V3-04/SINGLE_INSTALL_MIGRATION.md)。保留日常数据和安全边界，旧任务“另选路径可并行安装”属于历史策略。

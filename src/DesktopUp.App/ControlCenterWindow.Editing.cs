@@ -66,7 +66,7 @@ public sealed partial class ControlCenterWindow
         _styleCancel.Click += (_, _) => { _editor.Cancel(); RenderEditing(); };
         AutomationProperties.SetAutomationId(_geometryApply, "ApplyGeometry");
         AutomationProperties.SetAutomationId(_styleApply, "ApplyPresentation");
-        Closed += (_, _) => { _editingClosed = true; _catalogDialog?.Hide(); _editor.Close(); };
+        Closed += (_, _) => { _editingClosed = true; _catalogDialog?.Hide(); _activityDialog?.Hide(); _editor.Close(); };
     }
 
     private StackPanel Section(string title, bool collapsed = false)
@@ -90,14 +90,14 @@ public sealed partial class ControlCenterWindow
     private void CaptureGeometry()
     {
         if (_renderingEditor || _geometryFields.Count != 4) return;
-        if (_lampColorFlyout is not null || _settings.ProtectsInteraction || IsContentFieldDraftActive || _view?.SelectedPosterId is { } id && DesktopInteractionConflicts(id))
+        if (_lampColorFlyout is not null || _settings.ProtectsInteraction || IsContentFieldDraftActive || _activityDialog is not null || _view?.SelectedPosterId is { } id && DesktopInteractionConflicts(id))
         { _geometryStatus.Text = "请先完成或取消当前海报操作；原草稿已保留。"; return; }
         _editor.EditGeometry(new(_geometryFields["X"].Text, _geometryFields["Y"].Text, _geometryFields["Width"].Text, _geometryFields["Height"].Text));
     }
     private void CaptureStyle()
     {
         if (_renderingEditor || _styleFields.Count != 10 || _editor.Presentation is not { } draft) return;
-        if (_lampColorFlyout is not null || _settings.ProtectsInteraction || IsContentFieldDraftActive || _view?.SelectedPosterId is { } id && DesktopInteractionConflicts(id))
+        if (_lampColorFlyout is not null || _settings.ProtectsInteraction || IsContentFieldDraftActive || _activityDialog is not null || _view?.SelectedPosterId is { } id && DesktopInteractionConflicts(id))
         { _styleStatus.Text = "请先完成或取消当前海报操作；原草稿已保留。"; return; }
         double Number(string key) => double.TryParse(_styleFields[key].Text, NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint,
             CultureInfo.InvariantCulture, out double n) && double.IsFinite(n) ? n : double.NaN;
@@ -142,7 +142,7 @@ public sealed partial class ControlCenterWindow
                 Set(_styleFields, "Background", t.Background); Set(_styleFields, "Foreground", t.Foreground); Set(_styleFields, "Accent", t.Accent);
             }
             bool movable = target && _editor.HasActualGeometry && _editor.LatestCommitted?.CanMove == true && _editor.LatestCommitted.Poster.IsVisible;
-            bool otherDraft = _lampColorFlyout is not null || _settings.ProtectsInteraction || IsContentFieldDraftActive || _editor.PosterId is { } targetId && DesktopInteractionConflicts(targetId);
+            bool otherDraft = _lampColorFlyout is not null || _settings.ProtectsInteraction || IsContentFieldDraftActive || _activityDialog is not null || _editor.PosterId is { } targetId && DesktopInteractionConflicts(targetId);
             foreach (var (key, field) in _geometryFields) field.IsEnabled = geometry && !pending && !otherDraft && movable &&
                 (key is "X" or "Y" || _editor.LatestCommitted?.CanResize == true);
             foreach (var field in _styleFields.Values) field.IsEnabled = style && !pending && !otherDraft && _editor.Presentation is not null;
@@ -152,12 +152,12 @@ public sealed partial class ControlCenterWindow
                 ToolTipService.SetToolTip(_styleFields[key],"旧等格兼容值，只读保留。当前卡片由内容布局的跨度/基线控制；宏观疏密在外观页调整。");
             }
             _template.IsEnabled = style && !pending && !otherDraft && !_editor.IsDirty && _editor.Presentation is not null;
-            _geometryApply.IsEnabled = geometry && _editor.CanApply;
-            _styleApply.IsEnabled = style && _editor.CanApply;
+            _geometryApply.IsEnabled = geometry && _editor.CanApply && !otherDraft;
+            _styleApply.IsEnabled = style && _editor.CanApply && !otherDraft;
             _geometryCancel.IsEnabled = geometry && _editor.CanCancel;
             _styleCancel.IsEnabled = style && _editor.CanCancel;
-            CreatePosterButton.IsEnabled = !pending && _applyCatalog is not null;
-            ClonePosterButton.IsEnabled = RenamePosterButton.IsEnabled = target && !pending && _catalogDialog is null;
+            CreatePosterButton.IsEnabled = !pending && _applyCatalog is not null && _activityDialog is null;
+            ClonePosterButton.IsEnabled = RenamePosterButton.IsEnabled = target && !pending && _catalogDialog is null && _activityDialog is null;
             if (pending) LockButton.IsEnabled = CollapseButton.IsEnabled = VisibilityButton.IsEnabled = RemoveButton.IsEnabled = false;
             string? error = _editor.ValidationError ?? _editor.Error;
             _editNotice.IsOpen = error is not null || _editor.IsDirty || pending;
@@ -184,7 +184,7 @@ public sealed partial class ControlCenterWindow
     }
     private void CreatePoster_Click(object sender, RoutedEventArgs e)
     {
-        if (_portableBusy || _editingClosed) return;
+        if (_portableBusy || _editingClosed || _activityDialog is not null) return;
         var menu = new MenuFlyout();
         var normal = new MenuFlyoutItem { Text = "普通海报" };
         normal.Click += (_, _) => ShowCatalogDialog("create");
@@ -207,7 +207,7 @@ public sealed partial class ControlCenterWindow
     private void RenamePoster_Click(object sender, RoutedEventArgs e) => ShowCatalogDialog("rename");
     private async void ShowCatalogDialog(string kind)
     {
-        if (_catalogDialog is not null || _portableBusy || _editor.IsPending || _readCommitted?.Invoke() is not { } basis) return;
+        if (_catalogDialog is not null || _activityDialog is not null || _portableBusy || _editor.IsPending || _readCommitted?.Invoke() is not { } basis) return;
         if (_lampColorFlyout is not null || _settings.ProtectsInteraction || _editor.ProtectsInteraction || IsContentFieldDraftActive || _view?.SelectedPosterId is { } selectedId && DesktopInteractionConflicts(selectedId))
         { CommonSettingsNotice.Text = "请先完成或取消当前海报操作。"; return; }
         var target = _view?.SelectedPoster;

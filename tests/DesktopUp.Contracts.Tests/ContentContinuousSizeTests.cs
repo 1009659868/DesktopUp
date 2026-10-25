@@ -55,13 +55,13 @@ public sealed class ContentContinuousSizeTests
     {
         var document = ContentLayoutSamples.Equal("A", 2) with { FlowAxis = axis };
         var small = ContentLayoutSolver.Resolve(document, new(800, 800, Scale: .4));
-        var large = ContentLayoutSolver.Resolve(document, new(800, 800, Scale: 3));
+        var large = ContentLayoutSolver.Resolve(document, new(800, 800, Scale: 1.8));
         var smallFrame = ContentFrameMinimumPolicy.FromSnapshot(small, 34, 70);
         var largeFrame = ContentFrameMinimumPolicy.FromSnapshot(large, 34, 70);
-        Assert.Equal(axis == ContentFlowAxis.Vertical ? 96 : 240, smallFrame.WidthDip);
-        Assert.Equal(axis == ContentFlowAxis.Vertical ? 240 : 126.4, smallFrame.HeightDip, 8);
-        Assert.Equal(axis == ContentFlowAxis.Vertical ? 340 : 240, largeFrame.WidthDip);
-        Assert.Equal(axis == ContentFlowAxis.Vertical ? 240 : 376, largeFrame.HeightDip);
+        Assert.Equal(96, smallFrame.WidthDip);
+        Assert.Equal(axis == ContentFlowAxis.Vertical ? 118 : 126.4, smallFrame.HeightDip, 8);
+        Assert.Equal(axis == ContentFlowAxis.Vertical ? 224.8 : 96, largeFrame.WidthDip, 8);
+        Assert.Equal(axis == ContentFlowAxis.Vertical ? 118 : 260.8, largeFrame.HeightDip, 8);
         var minimumViewport = axis == ContentFlowAxis.Vertical
             ? new ContentLayoutViewport(small.MinimumCrossAxisDip, 800, Scale: .4)
             : new ContentLayoutViewport(800, small.MinimumCrossAxisDip, Scale: .4);

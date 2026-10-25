@@ -1,5 +1,11 @@
 # DesktopUp V2 — Poster Redesign V3
 
+## 当前入口（2026-10-24核对）
+
+开发基线`impl/develop@d922669`，发布基线`impl/main@ecb0c04`。近期内容闭环、架构整理、连续尺寸/悬停、唯一安装/迁移升级均已有实现与限定交付；SQLite当前26，六个应用/运行时工程加独立Setup。下一主线是 **V3-06真实热度设计准备，尚未实现统计/评分生产链路**。见[近期代码/文档核对及下一里程碑](Docs/A_Project/40_Implementation/PROJECT_STATUS_AUDIT_2026-10-24.md)和[agent冷启动入口](Docs/00_Catalog/AGENT_COLD_START.md)。本轮仅对齐文档，不新增产品验证结论。
+
+以下日期段落为交付时间线；旧分支、待验、并行安装及“本轮HOLD”只描述当时，不覆盖当前入口或构成新的执行授权。
+
 2026-10-23 最新：同用户唯一安装、原位升级与换路径迁移升级两组人工通过并收口。功能f6a09c2→develop876293d→精简main ecb0c04均已推送，20261023.5包构建/限定安装验证与清理完成；现有[preview-20261023.1](https://github.com/1009659868/DesktopUp/releases/tag/preview-20261023.1)已更新准确源码、安装包和SHA256SUMS.txt，下载摘要通过，未新增tag，最终回develop。[完整发布记录](Docs/A_Project/40_Implementation/V3-04/PREVIEW_INSTALLER_DELIVERY.md#2026-10-23-唯一安装与迁移升级发布同步)。配置、收纳、自启与安全保护保持，旧目录未知文件保留；历史卸载和锁冲突未定因继续携带，真实热度未推进。下方并行安装等为旧策略。
 
 2026-10-23 最新：原位覆盖升级已验集成并发布。功能eee8e56 → develop51419c4 → 精简main e3bb8c8均已推送，独立打包与实际升级/运行/卸载验证、测试清理完成。现有[preview-20261023.1](https://github.com/1009659868/DesktopUp/releases/tag/preview-20261023.1)更新为20261023.3安装包及准确源码，未新增标签；旧preview-20261021.5不变。最终保持impl/develop，[发布记录](Docs/A_Project/40_Implementation/V3-04/PREVIEW_INSTALLER_DELIVERY.md#2026-10-23-覆盖升级收口发布同步与现有预发布更新)保留指纹、验证范围与清理证据；历史未定因、剩余成本继续保留，暂不推进真实热度。

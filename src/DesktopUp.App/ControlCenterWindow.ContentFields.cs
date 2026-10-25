@@ -22,8 +22,9 @@ public sealed partial class ControlCenterWindow
     internal bool IsContentFieldDraftActive => _contentFieldDraft is not null;
     internal bool HasContentFieldDraft(string? id) => id is not null && _contentFieldDraft?.PosterId == id;
     internal bool OwnsContentFieldDraft(string id, long entityVersion, long documentVersion) =>
-        _contentFieldApplying && !OtherContentOwner && _contentFieldDraft is { } draft &&
-        draft.PosterId == id && draft.EntityVersion == entityVersion && draft.DocumentVersion == documentVersion;
+        (_contentFieldApplying && !OtherContentOwner && _contentFieldDraft is { } draft &&
+        draft.PosterId == id && draft.EntityVersion == entityVersion && draft.DocumentVersion == documentVersion) ||
+        OwnsActivityDraft(id, entityVersion, documentVersion);
     private void ClearContentFieldDraft()
     {
         bool hadDraft = _contentFieldDraft is not null;

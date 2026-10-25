@@ -128,7 +128,7 @@ public sealed class DirectoryMappingTests
         var checksum = f.Sql("SELECT checksum_sha256 FROM schema_migrations WHERE version=22");
         f.Sql(StorageSchemaFixture.Drop23 + "UPDATE state_head SET schema_version=22; PRAGMA user_version=22;");
         var result = f.Store.Initialize(); Assert.True(result.Succeeded, result.Error);
-        Assert.Equal(22, result.PreviousSchemaVersion); Assert.Equal(26, result.Head!.SchemaVersion);
+        Assert.Equal(22, result.PreviousSchemaVersion); Assert.Equal(27, result.Head!.SchemaVersion);
         Assert.NotNull(result.PreMigrationBackupFileName);
         Assert.Equal(checksum, f.Sql("SELECT checksum_sha256 FROM schema_migrations WHERE version=22"));
         Assert.Equal(before.ContentCatalog.PosterItems, f.State.ContentCatalog.PosterItems);

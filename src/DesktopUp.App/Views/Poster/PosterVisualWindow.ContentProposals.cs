@@ -22,12 +22,14 @@ internal sealed partial class PosterVisualWindow
         return true;
     }
     private ContentLayoutDocument EffectiveContentDocument => _contentSession.Effective(ContentDocument);
+    internal ContentHeatProposal? ActiveContentHeat => _contentSession.ContinuousHeat;
     private ContentLayoutDocument ProjectContentEdit(ContentLayoutDocument author) => _contentSession.ProjectEdit(author);
     private void ResetContentProposals(ContentLayoutDocument current) =>
         _contentSession.Reconcile(current, ContentViewportFor(_bounds));
 
     private void QueueContentProposalDrain()
     {
+        RefreshActivityAtSafePoint();
         if (_contentSession.SourceRefreshPending && _contentSession.CanRefreshSource) RefreshContentSource();
         if (_window is null || !_contentSession.TryQueue(_presentation.Parameters, out var work)) return;
         if (!_window.DispatcherQueue.TryEnqueue(() =>
@@ -41,7 +43,8 @@ internal sealed partial class PosterVisualWindow
     internal void NotifyCenterContentInteractionChanged()
     {
         // The center remains the owner of its draft; its explicit notification wakes only this session.
-        if (_contentSession.SetCenterDraft(spatial.HasCenterDraft(inputSession.PosterId)))
+        if (_contentSession.SetCenterDraft(spatial.HasCenterDraft(inputSession.PosterId)) ||
+            _activityRefreshRequested || _activityReady is not null || ActivityConfigurationChanged)
             QueueContentProposalDrain();
     }
     private void DrainContentProposals()

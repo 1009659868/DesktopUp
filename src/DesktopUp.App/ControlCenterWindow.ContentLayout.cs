@@ -56,7 +56,7 @@ public sealed partial class ControlCenterWindow
         });
     }
     private bool OtherContentOwner => _lampColorFlyout is not null || _settings.ProtectsInteraction || _editor.ProtectsInteraction || _portableBusy ||
-        _catalogDialog is not null || _removalDialog is not null;
+        _catalogDialog is not null || _removalDialog is not null || _activityDialog is not null;
     private void RenderContentLayout()
     {
         if (ContentLayoutPanel is null || _editingClosed) return;
@@ -65,6 +65,7 @@ public sealed partial class ControlCenterWindow
         {
             ReleaseContentActivation();
             ClearContentFieldDraft();
+            SetActivityNotice(null);
             _contentTargetId = id;
         }
         var view = _contentRuntime?.Invoke()?.ReadContentEditor(id);
@@ -73,6 +74,7 @@ public sealed partial class ControlCenterWindow
         {
             bool editable = view?.CanEdit == true && !OtherContentOwner;
             bool idle = editable && !IsContentFieldDraftActive;
+            ActivitySettingsButton.IsEnabled = idle;
             ContentLayoutStatus.Text = view is null ? "请先显示海报；内容布局不会强行恢复隐藏窗口。" :
                 $"{(view.Document.Mode == ContentLayoutMode.Manual ? "手动排布" : "自动排布")} · {view.Document.Placements.Count} 项";
             ContentModeSelector.IsEnabled = ContentFlowSelector.IsEnabled = ContentLoopSwitch.IsEnabled = idle;

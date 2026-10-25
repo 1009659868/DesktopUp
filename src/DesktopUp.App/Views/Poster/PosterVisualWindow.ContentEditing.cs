@@ -318,6 +318,7 @@ internal sealed partial class PosterVisualWindow
         }
         _contentLayout.Invalidate(); RefreshContentSurface();
         spatial.NotifyContentEditorChanged(PosterId);
+        NotifyActivitySafePoint();
         return result.Succeeded ? null : _contentNotice;
     }
     private string RefuseContentCommit(string message)

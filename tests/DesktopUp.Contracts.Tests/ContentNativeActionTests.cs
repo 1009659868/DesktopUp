@@ -133,7 +133,7 @@ public sealed class ContentNativeActionTests
         using var f=new F();Collect(f);var before=f.State;
         f.Sql(StorageSchemaFixture.Drop22+"UPDATE state_head SET schema_version=21; PRAGMA user_version=21;");
         var result=f.Store.Initialize();Assert.True(result.Succeeded,result.Error);Assert.Equal(21,result.PreviousSchemaVersion);
-        Assert.Equal(26,result.Head!.SchemaVersion);Assert.NotNull(result.PreMigrationBackupFileName);
+        Assert.Equal(27,result.Head!.SchemaVersion);Assert.NotNull(result.PreMigrationBackupFileName);
         Assert.Equal(before.ContentCatalog.PosterItems,f.State.ContentCatalog.PosterItems);
         Assert.Equal(before.ContentCatalog.Items,f.State.ContentCatalog.Items);
     }

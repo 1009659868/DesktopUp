@@ -2,11 +2,11 @@
 
 状态：`FROZEN PRODUCT DIRECTION — USER REVISION 2026-09-08`
 
-最后检查：2026-10-09（DEC-037限定Ctrl/Shift集合描边，真实Item无底板；自定义图标属于当前卡片，真实路径与其他海报不变。DEC-035共享来源修复保持）
+导航核对：2026-10-24。近期有效决定包括DEC-043撤销普通空白点击穿透、DEC-047单一有效卡片归属及直接原生拖放、DEC-048通用背景/界面收敛；连续尺寸和安装策略等后续决定查[统一决定入口](../A_Project/10_Requirements/REQUIREMENTS_RISKS_AND_OPEN_QUESTIONS.md)。DEC-035旧共享修复在被DEC-047取代的范围内不再是开发目标，历史证据保留。
 
 历史设计过程：先以[体验评审](../A_Project/20_Architecture/CONTENT_LAYOUT_EXPERIENCE_REVIEW_V1.md)核对基础手势和两重点风险；E1后用户采用DEC-023基础手势/退出A及DEC-022受限双轴。该评审已完成相应出口，不是当前重新评审指令。
 
-UI C及DEC-019/020两模式、直接操作、局部让位与有效编辑承接保持；后续决定查[决定索引](../A_Project/10_Requirements/REQUIREMENTS_RISKS_AND_OPEN_QUESTIONS.md)，DEC-034确认成功交接统计门，DEC-035确认统一修复共享内容且预先列出受影响海报。05-04已获用户确认；05-05／06真实图标/打开/定位/仅移除关联已接，当前人工待验。证据与当前入口查[ACTIVE_PATH](ACTIVE_PATH.md)，本索引不代替验收，也不扩展物理文件操作权限。
+UI C及DEC-019/020两模式、直接操作、局部让位与有效编辑承接保持；DEC-034的可信成功交接统计门继续有效。真实图标/打开与本地内容闭环不再停在05-05／06首批待验阶段；当前支持范围查[兼容矩阵](../A_Project/40_Implementation/V3-05/CONTENT_COMPATIBILITY.md)，进度查[ACTIVE_PATH](ACTIVE_PATH.md)和[近期核对](../A_Project/40_Implementation/PROJECT_STATUS_AUDIT_2026-10-24.md)。本索引只导航，不把现有实现当作全部目标验收通过，也不扩展文件操作权限。
 
 近期决定统一查[需求决定索引§3.1](../A_Project/10_Requirements/REQUIREMENTS_RISKS_AND_OPEN_QUESTIONS.md#31-已明确的近期优先级)：DEC-005～008原方向保持，后续操作/模块规则及DEC-032模板碰撞、DEC-033长测后置均以该处为准。本页只导航，不在需求索引重建待办或将设计认可算作生产验收。
 

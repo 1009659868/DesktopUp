@@ -1,5 +1,11 @@
 # DesktopUp V2 V3 模块分类与端口目录 V1
 
+## 当前实现映射（2026-10-24）
+
+本目录保留模块设计ID；当前已存在的工程/拥有者以[src职责](../../../src/README.md)及[代码锚点](../40_Implementation/V3-04/CODE_ANCHORS.md#2026-10-24-当前源码与热度接入锚点)为准。架构R1～R8/P1～P3已收口，生产用例位于Application/Features/Content，持久化位于Infrastructure/Persistence/{State,Content,Transfers}，窗口/会话/呈现分别在App/Views/Poster、Runtime/Posters、Presentation。SQLite当前26；另有无业务工程引用的Setup负责唯一安装与原位/迁移升级，不能映射为在线Updater已完成。
+
+真实本地内容、原生拖放、文件动作、映射/观察及归还已有首版交付；热度已有成功事实与提案会话，缺统计消费和评分生产链。详见[近期源码核对](../40_Implementation/PROJECT_STATUS_AUDIT_2026-10-24.md)。下方日期条目是当时映射，旧Outgoing生产接线、共享关系、同卷限定、尚无目录映射等已被后续交付取代；旧建议类名不保证是现存代码路径。内置模块不等于完整动态模板/AI平台。
+
 2026-10-13 DEC-048：通用`PosterSurfaceAppearance`（presentation v8）独立于模板私有bindings，`ScenePresentationAdapter`在背景层统一应用；无覆盖时保留原模板基线。`Base.Heading`控制介绍组件装配，实例显隐不能凭空挂载组件；控制中心按已装配组件生成折叠设置。副标题/大标题/数量三组件及自由装配器尚属后续，不冒称已实现。代码/证据见[§13](../40_Implementation/V3-05/DIRECT_TRANSFER_DELIVERY.md#13-05-14界面减法与通用背景2026-10-13)。
 
 2026-10-13 DEC-047已实施：`NativeShellDragSource`负责唯一OLE源与原生目标交接，`NativeDragDataObject`组合Shell载荷/私有图像格式，输入宿主仅交接捕获；`NativeShellExitJournal`（schema21）只记意图/观察结果，`ContentRelationRemoval`统一移除，`ContentSingleOwnerPolicy/SingleOwnerMigration`限制新增共享并备份迁移旧关系。既有Incoming账本保持，旧Outgoing仅限隔离旧执行器探针，不接生产鼠标。证据与人工门见[§11](../40_Implementation/V3-05/DIRECT_TRANSFER_DELIVERY.md#11-dec-047单一引用与直接原生拖放)。下段“待实现/共享关系”已被覆盖。
@@ -14,7 +20,7 @@
 
 历史设计起点（2026-09-23）：布局V2评审已由后续R1～R8推进；保留旧审查材料，不用当时“待批准/未实现”覆盖现在的源码/证据。
 
-状态：`DESIGN BASELINE / IMPLEMENTATION MAPPING ALIGNED 2026-10-10`。下方建议类名/未来进程不等于已有代码；生产/验证边界归C层。
+历史目录状态：`DESIGN BASELINE / IMPLEMENTATION MAPPING ALIGNED 2026-10-10`。下方建议类名/未来进程不等于已有代码；当前实现见页首，生产/验证边界归C层。
 
 建立日期：2026-09-03
 

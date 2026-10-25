@@ -52,7 +52,7 @@ internal sealed partial class PosterSpatialRuntime
         // original same-version/generation bounds. Peers remain their actual current geometry.
         scene = new(observed!.Environment, observed.Posters.Select(p => p.PosterId == command.PosterId
             ? p with { Bounds = Rect(baseline) } : p));
-        plan = ContentScaleExpansion.Plan(basis.Poster, command.DesiredState, scene, out error);
+        plan = ContentScaleExpansion.Plan(basis.Poster, command.DesiredState, scene, out error, target.ActiveContentHeat);
         return plan is not null;
     }
 
@@ -77,7 +77,7 @@ internal sealed partial class PosterSpatialRuntime
                         Posters = current!.Posters.ToDictionary(p => p.Poster.PosterId, p => p.EntityVersion),
                         CatalogVersion = current.CatalogVersion
                     },
-                    ContentScaleExpansion = new(scene!, command.DesiredState)
+                    ContentScaleExpansion = new(scene!, command.DesiredState, target.ActiveContentHeat)
                 };
             return commands.Execute(command);
         }

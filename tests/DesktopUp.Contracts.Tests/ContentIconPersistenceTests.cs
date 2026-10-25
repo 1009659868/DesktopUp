@@ -114,7 +114,7 @@ public sealed class ContentIconPersistenceTests
         var raw=f.Sql("SELECT body_json FROM content_poster_items"); var checks=f.Sql("SELECT group_concat(checksum_sha256) FROM schema_migrations ORDER BY version");
         var result=f.Store.Initialize(); Assert.True(result.Succeeded,result.Error);Assert.Equal(14,result.PreviousSchemaVersion);Assert.NotNull(result.PreMigrationBackupFileName);
         Assert.Equal(raw,f.Sql("SELECT body_json FROM content_poster_items"));Assert.Equal(checks,f.Sql("SELECT group_concat(checksum_sha256) FROM schema_migrations WHERE version<=14 ORDER BY version"));
-        Assert.Equal(26L,f.Sql("PRAGMA user_version")); Assert.Equal(0L,f.Sql("SELECT count(*) FROM content_icon_assets"));
+        Assert.Equal(27L,f.Sql("PRAGMA user_version")); Assert.Equal(0L,f.Sql("SELECT count(*) FROM content_icon_assets"));
     }
     [Fact] public void FailedMigrationKeepsVersionAndOriginalRelations()
     {

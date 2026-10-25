@@ -36,18 +36,19 @@ public static class ContentFrameMinimumPolicy
 
     // Transaction validation recomputes from authoritative content/presentation; a UI cannot
     // weaken this witness by passing its own minimum. Unknown raw layouts stay untouched.
-    public static bool TryForPoster(PosterDefinition poster, out ContentFrameMinimum? minimum, out string? error)
+    public static bool TryForPoster(PosterDefinition poster, out ContentFrameMinimum? minimum, out string? error,
+        bool heatLowerBound = false)
     {
         minimum = null;
         if (!ContentLayoutPolicy.TryRead(poster.ContentLayoutJson, poster.PosterId, out var doc, out error)) return false;
         try
         {
             var presentation = PosterPresentationPolicy.Resolve(poster);
-            var preferences = presentation.Parameters.Preferences ?? new();
             double chromeX = PosterPresentationPolicy.HorizontalPaddingDip * 2 + EditingBorderDip;
             double chromeY = presentation.Metrics.ReservedTopDip + presentation.Metrics.ReservedBottomDip + EditingBorderDip;
             var viewport = new ContentLayoutViewport(Math.Max(0, poster.WidthDip - chromeX),
-                Math.Max(0, poster.ExpandedHeightDip - chromeY), Scale: preferences.Scale, Spacing: preferences.Spacing);
+                Math.Max(0, poster.ExpandedHeightDip - chromeY)).WithPresentation(presentation.Parameters);
+            if (heatLowerBound) doc = ContentHeatSizing.LowerBound(doc!, viewport);
             minimum = FromSnapshot(ContentLayoutSolver.Resolve(doc!, viewport), chromeX, chromeY);
             return true;
         }
