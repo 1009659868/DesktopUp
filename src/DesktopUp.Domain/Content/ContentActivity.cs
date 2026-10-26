@@ -4,7 +4,12 @@ namespace DesktopUp.Domain;
 public sealed record ContentActivityOptions(double MinimumScale = .5, double MaximumScale = 3,
     double DefaultScale = 1.5, double SmoothingStrength = 20)
 {
+    public string ModelId { get; init; } = ContentModelProtocol.BuiltInId;
+    public int ModelVersion { get; init; } = 1;
+    public int ParameterVersion { get; init; } = 1;
+    public bool AllowTransitions { get; init; } = true;
     public string? Validate() =>
+        !ContentModelProtocol.ValidId(ModelId) || ModelVersion < 1 || ParameterVersion != 1 ||
         !double.IsFinite(MinimumScale) || !double.IsFinite(MaximumScale) ||
         !double.IsFinite(DefaultScale) || !double.IsFinite(SmoothingStrength) ||
         MinimumScale < .5 || MaximumScale > 3 || MinimumScale > DefaultScale ||

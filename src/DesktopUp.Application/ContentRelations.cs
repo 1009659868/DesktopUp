@@ -12,6 +12,31 @@ public sealed record ContentDetachPlan(Guid RequestId, ContentRelationWitness Re
 // again inside the existing SQLite transaction and remove the matching layout placement atomically.
 public static class ContentRelationPolicy
 {
+    // One immutable read round, not a cross-request cache. Validate the entire catalog once;
+    // indexes only accelerate resolving this poster's requested members in their original order.
+    public static IReadOnlyList<ContentRelationResolution?> ResolveMany(ContentCatalogSnapshot snapshot,
+        string posterId, IReadOnlyList<string> layoutItemIds)
+    {
+        var catalog = ContentCatalogPolicy.Freeze(snapshot);
+        var relations = catalog.PosterItems.Where(p => p.PosterId == posterId)
+            .ToDictionary(p => p.LayoutItemId, StringComparer.Ordinal);
+        var members = catalog.Memberships.ToDictionary(m => m.Id);
+        var items = catalog.Items.ToDictionary(i => i.Id);
+        var collections = catalog.Collections.ToDictionary(c => c.Id);
+        var binding = catalog.Bindings.SingleOrDefault(b => b.PosterId == posterId);
+        var result = new ContentRelationResolution?[layoutItemIds.Count];
+        for (int i = 0; i < result.Length; i++)
+        {
+            if (!relations.TryGetValue(layoutItemIds[i], out var relation)) continue;
+            var member = members[relation.MembershipId];
+            var item = items[member.ContentItemId];
+            var collection = collections[member.CollectionId];
+            result[i] = new(item, relation, new(relation.Id, posterId, relation.Version, member.Id, member.Version,
+                collection.Id, collection.Version, item.Id, item.Version, binding!.Version));
+        }
+        return Array.AsReadOnly(result);
+    }
+
     public static ContentRelationResolution? Resolve(ContentCatalogSnapshot snapshot, string posterId, string layoutItemId)
     {
         var catalog = ContentCatalogPolicy.Freeze(snapshot);

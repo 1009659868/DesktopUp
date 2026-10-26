@@ -14,7 +14,18 @@ public static class ContentHeatSizing
         var heat = proposal.Items.ToDictionary(x => x.ItemId, StringComparer.Ordinal);
         if (heat.Keys.Except(author.Placements.Select(x => x.ItemId), StringComparer.Ordinal).Any())
             throw new ContentLayoutException("Heat includes a removed content item.");
-        return Transform(author, viewport, p => heat.TryGetValue(p.ItemId, out var h) ? h : null, constrainToViewport);
+        var sized = Transform(author, viewport, p => heat.TryGetValue(p.ItemId, out var h) ? h : null, constrainToViewport);
+        // Growth computes size only. Explicit ordering/position authoring always wins over model motion.
+        if (!constrainToViewport || author.Mode == ContentLayoutMode.Manual ||
+            author.Placements.Any(p => p.PinnedIndex.HasValue) || !heat.Values.Any(h => h.Position is not null)) return sized;
+        var positioned = ContentLayoutPolicy.Freeze(sized with { Placements = sized.Placements.Select(p =>
+            !p.FixedPosition && heat.TryGetValue(p.ItemId, out var h) ? p with { ModelPosition = h.Position } : p).ToArray() });
+        try
+        {
+            if (!ContentLayoutSolver.Resolve(positioned, viewport).IsLayoutReadOnly) return positioned;
+        }
+        catch (ArgumentException) { /* Suggestions cannot displace protected authoring or defeat spatial safety. */ }
+        return sized;
     }
 
     public static ContentLayoutDocument LowerBound(ContentLayoutDocument author, ContentLayoutViewport viewport) =>
@@ -35,7 +46,7 @@ public static class ContentHeatSizing
         {
             if (readHeat(p) is not { } h) return p;
             var ordered = p with { Order = h.Rank };
-            if (!author.AllowHeatDrivenSize || p.ManualSize || p.FixedPosition) return ordered;
+            if (!h.AdjustSize || !author.AllowHeatDrivenSize || p.ManualSize || p.FixedPosition) return ordered;
             double width = Math.Max(ContentLayoutPolicy.MinimumReadableCardDip, p.ColumnSpan * pitch - gap);
             double height = Math.Max(ContentLayoutPolicy.MinimumReadableCardDip, p.RowSpan * pitch - gap);
             double lower = Math.Max(author.Activity.MinimumScale,

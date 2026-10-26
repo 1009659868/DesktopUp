@@ -1,11 +1,17 @@
 namespace DesktopUp.Domain;
 
-public sealed record ContentHeatItem(string ItemId, int Rank, double RelativeScale, string Reason = "injected");
+public sealed record ContentHeatItem(string ItemId, int Rank, double RelativeScale, string Reason = "injected")
+{
+    public bool AdjustSize { get; init; } = true;
+    public ContentModelPosition? Position { get; init; }
+}
 public sealed record ContentHeatProposal(string PosterId, long ItemSetVersion, long Version,
     IReadOnlyList<ContentHeatItem> Items, int MappingVersion = 1)
 {
     public long? AuthorDocumentVersion { get; init; }
     public int StrategyVersion { get; init; } = ContentActivityPolicy.Version;
+    public ContentModelDescriptor? Model { get; init; }
+    public ContentModelTransition? Transition { get; init; }
 }
 public sealed record ContentHeatResolution(ContentLayoutDocument Document, long ProposalVersion,
     IReadOnlyDictionary<string, int> Tiers);
@@ -74,12 +80,24 @@ public static class ContentLayoutProposals
     {
         if (proposal is null || string.IsNullOrWhiteSpace(proposal.PosterId) || proposal.ItemSetVersion < 1 || proposal.Version < 1 ||
             proposal.MappingVersion is not (MappingVersion or ContinuousMappingVersion) || proposal.Items is null || proposal.Items.Count > ContentLayoutPolicy.MaximumItems ||
-            proposal.MappingVersion == ContinuousMappingVersion && (proposal.AuthorDocumentVersion is null or < 1 || proposal.StrategyVersion != ContentActivityPolicy.Version))
+            proposal.MappingVersion == ContinuousMappingVersion && (proposal.AuthorDocumentVersion is null or < 1 ||
+                proposal.Model is null && proposal.StrategyVersion != ContentActivityPolicy.Version))
             throw new ContentLayoutException("Unsupported/invalid heat proposal.");
+        if (proposal.Model is { } model)
+        {
+            ContentModelProtocol.Validate(model);
+            if (proposal.MappingVersion != ContinuousMappingVersion) throw new ContentLayoutException("Models require continuous proposals.");
+        }
+        ContentModelProtocol.Validate(proposal.Transition);
+        if (proposal.Transition is not null && proposal.Model?.Capabilities.HasFlag(ContentModelCapabilities.Transition) != true)
+            throw new ContentLayoutException("Transition requires a declared model capability.");
         var ids = new HashSet<string>(StringComparer.Ordinal);
         foreach (var item in proposal.Items)
             if (item is null || string.IsNullOrWhiteSpace(item.ItemId) || !item.ItemId.StartsWith(proposal.PosterId + ":", StringComparison.Ordinal) ||
-                !ids.Add(item.ItemId) || item.Rank < 0 || !double.IsFinite(item.RelativeScale) || item.RelativeScale is < .5 or > 3 || item.Reason?.Length > 512)
+                !ids.Add(item.ItemId) || item.Rank < 0 || !double.IsFinite(item.RelativeScale) || item.RelativeScale is < .5 or > 3 || item.Reason?.Length > 512 ||
+                item.Position is { } position && (position.Column is < 0 or > 65535 || position.Row is < 0 or > 65535 ||
+                    proposal.Model?.Capabilities.HasFlag(ContentModelCapabilities.Position) != true) ||
+                proposal.Model is { } declared && item.AdjustSize && !declared.Capabilities.HasFlag(ContentModelCapabilities.Scaling))
                 throw new ContentLayoutException("Invalid heat item.");
     }
 }

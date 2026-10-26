@@ -36,6 +36,9 @@ public sealed record ContentAutomaticPlacementState(int Order, double ColumnSpan
 }
 public sealed record ContentPlacement(string ItemId, int Order, double ColumnSpan = 4, double RowSpan = 4)
 {
+    // Ephemeral model suggestion, never authored or persisted as a fixed position.
+    [JsonIgnore]
+    public ContentModelPosition? ModelPosition { get; init; }
     public long Version { get; init; } = 1;
     public string RegionId { get; init; } = "main";
     public int? Column { get; init; }
