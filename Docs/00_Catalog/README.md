@@ -1,5 +1,7 @@
 # DesktopUp V2 文档目录
 
+- [当前状态与下一步](CURRENT_STATUS.md)：唯一当前摘要，历史未定因继续携带。
+- [本次文档对齐记录](DOCUMENT_ALIGNMENT_20261026.md)
 - [Agent冷启动提示词](AGENT_COLD_START.md)：可复制启动入口、当前基线、阅读顺序及接手边界。
 - [需求索引](REQUIREMENTS_INDEX.md)
 - [当前执行入口](ACTIVE_PATH.md)

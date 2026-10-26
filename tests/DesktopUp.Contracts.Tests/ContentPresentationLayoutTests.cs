@@ -76,6 +76,33 @@ public sealed class ContentPresentationLayoutTests
     }
 
     [Fact]
+    public void TranslationReusesLocalRegionsButPublishesFreshAbsoluteHits()
+    {
+        var cache = new ContentInputGeometryCache();
+        var content = Prepare(new(), ContentLayoutSamples.Equal("p", 3), new(300, 200));
+        var bounds = new DesktopPixelRect(0, 0, 360, 300);
+        var context = new PosterInputGeometryContext(Monitor, new(0, 0, 360, 300, false, false, 1),
+            Theme, default, false, false, null, content, 28, 60, false, 0);
+        var first = cache.Resolve(1, bounds, context);
+        var moved = bounds with { X = 900, Y = 500 };
+        var next = cache.Resolve(2, moved, context);
+        Assert.Same(first.Regions, next.Regions);
+        Assert.Equal(first.ContentSnapshotGeneration, next.ContentSnapshotGeneration);
+        var router = new PosterInputRouter(); var key = new PosterInputSessionKey("p", 1);
+        router.Register(key);
+        Assert.True(router.Publish(key, bounds, first));
+        Assert.False(router.Publish(key, moved, first)); // stale revision may not relocate
+        Assert.True(router.Publish(key, moved, next));
+        Assert.False(router.IsCurrent(key, 1));
+        var item = next.Regions.First(r => r.Kind == PosterInputTargetKind.ContentItem);
+        Assert.NotNull(router.Resolve(moved.X + item.Bounds.X + 2, moved.Y + item.Bounds.Y + 2, [key]));
+        Assert.Null(router.Resolve(item.Bounds.X + 2, item.Bounds.Y + 2, [key]));
+        Assert.NotSame(next.Regions, cache.Resolve(3, moved, context with { Editing = true }).Regions);
+        Assert.NotSame(next.Regions, cache.Resolve(4, moved with { Width = 400 }, context).Regions);
+        Assert.NotSame(next.Regions, cache.Resolve(5, moved, context with { ReadOnly = true }).Regions);
+    }
+
+    [Fact]
     public void InvalidProjectionKeepsAuthorAndProducesReadOnlyEmptyFallback()
     {
         var owner = new ContentPresentationLayout();

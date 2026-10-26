@@ -35,7 +35,7 @@ internal sealed partial class PosterVisualWindow
                 var region = surface.Layout.Regions.First(r=>r.Kind==kind);
                 OnInput(_inputIsland,new(action,kind,region.Index,initial,vertical?delta:0,vertical?0:delta,surface.Layout.Revision) {Session=inputSession});
                 if(action==PosterInputEventKind.GesturePreview)
-                { Require(_pendingGestureFrame is not null,"Resize input was not scheduled."); OnGestureFrameTick(_gestureFrameTimer!,EventArgs.Empty); }
+                { Require(_pendingGestureFrame is not null,"Resize input was not scheduled."); spatial.CancelDragFrame(this); PresentPendingGestureFrame(); }
             }
             foreach(int delta in new[]{-10000,-20,-10000})
             {
@@ -54,7 +54,7 @@ internal sealed partial class PosterVisualWindow
                 observations.Add(new{delta,_bounds,minWidth,minHeight,read});
             }
             Send(PosterInputEventKind.GestureCancelled,0);
-            Require(_spatialGesture is null && !_gestureFrameScheduled && _pendingGestureFrame is null && _bounds==initial,
+            Require(_spatialGesture is null && _pendingGestureFrame is null && _bounds==initial,
                 "Cancel did not restore the committed physical frame.");
             Require(_stateRevision==before.Revision && _authoritativePoster!.ContentLayoutJson==before.StoredRaw && inputRouter.Capture==native,
                 "Cancel saved state or touched native capture.");

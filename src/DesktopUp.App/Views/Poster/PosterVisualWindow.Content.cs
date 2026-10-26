@@ -13,6 +13,10 @@ internal sealed partial class PosterVisualWindow
     private bool _contentReadOnly;
     private bool _contentParseReadOnly;
     private readonly ContentPresentationLayout _contentLayout = new();
+    private ContentPresentationFrame? _paintedContentFrame;
+    private bool CanReuseTranslatedContent(PreparedSpatialFrame frame) =>
+        _bounds.Width == frame.Bounds.Width && _bounds.Height == frame.Bounds.Height &&
+        ReferenceEquals(_paintedContentFrame, frame.Presentation);
     private double _contentScrollX;
     private ContentLayoutDocument ContentDocument
     {
@@ -107,6 +111,8 @@ internal sealed partial class PosterVisualWindow
             SelectedContentIds(), _contentSelection.ShowHighlight, IsEditing, _selectedContentItem,
             _geometry.IsLocked, _contentReadOnly, IsRealContent, _presentation, _inlineRenameItem,
             _contentParseReadOnly, _contentLayout.HasFault, ghost));
+        _paintedContentFrame = ReferenceEquals(_contentLayout.Snapshot, snapshot) && _contentLayout.Viewport == viewport
+            ? _contentLayout.Current : null;
         _inputIsland?.RefreshContentHover();
         _itemColumnCount = snapshot.Columns;
         string kind = !TestContentFeedbackEnabled || IsRealContent || doc.Placements.Count == 0 ? "ITEMS" : "DEMO ITEMS";

@@ -40,6 +40,11 @@ public partial class App
             var spatial = _spatialRuntime!;
             var window = spatial.BackdropWindowForProbe(id);
             await window.CaptureRenderIdentityForProbe();
+            if (_startupIntent.Arguments.Contains("--drag-presentation-probe"))
+            {
+                await window.VerifyDragPresentationForProbe(cancellation.Token);
+                return;
+            }
             if (_startupIntent.Arguments.Contains("--scale-expansion-probe"))
             {
                 await VerifyScaleExpansionForProbe(window, cancellation.Token);

@@ -86,13 +86,7 @@ internal sealed partial class PosterSpatialRuntime
             if (!TitleCurrent(run) || surfaces.Any(p => p is null) ||
                 !owner.CommitSpatialFrames(surfaces.Select(p => p!).ToArray(), DesktopFramePhase.SurfacePreparation))
                 throw new InvalidOperationException("Title R4 surface preparation failed.");
-            run.RenderingHandler = (_, _) =>
-            {
-                if (!ReferenceEquals(_title, run)) return;
-                try { AdvanceTitle(run); }
-                catch (Exception e) { log.Write("error", "spatial.title_render_failed", new { e.Message }); CancelTitle("render-exception"); }
-            };
-            CompositionTarget.Rendering += run.RenderingHandler;
+            RequestTitleFrame(run);
             timer.Tick += WatchTitle; timer.Start();
             log.Write("info", "spatial.title_started", new { press.OperationId, owner.PosterId, stage,
                 acceptedPrefix = paused?.AcceptedFrames, press.Capture.Id, press.Capture.Press.Frame,
@@ -128,6 +122,7 @@ internal sealed partial class PosterSpatialRuntime
             { CancelTitle("pointer-environment-changed"); return; }
             bool queued = run.Driver.Queue(new(run.Session.Intent.Token, input.Sequence, kind, input.Position,
                 input.CanInvoke, evidence?.Pointer));
+            if (queued) RequestTitleFrame(run);
             if (interrupted && queued)
             {
                 // Native capture has ended. All other session/generation/whole-group/read-set
@@ -168,6 +163,22 @@ internal sealed partial class PosterSpatialRuntime
             scene.Posters.All(p => run.Driver.Physical.TryGetValue(p.PosterId, out var bounds) && bounds == p.Bounds);
     }
 
+    private void RequestTitleFrame(TitleRun run) => RequestDragFrame(run.Owner, () =>
+    {
+        if (!ReferenceEquals(_title, run) || run.Finishing) return;
+        try
+        {
+            AdvanceTitle(run);
+            if (ReferenceEquals(_title, run) && !run.Finishing &&
+                (!run.Ready || run.Driver.HasPendingWork)) RequestTitleFrame(run);
+        }
+        catch (Exception e)
+        {
+            log.Write("error", "spatial.title_render_failed", new { e.Message });
+            CancelTitle("render-exception");
+        }
+    });
+
     private void AdvanceTitle(TitleRun run)
     {
         if (!TitleCurrent(run)) { CancelTitle("environment-capture-or-read-set-stale"); return; }
@@ -178,8 +189,6 @@ internal sealed partial class PosterSpatialRuntime
             run.Ready = true; run.LastProgressMs = run.Clock.Elapsed.TotalMilliseconds;
         }
         double now = run.Clock.Elapsed.TotalMilliseconds;
-        if (now - run.LastFrameMs < animationOptions.FrameIntervalMs) return;
-        run.LastFrameMs = now;
         int before = run.Driver.AcceptedFrames;
         run.Driver.Tick(() => TitleCurrent(run), frame =>
         {
@@ -223,7 +232,7 @@ internal sealed partial class PosterSpatialRuntime
     {
         run.Finishing = true;
         run.Timer.Stop(); run.Timer.Tick -= WatchTitle;
-        CompositionTarget.Rendering -= run.RenderingHandler;
+        CancelDragFrame(run.Owner);
         run.Clock.Stop(); run.Lease?.Dispose();
         run.Owner.CancelTitleCapture();
         if (result.Succeeded && result.Projection is { } projection)
@@ -267,13 +276,11 @@ internal sealed partial class PosterSpatialRuntime
         public IReadOnlyList<PosterVisualWindow> Participants { get; } = participants;
         public DispatcherQueueTimer Timer { get; } = timer;
         public TitleRuntimeLease? Lease { get; set; }
-        public EventHandler<object>? RenderingHandler { get; set; }
         public Stopwatch Clock { get; } = new();
         public bool Ready { get; set; }
         public bool Finishing { get; set; }
         public TitleNativeEndReason NativeEnd { get; set; }
         public int ReadyCallbacks { get; set; }
-        public double LastFrameMs { get; set; }
         public double LastProgressMs { get; set; }
     }
 }

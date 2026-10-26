@@ -1,20 +1,15 @@
 # DesktopUp V2 V3 技术路线与总体架构 V1
 
-状态：`DESIGN BASELINE — GENERAL CONTENT / MULTI-POSTER`；2026-10-09：SQLite14、portable5、content3、presentation6为不同版本域。[V3-05-05／06](../40_Implementation/V3-05/REAL_CONTENT_DISPLAY_AND_ACTIONS.md)已接独立有界Shell辅助进程、真实图标/默认打开/定位及同库打开收据/事实；05-04引用已获用户确认，本轮自动通过、人工待验。不做物理搬移/删除或真实热度消费。便携v5不含真实关系，有绑定时禁止导出及替换导入；本机备份包含关系/收据。进程隔离不是权限沙箱，目标拓扑不等于所有提供方已实现。
+状态：当前职责基线＋后续目标，2026-10-23对齐。实际进度见[CURRENT_STATUS](../../00_Catalog/CURRENT_STATUS.md)。下文涉及热度、完整模板、AI和独立在线更新器的设计不是已实现能力。
 
-建立日期：2026-09-03
+## 0. 当前实现与目标的分界
 
-适用分支：`impl/poster-redesign-V3`
-
-## 0. 本次扩展合同
-
-2026-09-16配置/恢复增量：沿用SQLite单权威和原命令投影，引入PortableProfileCodec/Planner、单事务导入提案、原子文件IO及显式离线StateBackupRecovery。schema9待安置与用户显隐意图分层，未安置不创建窗口/参与空间/运行自动收展；控制中心全局数据入口不依赖选中海报。整体架构不增加第二状态源或文件执行权；基础已接代码，生产整合/同包及人工门查[04-06交付](../40_Implementation/V3-04/PORTABLE_PROFILE_DELIVERY.md)，真实他机未实测。
-
-2026-09-15 UX增量（已接入）：[控制中心首版可用性](CONTROL_CENTER_USABILITY_DESIGN_V1.md)承接V2-DEC-005，撤掉桌面缩略预览、改真实海报定位，宏观偏好/热度结果/视口布局分层，常用参数临时预览＋自动提交。复用独立会话、单权威CAS、空间/R4/恢复；下文M08应用/取消为原阶段历史入口，现常用设置已由UX替换，不重写自动行为模型。具体实现及验证范围见[UX交付](../40_Implementation/V3-04/CONTROL_CENTER_USABILITY_DELIVERY.md)，不在架构层维护另一套验收状态。
-
-2026-09-11必要补项设计：[M08自动收展计划](../30_Plans/V3_04_M08_AUTO_POSTURE_PLAN.md)在现有会话之上补逐海报纯交互模型、被动指针观察和共享截止时间调度；复用空间运行器，不新增状态权威、窗口层或空间求解器。当前已实现Application纯模型及[设置/迁移](../40_Implementation/V3-04/M08_AUTO_POSTURE_SETTINGS.md)，以及[M08-03观察适配器](../40_Implementation/V3-04/M08_POINTER_OBSERVATION.md)；[M08-04](../40_Implementation/V3-04/M08_SHARED_SCHEDULER.md)已接共享观察/截止调度和受限System姿态提交，沿用committed revision/CAS与R4恢复。[M08-05](../40_Implementation/V3-04/M08_CONTROL_CENTER_SETTINGS.md)已接窗口内目标草稿、开关/秒数和应用/取消，仍复用同一实体CAS；[M08-06](../40_Implementation/V3-04/M08_LIFECYCLE_REGRESSION.md)已补共享系统通知与多原因暂停，复用原恢复并使旧计时/回调失效；实际鼠标视觉/增量资源门及最终自动环境复测仍待补，不把运行通道接通等同于完整产品可用。
-
-[通用内容与多海报合同](GENERAL_CONTENT_MULTI_POSTER_CONTRACT_V1.md) 规定实例/共享边界、数据关系、实体 CAS 与 global revision、生命周期、原生拖放、主题/热度/AI 目标和 DeskBox 来源；是本架构的细化。M01 目录与 M02 实体读集 CAS/集合投影已落地，见 [M02 实际合同](../40_Implementation/V3-04/TARGETED_COMMAND_PROJECTION_V2.md)；M03 多会话已落地，见[实际会话恢复合同](../40_Implementation/V3-04/M03_SESSION_RECOVERY.md)。验收范围与未认证环境以C层[交接](../40_Implementation/V3-04/HANDOFF.md)为准，不在架构正文维护滚动待办。下文模块是设计，不代表全部已有实现。旧 V3_CURRENT 图保持为单海报实现快照，不能视为多海报完成图。
+- 已验基础架构R1～R8、P1～P3已集成；真实内容、原生拖放、生命周期、单一归属及安装升级的职责见[源码导航](../../../src/README.md)和[最终复审](../40_Implementation/Architecture/FOUNDATION_REMAINDER_PLAN.md#30-p2p3收口后的最终架构与成本复审2026-10-20)。
+- 当前7个生产项目：App、Application、Domain、Infrastructure、Windows、ContentWorker，加后续安装事务Setup。原2026-10-20“六程序集”图是当时业务边界快照，未画后来新增的Setup。
+- 热度已有成功打开事实、作者布局与提案会话；尚缺增量聚合、正式评分／连续映射及生产发布时机。旧五档注入路径不是正式热度。
+- Lamp／Rain等是编译期内置模块；标题等组件可配置不等于运行时任意风格模板平台。AI和在线更新器尚未实现。
+- 普通点击穿透和共享内容引用已撤销；本文正文按现行合同修正，不要求为旧方案重新做P0探针。已有SQL迁移不可改写，文件安全与CAS保持。
+- 具体产品行为／验收状态分别归需求与C层；不在此累积每次候选数字。历史架构来源可由Git追溯；旧图保留其日期边界。
 
 ## 1. 目的
 
@@ -22,7 +17,7 @@
 
 本文把 DesktopUp V2 的冻结需求投影为一套可实施、可替换、可验证的 Windows 原生架构。V3 不继承旧 Qt、WebView、QPainter、Qt Quick、旧 WorkerW 探针或 Axiom 原型代码，而以 DeskBox 的成熟实现为主要工程参考。
 
-“基于 DeskBox”表示允许直接借鉴窗口生命周期、WinUI 组织方式、文件收纳、Shell 交互、托盘、状态恢复和原生边界，也允许在许可证允许的条件下移植代码；但 DesktopUp 仍必须实现自身的海报层级、透明空白穿透、活跃度排版、主题热更新和 AI 变更控制。
+“基于 DeskBox”表示允许直接借鉴窗口生命周期、WinUI 组织方式、文件收纳、Shell 交互、托盘、状态恢复和原生边界，也允许在许可证允许的条件下移植代码；但 DesktopUp 仍必须实现自身的海报层级、全区域输入／拖放与同代命中、活跃度排版、主题热更新和 AI 变更控制。
 
 ## 2. 输入与优先级
 
@@ -82,36 +77,14 @@ DeskBox 当前源码为 `GPL-3.0-only`。因此：
 
 ## 5. 物理进程拓扑
 
-```text
-DesktopUp.exe
-├─ AppBootstrap / SingleInstance / Lifecycle
-├─ TraySurface
-├─ ControlCenterWindow（按需创建/释放）
-├─ PosterSessionRegistry（PosterId → 0..N 个独立会话）
-│  └─ PosterSession / PosterWindowCluster
-│     ├─ PosterVisualWindow（独立主题/内容/布局）
-│     └─ PosterInputIslands（独立手势/geometry revision）
-├─ DesktopEnvironmentCoordinator（共享 Shell/显示 generation，逐实例恢复）
-├─ Application Services
-├─ Domain Models / Policies
-├─ StateStore + RecoveryJournal
-└─ Windows Adapters
-   ├─ ExplorerDesktopHost
-   ├─ ShellFileOperations
-   ├─ NativeDragDrop
-   ├─ Shortcut / Icon / Launch
-   └─ Display / DPI / Power / Session
+当前实际拓扑：
 
-按需辅助进程
-├─ DesktopUp.ShellProxy.exe   第三方 Shell 菜单、缩略图等故障隔离
-├─ DesktopUp.ThemeHost.exe    未来受限自定义主题代码宿主
-└─ DesktopUp.Updater.exe      更新时替换主程序
+- DesktopUp.App：WinUI海报、控制中心、托盘；Bootstrap组装应用用例与适配器；配置／观察生命周期唯一。
+- DesktopUp.ContentWorker：独立Shell／图标进程，承接打开、属性、Win菜单等固定协议；不访问配置数据库，不是权限沙箱。
+- DesktopUp.Setup：安装器调用的独立安装事务程序；识别固定／历史登记、安全替换及路径迁移、更新自有入口和自启目标。它不读取业务数据库或搬迁收纳文件。不是在线更新器。
+- NSIS安装／卸载入口调用相应维护流程；业务归还仍复用Application生命周期用例，不在安装脚本重写。
 
-可选原生模块
-└─ desktopup_native.dll       Rust/C ABI，承载 AOT 困难或必须原生隔离的能力
-```
-
-多海报先采用一个主进程＋按需辅助进程，不为每张复制一个完整 Runtime，也不拆出常驻 Control Center 大型 UI 进程。控制中心只是同一主进程中的按需窗口；关闭后不影响海报、托盘和核心服务。
+Domain／Application／Infrastructure／Windows是逻辑程序集，不是每海报一个进程。精确引用见[src/README](../../../src/README.md)。未来如需ThemeHost或在线Updater，另行设计授权／安全／回退，不提前建空进程或声称已具备。
 
 ## 6. 逻辑分层
 
@@ -150,13 +123,9 @@ DesktopUp.exe
 
 ### 7.1 PosterWindowCluster
 
-每张海报在业务上是一个有稳定 PosterId 的 Poster，在物理上由自己的 HWND cluster 组成；多个 cluster 由 registry 管理：
+每张海报由稳定PosterId关联会话、视觉窗口和原生输入宿主。当前PosterVisualWindow负责窗口桥接；PosterContentSession持有内容交互／提案边界，Presenter保留稳定卡片／暖位图；布局与命中使用同一代几何。
 
-- `PosterVisualWindow`：绘制背景、标题、卡片和底栏；常态不激活；
-- `PosterInputIslands`：只覆盖标题栏、更多/收起按钮、Item、滚动区和编辑缩放边；
-- `PosterWindowClusterCoordinator`：以同一个 geometry revision 原子提交视觉窗口和输入岛位置。
-
-这个扩展是 DesktopUp 相对 DeskBox 的必要差异。DeskBox 的文件格子本身占用完整交互矩形；DesktopUp 要求海报空白仍能框选桌面、显示桌面菜单并操作被覆盖的原生快捷方式，因此不能让一个全矩形 WinUI HWND 吞掉所有输入。
+按DEC-043，原生输入宿主覆盖**当前可见海报矩形**，同一HWND注册OLE接收。InputIslands等历史命名不再表示常态稀疏点击穿透。逻辑命中区仍区分标题、按钮、Item、空白框选和编辑手柄；不另建全桌面拖放捕获窗口。可见区域、隐藏／暂停／销毁与拖放会话一起受生命周期保护。
 
 ### 7.2 DesktopLayerAttachment
 
@@ -190,7 +159,7 @@ DesktopUp.exe
 
 ### 7.3 输入策略
 
-- 常态空白：先检查更低层海报的有效命中，再穿透至 Explorer；不得用 A 的透明整面吞掉 B 的输入；
+- 常态空白：属于本海报，左键按住拖动框选，右键为海报目录操作；不把输入交给被覆盖桌面。可见矩形支持全区域拖入，海报之间仍遵守空间不重叠规则；
 - desktop-pinned HWND 的普通鼠标消息使用 `MA_NOACTIVATE`，不能因为点击而进入普通窗口前方；
 - 标题栏：未锁定时拖动，锁定时不移动；
 - Item：单击选择/启动规则由需求矩阵决定；
@@ -240,7 +209,7 @@ DesktopUp.exe
 2. **Mapped Collection**：映射已有目录，建立映射不搬文件，后续文件操作明确影响该目录；
 3. **Managed Collection**：显式受管目录，用户明确操作后才复制/移动。
 
-按类型声明引用/打开/复制/移动/重命名/回收能力；Shell 虚拟对象不伪造物理路径。集合可被多个海报查看，显示顺序和主题按海报独立；文件事实共享更新。删除海报、解除映射与删除实体文件不同。详细数据关系见通用多海报合同。
+按类型声明引用/打开/复制/移动/重命名/回收能力；Shell 虚拟对象不伪造物理路径。同一有效对象仅允许一个可见海报引用；物理受管集合可能共用，不等于同一对象可在多张海报重复展示。跨海报转移沿单一归属与版本事务；删除海报、解除映射与删除实体文件不同。详细数据关系见通用多海报合同。
 
 ### 9.3 文件操作事务
 
@@ -252,7 +221,7 @@ DesktopUp.exe
 → 验证结果 → 更新 Item/状态 → 提交 journal
 ```
 
-取消、部分失败、来源改变、目标断开、跨盘复制/移动和应用崩溃都必须留下可恢复结果。未经用户确认不得覆盖、永久删除或清空桌面快捷方式。
+取消、部分失败、来源改变、目标断开、跨盘操作和崩溃必须保留可核对结果。普通拖入／出没有应用额外确认；Windows必要冲突／回收提示保留，禁止未授权覆盖、永久删除或清空桌面。Shell原生拖出由目标执行，应用观察后移除关系，不能再执行一次搬移。
 
 ### 9.4 Shell 能力
 
@@ -260,18 +229,20 @@ DesktopUp.exe
 - 跟随 Windows 的复制、移动、链接及修饰键语义；
 - 使用 IFileOperation 或等价系统机制显示进度与撤销能力；
 - 快捷方式解析/创建、在资源管理器中显示、属性、回收站和系统菜单通过独立端口提供；
-- 第三方 Shell 扩展和缩略图处理优先放到 ShellProxy，防止主进程崩溃。
+- 现有Shell／图标协议隔离在ContentWorker；只支持已声明能力，不把进程隔离当权限沙箱或全部扩展兼容证明。
 
 ## 10. Item 排版与活跃度
 
-2026-09-16的04-L实现增量：[布局地基设计](CONTENT_LAYOUT_FOUNDATION_V1.md)已落实为ContentLayoutDocument/Placement、纯ContentLayoutSolver及统一Snapshot；跨格生产编辑已接原视口/输入岛/R4和单revision事务，不新增宿主或主题专属几何。schema10在同一Poster聚合保存版本化ContentLayoutJson，PortableProfile v2携带跨格载荷且继续读v1；本地未知原文保留、便携未知必需版本拒绝。热度/主题只做有界提案，当前素材为DEMO/Null provider，不是实际算分或图片平台。当前[04-L](../30_Plans/V3_04_L_CONTENT_LAYOUT_PLAN.md)已完成L01～06代码与同包自动门、L07人工待验；代码入口见[当前锚点](../40_Implementation/V3-04/CODE_ANCHORS.md)。下面策略名仍是职责设计，不代表所有同名类均已存在；04-07/08延期不改变安全约束。
+当前ContentLayoutDocument／纯布局帧／PosterContentSession及同代Presenter已接真实内容，已验连续视口、手动让位、图钉、小数尺寸与增量呈现。成功打开经ContentActionService／IContentOpenJournal持久化；正式聚合／评分仍未实现。ContentHeatSession和Domain提案路径存在旧五档量化适配，真实热度接入时要替换生产映射并保留必要历史兼容，不得将其当作用户要求的连续热度。
+
+后续链路：事实 → Application幂等消费与协调 → Domain纯策略 → 版本化连续提案 → 会话安全时点 → Presenter／同代命中。具体待裁决和性能约束见[工作流§7.1](../30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md#71-2026-10-21-真实热度准备未实施)。以下策略名表示职责，不要求另建同名类。
 
 - `ActivityScoringPolicy` 根据需求公式计算分数，不直接操作 XAML；
 - `ItemLayoutPolicy` 接收 viewport、内容参数、固定项和排序结果，输出稳定布局快照；
 - WinUI 视图使用虚拟化集合控件或自定义 Layout，而不是为每次缩放销毁全部控件；
 - 列数变化、连续裁剪和滚动只改变布局快照，Item identity 和 pointer capture 不变；
 - 所有 Item 必须可达；零项、单项、多项、失效项和重复来源都有独立夹具；
-- 自动、锚定+自动、全手动三层模式共享同一模型，自动调整可撤销。
+- 热度自动（可含顺位图钉）与纯手动两模式共享同一模型；图钉不是第三模式，手工尺寸优先，自动热度不主动扩外框。
 
 ## 11. 主题与热更新
 
@@ -361,7 +332,7 @@ V3 吸收 DeskBox 的窗口原生消息、低频全局拓扑兜底、稳定签�
 
 ## 16. 技术依赖方向
 
-首批工程候选：
+历史技术候选（不等于当前已引用依赖；准确版本与工程方向以项目文件及src/README为准）：
 
 - .NET Windows Desktop，目标版本与 DeskBox 当前工具链对齐后锁定；
 - WinUI 3 / Windows App SDK；
@@ -384,7 +355,7 @@ V3 吸收 DeskBox 的窗口原生消息、低频全局拓扑兜底、稳定签�
 
 - 每项冻结需求至少映射到一个模块和一个计划阶段；
 - DeskBox 直接复用点有许可证和来源策略；
-- DesktopUp 特有的空白穿透有独立 P0 探针，不假设 WinUI 自动满足；
+- 可见海报全区域输入／OLE与同代命中有验证；不恢复已取消的普通点击穿透；
 - owner attach、无白条、Win+D、Explorer 重建和普通窗口层级在最小海报上先通过；
 - 文件移动前恢复 journal 和 dry-run 已存在；
 - 主题和 AI 不进入桌面层 P0 的关键路径。
