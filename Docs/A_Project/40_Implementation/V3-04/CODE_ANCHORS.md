@@ -1,5 +1,13 @@
 # V3-04 代码锚点
 
+## 2026-10-26 联合成本／模板组件首批
+
+Application/ContentRelations.ResolveMany同轮完整校验后构造临时索引，Layout/ContentActivityProducer一次批量解析；SessionFixture/JointModelCostFixture给出存储／模型／会话分段基线。Domain/TemplateHeadingComposition与TemplateRecipes为v2组件声明／验证，PosterPresentationParameters计算省略后的占位；TemplatePresentationRefreshPolicy区分装配与轻量更新。PosterVisualWindow.CreateMeta按角色装配，Content／TitleChrome以角色引用替代固定索引；ControlCenterWindow.ContentHeading按装配挂折叠参数，TemplateRecipe沿原导入入口增加示例。review/App.TemplateComponentsProbe与scripts/start-template-components-review.ps1仅为隔离验收，普通产品不编入probe。证据见[首批交付](../V3-07/JOINT_COST_AND_COMPONENTS.md)。
+
+## 2026-10-26 可插拔模型接线
+
+Domain/Content/ContentBehaviorModel为协议／校验，BuiltInContentModels为两种可信实现；Application/Features/Content/Layout/ContentModelRegistry负责注册、槽与取消超时，ContentActivityProducer不再直调静态policy。ContentHeatSizing／ContentLayoutSolver接临时ModelPosition，ContentHeatSession及ContentProposals接同步发布回退。Bootstrap显式注册；ControlCenterWindow.Activity列出描述符；PosterVisualWindow.ModelTransition仅驱动按需不透明度，SceneMotion共享系统偏好观察。扩展步骤、源码与验证边界见[协议](../../30_Plans/V3_ACTIVITY_MODEL_PROTOCOL_PLAN.md)和[本批证据](../V3-06/PLUGGABLE_MODEL_DELIVERY.md)。下方“尚未实现”属于旧发布时点。
+
 ## 2026-10-26 发布绑定与模型协议缺口
 
 main@f259bbb与develop已验产品增量一致，只保留既有发布精简。ContentActivityProducer仍静态调用ContentActivityPolicy，ContentHeatProposal只有排名／比例，版本校验仍绑定内置策略；不能描述为已实现通用插件。下一批职责与退出门见[统一协议计划](../../30_Plans/V3_ACTIVITY_MODEL_PROTOCOL_PLAN.md)，本轮[发布证据](../V3-06/ACTIVITY_DRAG_RELEASE.md)记录源码绑定、包与隔离安装，而非新增实现。

@@ -16,6 +16,9 @@ public sealed class ContentHeatSession
     private bool closed;
     private ContentLayoutDocument? basis;
     private ContentLayoutViewport? lastViewport;
+    private sealed record PublicationState(ContentHeatProposal? Active, ContentLayoutDocument? Projection,
+        IReadOnlyDictionary<string, int>? Tiers, ContentLayoutDocument? Basis, ContentLayoutViewport? Viewport);
+    private PublicationState? beforePublication;
 
     public bool HasPending => buffer?.HasPending == true;
     public long? ActiveVersion => active?.Version;
@@ -72,8 +75,12 @@ public sealed class ContentHeatSession
         {
             if (proposal.AuthorDocumentVersion is { } version && version != author.DocumentVersion)
                 throw new ContentLayoutException("Activity proposal was computed from an older author document.");
+            if (proposal.Model is { } model && (model.Id != author.Activity.ModelId || model.Version != author.Activity.ModelVersion ||
+                model.ParameterVersion != author.Activity.ParameterVersion))
+                throw new ContentLayoutException("Activity proposal belongs to another selected model/version.");
             var resolved = Resolve(author, proposal, viewport);
             ContentProjectionValidation.RequireWritable(resolved.Document, viewport);
+            beforePublication = new(active, Projection, tiers, basis, lastViewport);
             active = proposal;
             Projection = resolved.Document;
             tiers = resolved.Tiers;
@@ -85,6 +92,18 @@ public sealed class ContentHeatSession
             // Consume the rejected version, retaining the last accepted state.
             return new(false, proposal.Version, error.Message);
         }
+    }
+
+    // Native admission and paint are synchronous in the host. Failed publication cannot become
+    // the next model's baseline; the buffered request stays consumed, with no automatic retry.
+    public void CompletePublication(bool accepted)
+    {
+        if (!accepted && beforePublication is { } previous)
+        {
+            active = previous.Active; Projection = previous.Projection; tiers = previous.Tiers;
+            basis = previous.Basis; lastViewport = previous.Viewport;
+        }
+        beforePublication = null;
     }
 
     private ContentHeatResolution Resolve(ContentLayoutDocument author, ContentHeatProposal proposal, ContentLayoutViewport viewport) =>
@@ -104,5 +123,6 @@ public sealed class ContentHeatSession
         active = null;
         Projection = null;
         tiers = null;
+        beforePublication = null;
     }
 }

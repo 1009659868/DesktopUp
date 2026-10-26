@@ -377,7 +377,7 @@
       </StackPanel>
      </ScrollViewer>
      <ScrollViewer Grid.Row="1" x:Name="BehaviorScroll" Visibility="Collapsed" HorizontalScrollBarVisibility="Disabled"><StackPanel Spacing="17" Padding="0,0,8,12">
-      <Grid ColumnSpacing="12"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><StackPanel Spacing="3"><TextBlock Text="使用热度" FontWeight="SemiBold"/><TextBlock Text="调整大小差异，保留真实使用记录" FontSize="10" Opacity="0.65"/></StackPanel><Button Grid.Column="1" x:Name="ActivitySettingsButton" Click="ActivitySettings_Click" Content="热度设置" Style="{StaticResource UiCAction}"/></Grid>
+      <Grid ColumnSpacing="12"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><StackPanel Spacing="3"><TextBlock Text="使用热度" FontWeight="SemiBold"/><TextBlock Text="选择模型、调整大小差异，保留使用记录" FontSize="10" Opacity="0.65"/></StackPanel><Button Grid.Column="1" x:Name="ActivitySettingsButton" Click="ActivitySettings_Click" Content="热度设置" Style="{StaticResource UiCAction}"/></Grid>
       <InfoBar x:Name="ActivitySettingsNotice" IsOpen="False" IsClosable="True" AutomationProperties.AutomationId="ActivitySettingsNotice"/>
       <Border Height="1" Background="{ThemeResource UiCBorderBrush}" Margin="0,3"/>
       <TextBlock Text="当前海报 · 状态" FontWeight="SemiBold"/>

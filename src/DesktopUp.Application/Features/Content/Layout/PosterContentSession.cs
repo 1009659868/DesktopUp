@@ -49,6 +49,7 @@ public sealed class PosterContentSession(PosterInputSessionKey identity, long in
     public long? ActiveHeatVersion => heat.ActiveVersion;
     public bool HasContinuousHeat => heat.HasContinuousProjection;
     public ContentHeatProposal? ContinuousHeat => heat.ContinuousProposal;
+    public void CompleteHeatPublication(bool accepted) => heat.CompletePublication(accepted);
     public bool HasBufferedTheme => theme?.HasPending == true;
     public bool HasPendingTheme(PosterPresentationParameters current) => theme is { } t && (t.HasPending || t.Current != current);
     public ContentLayoutDocument Effective(ContentLayoutDocument author) => DraftProjection ?? Draft ?? heat.Projection ?? author;

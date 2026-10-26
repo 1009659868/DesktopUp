@@ -90,14 +90,14 @@ internal static class ReadObservationCostFixture
             Scenarios = scenarios }, new JsonSerializerOptions { WriteIndented = true }));
     }
     // Shared owned scenario; P1 and R7 use the same real mapping setup, not copied business logic.
-    internal static void SeedMappings(SqliteStateStore store, string area, int count)
+    internal static void SeedMappings(SqliteStateStore store, string area, int count, int itemsPerMapping = 20)
     {
         var repository = new SqliteStateCommandRepository(store);
         var mapping = new MappedDirectoryUseCase(new SqliteMappedDirectoryStorage(store), new LocalContentObservationFiles());
         for (int i = 0; i < count; i++)
         {
             string path = Path.Combine(area, $"directory-{i}"); Directory.CreateDirectory(path);
-            for (int j = 0; j < 20; j++) File.WriteAllText(Path.Combine(path, $"item-{j}.txt"), "R7 isolated sample");
+            for (int j = 0; j < itemsPerMapping; j++) File.WriteAllText(Path.Combine(path, $"item-{j}.txt"), "R7 isolated sample");
             var state = repository.Read();
             var created = mapping.Create(new(Guid.NewGuid().ToString(), StateCommandSource.ControlCenter, state.Revision,
                 StateReadSet.ForCatalog(state.Catalog.CatalogVersion) with { ContentVersion = state.ContentVersion },

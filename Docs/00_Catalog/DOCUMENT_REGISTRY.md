@@ -4,6 +4,8 @@
 
 | 文档 | 角色／当前使用方式 |
 | --- | --- |
+| [联合成本与模板计划](../A_Project/30_Plans/JOINT_COST_AND_TEMPLATE_PLAN.md) / [首批交付](../A_Project/40_Implementation/V3-07/JOINT_COST_AND_COMPONENTS.md) | 当前实施：先测量再优化、声明式组件增量；成果集成后移 |
+| [模型协议计划](../A_Project/30_Plans/V3_ACTIVITY_MODEL_PROTOCOL_PLAN.md) / [本批模型交付](../A_Project/40_Implementation/V3-06/PLUGGABLE_MODEL_DELIVERY.md) | 当前功能分支：可信注册、四类建议，两组USER PASS / CLOSED及清理回执；未合并发布 |
 | [需求索引](REQUIREMENTS_INDEX.md) | A 层七份需求及后续用户决定；旧共享／穿透规则不得复活 |
 | [总体架构](../A_Project/20_Architecture/DESKTOPUP_V2_V3_ARCHITECTURE_V1.md) | 分开现有实现与未来目标 |
 | [模块目录](../A_Project/20_Architecture/DESKTOPUP_V2_V3_MODULE_CATALOG_V1.md) / [src](../../src/README.md) | 设计职责与实际工程对应；不要求按设计名另建类 |
@@ -21,7 +23,6 @@
 | [热度分支审查](../A_Project/40_Implementation/V3-06/ACTIVITY_BRANCH_REVIEW_20261026.md) / [原始交付](../A_Project/40_Implementation/V3-06/REAL_ACTIVITY_DELIVERY.md) | 整合前审查快照及功能分支历史证据；不以旧待验覆盖用户补充USER PASS |
 | [热度与拖动整合](../A_Project/40_Implementation/V3-06/ACTIVITY_DRAG_INTEGRATION.md) | 18份文档冲突协调、定向／组合与普通构建、清理及develop同步回执；本轮集成的历史证据 |
 | [热度与拖动发布](../A_Project/40_Implementation/V3-06/ACTIVITY_DRAG_RELEASE.md) | main源码绑定、安装包、首次卸载异常、清理及新预发布回执 |
-| [可插拔模型协议](../A_Project/30_Plans/V3_ACTIVITY_MODEL_PROTOCOL_PLAN.md) | 下一批范围与退出标准，尚未实现 |
 | [回车与方向切换外框修订](../A_Project/40_Implementation/V3-04/CONTROL_CENTER_USABILITY_DELIVERY.md#2026-10-23-浏览方向与外框下限统一) | 两项USER PASS；浏览方向切换可缩回合法尺寸，不改循环 |
 | [覆盖升级](../A_Project/40_Implementation/V3-04/INSTALLER_UPGRADE_DELIVERY.md) | 已验前一阶段；其中并行安装规则已被下项替代 |
 | [唯一安装／迁移升级](../A_Project/40_Implementation/V3-04/SINGLE_INSTALL_MIGRATION.md) | 最新已验安装规则，保留数据及自启 |

@@ -156,9 +156,26 @@ public sealed class ArchitectureTests
         Assert.Contains("PosterContentWork", owner);
         foreach (string forbidden in new[] { "DispatcherQueue", "Sqlite", "PosterVisualWindow", "System.Timers" })
             Assert.DoesNotContain(forbidden, owner);
-        Assert.Contains("RefreshContentSurface()", host);
+        Assert.Contains("published = ApplyContentFrame(_bounds)", host);
+        Assert.Contains("CompleteHeatPublication(published)", host);
         Assert.DoesNotContain("ContentLayoutProposals.ResolveHeat", host);
         Assert.DoesNotContain("ContentHeatProposalBuffer", host);
+    }
+
+    [Fact]
+    public void BehaviorModelsUseTheSharedProposalAndAccessibilityBoundaries()
+    {
+        string root = FindRepositoryRoot();
+        string producer = File.ReadAllText(Path.Combine(root, "src/DesktopUp.Application/Features/Content/Layout/ContentActivityProducer.cs"));
+        Assert.Contains("registry.EvaluateAsync", producer);
+        Assert.DoesNotContain("ContentActivityPolicy.Evaluate", producer);
+        string registry = File.ReadAllText(Path.Combine(root, "src/DesktopUp.Application/Features/Content/Layout/ContentModelRegistry.cs"));
+        foreach (string forbidden in new[] { "Sqlite", "DispatcherQueue", "LoadFrom", "Assembly.Load" }) Assert.DoesNotContain(forbidden, registry);
+        string transition = File.ReadAllText(Path.Combine(root, "src/DesktopUp.App/Views/Poster/PosterVisualWindow.ModelTransition.cs"));
+        Assert.Contains("CompositionTarget.Rendering -=", transition);
+        Assert.Contains("CanAnimateContent", transition);
+        Assert.DoesNotContain("CreateTimer", transition);
+        Assert.DoesNotContain("ContentLayoutSolver", transition);
     }
 
     [Fact]

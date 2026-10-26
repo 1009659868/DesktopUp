@@ -15,7 +15,7 @@ public partial class App
         var coordinator = services.Projection;
         var journal = new SqliteContentOpenJournal(store);
         journal.RetireInterruptedRequests();
-        runtime.ConfigureActivity(new ContentActivityProducer(services.ActivityStore, services.Activity));
+        runtime.ConfigureActivity(new ContentActivityProducer(services.ActivityStore, services.Activity, ContentModelRegistry.BuiltIns()));
         services.Activity.StatisticsChanged += ids =>
             _dispatcher!.TryEnqueue(() => runtime.NotifyActivityStatisticsChanged(ids));
         services.Activity.RequestRefresh();

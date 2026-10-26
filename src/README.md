@@ -2,16 +2,18 @@
 
 当前7个生产项目：六个业务／系统工程（App、Application、Domain、Infrastructure、Windows、ContentWorker）及独立Setup安装事务程序。基础架构R1～R8／P1～P3、安装迁移、拖动优化与真实热度均已验；本轮组合验证通过并按授权集成，最终状态见[CURRENT_STATUS](../Docs/00_Catalog/CURRENT_STATUS.md)。
 
+可插拔模型已人工通过，本轮只集成模型与性能优化：ContentRelationPolicy.ResolveMany将模型同轮关系解析的完整目录校验合为一次，临时索引不跨轮缓存。声明式介绍组件原型（TemplateHeadingComposition／v2配方等）仅留在功能分支，未随本批进入集成或发布线；勿按相关原型记录假设当前分支存在这些类。范围见[发布记录](../Docs/A_Project/40_Implementation/V3-06/MODEL_PROTOCOL_RELEASE.md)，后续先做[画板引擎设计](../Docs/A_Project/30_Plans/POSTER_CANVAS_ENGINE_DESIGN_PLAN.md)。
+
 热度统计提交后通过StatisticsChanged通知UI，按ContentItemId当前归属刷新；每海报单计算／合并最新请求，交互结束续作，不必收展。[2026-10-20架构图](../Docs/A_Project/40_Implementation/Architecture/FOUNDATION_REMAINDER_PLAN.md#31-本轮基础架构正式收口与当前架构图2026-10-20)仍是当日快照，不包含后来Setup及热度细化。动态模板、AI及在线更新器仍为后续；记录见[热度交付](../Docs/A_Project/40_Implementation/V3-06/REAL_ACTIVITY_DELIVERY.md)和[整合](../Docs/A_Project/40_Implementation/V3-06/ACTIVITY_DRAG_INTEGRATION.md)。
 
 | 位置 | 职责与边界 |
 | --- | --- |
-| Domain/Content | 实体、能力、作者数据；ContentActivityPolicy批准衰减/低样本平滑及ContentHeatSizing连续空间投影，无外部I/O或UI |
+| Domain/Content | 实体、能力、作者数据；IContentBehaviorModel只读输入／四类建议、双内置适配；ContentActivityPolicy原公式和ContentHeatSizing连续空间投影，无外部I/O或UI |
 | Application/Features/Content/Open | 成功交接事实、打开/定位用例；ContentActivityConsumer事件触发有界增量消费，不重放真实打开 |
 | Application/Features/Content/FileActions、Transfers | 新建、命名、删除、Win菜单、拖入/出及跨海报的应用编排；R5映射新建有独立用例，存储端口不包整段流程 |
 | Application/Features/Content/ContentOperationLifetime | 宿主内容操作的活动范围、停止令牌与任务排空；不执行文件操作，不替代每海报会话保护或事务锁 |
 | Application/Features/Content/Observation、Lifecycle、Storage | 映射/最小外部同步、启动观察、归还/卸载、位置迁移的业务顺序 |
-| Application/Features/Content/Layout | ContentActivityProducer从统计/成员快照生成真实连续提案；PosterContentSession保护/草稿/提案；ContentPresentationLayout准备帧；ContentInputGeometry同代区域；无窗口或SQLite |
+| Application/Features/Content/Layout | ContentActivityProducer从统计／成员快照调用ContentModelRegistry可信模型；有界取消／超时与协议校验。PosterContentSession保护／草稿／提案；ContentPresentationLayout准备帧；ContentInputGeometry同代区域；无窗口或SQLite |
 | Application/Ports | 请求、结果、版本/取消及原子操作端口，不暴露任意SQL或窗口私有状态 |
 | Infrastructure/Persistence/State、Transfers、Content | SQLite原子事务、打开事实、图标资产、CAS和账本；工作树schema27新增显式待消费序列/位置、按ContentItemId聚合及每对象最近32条历史，每批最多128条同事务消费；001～027迁移冻结，不重写旧事实 |
 | Infrastructure各Content/Storage适配 | 文件身份、租约、原子提交及系统执行；复用Windows只读探测；不回调视图私有状态 |

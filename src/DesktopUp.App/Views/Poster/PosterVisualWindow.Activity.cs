@@ -5,6 +5,8 @@ namespace DesktopUp;
 
 internal sealed partial class PosterVisualWindow
 {
+    internal ContentLayoutViewport ActivityViewport => ContentViewportFor(_bounds);
+    internal ContentLayoutSnapshot? ActivityLayout => _contentLayout.Snapshot;
     private bool _activityRefreshRequested = true, _activityWasCollapsed;
     private long _activityRequestVersion;
     private ContentActivityOptions? _activityOptions;
@@ -12,7 +14,7 @@ internal sealed partial class PosterVisualWindow
     private ContentLayoutMode? _activityMode;
     private ActivityReady? _activityReady;
     private sealed record ActivityReady(ContentHeatProposal Proposal, long EntityVersion,
-        DesktopRecoveryGenerationPair Generations);
+        DesktopRecoveryGenerationPair Generations, ContentLayoutViewport Viewport);
     private bool _activityGrowing, _activityCalculating, _activityRefreshQueued;
     private bool ActivityConfigurationChanged => _activityOptions != ContentDocument.Activity ||
         _activitySizeEnabled != ContentDocument.AllowHeatDrivenSize || _activityMode != ContentDocument.Mode;
@@ -68,7 +70,7 @@ internal sealed partial class PosterVisualWindow
             var ready = pending.Proposal;
             if (ready.Version != _activityRequestVersion || ready.AuthorDocumentVersion != document.DocumentVersion ||
                 ready.ItemSetVersion != document.ItemSetVersion || pending.EntityVersion != _posterEntityVersion ||
-                pending.Generations != CurrentGenerationPair)
+                pending.Generations != CurrentGenerationPair || !SameActivityViewport(pending.Viewport, ActivityViewport))
                 _activityRefreshRequested = true; // Rebase pending work after a gesture/environment change.
             else
             {
@@ -91,6 +93,7 @@ internal sealed partial class PosterVisualWindow
         _activityCalculating = true;
         long version = checked(++_activityRequestVersion);
         long entityVersion = _posterEntityVersion;
+        var viewport = ActivityViewport;
         spatial.RequestActivity(this, document, version, entityVersion, proposal =>
         {
             _activityCalculating = false;
@@ -98,11 +101,16 @@ internal sealed partial class PosterVisualWindow
             if (version == _activityRequestVersion)
             {
                 if (entityVersion != _posterEntityVersion || generations != CurrentGenerationPair ||
-                    document.DocumentVersion != ContentDocument.DocumentVersion || document.ItemSetVersion != ContentDocument.ItemSetVersion)
+                    document.DocumentVersion != ContentDocument.DocumentVersion || document.ItemSetVersion != ContentDocument.ItemSetVersion ||
+                    !SameActivityViewport(viewport, ActivityViewport))
                     _activityRefreshRequested = true;
-                else if (proposal is not null) _activityReady = new(proposal, entityVersion, generations);
+                else if (proposal is not null) _activityReady = new(proposal, entityVersion, generations, viewport);
             }
             QueueContentProposalDrain();
         });
     }
+
+    private static bool SameActivityViewport(ContentLayoutViewport a, ContentLayoutViewport b) =>
+        a.WidthDip == b.WidthDip && a.HeightDip == b.HeightDip && a.Scale == b.Scale && a.Spacing == b.Spacing &&
+        a.BaseMetricsScale == b.BaseMetricsScale && a.ThemeMetricsVersion == b.ThemeMetricsVersion;
 }
