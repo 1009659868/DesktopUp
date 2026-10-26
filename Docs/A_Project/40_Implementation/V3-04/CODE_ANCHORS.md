@@ -1,5 +1,9 @@
 # V3-04 代码锚点
 
+## 2026-10-26 发布绑定与模型协议缺口
+
+main@f259bbb与develop已验产品增量一致，只保留既有发布精简。ContentActivityProducer仍静态调用ContentActivityPolicy，ContentHeatProposal只有排名／比例，版本校验仍绑定内置策略；不能描述为已实现通用插件。下一批职责与退出门见[统一协议计划](../../30_Plans/V3_ACTIVITY_MODEL_PROTOCOL_PLAN.md)，本轮[发布证据](../V3-06/ACTIVITY_DRAG_RELEASE.md)记录源码绑定、包与隔离安装，而非新增实现。
+
 ## 2026-10-26 热度与拖动整合入口
 
 热度生产链和拖动调度在整合候选中并存。新增组合探针位于tools/review/App/App.ActivityRuntimeProbe.cs，使用`--real-activity-probe --activity-drag-integration-probe`；复用原生拖动探针验证缓存、同代命中与交互延期。证据见[整合记录](../V3-06/ACTIVITY_DRAG_INTEGRATION.md)。

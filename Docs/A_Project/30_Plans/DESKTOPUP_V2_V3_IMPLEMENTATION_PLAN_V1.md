@@ -17,14 +17,14 @@
 | 基础架构 R1～R8、P1～P3 | USER ACCEPTED / CLOSED，已集成发布 | [复审／成本](../40_Implementation/Architecture/FOUNDATION_REMAINDER_PLAN.md#30-p2p3收口后的最终架构与成本复审2026-10-20)；不是全平台／全性能完成 |
 | 海报尺度／悬停／浏览外框修订 | USER PASS，已集成发布 | [尺度专项](../40_Implementation/V3-04/POSTER_SCALE_AND_HOVER.md)与[方向／外框修订](../40_Implementation/V3-04/CONTROL_CENTER_USABILITY_DELIVERY.md#2026-10-23-浏览方向与外框下限统一)，已验规则继续保留 |
 | 海报拖动呈现优化 | USER PASS / CLOSED，已推送并集成develop | [专项记录](../40_Implementation/V3-04/POSTER_DRAG_PRESENTATION.md)；共享按需调度、纯平移复用已验，样例归档清理 |
-| V3-06 真实热度 | **USER PASS；组合验证通过，按授权集成develop** | §10；[整合与同步](../40_Implementation/V3-06/ACTIVITY_DRAG_INTEGRATION.md)，不重复已验人工 |
+| V3-06 真实热度 | **内置初步接入USER PASS，已集成发布；可插拔协议下一批** | §10；[整合与同步](../40_Implementation/V3-06/ACTIVITY_DRAG_INTEGRATION.md)，不重复已验人工 |
 | V3-07／08 模板平台、AI | 后续 | 内置模块与标题组件不代替完整平台 |
 | V3-09 安装／卸载／升级 | 已验范围完成 | 同用户唯一安装与迁移升级；真实登录自启仍待验 |
 | V3-10 联合长期／资源认证 | NOT RUN／后续测量 | 不因定向优化通过声称整体达标 |
 
 ## 3. 推进顺序
 
-文档对齐、[海报拖动呈现优化](../40_Implementation/V3-04/POSTER_DRAG_PRESENTATION.md)及真实热度均已验；本轮18份文档冲突已协调，209项定向／组合冒烟／普通构建通过，按授权非快进集成develop。同步回执见[整合记录](../40_Implementation/V3-06/ACTIVITY_DRAG_INTEGRATION.md)。下一步评估联合稳定性／发布里程碑，再分批模板平台和AI；具体执行另按授权，不重复原人工验收。
+文档对齐、[海报拖动呈现优化](../40_Implementation/V3-04/POSTER_DRAG_PRESENTATION.md)及真实热度均已验；本轮18份文档冲突已协调，209项定向／组合冒烟／普通构建通过，按授权非快进集成develop。同步回执见[整合记录](../40_Implementation/V3-06/ACTIVITY_DRAG_INTEGRATION.md)。本轮已同步精简main并发布preview-20261026.1，见[发布记录](../40_Implementation/V3-06/ACTIVITY_DRAG_RELEASE.md)。用户确认下一批补[可插拔模型协议](V3_ACTIVITY_MODEL_PROTOCOL_PLAN.md)，然后按实测推进联合成本／稳定性及模板、AI；不重复原人工验收。
 
 模板／AI在后续分批接入；安装维护与环境余验是并行责任，不要求先做完AI才能发布。成本问题按证据触发，既不无限前置架构重做，也不隐去现有未定因。
 

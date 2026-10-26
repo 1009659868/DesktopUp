@@ -17,9 +17,11 @@
 | [基础架构](../A_Project/40_Implementation/Architecture/FOUNDATION_REMAINDER_PLAN.md) | R1～R8、P1～P3 CLOSED；§30.4剩余成本与锁冲突保留 |
 | [当前架构图源](../A_Project/20_Architecture/ArchitectureReview/Foundation-Closed/current.architecture.json) | 2026-10-20收口时业务架构快照；非2026-10-23完整安装拓扑 |
 | [尺度与悬停](../A_Project/40_Implementation/V3-04/POSTER_SCALE_AND_HOVER.md) | 连续尺寸、动态下限、扩框／回弹 |
-| [拖动呈现优化](../A_Project/40_Implementation/V3-04/POSTER_DRAG_PRESENTATION.md) | 两组人工USER PASS / CLOSED，已推送并集成develop；测量／清理已记录，尚未发布 |
+| [拖动呈现优化](../A_Project/40_Implementation/V3-04/POSTER_DRAG_PRESENTATION.md) | 两组人工USER PASS / CLOSED，已推送并集成develop；测量／清理已记录，已随preview-20261026.1发布 |
 | [热度分支审查](../A_Project/40_Implementation/V3-06/ACTIVITY_BRANCH_REVIEW_20261026.md) / [原始交付](../A_Project/40_Implementation/V3-06/REAL_ACTIVITY_DELIVERY.md) | 整合前审查快照及功能分支历史证据；不以旧待验覆盖用户补充USER PASS |
-| [热度与拖动整合](../A_Project/40_Implementation/V3-06/ACTIVITY_DRAG_INTEGRATION.md) | 18份文档冲突协调、定向／组合与普通构建、清理及develop同步回执；未发布main |
+| [热度与拖动整合](../A_Project/40_Implementation/V3-06/ACTIVITY_DRAG_INTEGRATION.md) | 18份文档冲突协调、定向／组合与普通构建、清理及develop同步回执；本轮集成的历史证据 |
+| [热度与拖动发布](../A_Project/40_Implementation/V3-06/ACTIVITY_DRAG_RELEASE.md) | main源码绑定、安装包、首次卸载异常、清理及新预发布回执 |
+| [可插拔模型协议](../A_Project/30_Plans/V3_ACTIVITY_MODEL_PROTOCOL_PLAN.md) | 下一批范围与退出标准，尚未实现 |
 | [回车与方向切换外框修订](../A_Project/40_Implementation/V3-04/CONTROL_CENTER_USABILITY_DELIVERY.md#2026-10-23-浏览方向与外框下限统一) | 两项USER PASS；浏览方向切换可缩回合法尺寸，不改循环 |
 | [覆盖升级](../A_Project/40_Implementation/V3-04/INSTALLER_UPGRADE_DELIVERY.md) | 已验前一阶段；其中并行安装规则已被下项替代 |
 | [唯一安装／迁移升级](../A_Project/40_Implementation/V3-04/SINGLE_INSTALL_MIGRATION.md) | 最新已验安装规则，保留数据及自启 |

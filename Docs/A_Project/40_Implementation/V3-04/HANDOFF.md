@@ -1,5 +1,11 @@
 # V3-04 当前交接
 
+## 2026-10-26 已验成果发布与模型协议接续
+
+已将develop已验拖动／内置热度同步至精简main@f259bbb，发布[preview-20261026.1](https://github.com/1009659868/DesktopUp/releases/tag/preview-20261026.1)，安装包及SHA256SUMS下载哈希一致，旧发布保留。构建和安装后首次启动通过；首次卸载DeleteFileW／Windows32在System.Transactions.Local.dll停止，持有者0，证据保留。显式重试及重装后普通卸载0，未修改保护、未认定首因。临时安装和构建输出清理，29份证据归档。完整[发布回执](../V3-06/ACTIVITY_DRAG_RELEASE.md)与CURRENT_STATUS为现状，下方“不改main／tag”是上轮历史。
+
+用户明确下一批补[可插拔模型统一协议](../../30_Plans/V3_ACTIVITY_MODEL_PROTOCOL_PLAN.md)，本包仍固定内置模型；支持排序／尺寸／位置／声明式过渡的协议尚未实现。结束停留develop，剩余成本、P1/R6锁冲突及历史卸载／升级41首因继续OPEN。
+
 ## 2026-10-26 热度与拖动整合收口
 
 用户已确认热度全部集中体验通过，本轮按授权完成独立整合：源`6bbfcfc`＋develop@023a76f，18份Markdown冲突逐项协调，产品自动合并，新增仅review组合探针／入口。209项定向、实际HWND/XAML组合、普通Release／架构门通过；拖动内热度延期、释放后10→12、纯平移32次零内容重绘、命中同代及失败恢复均保持。
