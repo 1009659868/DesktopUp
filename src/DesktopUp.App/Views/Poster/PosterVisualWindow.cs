@@ -1539,6 +1539,8 @@ internal sealed partial class PosterVisualWindow(
         return item;
     }
 
+    private TextBlock? _metaTitleText, _metaCountText;
+
     private StackPanel CreateMeta()
     {
         var meta = new StackPanel
@@ -1546,15 +1548,30 @@ internal sealed partial class PosterVisualWindow(
             Margin = new Thickness(HorizontalPaddingDip, 18, HorizontalPaddingDip, 0),
             Spacing = 5
         };
-        var subtitle = Text(_authoritativePoster?.Subtitle ?? "", 11, 500, 230, 153, 206, 255);
-        subtitle.Foreground = ColorBrush(_presentation.Parameters.Theme.Accent, 230);
-        subtitle.MaxLines = 1; subtitle.TextTrimming = TextTrimming.CharacterEllipsis;
-        var title = Text(_authoritativePoster?.Title ?? "Desktop collection", ContentParameters.TitleFontSizeDip, 700, 255, 242, 242, 242);
-        title.Foreground = ColorBrush(_presentation.Parameters.Theme.Foreground);
-        title.Opacity = _presentation.Parameters.IsTitleVisible ? 1 : 0;
-        title.MaxLines = 1; title.TextTrimming = TextTrimming.CharacterEllipsis;
-        meta.Children.Add(subtitle); meta.Children.Add(title);
-        meta.Children.Add(Text($"{ContentDocument.Placements.Count:00} ITEMS", 10, 400, 170, 198, 198, 198));
+        _metaTitleText = null; _metaCountText = null;
+        foreach (var component in _presentation.HeadingComponents)
+        {
+            TextBlock text;
+            switch (component)
+            {
+                case TemplateHeadingComponent.Subtitle:
+                    text = Text(_authoritativePoster?.Subtitle ?? "", 11, 500, 230, 153, 206, 255);
+                    text.Foreground = ColorBrush(_presentation.Parameters.Theme.Accent, 230);
+                    break;
+                case TemplateHeadingComponent.Title:
+                    text = _metaTitleText = Text(_authoritativePoster?.Title ?? "Desktop collection", ContentParameters.TitleFontSizeDip, 700, 255, 242, 242, 242);
+                    text.Foreground = ColorBrush(_presentation.Parameters.Theme.Foreground);
+                    text.Opacity = _presentation.Parameters.IsTitleVisible ? 1 : 0;
+                    break;
+                case TemplateHeadingComponent.Count:
+                    text = _metaCountText = Text($"{ContentDocument.Placements.Count:00} ITEMS", 10, 400, 170, 198, 198, 198);
+                    break;
+                default: throw new InvalidOperationException("Unsupported admitted heading component.");
+            }
+            text.Tag = component;
+            text.MaxLines = 1; text.TextTrimming = TextTrimming.CharacterEllipsis;
+            meta.Children.Add(text);
+        }
         return meta;
     }
 
@@ -1845,6 +1862,7 @@ internal sealed partial class PosterVisualWindow(
         ClearContentVisuals();
         RestoreTransitionLayout();
         _contentStructure = null; _metaPanel = null; _footer = null;
+        _metaTitleText = null; _metaCountText = null;
         _menuInteraction?.Cancel();
         _menuInteraction = null;
         MenuFlyout? menu = _posterMenu;

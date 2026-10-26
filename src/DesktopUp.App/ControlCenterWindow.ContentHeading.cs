@@ -1,4 +1,5 @@
 using DesktopUp.Application;
+using DesktopUp.Domain;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
@@ -12,32 +13,54 @@ public sealed partial class ControlCenterWindow
     private ToggleSwitch? ContentHeadingSwitch;
     private TextBox? ContentHeadingSubtitle;
     private Button? ContentHeadingRename;
+    private string _contentHeadingAssembly = "";
 
-    private void MountContentHeadingControls(bool mounted)
+    private void MountContentHeadingControls(IReadOnlyList<TemplateHeadingComponent> components)
     {
-        if (!mounted)
+        string assembly = string.Join(",", components);
+        if (_contentHeadingAssembly != assembly || components.Count == 0)
         {
             TemplateComponentsSection.Children.Clear();
             ContentHeadingFolder = null; ContentHeadingSwitch = null;
             ContentHeadingSubtitle = null; ContentHeadingRename = null;
-            return;
+            _contentHeadingAssembly = assembly;
         }
+        if (components.Count == 0) return;
         if (ContentHeadingFolder is not null) return;
         ContentHeadingSwitch = new() { Header = "显示内容介绍", OnContent = "显示", OffContent = "隐藏" };
         ContentHeadingSwitch.Toggled += ContentHeading_Changed;
         AutomationProperties.SetAutomationId(ContentHeadingSwitch, "ContentHeadingVisibility");
         ToolTipService.SetToolTip(ContentHeadingSwitch, "仅当前模板已装配的介绍区；隐藏后收回占位，顶部标题栏不变。");
-        ContentHeadingSubtitle = new() { Header = "副标题", MaxLength = 512 };
-        ContentHeadingSubtitle.TextChanging += ContentHeadingSubtitle_Changing;
-        ContentHeadingSubtitle.LostFocus += ContentHeadingSubtitle_LostFocus;
-        ContentHeadingSubtitle.KeyDown += ContentHeadingSubtitle_KeyDown;
-        AutomationProperties.SetAutomationId(ContentHeadingSubtitle, "ContentHeadingSubtitle");
-        ToolTipService.SetToolTip(ContentHeadingSubtitle, "可留空；Enter或离开输入框保存，Esc取消当前输入。");
-        ContentHeadingRename = new() { Content = "修改海报名称…", Style = (Style)UiCRoot.Resources["UiCAction"] };
-        ContentHeadingRename.Click += RenamePoster_Click;
-        ToolTipService.SetToolTip(ContentHeadingRename, "介绍区大标题使用海报名称；数量由内容自动更新。");
         var panel = new StackPanel { Spacing = 12 };
-        panel.Children.Add(ContentHeadingSwitch); panel.Children.Add(ContentHeadingSubtitle); panel.Children.Add(ContentHeadingRename);
+        panel.Children.Add(ContentHeadingSwitch);
+        foreach (var component in components)
+        {
+            UIElement control; string label;
+            switch (component)
+            {
+                case TemplateHeadingComponent.Subtitle:
+                    ContentHeadingSubtitle = new() { Header = "文字", MaxLength = 512 };
+                    ContentHeadingSubtitle.TextChanging += ContentHeadingSubtitle_Changing;
+                    ContentHeadingSubtitle.LostFocus += ContentHeadingSubtitle_LostFocus;
+                    ContentHeadingSubtitle.KeyDown += ContentHeadingSubtitle_KeyDown;
+                    AutomationProperties.SetAutomationId(ContentHeadingSubtitle, "ContentHeadingSubtitle");
+                    ToolTipService.SetToolTip(ContentHeadingSubtitle, "可留空；Enter或离开输入框保存，Esc取消当前输入。");
+                    control = ContentHeadingSubtitle; label = "副标题";
+                    break;
+                case TemplateHeadingComponent.Title:
+                    ContentHeadingRename = new() { Content = "修改海报名称…", Style = (Style)UiCRoot.Resources["UiCAction"] };
+                    ContentHeadingRename.Click += RenamePoster_Click;
+                    control = ContentHeadingRename; label = "大标题";
+                    break;
+                case TemplateHeadingComponent.Count:
+                    control = new TextBlock { Text = "数量随海报内容自动更新。", TextWrapping = TextWrapping.Wrap };
+                    label = "数量介绍";
+                    break;
+                default: throw new InvalidOperationException("Unsupported admitted component.");
+            }
+            panel.Children.Add(new Expander { Header = label, Content = control,
+                HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Stretch });
+        }
         ContentHeadingFolder = new() { Header = "组件与参数 · 内容介绍", Content = panel,
             HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Stretch };
         TemplateComponentsSection.Children.Add(ContentHeadingFolder);
@@ -47,17 +70,21 @@ public sealed partial class ControlCenterWindow
         var target = _view?.SelectedPoster;
         var active = _settings.Preview?.PosterId == target?.Poster.PosterId ? _settings.Preview : null;
         bool supported = target?.Presentation.CanShowContentHeading == true;
-        MountContentHeadingControls(supported);
-        if (ContentHeadingSwitch is null || ContentHeadingSubtitle is null || ContentHeadingRename is null) return;
+        MountContentHeadingControls(supported ? target!.Presentation.HeadingComponents : []);
+        if (ContentHeadingSwitch is null) return;
         ContentHeadingSwitch.IsOn = active?.Setting == PosterSetting.ContentHeadingVisibility ? active.Number == 1 :
             target?.Presentation.IsContentHeadingVisible == true;
         bool available = supported && target?.Presentation.CanEdit == true && !_editor.ProtectsInteraction &&
             !IsContentFieldDraftActive && _lampColorFlyout is null;
-        ContentHeadingSwitch.IsEnabled = ContentHeadingRename.IsEnabled = available && !_settings.ProtectsInteraction;
-        ContentHeadingSubtitle.IsEnabled = available && ContentHeadingSwitch.IsOn &&
-            (!_settings.ProtectsInteraction || active?.Setting == PosterSetting.Subtitle);
-        string subtitle = active?.Setting == PosterSetting.Subtitle ? active.Text : target?.Poster.Subtitle ?? "";
-        if (ContentHeadingSubtitle.Text != subtitle) ContentHeadingSubtitle.Text = subtitle;
+        ContentHeadingSwitch.IsEnabled = available && !_settings.ProtectsInteraction;
+        if (ContentHeadingRename is { } rename) rename.IsEnabled = available && !_settings.ProtectsInteraction;
+        if (ContentHeadingSubtitle is { } field)
+        {
+            field.IsEnabled = available && ContentHeadingSwitch.IsOn &&
+                (!_settings.ProtectsInteraction || active?.Setting == PosterSetting.Subtitle);
+            string subtitle = active?.Setting == PosterSetting.Subtitle ? active.Text : target?.Poster.Subtitle ?? "";
+            if (field.Text != subtitle) field.Text = subtitle;
+        }
     }
     private void ContentHeading_Changed(object sender, RoutedEventArgs args)
     {

@@ -36,7 +36,8 @@ public static class TemplateParameterSchemas
 
     public static string? Validate(TemplateParameterSchema? schema, bool stored = false)
     {
-        if (schema is null || !Key(schema.TemplateId) || !Text(schema.Name, 40) || schema.SchemaVersion != 1 ||
+        if (schema is null || !Key(schema.TemplateId) || !Text(schema.Name, 40) || schema.SchemaVersion is not (1 or 2) ||
+            schema.SchemaVersion == 2 && schema.RendererCapability != BasicCapability ||
             schema.TemplateVersion is < 1 or > 999 || !CapabilityKey(schema.RendererCapability) || !stored && !SceneCapabilityRegistry.Available(schema.RendererCapability) ||
             schema.Properties is null || schema.Properties.Count > MaximumProperties) return "Unknown or invalid built-in parameter description.";
         var keys = new HashSet<string>(StringComparer.Ordinal); var bindings = new HashSet<string>(StringComparer.Ordinal);

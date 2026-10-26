@@ -1,12 +1,18 @@
 using System.Collections.ObjectModel;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace DesktopUp.Domain;
 
 public sealed record TemplateRecipeBase(string Background, string Card, bool Heading);
 public sealed record TemplateRecipe(TemplateParameterSchema Schema, string Family, TemplateRecipeBase Base)
 {
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<TemplateHeadingComponent>? Components { get; init; }
+    [JsonIgnore]
+    public IReadOnlyList<TemplateHeadingComponent> HeadingComponents => Components ??
+        (Base.Heading ? TemplateHeadingComposition.Legacy : Array.Empty<TemplateHeadingComponent>());
     public string Id => Schema.TemplateId;
     public string Name => Schema.Name;
     public string EffectiveTemplateKey => Schema.RendererCapability == TemplateParameterSchemas.LampCapability
@@ -36,8 +42,11 @@ public static class TemplateRecipeCodec
     }
     internal static TemplateRecipe Parse(JsonElement root, bool stored = false)
     {
-        Members(root, "format", "schemaVersion", "id", "version", "name", "family", "renderer", "base", "properties");
-        if (Text(root, "format") != Format || Integer(root, "schemaVersion") != 1)
+        int schemaVersion = Integer(root, "schemaVersion");
+        if (schemaVersion == 2)
+            Members(root, "format", "schemaVersion", "id", "version", "name", "family", "renderer", "base", "properties", "components");
+        else Members(root, "format", "schemaVersion", "id", "version", "name", "family", "renderer", "base", "properties");
+        if (Text(root, "format") != Format || schemaVersion is not (1 or 2))
             throw new ArgumentException("不支持的模板格式或 schemaVersion。");
         string capability = Text(root, "renderer") switch
         {
@@ -74,7 +83,8 @@ public static class TemplateRecipeCodec
         }
         var recipe = new TemplateRecipe(new(Text(root, "id"), Text(root, "name"), capability, definitions,
             Integer(root, "schemaVersion"), Integer(root, "version")), Text(root, "family"),
-            new(Text(basis, "background"), Text(basis, "card"), basis.GetProperty("heading").GetBoolean()));
+            new(Text(basis, "background"), Text(basis, "card"), basis.GetProperty("heading").GetBoolean()))
+        { Components = schemaVersion == 2 ? TemplateHeadingComposition.Parse(root.GetProperty("components")) : null };
         return Freeze(recipe, stored);
     }
     public static TemplateRecipe Freeze(TemplateRecipe recipe, bool stored = false)
@@ -84,7 +94,8 @@ public static class TemplateRecipeCodec
             throw new ArgumentException("配方材质或分类无效。");
         if (SceneCapabilityRegistry.Find(recipe.Schema.RendererCapability)?.ReplacesMetaText == true && !recipe.Base.Heading)
             throw new ArgumentException("此场景需要保留顶部装饰槽；不能通过配方移除该槽。");
-        return recipe with { Schema = TemplateParameterSchemas.Freeze(recipe.Schema, stored) };
+        var components = TemplateHeadingComposition.Freeze(recipe);
+        return recipe with { Schema = TemplateParameterSchemas.Freeze(recipe.Schema, stored), Components = components };
     }
     public static string Serialize(TemplateRecipe recipe, bool stored = false)
     {
@@ -92,13 +103,19 @@ public static class TemplateRecipeCodec
         using var output = new MemoryStream();
         using (var writer = new Utf8JsonWriter(output, new JsonWriterOptions { Indented = true }))
         {
-            writer.WriteStartObject(); writer.WriteString("format", Format); writer.WriteNumber("schemaVersion", 1);
+            writer.WriteStartObject(); writer.WriteString("format", Format); writer.WriteNumber("schemaVersion", recipe.Schema.SchemaVersion);
             writer.WriteString("id", recipe.Id); writer.WriteNumber("version", recipe.Schema.TemplateVersion);
             writer.WriteString("name", recipe.Name); writer.WriteString("family", recipe.Family);
             writer.WriteString("renderer", recipe.Schema.RendererCapability switch { TemplateParameterSchemas.LampCapability => "lamp@1", TemplateParameterSchemas.BasicCapability => "minimal@1", var id => id });
             writer.WritePropertyName("base"); writer.WriteStartObject();
             writer.WriteString("background", recipe.Base.Background); writer.WriteString("card", recipe.Base.Card);
             writer.WriteBoolean("heading", recipe.Base.Heading); writer.WriteEndObject();
+            if (recipe.Components is { } components)
+            {
+                writer.WritePropertyName("components"); writer.WriteStartArray();
+                foreach (var component in components) writer.WriteStringValue(component.ToString().ToLowerInvariant());
+                writer.WriteEndArray();
+            }
             writer.WritePropertyName("properties"); writer.WriteStartArray();
             foreach (var p in recipe.Schema.Properties)
             {

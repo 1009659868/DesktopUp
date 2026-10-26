@@ -86,7 +86,7 @@ internal sealed partial class PosterVisualWindow
         _presentation.Parameters.IsTitleVisible == show &&
         _titleName?.Child is TextBlock name && name.Text == _authoritativePoster?.Title &&
         name.Opacity == (show ? 1 : 0) && _titleName.Opacity == 1 &&
-        (_metaPanel?.Children.ElementAtOrDefault(1) is not TextBlock metaTitle ||
+        (_metaTitleText is not TextBlock metaTitle ||
             metaTitle.Text == _authoritativePoster?.Title && metaTitle.Opacity == (show ? 1 : 0)) &&
         _titleCollapse?.Opacity == 1 && _titleMore?.Opacity == 1 &&
         _collapseGlyph?.Opacity == 1 && _moreGlyph?.Opacity == 1 && VerifyTitleChromeForProbe();
@@ -135,7 +135,7 @@ internal sealed partial class PosterVisualWindow
         if (_titleName.Child is TextBlock name)
         { name.Text = _authoritativePoster?.Title ?? "Desktop collection"; name.Padding = new(3, 1, 3, 0); name.Foreground = ColorBrush(ink.Text);
             name.Opacity = _presentation.Parameters.IsTitleVisible ? 1 : 0; }
-        if (_metaPanel?.Children.ElementAtOrDefault(1) is TextBlock metaTitle)
+        if (_metaTitleText is TextBlock metaTitle)
             metaTitle.Opacity = _presentation.Parameters.IsTitleVisible ? 1 : 0;
         _titleCloudGroup!.Visibility = cloud ? Visibility.Visible : Visibility.Collapsed;
         if (cloud)

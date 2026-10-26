@@ -10,9 +10,9 @@ if (args.Length == 2 && args[1] == "--joint-model-cost")
     return;
 }
 
-if (args.Length == 2 && args[1] == "--model-protocol")
+if (args.Length == 2 && args[1] is "--model-protocol" or "--template-components")
 {
-    ModelProtocolReviewFixture.Create(args[0]);
+    ModelProtocolReviewFixture.Create(args[0], templateComponents: args[1] == "--template-components");
     return;
 }
 

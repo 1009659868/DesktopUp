@@ -229,6 +229,13 @@ public partial class App
                 Require(files.Select(Hash).SequenceEqual(hashes), "Model proposals changed real files.");
             }
 
+            if (Environment.GetCommandLineArgs().Contains("--template-components-probe"))
+            {
+                stage = "template-components";
+                await VerifyTemplateComponentsForProbe(id, cancellation.Token);
+                Require(files.Select(Hash).SequenceEqual(hashes), "Template components changed real files.");
+            }
+
             _log!.Write("info", "contract.real_activity_runtime_passed", new
             {
                 providerConfirmation = "SIMULATED: worker acceptance; production open service; no external program opened",

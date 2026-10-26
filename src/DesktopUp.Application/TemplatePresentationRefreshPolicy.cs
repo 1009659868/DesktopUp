@@ -38,7 +38,8 @@ public static class TemplatePresentationRefreshPolicy
     }
 
     private static bool SameRecipe(TemplateRecipe before, TemplateRecipe after) =>
-        before with { Schema = after.Schema } == after &&
+        before with { Schema = after.Schema, Components = after.Components } == after &&
+        (before.Components is null ? after.Components is null : after.Components is not null && before.Components.SequenceEqual(after.Components)) &&
         before.Schema with { Properties = after.Schema.Properties } == after.Schema &&
         before.Schema.Properties.SequenceEqual(after.Schema.Properties);
 }

@@ -46,7 +46,11 @@ public sealed record ResolvedPosterPresentation(string EffectiveTemplateKey, Pos
             return CanShowContentHeading && (Parameters.HeadingVisibility?.Resolve(id, baseline) ?? baseline);
         }
     }
-    public double MetaHeightDip => IsContentHeadingVisible ? Math.Ceiling(81 + Parameters.Content.TitleFontSizeDip * 1.35) : 0;
+    public IReadOnlyList<TemplateHeadingComponent> HeadingComponents =>
+        TemplateRecipeInstancePolicy.RecipeFor(Parameters, SelectedRecipeId ?? EffectiveTemplateKey)?.HeadingComponents ??
+        Array.Empty<TemplateHeadingComponent>();
+    public double MetaHeightDip => IsContentHeadingVisible
+        ? TemplateHeadingComposition.Height(HeadingComponents, Parameters.Content.TitleFontSizeDip) : 0;
 }
 
 public static class PosterPresentationPolicy

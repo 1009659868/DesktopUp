@@ -46,9 +46,11 @@ public sealed partial class ControlCenterWindow
             body.Children.Add(new TextBlock { Text = "参数随模板而来。检查通过后，直接用于当前海报，无需刷新。", TextWrapping = TextWrapping.Wrap });
             var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10 };
             var example = new Button { Content = "填入「暖夜书桌」示例" };
+            var components = new Button { Content = "填入「组件书桌」示例" };
             var file = new Button { Content = "选择 JSON" };
             var inspect = new Button { Content = "查看当前配方", Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent), BorderThickness = new Thickness(0) };
             actions.Children.Add(example); actions.Children.Add(file); actions.Children.Add(inspect); body.Children.Add(actions);
+            body.Children.Add(components);
             var source = new TextBox { Text = initial ?? "", AcceptsReturn = true, TextWrapping = TextWrapping.NoWrap,
                 FontFamily = new FontFamily("Consolas"), FontSize = 12, MinHeight = 180,
                 Height = Math.Max(180, Math.Min(340, UiCRoot.ActualHeight - 340)), MaxLength = 65536,
@@ -65,6 +67,16 @@ public sealed partial class ControlCenterWindow
             {
                 var recipe = TemplateRecipeCatalog.BuiltIns.FirstOrDefault(r => r.Schema.Properties.Count > 0) ?? TemplateRecipeCatalog.BuiltIns[0];
                 source.Text = TemplateRecipeCodec.Serialize(recipe with { Schema = recipe.Schema with { TemplateId = "my-warm-desk", Name = "暖夜书桌" } });
+            };
+            components.Click += (_, _) =>
+            {
+                var basis = TemplateRecipeCatalog.BuiltIns.Single(r => r.Id == "basic-box");
+                source.Text = TemplateRecipeCodec.Serialize(basis with
+                {
+                    Schema = basis.Schema with { TemplateId = "my-component-desk", Name = "组件书桌", SchemaVersion = 2 },
+                    Base = basis.Base with { Heading = true },
+                    Components = [TemplateHeadingComponent.Title, TemplateHeadingComponent.Count]
+                });
             };
             inspect.Click += (_, _) => { if (SelectedRecipe is { } recipe) source.Text = TemplateRecipeCodec.Serialize(recipe); };
             file.Click += async (_, _) =>

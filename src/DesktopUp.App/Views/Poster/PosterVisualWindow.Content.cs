@@ -97,6 +97,7 @@ internal sealed partial class PosterVisualWindow
 
     private void DrawContentSnapshot(ContentLayoutSnapshot snapshot, ContentLayoutViewport viewport)
     {
+        CancelModelTransition();
         if (_itemsGrid is null) return;
         var doc = ContentDocument;
         var views = ReadContentViews();
@@ -119,7 +120,7 @@ internal sealed partial class PosterVisualWindow
         _itemColumnCount = snapshot.Columns;
         string kind = !TestContentFeedbackEnabled || IsRealContent || doc.Placements.Count == 0 ? "ITEMS" : "DEMO ITEMS";
         if (_footer?.Children.OfType<TextBlock>().FirstOrDefault() is { } count) count.Text = $"{doc.Placements.Count} {kind}";
-        if (_metaPanel?.Children.OfType<TextBlock>().LastOrDefault() is { } meta) meta.Text = $"{doc.Placements.Count:00} {kind}";
+        if (_metaCountText is { } meta) meta.Text = $"{doc.Placements.Count:00} {kind}";
         RenderContentFeedback();
         DrawContentMarquee();
     }
@@ -169,6 +170,7 @@ internal sealed partial class PosterVisualWindow
     }
     private void ClearContentVisuals()
     {
+        CancelModelTransition();
         ReleaseScene();
         CancelContentGesture("surface-release");
         ReleaseContentAssets();
