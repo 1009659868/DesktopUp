@@ -1,5 +1,9 @@
 # V3-04 代码锚点
 
+## 2026-10-26 集成线与原型边界
+
+develop含ContentBehaviorModel／ContentModelRegistry／双模型／ModelTransition及ContentRelationPolicy.ResolveMany批量优化。T1的TemplateHeadingComposition、v2组件配方、角色装配及中心ContentHeading增量仅在功能分支61819dd；下方T1锚点不能用于当前develop／main。main保留产品实现，删除review／SessionFixture入口；精简差异及包绑定见[发布记录](../V3-06/MODEL_PROTOCOL_RELEASE.md)。下一步画板引擎仍是设计准备，无新运行时类。
+
 ## 2026-10-26 联合成本／模板组件首批
 
 Application/ContentRelations.ResolveMany同轮完整校验后构造临时索引，Layout/ContentActivityProducer一次批量解析；SessionFixture/JointModelCostFixture给出存储／模型／会话分段基线。Domain/TemplateHeadingComposition与TemplateRecipes为v2组件声明／验证，PosterPresentationParameters计算省略后的占位；TemplatePresentationRefreshPolicy区分装配与轻量更新。PosterVisualWindow.CreateMeta按角色装配，Content／TitleChrome以角色引用替代固定索引；ControlCenterWindow.ContentHeading按装配挂折叠参数，TemplateRecipe沿原导入入口增加示例。review/App.TemplateComponentsProbe与scripts/start-template-components-review.ps1仅为隔离验收，普通产品不编入probe。证据见[首批交付](../V3-07/JOINT_COST_AND_COMPONENTS.md)。

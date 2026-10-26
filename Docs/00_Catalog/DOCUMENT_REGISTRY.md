@@ -4,8 +4,10 @@
 
 | 文档 | 角色／当前使用方式 |
 | --- | --- |
-| [联合成本与模板计划](../A_Project/30_Plans/JOINT_COST_AND_TEMPLATE_PLAN.md) / [首批交付](../A_Project/40_Implementation/V3-07/JOINT_COST_AND_COMPONENTS.md) | 当前实施：先测量再优化、声明式组件增量；成果集成后移 |
-| [模型协议计划](../A_Project/30_Plans/V3_ACTIVITY_MODEL_PROTOCOL_PLAN.md) / [本批模型交付](../A_Project/40_Implementation/V3-06/PLUGGABLE_MODEL_DELIVERY.md) | 当前功能分支：可信注册、四类建议，两组USER PASS / CLOSED及清理回执；未合并发布 |
+| [模型／性能发布](../A_Project/40_Implementation/V3-06/MODEL_PROTOCOL_RELEASE.md) | preview-20261026.2：精确拆分、集成／发布、安装验证和清理回执；T1排除 |
+| [画板引擎设计准备](../A_Project/30_Plans/POSTER_CANVAS_ENGINE_DESIGN_PLAN.md) | 下一步设计顺序与退出门，尚未实施，不预设原型就是通用方案 |
+| [联合成本与模板计划](../A_Project/30_Plans/JOINT_COST_AND_TEMPLATE_PLAN.md) / [首批交付](../A_Project/40_Implementation/V3-07/JOINT_COST_AND_COMPONENTS.md) | J1测量／优化已集成；T1自动通过但人工待验，源码仅功能分支 |
+| [模型协议计划](../A_Project/30_Plans/V3_ACTIVITY_MODEL_PROTOCOL_PLAN.md) / [本批模型交付](../A_Project/40_Implementation/V3-06/PLUGGABLE_MODEL_DELIVERY.md) | 可信注册、四类建议，两组USER PASS / CLOSED，后续已集成发布 |
 | [需求索引](REQUIREMENTS_INDEX.md) | A 层七份需求及后续用户决定；旧共享／穿透规则不得复活 |
 | [总体架构](../A_Project/20_Architecture/DESKTOPUP_V2_V3_ARCHITECTURE_V1.md) | 分开现有实现与未来目标 |
 | [模块目录](../A_Project/20_Architecture/DESKTOPUP_V2_V3_MODULE_CATALOG_V1.md) / [src](../../src/README.md) | 设计职责与实际工程对应；不要求按设计名另建类 |

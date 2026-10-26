@@ -1,6 +1,6 @@
 # 联合成本归因与声明式组件首批
 
-2026-10-26，AUTO PASS / USER PENDING。用户要求集成后移，先逐步执行联合成本和模板能力；[实施计划](../../30_Plans/JOINT_COST_AND_TEMPLATE_PLAN.md)已先行。继续`impl/06-pluggable-activity-model`（HEAD仍为`f6d4d2f5298fe8f8c1fab0904f59421467413647`），原模型两组USER PASS不重验；本批不提交／推送／合并，不改发布包或tag。
+2026-10-26：J1性能已与已验模型集成发布；T1仍为AUTO PASS / USER PENDING。按最新授权精确拆分：223e403模型／性能进入develop及preview-20261026.2，61819dd组件原型仅推送功能分支，不合入。详见[发布回执](../V3-06/MODEL_PROTOCOL_RELEASE.md)。原[首批计划](../../30_Plans/JOINT_COST_AND_TEMPLATE_PLAN.md)和下方证据保留；下一步先设计通用画板引擎，不用自动通过替代T1人工结论。
 
 ## 当前范围
 
@@ -50,7 +50,7 @@
 
 ## 一组集中人工体验（USER PENDING）
 
-普通候选`out/joint-template/candidate/app/DesktopUp.exe`已以隔离配置启动，PID23540。配置`out/drop-d3/template-components-review01/profile`，仅5个自建文本文件，未使用日常收纳。App DLL SHA256：`AE266EFDCA73B1F5EB598171EEC0D24A055F6D2DB2970A0A40A01B76E6624EA7`；Application：`77437F3CEF161B56993417A2D9F0DAACBF4F0CADD2A2CF2833644170B42FF9A7`；Domain：`8A0A419AF39BC9C9144C17EF8E49804E1DA4B5496BBF73198EF35A3EA6E8468B`。
+普通候选`out/joint-template/candidate/app/DesktopUp.exe`曾以隔离配置启动，PID23540；用户已正常退出，日志资源0。配置`out/drop-d3/template-components-review01/profile`，仅5个自建文本文件，未使用日常收纳。程序／配置原样保留供未验原型及设计参考，不随本次发布测试清理。App DLL SHA256：`AE266EFDCA73B1F5EB598171EEC0D24A055F6D2DB2970A0A40A01B76E6624EA7`；Application：`77437F3CEF161B56993417A2D9F0DAACBF4F0CADD2A2CF2833644170B42FF9A7`；Domain：`8A0A419AF39BC9C9144C17EF8E49804E1DA4B5496BBF73198EF35A3EA6E8468B`。
 
 在控制中心切换「数量在前 · 大标题」→「只装副标题」→「基础收纳」，核对海报只显示所装配介绍行、顺序正确且无多余空位；中心只显示对应可折叠参数，副标题可修改保存。原模型两组与安装矩阵不重复。重开可用`scripts/start-template-components-review.ps1 -Action Open`。
 

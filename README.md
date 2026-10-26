@@ -6,7 +6,9 @@ Windows原生桌面内容收纳工具：多海报、真实文件与快捷方式�
 
 [当前状态与后续工作](Docs/00_Catalog/CURRENT_STATUS.md)统一维护已验功能、分支／发布基线和未完成事项。[文档入口](Docs/README.md)按A → B → C导航；[源码职责](src/README.md)区分现有项目与未来目标。
 
-真实内容基础、架构整理、连续尺度与外框修订、唯一安装／迁移升级、拖动呈现优化，以及真实热度与桌面标准尺度均已验。热度与拖动的209项定向、组合冒烟及普通构建通过，按授权集成至develop；[整合记录](Docs/A_Project/40_Implementation/V3-06/ACTIVITY_DRAG_INTEGRATION.md)记录来源、证据及Git回执。已同步精简main并发布[preview-20261026.1](https://github.com/1009659868/DesktopUp/releases/tag/preview-20261026.1)，[发布记录](Docs/A_Project/40_Implementation/V3-06/ACTIVITY_DRAG_RELEASE.md)保留打包、隔离安装及首次卸载异常证据。下一批补[可插拔模型协议](Docs/A_Project/30_Plans/V3_ACTIVITY_MODEL_PROTOCOL_PLAN.md)，当前仍为固定内置模型。完整模板平台和AI后续推进；历史卸载首因、锁冲突及剩余成本继续保留。旧README时间线见[历史快照](README_HISTORY_20261023.md)，不作为当前任务指令。
+真实内容基础、架构整理、连续尺度与外框修订、唯一安装／迁移升级、拖动呈现优化，以及真实热度与桌面标准尺度均已验。最新已验[可插拔模型协议](Docs/A_Project/30_Plans/V3_ACTIVITY_MODEL_PROTOCOL_PLAN.md)支持运行中选择综合热度／最近使用条带，向宿主提供排序、连续尺度、位置及受限淡入建议，保留统计与人工优先；同轮关系解析减少重复校验。成果已集成develop并同步精简main，发布[preview-20261026.2](https://github.com/1009659868/DesktopUp/releases/tag/preview-20261026.2)，旧版保留；定向、组合、隔离安装／卸载、下载校验及清理见[本轮回执](Docs/A_Project/40_Implementation/V3-06/MODEL_PROTOCOL_RELEASE.md)。
+
+未验声明式组件原型仅留在功能分支，不在本包中。下一步先设计[海报画板／模板与组件通用引擎](Docs/A_Project/30_Plans/POSTER_CANVAS_ENGINE_DESIGN_PLAN.md)，AI与任意代码热加载不冒称已完成。历史卸载首因、锁冲突及剩余成本继续保留。旧README时间线见[历史快照](README_HISTORY_20261023.md)，不作为当前任务指令。
 
 开发集成线为impl/develop，后续功能从它派生；impl/main仅保留发布源码／内置模块／配置／构建打包入口与许可证。开发资料和测试不得被发布精简反向删除。Git操作与发布需用户授权，见[分支策略](Docs/Rules/GIT_STRATEGY.md)。
 

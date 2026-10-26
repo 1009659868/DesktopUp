@@ -2,7 +2,7 @@
 
 ## 2026-10-26 本批执行合同
 
-分支 `impl/06-pluggable-activity-model` 从 `impl/develop@f6d4d2f` 派生；用户已确认两组集中验收通过，本轮 **USER PASS / CLOSED**。人工样例与独立候选已清理，原始证据保留；尚未提交／推送／合并或发布。下文旧“下一批”说明保留为方案来源，本节为当前执行边界。
+分支 `impl/06-pluggable-activity-model` 从 `impl/develop@f6d4d2f` 派生；用户已确认两组集中验收通过，**USER PASS / CLOSED**。人工样例与独立候选已清理，原始证据保留；随后模型／J1性能经223e403合入develop并发布preview-20261026.2，见[回执](../40_Implementation/V3-06/MODEL_PROTOCOL_RELEASE.md)。未验T1另留功能分支。下文旧“下一批”说明保留为方案来源，本节为当前边界。
 
 ### 协议 v1
 

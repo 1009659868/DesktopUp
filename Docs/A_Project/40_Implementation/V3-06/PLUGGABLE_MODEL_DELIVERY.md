@@ -1,6 +1,6 @@
 # 可插拔热度／布局模型：本批交付
 
-2026-10-26；`impl/06-pluggable-activity-model`，来源 `impl/develop@f6d4d2f5298fe8f8c1fab0904f59421467413647`。创建前工作区干净，fetch 后 develop 与远端 0/0。先更新[协议及实施计划](../../30_Plans/V3_ACTIVITY_MODEL_PROTOCOL_PLAN.md)，再实施；**自动门及两组集中人工通过，USER PASS / CLOSED，未提交／推送／合并**。main、安装包、tag 未变。
+2026-10-26；`impl/06-pluggable-activity-model`，来源 `impl/develop@f6d4d2f5298fe8f8c1fab0904f59421467413647`。创建前工作区干净，fetch 后 develop 与远端 0/0。先更新[协议及实施计划](../../30_Plans/V3_ACTIVITY_MODEL_PROTOCOL_PLAN.md)，再实施；**自动门及两组集中人工通过，USER PASS / CLOSED**。后续模型／J1性能已按授权集成并发布preview-20261026.2，精确拆分与回执见[发布记录](MODEL_PROTOCOL_RELEASE.md)；本页下文保留原验收过程，不以历史“未提交”覆盖当前状态。
 
 ## 实现边界与清理
 

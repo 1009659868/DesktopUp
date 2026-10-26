@@ -17,17 +17,17 @@
 | 基础架构 R1～R8、P1～P3 | USER ACCEPTED / CLOSED，已集成发布 | [复审／成本](../40_Implementation/Architecture/FOUNDATION_REMAINDER_PLAN.md#30-p2p3收口后的最终架构与成本复审2026-10-20)；不是全平台／全性能完成 |
 | 海报尺度／悬停／浏览外框修订 | USER PASS，已集成发布 | [尺度专项](../40_Implementation/V3-04/POSTER_SCALE_AND_HOVER.md)与[方向／外框修订](../40_Implementation/V3-04/CONTROL_CENTER_USABILITY_DELIVERY.md#2026-10-23-浏览方向与外框下限统一)，已验规则继续保留 |
 | 海报拖动呈现优化 | USER PASS / CLOSED，已推送并集成develop | [专项记录](../40_Implementation/V3-04/POSTER_DRAG_PRESENTATION.md)；共享按需调度、纯平移复用已验，样例归档清理 |
-| V3-06 真实热度 | **内置接入已验发布；可插拔模型两组USER PASS / CLOSED，未集成** | [协议实施计划](V3_ACTIVITY_MODEL_PROTOCOL_PLAN.md)与[模型交付](../40_Implementation/V3-06/PLUGGABLE_MODEL_DELIVERY.md)，不重复已验人工 |
-| V3-07 模板／风格 | T1声明式组件首批自动通过，待一组体验 | 复用旧配方／实例／CAS，v1保持；素材包与完整平台后续，见[首批计划](JOINT_COST_AND_TEMPLATE_PLAN.md) |
+| V3-06 真实热度 | **内置接入及可插拔增量已验、已集成发布** | [协议](V3_ACTIVITY_MODEL_PROTOCOL_PLAN.md)、[模型验收](../40_Implementation/V3-06/PLUGGABLE_MODEL_DELIVERY.md)与[20261026.2发布](../40_Implementation/V3-06/MODEL_PROTOCOL_RELEASE.md)，不重复人工 |
+| V3-07 模板／风格 | T1仅功能分支自动通过／人工待验；下一步通用画板引擎设计 | 原型不随本轮集成；按[设计准备](POSTER_CANVAS_ENGINE_DESIGN_PLAN.md)先定边界、成本与切片 |
 | V3-08 AI | 后续 | 稳定协议后接入，不绕过文件和版本保护 |
 | V3-09 安装／卸载／升级 | 已验范围完成 | 同用户唯一安装与迁移升级；真实登录自启仍待验 |
 | V3-10 联合长期／资源认证 | J1短样本已测、局部关系解析已优化；长时认证NOT RUN | 不因无窗口定向样本通过声称UI／整体达标 |
 
 ## 3. 推进顺序
 
-文档对齐、[海报拖动呈现优化](../40_Implementation/V3-04/POSTER_DRAG_PRESENTATION.md)及内置真实热度均已验集成，18份文档冲突已协调，209项定向／组合冒烟／普通构建通过，见[整合记录](../40_Implementation/V3-06/ACTIVITY_DRAG_INTEGRATION.md)。此前已同步精简main并发布preview-20261026.1，见[发布记录](../40_Implementation/V3-06/ACTIVITY_DRAG_RELEASE.md)。随后[可插拔模型协议](V3_ACTIVITY_MODEL_PROTOCOL_PLAN.md)实现、两组人工通过及样例清理完成，仅在功能分支收口，尚未集成发布。
+文档对齐、[海报拖动呈现优化](../40_Implementation/V3-04/POSTER_DRAG_PRESENTATION.md)及内置真实热度此前已验集成发布。后续[可插拔模型协议](V3_ACTIVITY_MODEL_PROTOCOL_PLAN.md)两组人工通过，J1测量触发同轮关系解析优化；本轮按用户授权拆分未验组件，仅将模型／性能非快进合入develop并同步精简main，发布preview-20261026.2。准确源码、包与验证见[本轮回执](../40_Implementation/V3-06/MODEL_PROTOCOL_RELEASE.md)，旧发布保留。
 
-用户最新调整：**成果集成后移，先逐步执行成本与模板。** 当前按[首批计划](JOINT_COST_AND_TEMPLATE_PLAN.md)推进J1测量／证据触发优化与T1声明式组件；再按实际成本推进J2及素材包／切换T2。阶段交付后再由用户授权Git集成与发布；AI仍后续。发布环境余验并行，外部代码热加载与逐帧位移插值另行评审，不把模型接口收口变成无限扩平台，不重复原人工验收。
+用户最新调整：**已验成果先集成，未验T1保留功能分支；下一步准备海报画板通用引擎设计。** 按[设计准备](POSTER_CANVAS_ENGINE_DESIGN_PLAN.md)明确画板／组件／内容槽、统一声明、增量运行与同代命中、资源安全和最小迁移切片，方向确认后再实施。T1原型不默认成为目标结构；J2按真实成本继续，AI仍后续。发布环境余验并行，外部代码热加载与逐帧位移插值另行评审，不重复原人工验收。
 
 模板／AI在后续分批接入；安装维护与环境余验是并行责任，不要求先做完AI才能发布。成本问题按证据触发，既不无限前置架构重做，也不隐去现有未定因。
 
@@ -48,7 +48,7 @@
 
 ## 10. V3-06：真实热度与动态排版（功能已验，整合验证通过）
 
-当前插入批：`impl/06-pluggable-activity-model` 已实现协议 v1、可信注册、综合热度／最近使用条带两个模型、运行时选择及受限淡入，集中两组USER PASS并收口，暂不合并。旧统计口径、原内置公式和文件保护不变；本批退出门、首轮失败证据及清理见[专项](../40_Implementation/V3-06/PLUGGABLE_MODEL_DELIVERY.md)。下表为上一轮内置模型已验／集成范围，不将本批通过误写成已发布。
+可插拔增量已实现协议v1、可信注册、综合热度／最近使用条带两个模型、运行时选择及受限淡入；两组USER PASS后与J1性能优化一起集成发布。旧统计口径、原内置公式和文件保护不变；原始验收与首次失败见[专项](../40_Implementation/V3-06/PLUGGABLE_MODEL_DELIVERY.md)，集成／打包见[本轮回执](../40_Implementation/V3-06/MODEL_PROTOCOL_RELEASE.md)。下表保留上一轮内置模型整合过程，后续发布状态以本段为准。
 
 正式增量聚合、纯评分／连续尺寸及实时生产接线来自`impl/06-real-activity@6bbfcfc`。用户确认其标准尺度与空间组合集中验收通过；本轮完成与拖动调度的组合验证，按授权合入develop，详见[整合记录](../40_Implementation/V3-06/ACTIVITY_DRAG_INTEGRATION.md)。
 
@@ -60,13 +60,13 @@
 | 功能集中验收 | 用户2026-10-26确认桌面标准尺度、热度／空间与人工覆盖全部通过 | USER PASS；另有本轮组合验证通过，不重复原两组，不等同全环境认证 |
 | 本轮整合 | 文档冲突逐条协调，209项定向、隔离组合与普通构建通过 | 按授权非快进合入develop；main／包／tag本轮不改，发布另行授权 |
 
-当前已验发布：热度相对倍率默认0.5～3、无数据1.5、K=20可配置；整体尺度另为0.4～1.8，标准图像区域48 DIP。上述值已随preview-20261026.1发布；新可插拔增量仍只在功能分支。临时排名奖励、主动刷新菜单、任意代码热加载不在本批。
+当前已验发布：热度相对倍率默认0.5～3、无数据1.5、K=20可配置；整体尺度另为0.4～1.8，标准图像区域48 DIP。上述值随preview-20261026.1发布，preview-20261026.2增加可插拔协议及双模型切换。临时排名奖励、主动刷新菜单、任意代码热加载不在本批。
 
 详细链路见[工作流§7.1～7.2](V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md#71-2026-10-21-真实热度准备未实施)，源码入口与证据归本轮整合。事件式消费／每海报合并待更新不等于所有读取及锁等待成本已经消除。
 
 ## 11. V3-07：模板、风格热替换
 
-前置插入的[模型统一协议](V3_ACTIVITY_MODEL_PROTOCOL_PLAN.md)已在功能分支两组USER PASS并收口，覆盖可信模型替换、排序／尺寸／位置与受限淡入，宿主保留保护与执行权；尚未集成发布。模板平台复用这些边界，但不得将其视为任意模板或外部代码热加载已完成。
+前置[模型统一协议](V3_ACTIVITY_MODEL_PROTOCOL_PLAN.md)已两组USER PASS、集成并发布，覆盖可信模型替换、排序／尺寸／位置与受限淡入，宿主保留保护与执行权。T1组件只在功能分支，未验未集成；下一步[画板引擎设计](POSTER_CANVAS_ENGINE_DESIGN_PLAN.md)复用已验模型边界，不将其视为任意模板或外部代码热加载已完成。
 
 后续按稳定声明schema／组件参数 → 包导入与安全校验 → 候选预览／原子切换／失败保留 → 兼容迁移逐步推进。既有内置Lamp／Rain及基础收纳不等于任意风格平台。非矩形、离散区域作为后续目标，需先明确几何／受保护操作区／同代命中，不能恢复日常点击穿透作为默认前提。
 
@@ -96,4 +96,4 @@ P1～P3优化已验，但并非整体速度／尾延迟认证。残余全局读�
 
 ## 15. 记录与下一步
 
-本轮可插拔模型两组通过并收口，样例／候选清理，未提交／推送／合并，精确证据归模型交付记录。未定因和成本始终随交接保留；当前状态有变化时原位修订[状态入口](../../00_Catalog/CURRENT_STATUS.md)，详细证据留C层，不从历史“未实施”段落重启已完成工作。
+本轮模型／性能已集成发布，精确回执归MODEL_PROTOCOL_RELEASE；T1原型／候选留存，画板引擎仅设计准备。未定因和成本始终随交接保留；当前状态有变化时原位修订[状态入口](../../00_Catalog/CURRENT_STATUS.md)，详细证据留C层，不从历史“未实施”段落重启已完成工作。
