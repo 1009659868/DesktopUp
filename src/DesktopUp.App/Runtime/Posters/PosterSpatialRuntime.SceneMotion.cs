@@ -39,33 +39,45 @@ internal sealed partial class PosterSpatialRuntime
             _sceneMotionSurfaces.Add(window);
             _sceneMotionDispatcher = window.SpatialDispatcher;
             _scenePointer ??= new(router);
-            if (_sceneUiSettings is null && !_sceneMotionFaulted)
-            {
-                UISettings? settings = null;
-                bool subscribed = false;
-                try
-                {
-                    if (_sceneMotionLedger is null) throw new InvalidOperationException("The shared motion ledger is not configured.");
-                    settings = new UISettings();
-                    _sceneAnimationsEnabled = settings.AnimationsEnabled;
-                    settings.AnimationsEnabledChanged += SceneAnimationsEnabledChanged;
-                    subscribed = true;
-                    _sceneMotionSettingsLease = _sceneMotionLedger.Acquire("subscription.scene-motion-settings", "shared-reduced-motion-observer");
-                    _sceneUiSettings = settings;
-                }
-                catch (Exception error)
-                {
-                    if (subscribed)
-                        try { settings!.AnimationsEnabledChanged -= SceneAnimationsEnabledChanged; }
-                        catch (Exception cleanup) { log.Write("warning", "scene.motion_settings_cleanup_failed", new { cleanup.Message }); }
-                    _sceneAnimationsEnabled = false;
-                    _sceneMotionFaulted = true;
-                    log.Write("warning", "scene.motion_settings_unavailable", new { error.Message });
-                }
-            }
+            EnsureAnimationSettings(window.SpatialDispatcher);
         }
         try { ArmSceneMotion(); }
         catch (Exception error) { StopFailedSceneMotion("arming", error); }
+    }
+
+    // Content transitions share the accessibility observer, not scene pointer/timer demand.
+    // A basic-box poster has no animated scene and must still read the real system preference.
+    internal bool CanAnimateContent(DispatcherQueue dispatcher)
+    {
+        EnsureAnimationSettings(dispatcher);
+        return _sceneAnimationsEnabled && !_sceneMotionFaulted && !SceneGlobalMotionPaused;
+    }
+
+    private void EnsureAnimationSettings(DispatcherQueue dispatcher)
+    {
+        _sceneMotionDispatcher ??= dispatcher;
+        if (_sceneUiSettings is not null || _sceneMotionFaulted) return;
+        UISettings? settings = null;
+        bool subscribed = false;
+        try
+        {
+            if (_sceneMotionLedger is null) throw new InvalidOperationException("The shared motion ledger is not configured.");
+            settings = new UISettings();
+            _sceneAnimationsEnabled = settings.AnimationsEnabled;
+            settings.AnimationsEnabledChanged += SceneAnimationsEnabledChanged;
+            subscribed = true;
+            _sceneMotionSettingsLease = _sceneMotionLedger.Acquire("subscription.scene-motion-settings", "shared-reduced-motion-observer");
+            _sceneUiSettings = settings;
+        }
+        catch (Exception error)
+        {
+            if (subscribed)
+                try { settings!.AnimationsEnabledChanged -= SceneAnimationsEnabledChanged; }
+                catch (Exception cleanup) { log.Write("warning", "scene.motion_settings_cleanup_failed", new { cleanup.Message }); }
+            _sceneAnimationsEnabled = false;
+            _sceneMotionFaulted = true;
+            log.Write("warning", "scene.motion_settings_unavailable", new { error.Message });
+        }
     }
 
     private void SceneAnimationsEnabledChanged(UISettings sender, UISettingsAnimationsEnabledChangedEventArgs args) =>

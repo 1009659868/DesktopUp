@@ -4,6 +4,18 @@ using DesktopUp.Infrastructure;
 using System.Text.Json;
 using DesktopUp.Testing;
 
+if (args.Length == 2 && args[1] == "--joint-model-cost")
+{
+    await JointModelCostFixture.Run(args[0]);
+    return;
+}
+
+if (args.Length == 2 && args[1] == "--model-protocol")
+{
+    ModelProtocolReviewFixture.Create(args[0]);
+    return;
+}
+
 if (args.Length == 2 && args[1] == "--architecture-attribution")
 {
     ReadValidationCostFixture.Run(args[0]);

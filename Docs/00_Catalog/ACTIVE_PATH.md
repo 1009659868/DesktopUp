@@ -17,10 +17,10 @@
 
 ## C：实际证据与接手
 
-本轮承接[海报拖动优化](../A_Project/40_Implementation/V3-04/POSTER_DRAG_PRESENTATION.md)及[真实热度](../A_Project/40_Implementation/V3-06/REAL_ACTIVITY_DELIVERY.md)的USER PASS，完成定向／组合验证后按授权集成develop；准确来源、文档冲突处理、验证、清理与同步回执见[整合记录](../A_Project/40_Implementation/V3-06/ACTIVITY_DRAG_INTEGRATION.md)。不重复已通过人工验收，成本及未定因继续保留。
+当前停留从develop@f6d4d2f派生的`impl/06-pluggable-activity-model`。模型两组人工USER PASS并收口，原[模型证据](../A_Project/40_Implementation/V3-06/PLUGGABLE_MODEL_DELIVERY.md)保留；用户已将集成后移，现读[联合成本与模板计划](../A_Project/30_Plans/JOINT_COST_AND_TEMPLATE_PLAN.md)及[首批实施记录](../A_Project/40_Implementation/V3-07/JOINT_COST_AND_COMPONENTS.md)。未提交／推送／合并；成本及未定因继续保留。
 
 依次读[当前交接](../A_Project/40_Implementation/V3-04/HANDOFF.md)、[代码锚点](../A_Project/40_Implementation/V3-04/CODE_ANCHORS.md)、[最新验证记录](../A_Project/40_Implementation/V3-04/VERIFICATION.md)，再打开当前任务的专项记录；不默认重读全库或重跑累计测试。
 
-最新已验发布专项仍为[唯一安装与迁移升级](../A_Project/40_Implementation/V3-04/SINGLE_INSTALL_MIGRATION.md)及[发布交付](../A_Project/40_Implementation/V3-04/PREVIEW_INSTALLER_DELIVERY.md)。develop的热度和拖动集成不等于main／安装包／tag已更新；发布单独授权。
+最新已验发布为[拖动与内置热度 preview-20261026.1](../A_Project/40_Implementation/V3-06/ACTIVITY_DRAG_RELEASE.md)。本批可插拔增量不在该安装包中；后续发布单独授权。
 
 旧导航和阶段队列保留在[历史快照](ACTIVE_PATH_HISTORY_20261023.md)，仅用于追溯。

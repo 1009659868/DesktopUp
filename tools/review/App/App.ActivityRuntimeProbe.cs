@@ -219,6 +219,16 @@ public partial class App
                 });
             }
 
+            if (Environment.GetCommandLineArgs().Contains("--model-protocol-probe"))
+            {
+                stage = "pluggable-models";
+                var beforeModels = _composition.ActivityStore.Read(ownedIds).Items;
+                await window.VerifyModelProtocolForProbe(cancellation.Token);
+                var afterModels = _composition.ActivityStore.Read(ownedIds).Items;
+                Require(ownedIds.All(key => beforeModels[key] == afterModels[key]), "Switching models changed usage facts.");
+                Require(files.Select(Hash).SequenceEqual(hashes), "Model proposals changed real files.");
+            }
+
             _log!.Write("info", "contract.real_activity_runtime_passed", new
             {
                 providerConfirmation = "SIMULATED: worker acceptance; production open service; no external program opened",

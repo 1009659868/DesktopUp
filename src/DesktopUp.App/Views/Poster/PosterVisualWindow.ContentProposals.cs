@@ -73,7 +73,14 @@ internal sealed partial class PosterVisualWindow
         if (changed)
         {
             _contentLayout.Invalidate();
-            RefreshContentSurface();
+            bool published = false;
+            try { published = ApplyContentFrame(_bounds); }
+            finally
+            {
+                if (result.Heat.Applied) _contentSession.CompleteHeatPublication(published);
+                if (!published) _contentLayout.Invalidate();
+            }
+            if (published && result.Heat.Applied) StartModelTransition(ActiveContentHeat?.Transition);
             spatial.NotifyContentEditorChanged(PosterId);
         }
     }

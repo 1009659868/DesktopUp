@@ -27,7 +27,9 @@ public static class ContentLayoutSolver
         if (responsiveManual)
             ordered = ordered.OrderBy(p => axis.Main(p.Column!.Value, p.Row!.Value))
                 .ThenBy(p => axis.Cross(p.Column!.Value, p.Row!.Value)).ThenBy(p => p.ItemId, StringComparer.Ordinal).ToArray();
-        var candidates = ordered.Select(p => new Candidate(p, Math.Max(readable, p.ColumnSpan),
+        var candidates = ordered.Select(p => p.ModelPosition is { } position && document.Mode != ContentLayoutMode.Manual && !p.FixedPosition
+            ? p with { Column = position.Column, Row = position.Row, FixedPosition = true } : p)
+            .Select(p => new Candidate(p, Math.Max(readable, p.ColumnSpan),
             Math.Max(readable, p.RowSpan), p.FixedPosition || document.Mode == ContentLayoutMode.Manual && p.Column.HasValue,
             p.ColumnSpan < readable || p.RowSpan < readable ? "readable-minimum" : null)).ToArray();
         int minimumCells = candidates.Select(c => axis.Cross(c.Width, c.Height)).DefaultIfEmpty(0).Max();

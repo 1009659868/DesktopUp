@@ -83,6 +83,7 @@ internal sealed partial class PosterVisualWindow(
     }
     public void SuspendInput()
     {
+        CancelModelTransition();
         _contentSession.SetSuspended(true);
         _incomingPreview = null; _incomingLayout = null; _incomingBasis = null;
         _contentSession.SetInteraction(PosterContentInteraction.Incoming | PosterContentInteraction.NativeHover, false);

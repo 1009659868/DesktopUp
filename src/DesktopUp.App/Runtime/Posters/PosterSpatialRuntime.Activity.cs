@@ -6,6 +6,7 @@ namespace DesktopUp;
 internal sealed partial class PosterSpatialRuntime
 {
     private ContentActivityProducer? _activityProducer;
+    internal IReadOnlyList<ContentModelDescriptor> ActivityModels => _activityProducer?.Models ?? [];
     internal void ConfigureActivity(ContentActivityProducer producer)
     {
         if (_activityProducer is null) ActivityChanged += WakeActivitySafePoints;
@@ -38,6 +39,8 @@ internal sealed partial class PosterSpatialRuntime
         if (_activityProducer is null || _contentOperations.IsStopping ||
             !state.TryGetCurrent(out var current) || current is null) { publish(null); return; }
         var catalog = current.ContentCatalog;
+        var viewport = owner.ActivityViewport;
+        var layout = owner.ActivityLayout;
         _contentOperations.Track(Produce());
         async Task Produce()
         {
@@ -46,7 +49,7 @@ internal sealed partial class PosterSpatialRuntime
             try
             {
                 proposal = await _activityProducer.ProduceAsync(author, catalog, version, DateTimeOffset.UtcNow,
-                    _contentOperations.Stopping).ConfigureAwait(false);
+                    _contentOperations.Stopping, viewport, layout).ConfigureAwait(false);
                 log.Write("info", "content.activity_produced", new { author.PosterId, version, author.DocumentVersion,
                     count = proposal?.Items.Count, elapsedMs = System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds });
             }
