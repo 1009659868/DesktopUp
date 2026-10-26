@@ -72,6 +72,7 @@ public sealed class TitlePresentationDriverTests
     {
         var s = Session(); var d = new TitlePresentationDriver(s);
         var before = TitleSpatialTestData.Geometry(s.Presented);
+        Assert.False(d.HasPendingWork);
         for (int i = 0; i < 10000; i++) d.Tick(() => true, _ => throw new Exception("must not draw"));
         Assert.Equal(before, TitleSpatialTestData.Geometry(s.Presented));
         Assert.Equal(0, s.SampleCount); Assert.Equal(TitleInteractionPhase.Pending, s.Intent.Phase);
@@ -82,7 +83,10 @@ public sealed class TitlePresentationDriverTests
     {
         var s = Session(); var d = new TitlePresentationDriver(s);
         d.Queue(Input(s, 2, TitlePointerEventKind.Move, 30));
-        for (int i = 0; i < 100; i++) d.Tick(() => true, _ => true);
+        int frames = 0;
+        while (d.HasPendingWork && frames++ < 100) d.Tick(() => true, _ => true);
+        Assert.InRange(frames, 1, 99);
+        Assert.False(d.HasPendingWork);
         Assert.True(s.Presented.Posters.Single().IsCollapsed); Assert.False(s.Complete);
         int samples = s.SampleCount;
         for (int i = 0; i < 20; i++) d.Tick(() => true, _ => throw new Exception("no growth"));

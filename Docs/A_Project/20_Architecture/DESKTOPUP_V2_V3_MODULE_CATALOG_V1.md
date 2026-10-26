@@ -1,5 +1,7 @@
 # DesktopUp V2 V3 模块分类与端口目录 V1
 
+当前对齐：2026-10-23。以下A～H编号是**设计职责分类，不是实际类名／完成清单**。实际7个生产项目与调用链统一见[src/README](../../../src/README.md)，当前状态见[状态入口](../../00_Catalog/CURRENT_STATUS.md)。本轮基础架构已集成收口，真实热度／完整模板／AI未实施；下列带日期的增量是历史，不作为新待办。
+
 2026-10-13 DEC-048：通用`PosterSurfaceAppearance`（presentation v8）独立于模板私有bindings，`ScenePresentationAdapter`在背景层统一应用；无覆盖时保留原模板基线。`Base.Heading`控制介绍组件装配，实例显隐不能凭空挂载组件；控制中心按已装配组件生成折叠设置。副标题/大标题/数量三组件及自由装配器尚属后续，不冒称已实现。代码/证据见[§13](../40_Implementation/V3-05/DIRECT_TRANSFER_DELIVERY.md#13-05-14界面减法与通用背景2026-10-13)。
 
 2026-10-13 DEC-047已实施：`NativeShellDragSource`负责唯一OLE源与原生目标交接，`NativeDragDataObject`组合Shell载荷/私有图像格式，输入宿主仅交接捕获；`NativeShellExitJournal`（schema21）只记意图/观察结果，`ContentRelationRemoval`统一移除，`ContentSingleOwnerPolicy/SingleOwnerMigration`限制新增共享并备份迁移旧关系。既有Incoming账本保持，旧Outgoing仅限隔离旧执行器探针，不接生产鼠标。证据与人工门见[§11](../40_Implementation/V3-05/DIRECT_TRANSFER_DELIVERY.md#11-dec-047单一引用与直接原生拖放)。下段“待实现/共享关系”已被覆盖。
@@ -60,30 +62,13 @@ M07是外部测量/安全门，不新增生产服务或状态权威；当前已[
 
 本文把 V3 总体架构拆成可独立实现、测试和替换的模块。模块名表达职责，不等同于最终程序集数量；首发可在一个解决方案和主进程中实现，只有高风险 Shell、主题代码和更新流程需要物理隔离。
 
-## 2. 建议工程结构
+## 2. 实际工程结构与后续目标
 
-```text
-DesktopUp.sln
-src/
-├─ DesktopUp.App/                 WinUI 入口、Poster、Control Center、Tray
-├─ DesktopUp.Application/         用例、命令、查询、事务与投影
-├─ DesktopUp.Domain/              纯模型和策略
-├─ DesktopUp.Infrastructure/      SQLite、文件、主题、AI、日志
-├─ DesktopUp.Windows/             HWND、Explorer、Shell、DPI、拖放
-├─ DesktopUp.ShellProxy/          可选隔离进程
-├─ DesktopUp.ThemeHost/           可选受限主题进程
-└─ DesktopUp.Updater/             可选更新进程
-native/
-└─ desktopup-native/              可选 Rust/C ABI
-tests/
-├─ DesktopUp.Domain.Tests/
-├─ DesktopUp.Application.Tests/
-├─ DesktopUp.Windows.Tests/
-├─ DesktopUp.Integration.Tests/
-└─ DesktopUp.ManualGates/
-```
+生产项目为DesktopUp.App、Application、Domain、Infrastructure、Windows、ContentWorker、Setup，详见[src/README](../../../src/README.md)。Setup是后续新增安装事务进程，不属于旧六程序集图；无业务库依赖，不承担评分或文件归还政策。
 
-首阶段只建立前五个项目和对应测试；辅助进程与 Rust 模块在需求进入相应阶段时创建。
+已有模块放Modules并编译期装配。测试在tests，开发探针在tools/review，不进入发布源码。ThemeHost、在线Updater、Rust/C ABI是未来按需求评估，不是现有目录或必建空壳。
+
+下面表中的ItemApplicationService、ShellProxy等名称用于分类；现有用例分布Application/Features/Content，Shell隔离由ContentWorker承担。先复用实际调用链，不能为与表中名字一致而复制服务。
 
 ## 3. A 类：进程、启动与生命周期
 
@@ -180,7 +165,7 @@ Application 层拥有用例顺序和事务，不拥有 WinUI 控件或 HWND。
 | E04 | `ResponsiveLayoutPolicy` | 列数、行流、viewport、裁剪和可达性 | HWND/数据库 | V3-06 |
 | E05 | `ContentItemModel` | 类型、来源、目标、状态、排序和活跃度 | Shell API | V3-05 |
 | E06 | `ActivityScoringPolicy` | recency/frequency/newness、衰减和稳定排序 | 网络/UI | V3-06 |
-| E07 | `ManualLayoutPolicy` | 自动、锚定+自动、全手动与冲突偏移 | UI 控件 | V3-06 |
+| E07 | `ManualLayoutPolicy` | 热度自动（可带图钉）／纯手动与冲突偏移 | UI 控件 | V3-06 |
 | E08 | `CollectionModel` | reference/mapped/managed 所有权、能力和删除语义 | 文件系统 | V3-05 |
 | E09 | `FileTransferPlan` | 来源、目标、动作、冲突、回滚和逐项结果 | IFileOperation | V3-05 |
 | E10 | `ThemeManifest` | 主题身份、版本、资源、能力和权限 | XAML loader | V3-07 |
@@ -286,7 +271,7 @@ Bootstrap → 所有组合根
 | C02/E04 | DeskBox 文件格子/叠放布局与 DPI tests | 中；DesktopUp 另有连续 viewport 与活跃度要求 |
 | G01–G05 | DeskBox appearance/resource dictionary/backdrop | 中低；DesktopUp 需要独立主题包与热更新事务 |
 | G06–G09 | 无直接完整对应 | 新建 |
-| B06 | DeskBox 完整矩形交互不足以满足透明空白穿透 | 新建并优先探针 |
+| B06 | 参考原生交互；当前可见全矩形输入与OLE共用宿主，逻辑区域同代发布 | 已接线；普通点击穿透取消，不重开旧探针 |
 
 ## 14. 首批冻结端口
 

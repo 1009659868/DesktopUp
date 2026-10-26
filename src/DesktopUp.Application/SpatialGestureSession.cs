@@ -6,7 +6,7 @@ public sealed record SpatialGestureCommit(SpatialSnapshot Initial, SpatialRect F
     IReadOnlyList<SpatialPathLeg> Path, PosterGestureKind Gesture, bool HasUserAdjusted);
 
 // Dispatcher-owned, one instance for the complete press/release sequence. Feed only presented
-// frames into Accept: replacing an unpresented 16ms sample must not become a hidden movement path.
+// frames into Accept: replacing an unpresented pointer sample must not become a hidden movement path.
 public sealed class SpatialGestureSession
 {
     private const int MaximumPathLegs = 8192;

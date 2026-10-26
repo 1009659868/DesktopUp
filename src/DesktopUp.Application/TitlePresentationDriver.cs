@@ -19,6 +19,11 @@ public sealed class TitlePresentationDriver(TitleSpatialSession session)
     public bool Interrupted { get; private set; }
     public bool InputEnded => Released || Interrupted;
     public bool HasPendingPresentation => _proposal is not null;
+    public bool HasPendingWork => !Session.Complete && !Session.Cancelled &&
+        (_proposal is not null || _firstMove is not null || _latestMove is not null ||
+         _release is not null || _interrupt is not null ||
+         Session.Intent.Phase == TitleInteractionPhase.CompactDrag &&
+         !Session.Presented.Posters.Single(p => p.PosterId == Session.Intent.Token.Session.PosterId).IsCollapsed);
     public int AcceptedFrames { get; private set; }
     public bool WasFastExpand { get; private set; }
     public string? FailureReason { get; private set; }

@@ -303,9 +303,13 @@ public sealed class PosterInputIslandManager : IInputRegionHost
     [DllImport("user32.dll")] private static extern int GetWindowRgn(nint window, nint region);
     [DllImport("gdi32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool PtInRegion(nint region, int x, int y);
 
+    public bool ApplyLayout(DesktopPixelRect frame, PosterInputLayoutSnapshot layout) =>
+        ApplyLayout(frame, layout, boundsAlreadyApplied: false);
+
     public bool ApplyLayout(
         DesktopPixelRect frame,
-        PosterInputLayoutSnapshot layout)
+        PosterInputLayoutSnapshot layout,
+        bool boundsAlreadyApplied)
     {
         DesktopMenuInteraction.CancelForSurface(WindowHandle);
         if (_disposed || WindowHandle == 0 ||
@@ -314,13 +318,10 @@ public sealed class PosterInputIslandManager : IInputRegionHost
             return false;
         }
 
-        nint region = BuildWindowRegion(layout);
-        if (region == 0)
-        {
-            return false;
-        }
-
-        bool moved = SetWindowPos(
+        // A successful group batch already moved both HWNDs. Verify instead of moving twice.
+        bool moved = boundsAlreadyApplied ? GetWindowRect(WindowHandle, out var actual) &&
+            actual.Left == frame.X && actual.Top == frame.Y &&
+            actual.Right - actual.Left == frame.Width && actual.Bottom - actual.Top == frame.Height : SetWindowPos(
             WindowHandle,
             0,
             frame.X,
@@ -328,9 +329,13 @@ public sealed class PosterInputIslandManager : IInputRegionHost
             frame.Width,
             frame.Height,
             SwpNoZOrder | SwpNoActivate);
-        if (!moved || SetWindowRgn(WindowHandle, region, redraw: true) == 0)
+        // Verify the LIVE rectangular region: a native reset must not become a cache hit.
+        bool sameRegion = moved && GetWindowRgnBox(WindowHandle, out var box) == 2 &&
+            box.Left == 0 && box.Top == 0 && box.Right == frame.Width && box.Bottom == frame.Height;
+        nint region = moved && !sameRegion ? BuildWindowRegion(layout) : 0;
+        if (!moved || !sameRegion && (region == 0 || SetWindowRgn(WindowHandle, region, redraw: true) == 0))
         {
-            _ = DeleteObject(region);
+            if (region != 0) _ = DeleteObject(region);
             DisableRoutingNative();
             return false;
         }
@@ -1156,6 +1161,13 @@ public sealed class PosterInputIslandManager : IInputRegionHost
     [DllImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool DestroyWindow(nint windowHandle);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetWindowRect(nint window, out NativeRect rectangle);
+
+    [DllImport("user32.dll")]
+    private static extern int GetWindowRgnBox(nint window, out NativeRect rectangle);
 
     [DllImport("user32.dll", EntryPoint = "DefWindowProcW")]
     private static extern nint DefWindowProc(nint hwnd, uint message, nuint wParam, nint lParam);
