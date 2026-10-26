@@ -46,6 +46,8 @@ public sealed record PosterStateCommand(
     public ControlCenterGeometryProof? ControlCenterGeometry { get; init; }
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public ContentScaleExpansionProof? ContentScaleExpansion { get; init; }
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public ContentHeatExpansionProof? ContentHeatExpansion { get; init; }
 }
 
 public sealed record SettingsStateCommand(

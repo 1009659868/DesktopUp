@@ -47,6 +47,8 @@ public sealed class PosterContentSession(PosterInputSessionKey identity, long in
     public bool AtSpaceSafePoint => !HasGesture && !Has(PosterContentInteraction.Menu);
     public bool HasPendingHeat => heat.HasPending;
     public long? ActiveHeatVersion => heat.ActiveVersion;
+    public bool HasContinuousHeat => heat.HasContinuousProjection;
+    public ContentHeatProposal? ContinuousHeat => heat.ContinuousProposal;
     public bool HasBufferedTheme => theme?.HasPending == true;
     public bool HasPendingTheme(PosterPresentationParameters current) => theme is { } t && (t.HasPending || t.Current != current);
     public ContentLayoutDocument Effective(ContentLayoutDocument author) => DraftProjection ?? Draft ?? heat.Projection ?? author;
@@ -150,7 +152,7 @@ public sealed class PosterContentSession(PosterInputSessionKey identity, long in
     {
         var p = parameters.Preferences ?? new();
         ContentLayoutCommandPolicy.ValidateAuthoring(author, p.Scale, p.Spacing);
-        ContentProjectionValidation.RequireWritable(effective, viewport with { Scale = p.Scale, Spacing = p.Spacing });
+        ContentProjectionValidation.RequireWritable(effective, viewport.WithPresentation(parameters));
     }
 
     public long SourceVersion { get; private set; } = initialSourceVersion;

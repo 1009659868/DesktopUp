@@ -6,7 +6,7 @@ public sealed record SpatialGestureCommit(SpatialSnapshot Initial, SpatialRect F
     IReadOnlyList<SpatialPathLeg> Path, PosterGestureKind Gesture, bool HasUserAdjusted);
 
 // Dispatcher-owned, one instance for the complete press/release sequence. Feed only presented
-// frames into Accept: replacing an unpresented 16ms sample must not become a hidden movement path.
+// frames into Accept: replacing an unpresented pointer sample must not become a hidden movement path.
 public sealed class SpatialGestureSession
 {
     private const int MaximumPathLegs = 8192;
@@ -88,7 +88,7 @@ public static class SpatialGestureCommitPolicy
         int minHeight = Math.Min(env.WorkArea.Height, Math.Max(1, (int)Math.Round(240 * env.DpiY / 96d)));
         if (command.Kind == PosterStateCommandKind.Resize)
         {
-            if (!ContentFrameMinimumPolicy.TryForPoster(current, out var minimum, out var error)) return error;
+            if (!ContentFrameMinimumPolicy.TryForPoster(current, out var minimum, out var error, heatLowerBound: true)) return error;
             (minWidth, minHeight) = minimum!.Pixels(env.DpiX, env.DpiY);
             if (gesture.Final.Width < minWidth || gesture.Final.Height < minHeight)
                 return "Active resize cannot clip the largest complete content item.";

@@ -66,9 +66,8 @@ internal sealed partial class PosterVisualWindow(
     private long _appliedTopologyGeneration;
     private int _itemColumnCount = -1;
     private double _itemScrollOffsetDip;
-    private DispatcherQueueTimer? _gestureFrameTimer;
-    private PendingGestureFrame? _pendingGestureFrame;
-    private bool _gestureFrameScheduled;
+    private DesktopPixelRect? _pendingGestureFrame;
+    private readonly ContentInputGeometryCache _inputGeometry = new();
     private VisualRegionState? _appliedVisualRegion;
     private bool _disposed;
     private SpatialGestureSession? _spatialGesture;
@@ -190,6 +189,7 @@ internal sealed partial class PosterVisualWindow(
                 if (!owner.ApplyTransitionViewport(frame.Bounds)) return false;
                 continue;
             }
+            if (phase == DesktopFramePhase.Regular && owner.CanReuseTranslatedContent(frame)) continue;
             layouts.Add((root, root.Width, root.Height));
             owner._contentLayout.Adopt(frame.Presentation);
             owner.DrawContentSnapshot(frame.Content, frame.ContentViewport);
@@ -236,7 +236,8 @@ internal sealed partial class PosterVisualWindow(
             // Clear after both capacity and clipping are committed, before publishing input.
             bool backgroundApplied = regionApplied && surfaceApplied && owner.ClearExposedVisualBackground(regionBefore);
             applied &= backgroundApplied;
-            bool inputApplied = matches && owner._inputIsland is not null && owner._inputIsland.ApplyLayout(frame.Bounds, frame.Input);
+            bool inputApplied = matches && owner._inputIsland is not null && owner._inputIsland.ApplyLayout(frame.Bounds, frame.Input,
+                boundsAlreadyApplied: nativeApplied);
             applied &= inputApplied;
             if (owner._transitionLayout is { IsResponsiveGeometry: true })
                 applied &= owner.VerifyGeometryFramePresentation(frame, phase, surfaceApplied, inputApplied);
@@ -763,7 +764,7 @@ internal sealed partial class PosterVisualWindow(
             _monitor, _spatialGesture.MinimumWidth, _spatialGesture.MinimumHeight);
         if (args.EventKind == PosterInputEventKind.GesturePreview)
         {
-            ScheduleGestureFrame(candidate, args.InitialFrame);
+            ScheduleGestureFrame(candidate);
             return;
         }
 
@@ -804,38 +805,27 @@ internal sealed partial class PosterVisualWindow(
         }
     }
 
-    private void ScheduleGestureFrame(
-        DesktopPixelRect candidate,
-        DesktopPixelRect initialFrame)
+    private void ScheduleGestureFrame(DesktopPixelRect candidate)
     {
         if (_window is null)
         {
             return;
         }
 
-        _pendingGestureFrame = new PendingGestureFrame(candidate, initialFrame);
-        if (_gestureFrameTimer is null)
-        {
-            _gestureFrameTimer = _window.DispatcherQueue.CreateTimer();
-            _gestureFrameTimer.Interval = TimeSpan.FromMilliseconds(16);
-            _gestureFrameTimer.IsRepeating = false;
-            _gestureFrameTimer.Tick += OnGestureFrameTick;
-        }
-        if (_gestureFrameScheduled)
-        {
-            return;
-        }
-
-        _gestureFrameScheduled = true;
-        _gestureFrameTimer.Start();
+        _pendingGestureFrame = candidate;
+        spatial.RequestDragFrame(this, PresentPendingGestureFrame);
     }
 
-    private void OnGestureFrameTick(DispatcherQueueTimer sender, object args)
+    private void PresentPendingGestureFrame()
     {
-        _gestureFrameScheduled = false;
-        PendingGestureFrame? pending = _pendingGestureFrame;
+        var pending = _pendingGestureFrame;
         _pendingGestureFrame = null;
-        if (pending is { } frame) _ = PresentSpatialCandidate(frame.Candidate);
+        try { if (pending is { } frame) _ = PresentSpatialCandidate(frame); }
+        catch (Exception error)
+        {
+            log.Write("error", "spatial.drag_render_failed", new { error.Message });
+            CancelSpatialGesture("render-exception");
+        }
     }
 
     private bool PresentSpatialCandidate(DesktopPixelRect candidate)
@@ -851,10 +841,14 @@ internal sealed partial class PosterVisualWindow(
             CancelSpatialGesture("spatial-candidate-invalid");
             return false;
         }
-        // Preserve the contact/slide path. A skipped timer sample is never accepted as presented.
+        // Preserve the contact/slide path. Coalesced input is never accepted as presented.
         foreach (SpatialPathLeg leg in plan.Path)
         {
-            if (_spatialGesture != session || !ApplyFrame(PosterSpatialRuntime.Pixels(leg.To)))
+            var bounds = PosterSpatialRuntime.Pixels(leg.To);
+            bool presented = _spatialGesture == session && (session.Gesture == PosterGestureKind.Move
+                ? PrepareSpatialFrame(bounds) is { } prepared && CommitSpatialFrames([prepared])
+                : ApplyFrame(bounds));
+            if (!presented)
             {
                 CancelSpatialGesture("native-frame-rejected");
                 return false;
@@ -871,8 +865,7 @@ internal sealed partial class PosterVisualWindow(
     private void CancelScheduledGestureFrame()
     {
         _pendingGestureFrame = null;
-        _gestureFrameScheduled = false;
-        _gestureFrameTimer?.Stop();
+        spatial.CancelDragFrame(this);
     }
 
     private void HandleInvocation(PosterInputEventArgs args)
@@ -1282,7 +1275,7 @@ internal sealed partial class PosterVisualWindow(
     {
         if (_monitor is null) throw new InvalidOperationException("A monitor snapshot is required for input layout.");
         if (!_geometry.IsCollapsed) EnsureContentSnapshot(frame);
-        return ContentInputGeometry.Resolve(checked(++_layoutRevision), frame,
+        return _inputGeometry.Resolve(checked(++_layoutRevision), frame,
             new(_monitor, _geometry, _presentation, _titlePose, IsEditing, _contentReadOnly, _selectedContentItem,
                 _contentLayout.Current, ContentLeftDip, ContentTopDip, _transitionLayout is not null, ResolveOuterCornerRadiusPixels()));
     }
@@ -1876,11 +1869,6 @@ internal sealed partial class PosterVisualWindow(
             try { action(); } catch (Exception exception) { failures.Add(exception); }
         }
         CancelScheduledGestureFrame();
-        if (_gestureFrameTimer is not null)
-        {
-            _gestureFrameTimer.Tick -= OnGestureFrameTick;
-            _gestureFrameTimer = null;
-        }
         if (_inputIsland is not null)
         {
             Cleanup(() => { _fileDrop?.Dispose(); _fileDrop = null; });
@@ -1918,10 +1906,6 @@ internal sealed partial class PosterVisualWindow(
         byte Red,
         byte Green,
         byte Blue);
-
-    private readonly record struct PendingGestureFrame(
-        DesktopPixelRect Candidate,
-        DesktopPixelRect InitialFrame);
 
     private readonly record struct VisualRegionState(
         nint WindowHandle,

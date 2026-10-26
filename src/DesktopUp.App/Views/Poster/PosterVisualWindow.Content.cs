@@ -13,6 +13,10 @@ internal sealed partial class PosterVisualWindow
     private bool _contentReadOnly;
     private bool _contentParseReadOnly;
     private readonly ContentPresentationLayout _contentLayout = new();
+    private ContentPresentationFrame? _paintedContentFrame;
+    private bool CanReuseTranslatedContent(PreparedSpatialFrame frame) =>
+        _bounds.Width == frame.Bounds.Width && _bounds.Height == frame.Bounds.Height &&
+        ReferenceEquals(_paintedContentFrame, frame.Presentation);
     private double _contentScrollX;
     private ContentLayoutDocument ContentDocument
     {
@@ -43,10 +47,9 @@ internal sealed partial class PosterVisualWindow
         double sx = _monitor?.ScaleX ?? 1, sy = _monitor?.ScaleY ?? 1;
         double borderX = (_surface?.BorderThickness.Left ?? 0) + (_surface?.BorderThickness.Right ?? 0);
         double borderY = (_surface?.BorderThickness.Top ?? 0) + (_surface?.BorderThickness.Bottom ?? 0);
-        var preference = _presentation.Parameters.Preferences ?? new();
-        return new(Math.Max(0, frame.Width / sx - HorizontalPaddingDip * 2 - borderX),
+        return new ContentLayoutViewport(Math.Max(0, frame.Width / sx - HorizontalPaddingDip * 2 - borderX),
             Math.Max(0, frame.Height / sy - HeaderHeightDip - MetaHeightDip - ItemsTopInsetDip - FooterHeightDip - borderY),
-            _contentScrollX, _itemScrollOffsetDip, _contentLayout.Generation, preference.Scale, preference.Spacing);
+            _contentScrollX, _itemScrollOffsetDip, _contentLayout.Generation).WithPresentation(_presentation.Parameters);
     }
     internal bool TryReadContentFrameMinimum(out int width, out int height)
     {
@@ -54,18 +57,21 @@ internal sealed partial class PosterVisualWindow
         if (_disposed || _monitor is null || _authoritativePoster is null) return false;
         var snapshot = EnsureContentSnapshot(_bounds);
         if (_contentParseReadOnly || _contentLayout.HasFault ||
-            !ContentFrameMinimumPolicy.TryForPoster(_authoritativePoster, out var authored, out _)) return false;
+            !ContentFrameMinimumPolicy.TryForPoster(_authoritativePoster, out var authored, out _,
+                heatLowerBound: _contentSession.HasContinuousHeat)) return false;
         var effective = ContentFrameMinimumPolicy.FromSnapshot(snapshot,
             HorizontalPaddingDip * 2 + ContentFrameMinimumPolicy.EditingBorderDip,
             HeaderHeightDip + MetaHeightDip + ItemsTopInsetDip + FooterHeightDip + ContentFrameMinimumPolicy.EditingBorderDip);
         // A currently accepted heat projection may have larger cards than its author basis.
-        (width, height) = new ContentFrameMinimum(Math.Max(authored!.WidthDip, effective.WidthDip),
-            Math.Max(authored.HeightDip, effective.HeightDip)).Pixels(_monitor.DpiX, _monitor.DpiY);
+        (width, height) = (_contentSession.HasContinuousHeat ? authored! :
+            new ContentFrameMinimum(Math.Max(authored!.WidthDip, effective.WidthDip),
+                Math.Max(authored.HeightDip, effective.HeightDip))).Pixels(_monitor.DpiX, _monitor.DpiY);
         return true;
     }
     private ContentLayoutSnapshot EnsureContentSnapshot(DesktopPixelRect frame)
     {
         _ = ContentDocument;
+        _contentSession.Reconcile(ContentDocument, ContentViewportFor(frame));
         bool wasFault = _contentLayout.HasFault || _contentLayout.Snapshot?.IsLayoutReadOnly == true;
         var prepared = _contentLayout.Prepare(EffectiveContentDocument, ContentViewportFor(frame),
             ContentSurface(frame), HasContentGesture, _transitionLayout is not null,
@@ -107,6 +113,8 @@ internal sealed partial class PosterVisualWindow
             SelectedContentIds(), _contentSelection.ShowHighlight, IsEditing, _selectedContentItem,
             _geometry.IsLocked, _contentReadOnly, IsRealContent, _presentation, _inlineRenameItem,
             _contentParseReadOnly, _contentLayout.HasFault, ghost));
+        _paintedContentFrame = ReferenceEquals(_contentLayout.Snapshot, snapshot) && _contentLayout.Viewport == viewport
+            ? _contentLayout.Current : null;
         _inputIsland?.RefreshContentHover();
         _itemColumnCount = snapshot.Columns;
         const string kind = "ITEMS";

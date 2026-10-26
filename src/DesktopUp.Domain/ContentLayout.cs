@@ -70,12 +70,12 @@ public sealed record ContentLayoutDocument(string PosterId, IReadOnlyList<Conten
     public ContentFlowAxis FlowAxis { get; init; } = ContentFlowAxis.Vertical;
 
     /// <summary>
-    /// Opt-in heat participation. Ordering/ranking by heat is deliberately not implemented in this
-    /// batch; only card size may optionally follow the heat tier, and it stays off by default so a
-    /// manual or pinned card is never resized silently. Persisted as an explicit flag so the decision
-    /// is recorded and can be enabled later without another schema change.
+    /// Opt-in independent item sizing from activity. Ranking follows the current layout mode;
+    /// this flag only controls size and remains off for existing/default documents. Manual size
+    /// overrides are preserved; order pins constrain placement rather than size.
     /// </summary>
     public bool AllowHeatDrivenSize { get; init; }
+    public ContentActivityOptions Activity { get; init; } = new();
 
     /// <summary>
     /// Loop scrolling, deliberately separated from the flow axis. The axis decides the main scroll
@@ -119,7 +119,19 @@ public readonly record struct ContentRect(double X, double Y, double Width, doub
 
 public sealed record ContentScrollAnchor(string ItemId, double InsideOffsetDip, int PreviousReadOrder);
 public sealed record ContentLayoutViewport(double WidthDip, double HeightDip, double ScrollXDip = 0, double ScrollYDip = 0,
-    long Generation = 0, double Scale = 1, double Spacing = 1, long ThemeMetricsVersion = 1);
+    long Generation = 0, double Scale = 1, double Spacing = 1, long ThemeMetricsVersion = 1)
+{
+    // Rendering/measurement context, never persisted in author intent or used as a heat score.
+    public double BaseMetricsScale { get; init; } = 1;
+    public double CellDip(ContentLayoutDocument document) => document.BaseCellDip * Scale * BaseMetricsScale;
+    public double GapDip(ContentLayoutDocument document) => document.BaseGapDip * Spacing * BaseMetricsScale;
+    public ContentLayoutViewport WithPresentation(PosterPresentationParameters parameters)
+    {
+        var preferences = parameters.Preferences ?? new();
+        return this with { Scale = preferences.Scale, Spacing = preferences.Spacing,
+            BaseMetricsScale = PosterContentPreferencePolicy.BaseMetricsScale(parameters.Content) };
+    }
+}
 public sealed record ContentResolvedPlacement(string ItemId, int SourceIndex, int ReadOrder, int Column, int Row,
     double ColumnSpan, double RowSpan, ContentRect Bounds, ContentRect Clip, string? Diagnostic = null)
 {
@@ -144,6 +156,7 @@ public sealed record ContentLayoutSnapshot(string PosterId, long DocumentVersion
     /// <summary>Derived geometry witness. Null only for explicitly constructed legacy snapshots.</summary>
     public double? ResolvedScale { get; init; }
     public double? ResolvedSpacing { get; init; }
+    public double ResolvedBaseMetricsScale { get; init; } = 1;
     public ContentLayoutSpaceStatus SpaceStatus { get; init; }
     public bool IsLayoutReadOnly => SpaceStatus != ContentLayoutSpaceStatus.Normal;
     public ContentResolvedPlacement? HitTest(double x, double y) => Items.FirstOrDefault(i => i.Clip.Contains(x, y));
@@ -179,6 +192,7 @@ public static class ContentLayoutPolicy
         if (string.IsNullOrWhiteSpace(d.PosterId) || d.PosterId.Length > 128 || d.DocumentVersion < 1 || d.ItemSetVersion < 1 || !Enum.IsDefined(d.Mode))
             return "Invalid layout identity/version/mode.";
         if (!Enum.IsDefined(d.FlowAxis)) return "Invalid content flow axis.";
+        if (d.Activity is null || d.Activity.Validate() is not null) return "Invalid activity settings.";
         if (!double.IsFinite(d.BaseCellDip) || d.BaseCellDip is < 16 or > 96 || !double.IsFinite(d.BaseGapDip) || d.BaseGapDip is < 0 or > 40 || d.MaximumColumns is < 2 or > MaximumColumns)
             return "Invalid baseline grid metrics.";
         if (d.Placements is null || d.Placements.Count > MaximumItems || d.Regions is null || d.Regions.Count is < 1 or > MaximumRegions)

@@ -84,6 +84,10 @@ internal sealed partial class PosterVisualWindow
         var border = _surface.BorderThickness;
         double width = frame.Width / _monitor.ScaleX - border.Left - border.Right;
         double height = frame.Height / _monitor.ScaleY - border.Top - border.Bottom;
+        var viewportKey = (width, height, _geometry.IsCollapsed, lease.TitleSource);
+        if (!lease.IsResponsiveGeometry && lease.AppliedViewport == viewportKey)
+            return Math.Abs(lease.Structure.ActualWidth - lease.StableWidth) < .5 &&
+                Math.Abs(lease.Structure.ActualHeight - lease.StableHeight) < .5;
         if (lease.IsResponsiveGeometry)
         {
             _ = lease.NativeBoundsFor(frame); // Validate capacity before changing live logical layout.
@@ -108,8 +112,10 @@ internal sealed partial class PosterVisualWindow
         // Posture changes only viewport/position. Geometry has already consumed and measured
         // the current frame's composition, without changing the native allocation.
         lease.Canvas.UpdateLayout();
-        return Math.Abs(lease.Structure.ActualWidth - lease.StableWidth) < .5 &&
+        bool ready = Math.Abs(lease.Structure.ActualWidth - lease.StableWidth) < .5 &&
             Math.Abs(lease.Structure.ActualHeight - lease.StableHeight) < .5;
+        if (ready) lease.AppliedViewport = viewportKey;
+        return ready;
     }
 
     private DesktopPixelRect PreparedSurfaceBounds(DesktopPixelRect visible) =>
@@ -228,6 +234,7 @@ internal sealed partial class PosterVisualWindow
         public DesktopPixelRect PreviousNativeBounds { get; } = previousNativeBounds;
         public bool NativePrepared { get; set; }
         public bool TitleSource { get; set; }
+        public (double Width, double Height, bool Collapsed, bool TitleSource)? AppliedViewport { get; set; }
         public Grid Structure { get; } = structure;
         public Grid Footer { get; } = footer;
         public Canvas Canvas { get; } = canvas;

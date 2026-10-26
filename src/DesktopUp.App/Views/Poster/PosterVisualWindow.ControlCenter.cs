@@ -56,8 +56,8 @@ internal sealed partial class PosterVisualWindow
             ContentLayoutCommandPolicy.ValidateAuthoring(ContentDocument, preferences.Scale, preferences.Spacing);
             var frame = bounds ?? _bounds;
             if (_authoritativePoster?.IsVisible == true && !_geometry.IsCollapsed && _monitor is not null && frame.IsUsable)
-                RequireWritableContentProjection(EffectiveContentDocument, ContentViewportFor(frame) with
-                    { Scale = preferences.Scale, Spacing = preferences.Spacing,
+                RequireWritableContentProjection(EffectiveContentDocument, ContentViewportFor(frame).WithPresentation(next.Parameters) with
+                    {
                       HeightDip = Math.Max(0, ContentViewportFor(frame).HeightDip + _presentation.MetaHeightDip - next.MetaHeightDip
                           + _presentation.HeaderHeightDip - next.HeaderHeightDip) });
             return null;

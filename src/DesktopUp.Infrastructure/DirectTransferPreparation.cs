@@ -27,14 +27,18 @@ public static class DirectTransferPreparation
         if(paths.Count is <1 or >ContentTransferPlanning.MaximumBatch)throw new IOException("一次最多拖入100项。");
         if(state.ContentCatalog.Bindings.Any(b=>b.PosterId==posterId && state.ContentCatalog.Collections.Any(c=>c.Id==b.CollectionId && c.Kind==ContentCollectionKind.Mapped)))
             throw new IOException("映射海报不能走受管收纳拖入；请在资源管理器中将文件放入映射目录。");
+        var ownedMemberships=state.ContentCatalog.PosterItems.Select(p=>p.MembershipId).ToHashSet();
+        var liveItemIds=state.ContentCatalog.Memberships.Where(m=>ownedMemberships.Contains(m.Id))
+            .Select(m=>m.ContentItemId).ToHashSet();
         var inputs=paths.Select(path=>
         {
             var observed=LocalContentReferenceProbe.Inspect(path);
             var item=observed.Item??throw new IOException(observed.Message);
-            // Reuse live physical references, not detached historical entities.
+            // Detached references retain membership rows for history. Only a current card
+            // proves live ownership; a same-path re-add must receive a fresh usage identity.
             var known=state.ContentCatalog.Items.FirstOrDefault(x=>x.Source.ProviderId==item.Source.ProviderId &&
                 string.Equals(x.Target.Locator,item.Target.Locator,StringComparison.OrdinalIgnoreCase) &&
-                state.ContentCatalog.Memberships.Any(m=>m.ContentItemId==x.Id));
+                liveItemIds.Contains(x.Id));
             return (known??item,Path.Combine(storage.Collection.StorageLocator!,Path.GetFileName(item.Target.Locator)),(Guid?)null);
         }).ToArray();
         return LocalTransferPreview.Prepare(state,posterId,ContentDropRoute.IntoManagedStorage,inputs,storage.Root,

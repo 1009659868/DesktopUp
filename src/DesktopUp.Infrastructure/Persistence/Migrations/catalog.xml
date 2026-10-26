@@ -57,4 +57,5 @@
     <legacy sha256="C77625B89B5B4521AC31E97FC51A698412C44202F268FC455F6D19AD81E9214C" evidence="package-20261016.101;architecture-r1-transfers-product01" />
   </migration>
   <migration version="26" name="content-driven-frame-minimum" file="026.sql" sha256="55CC3DA4564923E04B0802DFC64072D79B7393C1EB10364F6B54046D5B2D4E9B" />
+  <migration version="27" name="content-activity-statistics" file="027.sql" sha256="18E6BF4B94B8E08B888DDA64C50E1226F33729FCB5BCC14F4AADF7602E86F0F1" />
 </migrations>

@@ -1,5 +1,6 @@
 using DesktopUp.Application;
 using DesktopUp.Domain;
+using Microsoft.UI.Xaml.Media;
 
 namespace DesktopUp;
 
@@ -13,6 +14,11 @@ internal sealed partial class PosterSpatialRuntime(IStateProjectionCoordinator s
     private PosterVisualWindow? _owner;
     private SpatialGestureSession? _gesture;
     private bool _suspended = true;
+    private readonly PosterDragFrameScheduler _dragFrames = new(
+        handler => CompositionTarget.Rendering += handler,
+        handler => CompositionTarget.Rendering -= handler);
+    internal void RequestDragFrame(PosterVisualWindow owner, Action present) => _dragFrames.Request(owner, present);
+    internal void CancelDragFrame(PosterVisualWindow owner) => _dragFrames.Cancel(owner);
     internal bool HasCenterDraft(string id) => hasCenterDraft?.Invoke(id) == true;
     internal bool OwnsCenterContentDraft(string id, long entityVersion, long documentVersion) =>
         ownsCenterContentDraft?.Invoke(id, entityVersion, documentVersion) == true;
@@ -94,6 +100,7 @@ internal sealed partial class PosterSpatialRuntime(IStateProjectionCoordinator s
     public void End(PosterVisualWindow owner)
     {
         if (!ReferenceEquals(owner, _owner)) return;
+        CancelDragFrame(owner);
         _gesture = null;
         _owner = null;
         ActivityChanged?.Invoke();

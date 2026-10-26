@@ -7,6 +7,24 @@ public sealed record PosterInputGeometryContext(DisplayMonitorSnapshot Monitor, 
     string? SelectedItem, ContentPresentationFrame? Content, double ContentLeft, double ContentTop,
     bool Transition, int CornerRadius);
 
+// Local hit geometry does not depend on screen position. Each publication still gets
+// a fresh revision: an old hit cannot remain valid after its surface has moved.
+public sealed class ContentInputGeometryCache
+{
+    private PosterInputGeometryContext? _context;
+    private PosterInputLayoutSnapshot? _layout;
+
+    public PosterInputLayoutSnapshot Resolve(long revision, DesktopPixelRect frame, PosterInputGeometryContext context)
+    {
+        if (_layout is not null && _context == context &&
+            _layout.FrameWidth == frame.Width && _layout.FrameHeight == frame.Height)
+            return _layout with { Revision = revision };
+        var resolved = ContentInputGeometry.Resolve(revision, frame, context);
+        _context = context;
+        return _layout = resolved;
+    }
+}
+
 /// <summary>All title/action, content/viewport and resize hit geometry for a prepared frame.
 /// The platform consumes these regions; it does not independently reinterpret layout.</summary>
 public static class ContentInputGeometry
