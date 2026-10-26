@@ -233,7 +233,7 @@ Domain／Application／Infrastructure／Windows是逻辑程序集，不是每海
 
 ## 10. Item 排版与活跃度
 
-当前ContentLayoutDocument／纯布局帧／PosterContentSession及同代Presenter已接真实内容，已验连续视口、手动让位、图钉、小数尺寸与增量呈现。成功打开经ContentActionService／IContentOpenJournal持久化；正式聚合／评分仍未实现。ContentHeatSession和Domain提案路径存在旧五档量化适配，真实热度接入时要替换生产映射并保留必要历史兼容，不得将其当作用户要求的连续热度。
+当前ContentLayoutDocument／纯布局帧／PosterContentSession及同代Presenter已接真实内容，已验连续视口、手动让位、图钉、小数尺寸与增量呈现。成功打开经ContentActionService／IContentOpenJournal持久化，ContentActivityConsumer/Store完成增量聚合，ContentActivityProducer调用内置ContentActivityPolicy生成连续提案。旧五档只保留注入兼容，不是当前生产模型。
 
 现有链路：事实 → Application幂等消费与协调 → Domain纯策略 → 版本化连续提案 → 会话安全时点 → Presenter／同代命中。已批准规则和仍待测量的成本见[工作流§7.1](../30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md#71-2026-10-21-真实热度准备未实施)。以下策略名表示职责，不要求另建同名类。
 
@@ -242,7 +242,9 @@ Domain／Application／Infrastructure／Windows是逻辑程序集，不是每海
 - WinUI 视图使用虚拟化集合控件或自定义 Layout，而不是为每次缩放销毁全部控件；
 - 列数变化、连续裁剪和滚动只改变布局快照，Item identity 和 pointer capture 不变；
 - 所有 Item 必须可达；零项、单项、多项、失效项和重复来源都有独立夹具；
-- 热度自动（可含顺位图钉）与纯手动两模式共享同一模型；图钉不是第三模式，手工尺寸优先，自动热度不主动扩外框。
+- 热度自动（可含顺位图钉）与纯手动两模式共享会话／布局基础；图钉不是第三模式，手工尺寸优先。热度可必要扩框、受阻限幅，用户缩框不被同目标撑回。
+
+2026-10-26可插拔需求确认：当前producer直接调用固定内置policy，尚无统一模型注册／切换接口，ContentHeatProposal目前只表达排名与相对尺寸；算法版本也仍绑定内置policy。独立纯策略不等于插件化已完成。下一批按[统一协议计划](../30_Plans/V3_ACTIVITY_MODEL_PROTOCOL_PLAN.md)拆分模型身份／协议版本／请求序列，允许模型输出排序、尺寸、位置及声明式过渡建议；宿主继续负责安全校验、布局可达性、人工覆盖、交互延期、动画执行和同代命中，不给模型窗口或文件操作权限。本轮仅发布已验内置模型，不把未验协议加入包。
 
 ## 11. 主题与热更新
 
