@@ -39,7 +39,10 @@
 
 ## Git回执
 
-验证与清理已完成，按授权非快进提交整合树并合入develop；实际提交及远端回读在完成同步后补记。本轮不改源热度分支、main或tag，不强推。
+- 整合提交`890c060d694700407cc36e63c2f309d6c4b58e79`，父提交为develop基线`023a76f`与热度`6bbfcfc`，已推送`origin/impl/06-activity-drag-integration`并设置上游。
+- develop非快进合并`1c6e1d69ed439154f44f65c1af3ece4c26cad76d`已推送；与验证整合树完全一致，tree均为`fb4c2bb91c3e18e16684b01919d56cda019cc72d`。本回执作为后续纯文档提交，不改变验证源码，不重复构建／业务验收。
+- `ls-remote`回读确认上述两线提交；源热度分支仍`6bbfcfc`，发布main仍`ecb0c04`，`preview-20261023.1`剥离后仍指向`ecb0c04`。没有强推、删除分支或更新安装包／Release。
+- 当前停留`impl/develop`；合并后工作区干净，自建运行目录／临时探针输出均不存在，无DesktopUp／Worker进程。本回执提交同步后以Git日志定位最终文档提交。
 
 ## 保持开放的边界
 

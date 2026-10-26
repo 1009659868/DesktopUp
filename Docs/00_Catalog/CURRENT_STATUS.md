@@ -7,7 +7,7 @@
 | 项目 | 已核实状态 |
 | --- | --- |
 | 实际仓库 | `G:\A_\Tools\DesktopUp_V2`；与旧 `DesktopUp` 仓库不同 |
-| 当前开发集成线 | `impl/develop`；本轮从`023a76f`整合已验热度，准确合并与远端回执见[整合记录](../A_Project/40_Implementation/V3-06/ACTIVITY_DRAG_INTEGRATION.md) |
+| 当前开发集成线 | `impl/develop`；整合提交`890c060`、非快进合入`1c6e1d6`已推送并回读一致；随后仅补文档回执，见[整合记录](../A_Project/40_Implementation/V3-06/ACTIVITY_DRAG_INTEGRATION.md) |
 | 最新已验功能 | 拖动优化、真实热度及桌面标准尺度，209项定向／组合冒烟／普通构建通过。最新已发布功能仍为唯一安装与换路径迁移升级 |
 | 热度来源 | `origin/impl/06-real-activity@6bbfcfc`，功能`8156b73`；共同基线`d922669`；经`impl/06-activity-drag-integration`保留双方历史集成 |
 | 精简发布源码 | `impl/main@ecb0c04`；保留源码、内置模块、配置、构建打包入口与许可证 |
