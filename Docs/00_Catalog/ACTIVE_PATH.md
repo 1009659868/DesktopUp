@@ -17,10 +17,10 @@
 
 ## C：实际证据与接手
 
-本轮任务：[海报拖动呈现优化](../A_Project/40_Implementation/V3-04/POSTER_DRAG_PRESENTATION.md)，分支 `impl/poster-drag-presentation`；两组人工USER PASS / CLOSED，样例已归档清理，未提交／集成。后续Git操作另行授权，不在本分支接入热度。
+本轮[海报拖动优化](../A_Project/40_Implementation/V3-04/POSTER_DRAG_PRESENTATION.md)已推送并集成develop；当前转入[远端热度分支审查与合并准备](../A_Project/40_Implementation/V3-06/ACTIVITY_BRANCH_REVIEW_20261026.md)。用户已补充确认热度集中验收通过；尚未实际合入热度，停留develop，下一步组合验证／整合另行授权。
 
 依次读[当前交接](../A_Project/40_Implementation/V3-04/HANDOFF.md)、[代码锚点](../A_Project/40_Implementation/V3-04/CODE_ANCHORS.md)、[最新验证记录](../A_Project/40_Implementation/V3-04/VERIFICATION.md)，再打开当前任务的专项记录；不默认重读全库或重跑累计测试。
 
-最新已验发布专项为[唯一安装与迁移升级](../A_Project/40_Implementation/V3-04/SINGLE_INSTALL_MIGRATION.md)及[发布交付](../A_Project/40_Implementation/V3-04/PREVIEW_INSTALLER_DELIVERY.md)。真实热度尚无已开工 C 实施记录；获授权开工时才建立。
+最新已验发布专项仍为[唯一安装与迁移升级](../A_Project/40_Implementation/V3-04/SINGLE_INSTALL_MIGRATION.md)及[发布交付](../A_Project/40_Implementation/V3-04/PREVIEW_INSTALLER_DELIVERY.md)。热度已有远端C实施记录，入口及确切提交见本轮审查，不以当前工作树缺少热度源码推断从未实现。
 
 旧导航和阶段队列保留在[历史快照](ACTIVE_PATH_HISTORY_20261023.md)，仅用于追溯。

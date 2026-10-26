@@ -1,5 +1,9 @@
 # V3-04 代码锚点
 
+## 2026-10-26 集成与远端热度入口
+
+拖动优化已集成develop；下节源码可在当前树定位。真实热度的新Consumer／Store／Policy／Sizing／Activity窗口接线仍只在`origin/impl/06-real-activity@6bbfcfc`，本轮仅审查，不建立假本地源码链接；准确入口、用户补充验收与组合风险见[合并准备](../V3-06/ACTIVITY_BRANCH_REVIEW_20261026.md)。
+
 ## 2026-10-26 海报拖动呈现
 
 App/Runtime/Posters/PosterDragFrameScheduler统一按需Rendering；PosterSpatialRuntime.Title使用TitlePresentationDriver.HasPendingWork保留静止收拢。PosterVisualWindow的普通Move复用CommitSpatialFrames，Content/Transition局部复用不变呈现；Application/ContentInputGeometryCache复用相对几何但发布新Revision。Windows/PosterInputIslandManager实际读回batch位置及HRGN，保留失效恢复。工具入口scripts/start-poster-drag-review.ps1，测量在tools/review/App/PosterVisualWindow.DragPresentationProbe.cs，均不进入正常产品编译；状态与证据归[专项](POSTER_DRAG_PRESENTATION.md)。

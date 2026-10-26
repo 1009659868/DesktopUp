@@ -2,7 +2,7 @@
 
 当前7个生产项目：六个业务／系统项目（App、Application、Domain、Infrastructure、Windows、ContentWorker）及后来新增的**Setup安装事务程序**。基础架构R1～R8、P1～P3已验并集成，最新安装迁移也已集成发布；基线和后续任务统一查[CURRENT_STATUS](../Docs/00_Catalog/CURRENT_STATUS.md)。
 
-[2026-10-20收口架构图](../Docs/A_Project/40_Implementation/Architecture/FOUNDATION_REMAINDER_PLAN.md#31-本轮基础架构正式收口与当前架构图2026-10-20)仍是该日业务边界快照，未包含后来新增的Setup，且浏览器／视觉复验限制保留。真实热度生产消费、动态模板、AI和在线更新器尚未实现，不再把旧架构分支／发布暂停状态当当前指令。
+[2026-10-20收口架构图](../Docs/A_Project/40_Implementation/Architecture/FOUNDATION_REMAINDER_PLAN.md#31-本轮基础架构正式收口与当前架构图2026-10-20)仍是该日业务边界快照，未包含后来新增的Setup，且浏览器／视觉复验限制保留。真实热度生产消费已在远端功能分支实现并获用户验收，但未合入本树，准确入口见[合并审查](../Docs/A_Project/40_Implementation/V3-06/ACTIVITY_BRANCH_REVIEW_20261026.md)；动态模板、AI和在线更新器仍属后续，不把旧架构／发布暂停状态当当前指令。
 
 | 位置 | 职责与边界 |
 | --- | --- |

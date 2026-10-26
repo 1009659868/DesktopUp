@@ -17,7 +17,8 @@
 | [基础架构](../A_Project/40_Implementation/Architecture/FOUNDATION_REMAINDER_PLAN.md) | R1～R8、P1～P3 CLOSED；§30.4剩余成本与锁冲突保留 |
 | [当前架构图源](../A_Project/20_Architecture/ArchitectureReview/Foundation-Closed/current.architecture.json) | 2026-10-20收口时业务架构快照；非2026-10-23完整安装拓扑 |
 | [尺度与悬停](../A_Project/40_Implementation/V3-04/POSTER_SCALE_AND_HOVER.md) | 连续尺寸、动态下限、扩框／回弹 |
-| [拖动呈现优化](../A_Project/40_Implementation/V3-04/POSTER_DRAG_PRESENTATION.md) | 统一调度与纯平移复用；两组人工USER PASS / CLOSED，测量／清理已记录，待授权集成 |
+| [拖动呈现优化](../A_Project/40_Implementation/V3-04/POSTER_DRAG_PRESENTATION.md) | 两组人工USER PASS / CLOSED，已推送并集成develop；测量／清理已记录，尚未发布 |
+| [热度分支审查与合并准备](../A_Project/40_Implementation/V3-06/ACTIVITY_BRANCH_REVIEW_20261026.md) | 远端实现范围、用户补充验收、文档冲突及组合验证计划；尚未实际合入热度 |
 | [回车与方向切换外框修订](../A_Project/40_Implementation/V3-04/CONTROL_CENTER_USABILITY_DELIVERY.md#2026-10-23-浏览方向与外框下限统一) | 两项USER PASS；浏览方向切换可缩回合法尺寸，不改循环 |
 | [覆盖升级](../A_Project/40_Implementation/V3-04/INSTALLER_UPGRADE_DELIVERY.md) | 已验前一阶段；其中并行安装规则已被下项替代 |
 | [唯一安装／迁移升级](../A_Project/40_Implementation/V3-04/SINGLE_INSTALL_MIGRATION.md) | 最新已验安装规则，保留数据及自启 |
