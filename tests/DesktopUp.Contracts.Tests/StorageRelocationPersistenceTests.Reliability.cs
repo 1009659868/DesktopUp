@@ -51,7 +51,7 @@ public sealed partial class StorageRelocationPersistenceTests
         byte[] marker=File.ReadAllBytes(Path.Combine(f.Root.Locator,".desktopup-storage-owner.json"));
         var sums=f.Sql("SELECT group_concat(checksum_sha256) FROM schema_migrations WHERE version<=18 ORDER BY version");
         f.Sql(StorageSchemaFixture.Drop19+"DELETE FROM schema_migrations WHERE version=19;UPDATE state_head SET schema_version=18;PRAGMA user_version=18;");
-        var result=f.Store.Initialize();Assert.True(result.Succeeded,result.Error);Assert.Equal(18,result.PreviousSchemaVersion);Assert.Equal(26,result.Head!.SchemaVersion);Assert.NotNull(result.PreMigrationBackupFileName);
+        var result=f.Store.Initialize();Assert.True(result.Succeeded,result.Error);Assert.Equal(18,result.PreviousSchemaVersion);Assert.Equal(27,result.Head!.SchemaVersion);Assert.NotNull(result.PreMigrationBackupFileName);
         Assert.Equal(sums,f.Sql("SELECT group_concat(checksum_sha256) FROM schema_migrations WHERE version<=18 ORDER BY version"));
         Assert.Equal(catalog,ContentCatalogCodec.Write(f.State.ContentCatalog));Assert.Equal(revision,f.State.Revision);
         Assert.Equal(marker,File.ReadAllBytes(Path.Combine(f.Root.Locator,".desktopup-storage-owner.json")));

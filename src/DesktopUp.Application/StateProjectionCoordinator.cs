@@ -5,7 +5,7 @@ namespace DesktopUp.Application;
 
 public sealed partial class StateProjectionCoordinator(
     IStateCommandRepository repository,
-    IStructuredLog? log = null) : IStateProjectionCoordinator, IStateCommandService, IAutomaticPostureCommitter, ITitleSpatialCommitter
+    IStructuredLog? log = null) : IStateProjectionCoordinator, IStateCommandService, IAutomaticPostureCommitter, ITitleSpatialCommitter, IContentHeatExpansionCommitter
 {
     private readonly object _sync = new();
     private readonly Queue<StateProjectionChangedEventArgs> _pending = new();
@@ -74,6 +74,14 @@ public sealed partial class StateProjectionCoordinator(
     public StateCommandResult ExecuteAutomaticPosture(PosterStateCommand command) => Run(
         command.RequestId, command.Source, command.ExpectedRevision, command.ReadSet,
         reads => command with { ReadSet = reads }, AutomaticPostureCommitPolicy.Prepare, allowSystem: true);
+
+    public StateCommandResult ExecuteContentHeatExpansion(PosterStateCommand command) => Run(
+        command.RequestId, command.Source, command.ExpectedRevision, command.ReadSet,
+        reads => command with { ReadSet = reads, ContentHeatExpansion = command.ContentHeatExpansion is { } proof
+            ? proof with { Proposal = proof.Proposal with { Items = Array.AsReadOnly(proof.Proposal.Items.ToArray()) } } : null },
+        (frozen, state) => frozen.ContentHeatExpansion is null
+            ? StateMutationPlan.Reject(StateCommandStatus.ValidationFailed, "Missing heat expansion proof.")
+            : ContentHeatExpansion.Prepare(frozen, state), allowSystem: true);
 
     // Pure/untrusted command path retains ordinary/durable initial geometry validation.
     public StateCommandResult Execute(TitleSpatialCommand command) => Run(

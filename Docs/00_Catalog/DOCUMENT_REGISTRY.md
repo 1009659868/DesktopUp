@@ -8,7 +8,7 @@
 | [总体架构](../A_Project/20_Architecture/DESKTOPUP_V2_V3_ARCHITECTURE_V1.md) | 分开现有实现与未来目标 |
 | [模块目录](../A_Project/20_Architecture/DESKTOPUP_V2_V3_MODULE_CATALOG_V1.md) / [src](../../src/README.md) | 设计职责与实际工程对应；不要求按设计名另建类 |
 | [通用内容合同](../A_Project/20_Architecture/GENERAL_CONTENT_MULTI_POSTER_CONTRACT_V1.md) | 真实内容、单一归属、文件安全及会话边界 |
-| [总计划](../A_Project/30_Plans/DESKTOPUP_V2_V3_IMPLEMENTATION_PLAN_V1.md) / [工作流](../A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md) | 当前阶段状态、06 准备和后续范围 |
+| [总计划](../A_Project/30_Plans/DESKTOPUP_V2_V3_IMPLEMENTATION_PLAN_V1.md) / [工作流](../A_Project/30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md) | 当前阶段状态、06 已验链路和后续范围 |
 | [直接拖放／生命周期](../A_Project/40_Implementation/V3-05/DIRECT_TRANSFER_DELIVERY.md) | 原生拖放、跨海报、删海报／卸载归还的已验记录 |
 | [真实文件操作](../A_Project/40_Implementation/V3-05/CONTENT_NATIVE_ACTIONS.md) | 新建／命名／真实删除／Win菜单／属性／目录映射 |
 | [兼容范围](../A_Project/40_Implementation/V3-05/CONTENT_COMPATIBILITY.md) | 05-13 已验本机范围、05-14差异收口；非全提供方认证 |
@@ -18,7 +18,8 @@
 | [当前架构图源](../A_Project/20_Architecture/ArchitectureReview/Foundation-Closed/current.architecture.json) | 2026-10-20收口时业务架构快照；非2026-10-23完整安装拓扑 |
 | [尺度与悬停](../A_Project/40_Implementation/V3-04/POSTER_SCALE_AND_HOVER.md) | 连续尺寸、动态下限、扩框／回弹 |
 | [拖动呈现优化](../A_Project/40_Implementation/V3-04/POSTER_DRAG_PRESENTATION.md) | 两组人工USER PASS / CLOSED，已推送并集成develop；测量／清理已记录，尚未发布 |
-| [热度分支审查与合并准备](../A_Project/40_Implementation/V3-06/ACTIVITY_BRANCH_REVIEW_20261026.md) | 远端实现范围、用户补充验收、文档冲突及组合验证计划；尚未实际合入热度 |
+| [热度分支审查](../A_Project/40_Implementation/V3-06/ACTIVITY_BRANCH_REVIEW_20261026.md) / [原始交付](../A_Project/40_Implementation/V3-06/REAL_ACTIVITY_DELIVERY.md) | 整合前审查快照及功能分支历史证据；不以旧待验覆盖用户补充USER PASS |
+| [热度与拖动整合](../A_Project/40_Implementation/V3-06/ACTIVITY_DRAG_INTEGRATION.md) | 18份文档冲突协调、定向／组合与普通构建、清理及develop同步回执；未发布main |
 | [回车与方向切换外框修订](../A_Project/40_Implementation/V3-04/CONTROL_CENTER_USABILITY_DELIVERY.md#2026-10-23-浏览方向与外框下限统一) | 两项USER PASS；浏览方向切换可缩回合法尺寸，不改循环 |
 | [覆盖升级](../A_Project/40_Implementation/V3-04/INSTALLER_UPGRADE_DELIVERY.md) | 已验前一阶段；其中并行安装规则已被下项替代 |
 | [唯一安装／迁移升级](../A_Project/40_Implementation/V3-04/SINGLE_INSTALL_MIGRATION.md) | 最新已验安装规则，保留数据及自启 |

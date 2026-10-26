@@ -1,5 +1,7 @@
 # 控制中心首版可用性设计 V1
 
+2026-10-25增量：宏观内容尺度节点为0.4/1/1.8，1×默认图标区域48 DIP，热度仍独立叠加。`ContentLayoutViewport.WithPresentation`提供统一基准校准，solver/edit/heat/frame minimum/preview共用cell/gap；缓存、重裁剪和热度投影比较此度量代次，避免旧几何复用。偏好mapping v2限制0.4～1.8，v1合法大值兼容限幅读取，既有SQL迁移不改。需求及验证以[Item§10.3](../10_Requirements/CONTENT_ITEM_ACTIVITY_LAYOUT_V1.md#103-宏观偏好与热度分层2026-09-15)和[V3-06记录](../40_Implementation/V3-06/REAL_ACTIVITY_DELIVERY.md)为准。
+
 日期：2026-09-15。状态：设计基线；UX已实施，当前滑块修订见[独立证据](../40_Implementation/V3-04/CONTROL_CENTER_SLIDER_REFINEMENT.md)，未验范围不补PASS。
 产品决定：[V2-DEC-005](../10_Requirements/REQUIREMENTS_RISKS_AND_OPEN_QUESTIONS.md)；表面需求：[运行表面§4～5](../10_Requirements/RUNTIME_SURFACES_AND_TRAY_V1.md)；执行：[04-04计划§4](../30_Plans/V3_04_04_CONTROL_CENTER_PLAN.md)。
 

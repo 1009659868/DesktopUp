@@ -16,7 +16,7 @@ public static class ContentLayoutSolver
         ValidateViewport(viewport);
         document = ContentLayoutPolicy.Freeze(document);
         var axis = new Axis(document.FlowAxis == ContentFlowAxis.Vertical);
-        double cell = document.BaseCellDip * viewport.Scale, gap = document.BaseGapDip * viewport.Spacing;
+        double cell = viewport.CellDip(document), gap = viewport.GapDip(document);
         double pitch = cell + gap;
         double readable = (ContentLayoutPolicy.MinimumReadableCardDip + gap) / pitch;
         bool responsiveManual = document.Mode == ContentLayoutMode.Manual && document.Regions.Count == 1 &&
@@ -187,7 +187,7 @@ public static class ContentLayoutSolver
         {
             FlowAxis = document.FlowAxis, LoopScroll = document.LoopScroll, CrossAxisCells = crossCells,
             MinimumCrossAxisDip = minimumDip, AvailableCrossAxisDip = availableDip, SpaceStatus = status,
-            ResolvedScale = viewport.Scale, ResolvedSpacing = viewport.Spacing
+            ResolvedScale = viewport.Scale, ResolvedSpacing = viewport.Spacing, ResolvedBaseMetricsScale = viewport.BaseMetricsScale
         };
         // Compatibility for callers still using the original vertical anchor. New adapters use
         // ContentBrowseAnchor, which also preserves the physical internal/viewport point across axes.
@@ -210,6 +210,7 @@ public static class ContentLayoutSolver
     {
         ValidateViewport(viewport);
         if (snapshot.ResolvedScale is { } scale && (scale != viewport.Scale || snapshot.ResolvedSpacing != viewport.Spacing ||
+            snapshot.ResolvedBaseMetricsScale != viewport.BaseMetricsScale ||
             snapshot.ThemeMetricsVersion != viewport.ThemeMetricsVersion ||
             snapshot.AvailableCrossAxisDip != (snapshot.FlowAxis == ContentFlowAxis.Vertical ? viewport.WidthDip : viewport.HeightDip)))
             throw new ContentLayoutException("Cross-axis space or layout metrics changed; resolve authoring before clipping.");
@@ -241,6 +242,7 @@ public static class ContentLayoutSolver
     {
         if (viewport is null || !In(viewport.WidthDip, 0, MaximumViewportDip) || !In(viewport.HeightDip, 0, MaximumViewportDip) ||
             !In(viewport.ScrollXDip, -16_000_000, 16_000_000) || !In(viewport.ScrollYDip, -16_000_000, 16_000_000) ||
+            !In(viewport.BaseMetricsScale, .1, 10) ||
             !In(viewport.Scale, PosterContentPreferencePolicy.MinimumScale, PosterContentPreferencePolicy.MaximumScale) ||
             !In(viewport.Spacing, .5, 1.5) || viewport.Generation < 0 || viewport.ThemeMetricsVersion < 1)
             throw new ContentLayoutException("Invalid content viewport or metric version.");

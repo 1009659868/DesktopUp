@@ -1,6 +1,8 @@
 # DesktopUp V2 V3 模块分类与端口目录 V1
 
-当前对齐：2026-10-23。以下A～H编号是**设计职责分类，不是实际类名／完成清单**。实际7个生产项目与调用链统一见[src/README](../../../src/README.md)，当前状态见[状态入口](../../00_Catalog/CURRENT_STATUS.md)。本轮基础架构已集成收口，真实热度／完整模板／AI未实施；下列带日期的增量是历史，不作为新待办。
+当前对齐：2026-10-26。以下A～H编号是设计职责分类，不是实际类名或完成清单；七个生产工程见[src/README](../../../src/README.md)，状态见[CURRENT_STATUS](../../00_Catalog/CURRENT_STATUS.md)。Application/Features组织用例／统计消费与提案，Infrastructure/Persistence负责SQLite27事务，App的Views／Runtime／Presentation分别负责视图、会话和呈现；Setup独立负责安装，不是在线Updater。
+
+基础架构已收口集成；真实热度代码及功能验收已完成，正在与拖动优化组合验证。完整动态模板／AI尚未完成；后续有日期的旧映射只作历史证据，不恢复旧共享、同卷限定或未实现目录映射等过时描述。
 
 2026-10-13 DEC-048：通用`PosterSurfaceAppearance`（presentation v8）独立于模板私有bindings，`ScenePresentationAdapter`在背景层统一应用；无覆盖时保留原模板基线。`Base.Heading`控制介绍组件装配，实例显隐不能凭空挂载组件；控制中心按已装配组件生成折叠设置。副标题/大标题/数量三组件及自由装配器尚属后续，不冒称已实现。代码/证据见[§13](../40_Implementation/V3-05/DIRECT_TRANSFER_DELIVERY.md#13-05-14界面减法与通用背景2026-10-13)。
 
@@ -16,7 +18,7 @@
 
 历史设计起点（2026-09-23）：布局V2评审已由后续R1～R8推进；保留旧审查材料，不用当时“待批准/未实现”覆盖现在的源码/证据。
 
-状态：`DESIGN BASELINE / IMPLEMENTATION MAPPING ALIGNED 2026-10-10`。下方建议类名/未来进程不等于已有代码；生产/验证边界归C层。
+历史目录状态：`DESIGN BASELINE / IMPLEMENTATION MAPPING ALIGNED 2026-10-10`。下方建议类名/未来进程不等于已有代码；当前实现见页首，生产/验证边界归C层。
 
 建立日期：2026-09-03
 

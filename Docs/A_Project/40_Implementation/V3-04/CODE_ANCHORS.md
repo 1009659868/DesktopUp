@@ -1,16 +1,37 @@
 # V3-04 代码锚点
 
-## 2026-10-26 集成与远端热度入口
+## 2026-10-26 热度与拖动整合入口
 
-拖动优化已集成develop；下节源码可在当前树定位。真实热度的新Consumer／Store／Policy／Sizing／Activity窗口接线仍只在`origin/impl/06-real-activity@6bbfcfc`，本轮仅审查，不建立假本地源码链接；准确入口、用户补充验收与组合风险见[合并准备](../V3-06/ACTIVITY_BRANCH_REVIEW_20261026.md)。
+热度生产链和拖动调度在整合候选中并存。新增组合探针位于tools/review/App/App.ActivityRuntimeProbe.cs，使用`--real-activity-probe --activity-drag-integration-probe`；复用原生拖动探针验证缓存、同代命中与交互延期。证据见[整合记录](../V3-06/ACTIVITY_DRAG_INTEGRATION.md)。
 
 ## 2026-10-26 海报拖动呈现
 
 App/Runtime/Posters/PosterDragFrameScheduler统一按需Rendering；PosterSpatialRuntime.Title使用TitlePresentationDriver.HasPendingWork保留静止收拢。PosterVisualWindow的普通Move复用CommitSpatialFrames，Content/Transition局部复用不变呈现；Application/ContentInputGeometryCache复用相对几何但发布新Revision。Windows/PosterInputIslandManager实际读回batch位置及HRGN，保留失效恢复。工具入口scripts/start-poster-drag-review.ps1，测量在tools/review/App/PosterVisualWindow.DragPresentationProbe.cs，均不进入正常产品编译；状态与证据归[专项](POSTER_DRAG_PRESENTATION.md)。
 
-## 2026-10-26 文档导航对齐（源码未改）
+## 历史：2026-10-26 整合前文档导航对齐（源码未改）
 
 现有七项目职责见[src/README](../../../../src/README.md)，其中Setup为后续新增安装事务程序；原六程序集图保留2026-10-20范围。热度复用入口为Application/Features/Content/Open/ContentActionService、Ports/Content/IContentOpenJournal、Infrastructure/Persistence/Content/SqliteContentOpenJournal，以及Layout中的PosterContentSession／ContentHeatSession。Domain/ContentLayoutProposals仍有旧五档Quantize／Round适配，不是正式连续热度。待接入边界见[工作流§7.1](../../30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md#71-2026-10-21-真实热度准备未实施)。
+
+## 2026-10-24 当前源码与热度接入锚点
+
+热度源基线`impl/develop@d922669`，以下入口已随`impl/06-real-activity@6bbfcfc`进入整合候选。旧日期条目保留原提交的路径/符号，不保证适用于现HEAD；职责总览见[src/README](../../../../src/README.md)，热度验证进度见[V3-06记录](../V3-06/REAL_ACTIVITY_DELIVERY.md)。
+
+| 当前入口 | 已存在的能力 / 下一接入边界 |
+| --- | --- |
+| [ContentActionService](../../../../src/DesktopUp.Application/Features/Content/Open/ContentActionService.cs) / [ContentOpenContract](../../../../src/DesktopUp.Application/Features/Content/Open/ContentOpenContract.cs) | `OpenAsync`统一打开编排，`Complete`限定可信成功交接事实，不把Reveal、扫描或无成功证明的Handled计数 |
+| [IContentOpenJournal](../../../../src/DesktopUp.Application/Ports/Content/IContentOpenJournal.cs) / [SqliteContentOpenJournal](../../../../src/DesktopUp.Infrastructure/Persistence/Content/SqliteContentOpenJournal.cs) | `TryStart`去重，`Complete`原子写完成与成功事实；027的触发器将新事实加入正式统计队列 |
+| [ContentActivityConsumer](../../../../src/DesktopUp.Application/Features/Content/Open/ContentActivityConsumer.cs) / [SqliteContentActivityStore](../../../../src/DesktopUp.Infrastructure/Persistence/Content/SqliteContentActivityStore.cs) | 有界增量消费、统计/游标原子提交、重启幂等，不重放真实打开 |
+| [ContentActivityPolicy](../../../../src/DesktopUp.Domain/Content/ContentActivity.cs) / [ContentActivityProducer](../../../../src/DesktopUp.Application/Features/Content/Layout/ContentActivityProducer.cs) | 连续衰减/评分/可配置平滑，生产连续提案v2；算法与I/O分开 |
+| [ContentHeatSession](../../../../src/DesktopUp.Application/Features/Content/Layout/ContentHeatSession.cs) / [ContentHeatSizing](../../../../src/DesktopUp.Domain/Content/ContentHeatSizing.cs) | 保留目标、从作者基准按当前视口限幅；v1旧注入仍兼容五档，不走生产v2 |
+| [PosterVisualWindow.Activity](../../../../src/DesktopUp.App/Views/Poster/PosterVisualWindow.Activity.cs) / [PosterSpatialRuntime.Activity](../../../../src/DesktopUp.App/Runtime/Posters/PosterSpatialRuntime.Activity.cs) | 生产计算、安全时点/版本门与原生扩框；成功打开实时入队，交互保护期间延期，释放后续作；用户resize不重新排名 |
+| [ContentScaleExpansion](../../../../src/DesktopUp.Application/ContentScaleExpansion.cs) / [ContentHeatExpansion](../../../../src/DesktopUp.Application/ContentHeatExpansion.cs) / [ContentFrameMinimumPolicy](../../../../src/DesktopUp.Domain/ContentFrameMinimumPolicy.cs) | 共用空间规划；手动尺度受阻回弹，热度受阻限幅，允许外框降至热度/可读下限 |
+| [ControlCenterWindow.Activity](../../../../src/DesktopUp.App/ControlCenterWindow.Activity.cs) | 行为页海报级倍率/K/尺寸开关；沿既有草稿/CAS，取消无写入 |
+| [PosterContentPresenter](../../../../src/DesktopUp.App/Presentation/PosterContentPresenter.cs) / [App组装](../../../../src/DesktopUp.App/Bootstrap/ApplicationComposition.cs) | 增量呈现/局部悬停及单次组合根；新策略不另造窗口状态库或整表图标重载 |
+| [SqliteStateStore](../../../../src/DesktopUp.Infrastructure/Persistence/State/SqliteStateStore.cs) / [迁移目录](../../../../src/DesktopUp.Infrastructure/Persistence/Migrations/catalog.xml) | 当前schema27；027新增统计队列/游标/聚合与有限历史，001～027及指纹冻结 |
+| [StartupIntent](../../../../src/DesktopUp.Domain/StartupIntent.cs) / [PosterConfigurationFactory](../../../../src/DesktopUp.Domain/PosterConfigurationFactory.cs) / [SqlitePosterCatalogRepository](../../../../src/DesktopUp.Infrastructure/Persistence/State/SqlitePosterCatalogRepository.cs) | `ShouldShowControlCenter`、基础收纳默认与`InitializeEmptyProfile`；登录自启保持后台，普通零海报启动开中心 |
+| [Setup](../../../../src/DesktopUp.Setup/DesktopUp.Setup.csproj) / [UpgradeTransaction](../../../../src/DesktopUp.Setup/UpgradeTransaction.cs) | 独立安装辅助工程，当前单安装/原位/迁移升级共用事务；无业务工程ProjectReference，不是在线Updater |
+
+可复用的定向测试入口：`tests/DesktopUp.Contracts.Tests/ContentActivity*Tests.cs`、`RealContentOpenTests.cs`、`ContentHeatSessionTests.cs`、`ContentFrameResizeTests.cs`及`ContentScaleExpansionTests.cs`。本批结果只在V3-06记录登记，未验的原生/人工不在此补PASS。
 
 ## 2026-10-23 唯一安装与迁移升级
 

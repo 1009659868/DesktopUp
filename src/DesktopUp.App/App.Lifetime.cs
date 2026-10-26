@@ -26,6 +26,7 @@ public partial class App
         _posterSessions = null;
         if (_composition is not null) await _composition.StopWorkerAsync();
         if (_spatialRuntime is not null) await _spatialRuntime.WaitForContentOperationsAsync();
+        if (_composition is not null) await _composition.StopActivityAsync();
         // Cancellation completes on the UI dispatcher before composition/logging and the final ledger close.
         await Task.WhenAll(_desktopRecoveryTasks.ToArray());
         _desktopRecoveryTasks.Clear();

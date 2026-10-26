@@ -1,6 +1,6 @@
 namespace DesktopUp.Domain;
 
-public enum ContentLayoutEditKind { Move, Resize, Fixed, Pinned, Mode, Guides, SizeOverride }
+public enum ContentLayoutEditKind { Move, Resize, Fixed, Pinned, Mode, Guides, SizeOverride, Activity }
 public sealed record ContentLayoutEdit(ContentLayoutEditKind Kind, string? ItemId = null)
 {
     public int? Column { get; init; }
@@ -15,6 +15,7 @@ public sealed record ContentLayoutEdit(ContentLayoutEditKind Kind, string? ItemI
     public bool? ShowSpanLabels { get; init; }
     public ContentLayoutMode? Mode { get; init; }
     public ManualLayoutExit? ManualExit { get; init; }
+    public ContentActivityOptions? Activity { get; init; }
 }
 public sealed record ContentLayoutEditResult(bool Accepted, ContentLayoutDocument Document, string? Error = null)
 {
@@ -137,6 +138,11 @@ public static class ContentLayoutEditing
                     candidate = candidate with { ShowBaselineGrid = edit.ShowBaselineGrid ?? candidate.ShowBaselineGrid,
                         ShowSpanLabels = edit.ShowSpanLabels ?? candidate.ShowSpanLabels };
                     break;
+                case ContentLayoutEditKind.Activity:
+                    if (edit.Activity is null || edit.Activity.Validate() is not null || edit.Enabled is null)
+                        throw new ContentLayoutException("Explicit valid activity settings and size switch are required.");
+                    candidate = candidate with { Activity = edit.Activity, AllowHeatDrivenSize = edit.Enabled.Value };
+                    break;
             }
             candidate = candidate with { Placements = Array.AsReadOnly(items) };
             if (SameState(document, candidate)) return new(true, document) { PreviewSnapshot = before };
@@ -200,7 +206,7 @@ public static class ContentLayoutEditing
             snapshot.ThemeMetricsVersion != viewport.ThemeMetricsVersion || snapshot.FlowAxis != document.FlowAxis ||
             snapshot.LoopScroll != document.LoopScroll || snapshot.ResolvedScale != viewport.Scale || snapshot.ResolvedSpacing != viewport.Spacing ||
             snapshot.AvailableCrossAxisDip != (document.FlowAxis == ContentFlowAxis.Vertical ? viewport.WidthDip : viewport.HeightDip) ||
-            snapshot.CellDip != document.BaseCellDip * viewport.Scale || snapshot.GapDip != document.BaseGapDip * viewport.Spacing ||
+            snapshot.CellDip != viewport.CellDip(document) || snapshot.GapDip != viewport.GapDip(document) ||
             snapshot.Items.Count != document.Placements.Count)
             throw new ContentLayoutException("The presented composition is stale, incomplete or belongs to another viewport/author.");
         var ids = new HashSet<string>(StringComparer.Ordinal);
@@ -234,7 +240,7 @@ public static class ContentLayoutEditing
     private static ContentLayoutDocument PushManualPeers(ContentLayoutDocument candidate, ContentLayoutSnapshot previous,
         string sourceId, ContentLayoutViewport viewport)
     {
-        double cell = candidate.BaseCellDip * viewport.Scale, gap = candidate.BaseGapDip * viewport.Spacing;
+        double cell = viewport.CellDip(candidate), gap = viewport.GapDip(candidate);
         double minimum = (ContentLayoutPolicy.MinimumReadableCardDip + gap) / (cell + gap);
         bool vertical = candidate.FlowAxis == ContentFlowAxis.Vertical;
         var previousById = previous.Items.ToDictionary(p => p.ItemId, StringComparer.Ordinal);

@@ -18,9 +18,9 @@ public sealed partial class ControlCenterWindow
     private Action? _cancelVisuals;
     private Func<string, string>? _locate;
     private SliderPresetMarks? _scaleMarks, _spacingMarks;
-    internal bool IsSettingsInteractionActive => _lampColorFlyout is not null || _portableBusy || _settings.ProtectsInteraction || _editor.ProtectsInteraction || _catalogDialog is not null || IsContentFieldDraftActive;
+    internal bool IsSettingsInteractionActive => _lampColorFlyout is not null || _portableBusy || _settings.ProtectsInteraction || _editor.ProtectsInteraction || _catalogDialog is not null || _activityDialog is not null || IsContentFieldDraftActive;
     internal bool HasPosterDraft(string id) => _lampColorTarget == id || _portableBusy || _settings.OwnsPoster(id) || HasContentFieldDraft(id) ||
-        _editor.ProtectsInteraction && _editor.PosterId == id || _catalogDialog is not null && _view?.SelectedPosterId == id;
+        _editor.ProtectsInteraction && _editor.PosterId == id || _catalogDialog is not null && _view?.SelectedPosterId == id || _activityPosterId == id;
     private bool DesktopInteractionConflicts(string id) => _contentRuntime?.Invoke()?.IsSpatialBusy == true;
     internal event Action? SettingsInteractionChanged;
 
@@ -102,7 +102,7 @@ public sealed partial class ControlCenterWindow
         { RenderSettings(); CommonSettingsNotice.Text = "请先应用或取消颜色选择。"; return; }
         if (DesktopInteractionConflicts(target.Poster.PosterId))
         { RenderSettings(); CommonSettingsNotice.Text = "海报正在操作，请先完成或取消；当前调节未开始。"; return; }
-        if (_editor.ProtectsInteraction || IsContentFieldDraftActive)
+        if (_editor.ProtectsInteraction || IsContentFieldDraftActive || _activityDialog is not null)
         { RenderSettings(); CommonSettingsNotice.Text = "请先应用或取消当前成组修改。"; return; }
         bool valid = _settings.Update(new(target, setting, number, text, Recipe: setting == PosterSetting.Template
             ? _templateCatalog.FirstOrDefault(r => r.Id == text) : null));
@@ -207,7 +207,7 @@ public sealed partial class ControlCenterWindow
             AutoPostureSwitch.IsOn = active?.Setting == PosterSetting.AutoEnabled ? active.Number == 1 : target?.AutoPosture.Enabled == true;
             if (active?.Setting != PosterSetting.AutoDelay)
                 AutoPostureDelay.Value = target?.AutoPosture.LeaveDelaySeconds ?? 3;
-            bool enabled = target is not null && !_editor.ProtectsInteraction && !IsContentFieldDraftActive;
+            bool enabled = target is not null && !_editor.ProtectsInteraction && !IsContentFieldDraftActive && _activityDialog is null;
             TitleVisibilitySwitch.IsOn = active?.Setting == PosterSetting.TitleVisibility ? active.Number == 1 :
                 target?.Presentation.Parameters.IsTitleVisible ?? true;
             TitleVisibilitySwitch.IsEnabled = enabled && target?.Presentation.CanEdit == true &&

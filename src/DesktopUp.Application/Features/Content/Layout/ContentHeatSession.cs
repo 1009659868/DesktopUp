@@ -14,16 +14,22 @@ public sealed class ContentHeatSession
     private string? posterId;
     private long itemSetVersion;
     private bool closed;
+    private ContentLayoutDocument? basis;
+    private ContentLayoutViewport? lastViewport;
 
     public bool HasPending => buffer?.HasPending == true;
     public long? ActiveVersion => active?.Version;
     public ContentLayoutDocument? Projection { get; private set; }
+    public bool HasContinuousProjection => active?.MappingVersion == ContentLayoutProposals.ContinuousMappingVersion;
+    public ContentHeatProposal? ContinuousProposal => HasContinuousProjection ? active : null;
 
     public bool Offer(ContentHeatProposal proposal) => !closed && buffer?.Offer(proposal) == true;
 
     public void Reconcile(ContentLayoutDocument author, ContentLayoutViewport viewport)
     {
         if (closed) return;
+        if (ReferenceEquals(author, basis) && SameMetrics(viewport, lastViewport)) return;
+        basis = author; lastViewport = viewport;
         if (posterId != author.PosterId || itemSetVersion != author.ItemSetVersion)
         {
             buffer?.Invalidate();
@@ -38,7 +44,7 @@ public sealed class ContentHeatSession
         {
             try
             {
-                var resolved = ContentLayoutProposals.ResolveHeat(author, active, tiers);
+                var resolved = Resolve(author, active, viewport);
                 ContentProjectionValidation.RequireWritable(resolved.Document, viewport);
                 Projection = resolved.Document;
                 tiers = resolved.Tiers;
@@ -56,7 +62,7 @@ public sealed class ContentHeatSession
     // Previewing another membership set must not invalidate the committed state.
     public ContentLayoutDocument ProjectEdit(ContentLayoutDocument author) =>
         active is { } heat && heat.PosterId == author.PosterId && heat.ItemSetVersion == author.ItemSetVersion
-            ? ContentLayoutProposals.ResolveHeat(author, heat, tiers).Document : author;
+            ? Resolve(author, heat, lastViewport ?? new(10000, 10000)).Document : author;
 
     public ContentHeatApplication ApplyPending(ContentLayoutDocument author, ContentLayoutViewport viewport,
         bool interactionProtected)
@@ -64,11 +70,14 @@ public sealed class ContentHeatSession
         if (closed || buffer?.Take(interactionProtected) is not { } proposal) return new(false);
         try
         {
-            var resolved = ContentLayoutProposals.ResolveHeat(author, proposal, tiers);
+            if (proposal.AuthorDocumentVersion is { } version && version != author.DocumentVersion)
+                throw new ContentLayoutException("Activity proposal was computed from an older author document.");
+            var resolved = Resolve(author, proposal, viewport);
             ContentProjectionValidation.RequireWritable(resolved.Document, viewport);
             active = proposal;
             Projection = resolved.Document;
             tiers = resolved.Tiers;
+            basis = author; lastViewport = viewport;
             return new(true);
         }
         catch (ArgumentException error)
@@ -77,6 +86,15 @@ public sealed class ContentHeatSession
             return new(false, proposal.Version, error.Message);
         }
     }
+
+    private ContentHeatResolution Resolve(ContentLayoutDocument author, ContentHeatProposal proposal, ContentLayoutViewport viewport) =>
+        proposal.MappingVersion == ContentLayoutProposals.ContinuousMappingVersion
+            ? new(ContentHeatSizing.Project(author, proposal, viewport), proposal.Version, new Dictionary<string, int>())
+            : ContentLayoutProposals.ResolveHeat(author, proposal, tiers);
+
+    private static bool SameMetrics(ContentLayoutViewport a, ContentLayoutViewport? b) => b is not null &&
+        a.WidthDip == b.WidthDip && a.HeightDip == b.HeightDip && a.Scale == b.Scale && a.Spacing == b.Spacing &&
+        a.BaseMetricsScale == b.BaseMetricsScale;
 
     public void Close()
     {

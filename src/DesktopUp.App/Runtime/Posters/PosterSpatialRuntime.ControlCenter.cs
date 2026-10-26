@@ -43,6 +43,12 @@ internal sealed partial class PosterSpatialRuntime
         command = command with { Kind = resize ? PosterStateCommandKind.Resize : PosterStateCommandKind.Move,
             DesiredState = plan.Desired, ControlCenterGeometry = new(scene!, intent) };
         if (plan.Path.Count == 0) { completed(commands.Execute(command)); return; }
+        BeginPlannedGeometry(owner, command, scene!, plan, completed);
+    }
+
+    private void BeginPlannedGeometry(PosterVisualWindow owner, PosterStateCommand command, SpatialSnapshot scene,
+        ControlCenterGeometryPlan plan, Action<StateCommandResult> completed)
+    {
         try
         {
             var schedule = SpatialAnimationSchedule.Create(scene!, plan.Path.Select(p => new SpatialBatchFrame(new[] { p })).ToArray(), animationOptions);

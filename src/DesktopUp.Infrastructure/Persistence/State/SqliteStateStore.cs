@@ -10,7 +10,7 @@ public sealed class SqliteStateStore : IStateStore
     private const int ApplicationId = 0x44555033; // "DUP3"
     private const int BusyTimeoutMilliseconds = 5_000;
     // Historical SQL and approved ledger identities are frozen in Persistence/Migrations.
-    private const int CurrentSchemaVersion = 26;
+    private const int CurrentSchemaVersion = 27;
     private const string DatabaseFileName = "desktopup.sqlite3";
     private static readonly SqliteMigration[] Migrations = SqliteMigrationCatalog.Load(CurrentSchemaVersion);
 
@@ -567,6 +567,7 @@ public sealed class SqliteStateStore : IStateStore
         if (expectedVersion >= 23) MappedDirectoryStore.Verify(connection, null);
         if (expectedVersion >= 24) MappedDirectoryIngress.Verify(connection, null);
         if (expectedVersion >= 25) ContentReturnStore.Verify(connection, null);
+        if (expectedVersion >= 27) SqliteContentActivityStore.Verify(connection, null);
         if (head.SchemaVersion != version)
         {
             throw new InvalidDataException(

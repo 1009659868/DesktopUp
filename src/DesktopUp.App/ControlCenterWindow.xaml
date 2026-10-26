@@ -277,7 +277,7 @@
        </Expander>
        </Border>
        <Grid x:Name="MacroPair" ColumnSpacing="24"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
-        <StackPanel x:Name="ScaleHost" Spacing="0" HorizontalAlignment="Stretch"><TextBlock x:Name="ScaleLabel" Text="内容尺度"/><Grid><Slider x:Name="ScaleSlider" Minimum="0.4" Maximum="3" StepFrequency="0.001" TickPlacement="None" AutomationProperties.AutomationId="ContentScale" AutomationProperties.Name="内容尺度"/><Canvas x:Name="ScaleMarks" IsHitTestVisible="False"/></Grid><Canvas x:Name="ScaleLabels" Height="20" IsHitTestVisible="False"/></StackPanel>
+        <StackPanel x:Name="ScaleHost" Spacing="0" HorizontalAlignment="Stretch"><TextBlock x:Name="ScaleLabel" Text="内容尺度"/><Grid><Slider x:Name="ScaleSlider" Minimum="0.4" Maximum="1.8" StepFrequency="0.001" TickPlacement="None" AutomationProperties.AutomationId="ContentScale" AutomationProperties.Name="内容尺度"/><Canvas x:Name="ScaleMarks" IsHitTestVisible="False"/></Grid><Canvas x:Name="ScaleLabels" Height="20" IsHitTestVisible="False"/></StackPanel>
         <StackPanel Grid.Column="1" x:Name="SpacingHost" Spacing="0" HorizontalAlignment="Stretch"><TextBlock x:Name="SpacingLabel" Text="内容疏密"/><Grid><Slider x:Name="SpacingSlider" Minimum="0.5" Maximum="1.5" StepFrequency="0.01" TickPlacement="None" AutomationProperties.AutomationId="ContentSpacing" AutomationProperties.Name="内容疏密"/><Canvas x:Name="SpacingMarks" IsHitTestVisible="False"/></Grid><Canvas x:Name="SpacingLabels" Height="20" IsHitTestVisible="False"/></StackPanel>
        </Grid>
         <Grid ColumnSpacing="10"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
@@ -377,6 +377,9 @@
       </StackPanel>
      </ScrollViewer>
      <ScrollViewer Grid.Row="1" x:Name="BehaviorScroll" Visibility="Collapsed" HorizontalScrollBarVisibility="Disabled"><StackPanel Spacing="17" Padding="0,0,8,12">
+      <Grid ColumnSpacing="12"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><StackPanel Spacing="3"><TextBlock Text="使用热度" FontWeight="SemiBold"/><TextBlock Text="调整大小差异，保留真实使用记录" FontSize="10" Opacity="0.65"/></StackPanel><Button Grid.Column="1" x:Name="ActivitySettingsButton" Click="ActivitySettings_Click" Content="热度设置" Style="{StaticResource UiCAction}"/></Grid>
+      <InfoBar x:Name="ActivitySettingsNotice" IsOpen="False" IsClosable="True" AutomationProperties.AutomationId="ActivitySettingsNotice"/>
+      <Border Height="1" Background="{ThemeResource UiCBorderBrush}" Margin="0,3"/>
       <TextBlock Text="当前海报 · 状态" FontWeight="SemiBold"/>
       <Grid ColumnSpacing="12"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><StackPanel Spacing="3"><TextBlock Text="锁定海报"/><TextBlock Text="保持外框位置与大小" FontSize="10" Opacity="0.65"/></StackPanel><Button Grid.Column="1" x:Name="LockButton" Click="LockButton_Click" Content="锁定" Style="{StaticResource UiCAction}"/></Grid>
       <Grid ColumnSpacing="12"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><StackPanel Spacing="3"><TextBlock Text="收纳与展开"/><TextBlock Text="收纳后保留当前内容和配置" FontSize="10" Opacity="0.65"/></StackPanel><Button Grid.Column="1" x:Name="CollapseButton" Click="CollapseButton_Click" Content="收起" Style="{StaticResource UiCAction}"/></Grid>

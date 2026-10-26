@@ -2,9 +2,9 @@
 
 状态：`FROZEN PRODUCT DIRECTION — USER REVISION 2026-09-08`
 
-最后对齐：2026-10-23。需求是已确认产品方向，实施状态统一查[CURRENT_STATUS](CURRENT_STATUS.md)。普通点击穿透已取消（DEC-043），共享引用／额外拖放确认由单一归属和原生交互替代（DEC-047）；新配置零海报。真实文件操作和首版本机兼容已验，构造卡片延期；真实热度公式／尺度合成／统计作用域仍待裁决，不继承旧稿默认值。
+最后对齐：2026-10-26。实施状态查[CURRENT_STATUS](CURRENT_STATUS.md)。DEC-043撤销普通点击穿透，DEC-047保留单一有效卡片归属／直接原生拖放，DEC-048通用背景与界面收敛；零海报首启及独立静默登录意图保持。真实内容首版本机范围已验，构造卡片延期。
 
-历史设计评审和用户逐次修订继续保留；后续决定优先于旧条目，不由历史“人工待验”覆盖新证据。本索引只导航，不扩大文件操作授权。
+热度公式、ContentItemId身份、独立倍率／空间限幅及实时更新已获用户确认，与拖动优化的组合验证通过并按授权集成，见[热度实施记录](../A_Project/40_Implementation/V3-06/REAL_ACTIVITY_DELIVERY.md)及[整合记录](../A_Project/40_Implementation/V3-06/ACTIVITY_DRAG_INTEGRATION.md)。不重新裁决已定规则，也不扩展文件操作权限；历史决定仍按日期追溯，环境余验不自动补PASS。
 
 近期决定统一查[需求决定索引§3.1](../A_Project/10_Requirements/REQUIREMENTS_RISKS_AND_OPEN_QUESTIONS.md#31-已明确的近期优先级)：DEC-005～008原方向保持，后续操作/模块规则及DEC-032模板碰撞、DEC-033长测后置均以该处为准。本页只导航，不在需求索引重建待办或将设计认可算作生产验收。
 

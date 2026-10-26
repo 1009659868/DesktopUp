@@ -36,7 +36,7 @@ public sealed class ContentFrameMigrationTests
                 result = store.Initialize();
             }
             Assert.True(result.Succeeded, result.Error);
-            Assert.Equal(26, result.Head!.SchemaVersion);
+            Assert.Equal(27, result.Head!.SchemaVersion);
             Assert.Equal(before, fixture.Rows());
             Assert.Equal(ledger, fixture.Query("SELECT checksum_sha256 FROM schema_migrations WHERE version<=25 ORDER BY version"));
             string backup = Path.Combine(fixture.Paths.Backups, result.PreMigrationBackupFileName!);
@@ -68,7 +68,7 @@ public sealed class ContentFrameMigrationTests
         {
             Paths = new(_root); Paths.EnsureCreated();
             using var connection = Open();
-            foreach (var migration in SqliteMigrationCatalog.Load(26).Take(25))
+            foreach (var migration in SqliteMigrationCatalog.Load(27).Take(25))
             {
                 using var command = connection.CreateCommand();
                 command.CommandText = migration.Sql; command.ExecuteNonQuery();
@@ -113,7 +113,8 @@ public sealed class ContentFrameMigrationTests
         public string Rows(string? path = null)
         {
             // Compare every persisted business field by name; column order is not a data contract.
-            var tables = Query("SELECT name FROM sqlite_master WHERE type='table' AND name NOT IN ('schema_migrations','state_head') ORDER BY name", path);
+            // Compare schema25 business tables; schema27 adds its own activity projection state.
+            var tables = Query("SELECT name FROM sqlite_master WHERE type='table' AND name NOT IN ('schema_migrations','state_head','content_activity_items','content_activity_state','content_activity_recent','content_activity_pending','sqlite_sequence') ORDER BY name", path);
             var rows = new List<string>();
             using var c = Open(path);
             foreach (string table in tables)

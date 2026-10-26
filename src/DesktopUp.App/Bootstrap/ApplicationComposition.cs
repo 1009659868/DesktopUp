@@ -26,8 +26,14 @@ internal sealed class ApplicationComposition : IDisposable
     internal ILocalContentWorker StartWorker() => _worker ??= new LocalContentWorkerClient(
         ContentWorkerLocation.InApplication(AppContext.BaseDirectory), Ledger);
     internal Task StopWorkerAsync() => _worker?.StopAsync() ?? Task.CompletedTask;
+    internal IContentActivityStore ActivityStore => _activityStore ??= new SqliteContentActivityStore(Store);
+    internal ContentActivityConsumer Activity => _activity ??= new(ActivityStore,
+        error => Log.Write("warning", "content.activity_projection_failed", new { error.Message }));
+    internal Task StopActivityAsync() => _activity?.StopAsync() ?? Task.CompletedTask;
 
     private LocalContentWorkerClient? _worker;
+    private IContentActivityStore? _activityStore;
+    private ContentActivityConsumer? _activity;
     private IStructuredLog? _log;
     private IResourceLedger? _ledger;
     private SqliteStateStore? _store;
@@ -42,6 +48,7 @@ internal sealed class ApplicationComposition : IDisposable
     // Repeated early-failure/exit disposal is safe, and never creates an unopened store.
     public void Dispose()
     {
+        _activity?.StopAsync().GetAwaiter().GetResult();
         _worker?.Dispose();
         _store?.Dispose();
     }

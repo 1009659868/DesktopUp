@@ -7,7 +7,8 @@ namespace DesktopUp.Application;
 public sealed class ContentActionService(
     Func<ContentCatalogSnapshot> currentCatalog,
     ILocalContentWorker worker,
-    IContentOpenJournal journal) : IContentActionService
+    IContentOpenJournal journal,
+    ContentActivityConsumer? activity = null) : IContentActionService
 {
     public async ValueTask<ContentActionResult> OpenAsync(ContentOpenIntent intent, CancellationToken cancellation)
     {
@@ -53,8 +54,9 @@ public sealed class ContentActionService(
 
         // Confirmed handoff remains a fact even when the visual owner is gone.
         // Complete must succeed before publishing the observation or feedback.
-        journal.Complete(request, new(request.ActivationId, request.Source.ProviderId,
+        var fact = journal.Complete(request, new(request.ActivationId, request.Source.ProviderId,
             outcome, result.Evidence, DateTimeOffset.UtcNow));
+        if (fact is not null) activity?.RequestRefresh();
         var observation = dispatched is null ? null : new ContentSourceObservation(intent.Target.ItemId, dispatched, result);
         return new(new(outcome == ContentOpenOutcome.Succeeded, result.Message, outcome), observation);
     }
