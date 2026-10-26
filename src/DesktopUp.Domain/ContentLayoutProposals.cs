@@ -2,7 +2,11 @@ namespace DesktopUp.Domain;
 
 public sealed record ContentHeatItem(string ItemId, int Rank, double RelativeScale, string Reason = "injected");
 public sealed record ContentHeatProposal(string PosterId, long ItemSetVersion, long Version,
-    IReadOnlyList<ContentHeatItem> Items, int MappingVersion = 1);
+    IReadOnlyList<ContentHeatItem> Items, int MappingVersion = 1)
+{
+    public long? AuthorDocumentVersion { get; init; }
+    public int StrategyVersion { get; init; } = ContentActivityPolicy.Version;
+}
 public sealed record ContentHeatResolution(ContentLayoutDocument Document, long ProposalVersion,
     IReadOnlyDictionary<string, int> Tiers);
 public enum ContentThemeChange { None, PaintOnly, Metrics }
@@ -11,6 +15,7 @@ public enum ContentThemeChange { None, PaintOnly, Metrics }
 public static class ContentLayoutProposals
 {
     public const int MappingVersion = 1;
+    public const int ContinuousMappingVersion = 2;
     public const double Hysteresis = .05;
     public static IReadOnlyList<double> TierScales { get; } = Array.AsReadOnly(new[] { .5, .75, 1d, 1.5, 3d });
 
@@ -47,7 +52,7 @@ public static class ContentLayoutProposals
             int tier = Quantize(h.RelativeScale, previousTiers is not null && previousTiers.TryGetValue(p.ItemId, out int old) ? old : null);
             tiers[p.ItemId] = tier;
             if (authorIntent.Mode == ContentLayoutMode.Manual) return p;
-            // The legacy injected heat proposal remains tiered; the real heat producer is deferred.
+            // Legacy injected proposals remain tiered; production continuous proposals use ContentHeatSizing.
             double Scale(double span) => Math.Clamp(Math.Round(span * TierScales[tier], MidpointRounding.AwayFromZero), 1, ContentLayoutPolicy.MaximumSpan);
             bool resize = authorIntent.AllowHeatDrivenSize && !p.ManualSize;
             return p with { Order = h.Rank, ColumnSpan = resize ? Scale(p.ColumnSpan) : p.ColumnSpan,
@@ -68,7 +73,8 @@ public static class ContentLayoutProposals
     internal static void Validate(ContentHeatProposal proposal)
     {
         if (proposal is null || string.IsNullOrWhiteSpace(proposal.PosterId) || proposal.ItemSetVersion < 1 || proposal.Version < 1 ||
-            proposal.MappingVersion != MappingVersion || proposal.Items is null || proposal.Items.Count > ContentLayoutPolicy.MaximumItems)
+            proposal.MappingVersion is not (MappingVersion or ContinuousMappingVersion) || proposal.Items is null || proposal.Items.Count > ContentLayoutPolicy.MaximumItems ||
+            proposal.MappingVersion == ContinuousMappingVersion && (proposal.AuthorDocumentVersion is null or < 1 || proposal.StrategyVersion != ContentActivityPolicy.Version))
             throw new ContentLayoutException("Unsupported/invalid heat proposal.");
         var ids = new HashSet<string>(StringComparer.Ordinal);
         foreach (var item in proposal.Items)

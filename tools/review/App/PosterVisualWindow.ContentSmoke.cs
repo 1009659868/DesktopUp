@@ -28,6 +28,17 @@ internal sealed record ContentAdornmentProbe(string? SelectedItemId, bool IsEdit
 
 internal sealed partial class PosterVisualWindow
 {
+    internal double ReadStandardContentIconSizeForProbe()
+    {
+        if ((_presentation.Parameters.Preferences ?? new()).Scale != 1 || ContentDocument.AllowHeatDrivenSize)
+            throw new InvalidOperationException("Neutral standard-size fixture required.");
+        var cell = Presenter.Cards.Values.OfType<Grid>().First();
+        var host = cell.Children.OfType<Border>().First().Child as Grid
+            ?? throw new InvalidOperationException("Missing content image host.");
+        var image = host.Children.OfType<FrameworkElement>().Single();
+        return Math.Min(image.Width, image.Height);
+    }
+
     internal ContentAdornmentProbe ReadContentAdornmentsForProbe()
     {
         (_window?.Content as FrameworkElement)?.UpdateLayout();

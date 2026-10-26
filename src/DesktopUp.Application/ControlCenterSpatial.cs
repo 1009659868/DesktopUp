@@ -45,7 +45,7 @@ public static class ControlCenterSpatial
         int minHeight = (int)Math.Ceiling(PosterFrameGeometryPolicy.MinimumExpandedHeightDip * env.DpiY / 96d);
         if (resize)
         {
-            if (!ContentFrameMinimumPolicy.TryForPoster(poster, out var minimum, out error)) return null;
+            if (!ContentFrameMinimumPolicy.TryForPoster(poster, out var minimum, out error, heatLowerBound: true)) return null;
             (minWidth, minHeight) = minimum!.Pixels(env.DpiX, env.DpiY);
             if (end.Width < minWidth || end.Height < minHeight)
             { error = "尺寸低于最大完整 Item 与海报边距所需下限；未缩小内容或改写布局。"; return null; }

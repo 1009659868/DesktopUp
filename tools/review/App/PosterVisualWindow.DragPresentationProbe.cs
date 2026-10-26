@@ -8,7 +8,7 @@ namespace DesktopUp;
 internal sealed partial class PosterVisualWindow
 {
     // Isolated, real HWND/XAML measurement. No SendInput, database commit or file movement.
-    internal async Task VerifyDragPresentationForProbe(CancellationToken cancellation)
+    internal async Task VerifyDragPresentationForProbe(CancellationToken cancellation, Func<Task>? duringDrag = null)
     {
         var original = _bounds;
         var revision = _stateRevision;
@@ -65,6 +65,13 @@ internal sealed partial class PosterVisualWindow
                     contentRepaints = repaints });
             }
             Require(_stateRevision == revision, "Preview wrote author state.");
+            if (duringDrag is not null)
+            {
+                var retained = Presenter.Frame;
+                await duringDrag();
+                Require(ReferenceEquals(retained, Presenter.Frame), "Activity repainted content during protected movement.");
+                RequireRetainedRenderForProbe(identity);
+            }
             CancelSpatialGesture("drag-probe-cancel");
             Require(_bounds == original && _spatialGesture is null && _pendingGestureFrame is null,
                 "Cancellation failed to restore the accepted frame.");

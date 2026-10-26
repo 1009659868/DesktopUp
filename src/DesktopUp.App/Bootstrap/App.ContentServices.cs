@@ -15,10 +15,14 @@ public partial class App
         var coordinator = services.Projection;
         var journal = new SqliteContentOpenJournal(store);
         journal.RetireInterruptedRequests();
+        runtime.ConfigureActivity(new ContentActivityProducer(services.ActivityStore, services.Activity));
+        services.Activity.StatisticsChanged += ids =>
+            _dispatcher!.TryEnqueue(() => runtime.NotifyActivityStatisticsChanged(ids));
+        services.Activity.RequestRefresh();
         var worker = _composition!.StartWorker();
         var actions = new ContentActionService(
             () => coordinator.TryGetCurrent(out var current) ? current!.ContentCatalog : ContentCatalogSnapshot.Empty,
-            worker, journal);
+            worker, journal, services.Activity);
         var files = new LocalContentActionFiles();
         var shellFiles = new ShellDirectoryTransfer();
         runtime.ConfigureContentReturns(ContentReturns);

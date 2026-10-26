@@ -75,7 +75,7 @@ public sealed partial class ContentLayoutPersistenceTests
         if (blocker == "work-area") scene = new(scene.Environment with { WorkArea = bounds }, scene.Posters);
         if (blocker == "neighbour") scene = new(scene.Environment,
             [scene.Posters[0], new("B", new(checked((int)bounds.Right), 0, 400, 600), 600, true, false, false, 1)]);
-        var edit = new PosterSettingEdit(target, PosterSetting.Scale, 2);
+        var edit = new PosterSettingEdit(target, PosterSetting.Scale, 1.8);
         var plan = ContentScaleExpansion.Plan(target.Poster, edit.Command("candidate").DesiredState, scene, out var error);
         Assert.Null(plan); Assert.NotNull(error);
         var session = new ControlCenterSettingsSession();

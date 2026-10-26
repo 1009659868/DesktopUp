@@ -6,7 +6,7 @@ Windows原生桌面内容收纳工具：多海报、真实文件与快捷方式�
 
 [当前状态与后续工作](Docs/00_Catalog/CURRENT_STATUS.md)统一维护已验功能、分支／发布基线和未完成事项。[文档入口](Docs/README.md)按A → B → C导航；[源码职责](src/README.md)区分现有项目与未来目标。
 
-真实内容基础、架构整理、连续尺度与外框修订、唯一安装／迁移升级及拖动呈现优化已验集成。真实热度与桌面标准尺度已在`impl/06-real-activity`实现并获用户验收，当前develop尚未合入；[合并准备](Docs/A_Project/40_Implementation/V3-06/ACTIVITY_BRANCH_REVIEW_20261026.md)记录差异与下一步。完整模板平台和AI后续推进；历史卸载首因、锁冲突及剩余成本继续保留。旧README时间线见[历史快照](README_HISTORY_20261023.md)，不作为当前任务指令。
+真实内容基础、架构整理、连续尺度与外框修订、唯一安装／迁移升级、拖动呈现优化，以及真实热度与桌面标准尺度均已验。热度与拖动的209项定向、组合冒烟及普通构建通过，按授权集成至develop；[整合记录](Docs/A_Project/40_Implementation/V3-06/ACTIVITY_DRAG_INTEGRATION.md)记录来源、证据及Git回执。本轮不更新main／安装包／tag。完整模板平台和AI后续推进；历史卸载首因、锁冲突及剩余成本继续保留。旧README时间线见[历史快照](README_HISTORY_20261023.md)，不作为当前任务指令。
 
 开发集成线为impl/develop，后续功能从它派生；impl/main仅保留发布源码／内置模块／配置／构建打包入口与许可证。开发资料和测试不得被发布精简反向删除。Git操作与发布需用户授权，见[分支策略](Docs/Rules/GIT_STRATEGY.md)。
 

@@ -1,4 +1,6 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
+using DesktopUp.Application;
 using DesktopUp.Domain;
 using static DesktopUp.Contracts.Tests.ControlCenterPosterEditorTests;
 
@@ -6,6 +8,50 @@ namespace DesktopUp.Contracts.Tests;
 
 public sealed class UxContentPreferenceTests
 {
+    [Theory]
+    [InlineData("basic-box")] [InlineData("night-ops")]
+    public void Standard_card_matches_desktop_icon_and_heat_remains_an_independent_multiplier(string template)
+    {
+        var parameters = PosterPresentationPolicy.Defaults(template);
+        var doc = ContentLayoutSamples.Equal("A", 1) with { AllowHeatDrivenSize = true };
+        var view = new ContentLayoutViewport(600, 600).WithPresentation(parameters);
+        var standard = Assert.Single(ContentLayoutSolver.Resolve(doc, view).Items);
+        double label = Math.Max(20, parameters.Content.LabelHeightDip + 7);
+        var image = ContentCardPresentationPolicy.ImageArea(standard.Bounds.Width, standard.Bounds.Height, label);
+        Assert.Equal(48, Math.Min(image.Width, image.Height), 8);
+        var heat = new ContentHeatProposal("A", doc.ItemSetVersion, 1,
+            [new(doc.Placements[0].ItemId, 0, 1.5)], ContentLayoutProposals.ContinuousMappingVersion)
+            { AuthorDocumentVersion = doc.DocumentVersion };
+        var derived = ContentHeatSizing.Project(doc, heat, view);
+        var hot = Assert.Single(ContentLayoutSolver.Resolve(derived, view).Items);
+        Assert.Equal(standard.Bounds.Width * 1.5, hot.Bounds.Width, 8);
+        Assert.Equal(4, doc.Placements[0].ColumnSpan);
+        Assert.Equal(new[] { .4, 1d, 1.8 }, PosterContentPreferencePolicy.ScalePresets);
+        // A metrics change must resolve again, never reuse old paint/hit coordinates.
+        Assert.Throws<ContentLayoutException>(() => ContentLayoutSolver.Reclip(
+            ContentLayoutSolver.Resolve(doc, view), view with { BaseMetricsScale = 1 }));
+    }
+
+    [Theory]
+    [InlineData(1.25, 1.25)] [InlineData(3, 1.8)]
+    public void Legacy_scale_normalizes_without_losing_the_theme_or_accepting_invalid_new_values(double oldScale, double expected)
+    {
+        var parameters = PosterPresentationPolicy.Defaults("basic-box") with { Preferences = new() };
+        var raw = JsonNode.Parse(PosterPresentationPolicy.Serialize(parameters))!;
+        raw["preferences"]!["mappingVersion"] = 1;
+        raw["preferences"]!["scale"] = oldScale;
+        var poster = Seed() with { TemplateKey = "basic-box", LayoutParametersJson = raw.ToJsonString() };
+        var read = PosterPresentationPolicy.Resolve(poster);
+        Assert.True(read.CanEdit);
+        Assert.Equal(expected, read.Parameters.Preferences!.Scale);
+        Assert.Equal(2, read.Parameters.Preferences.MappingVersion);
+        Assert.Equal(parameters.Theme, read.Parameters.Theme);
+        Assert.Equal(parameters.Content, read.Parameters.Content);
+        Assert.Equal(oldScale, JsonNode.Parse(poster.LayoutParametersJson)!["preferences"]!["scale"]!.GetValue<double>());
+        raw["preferences"]!["mappingVersion"] = 2;
+        raw["preferences"]!["scale"] = 1.801;
+        Assert.False(PosterPresentationPolicy.Resolve(poster with { LayoutParametersJson = raw.ToJsonString() }).CanEdit);
+    }
     [Theory]
     [InlineData("basic-box")] [InlineData("night-ops")]
     public void Legacy_neutral_is_exact_and_first_macro_write_is_versioned(string template)
@@ -25,7 +71,7 @@ public sealed class UxContentPreferenceTests
     }
 
     [Theory]
-    [InlineData(.4, .5)] [InlineData(1, 1)] [InlineData(3, 1.5)] [InlineData(1.1735, .83)]
+    [InlineData(.4, .5)] [InlineData(1, 1)] [InlineData(1.8, 1.5)] [InlineData(1.1735, .83)]
     public void Repeated_macro_changes_never_multiply_saved_base_or_drift(double scale, double spacing)
     {
         var p = PosterPresentationPolicy.Defaults("basic-box"); var basis = p.Content;
@@ -43,7 +89,7 @@ public sealed class UxContentPreferenceTests
     }
 
     [Theory]
-    [InlineData(.39, 1)] [InlineData(3.01, 1)] [InlineData(1, .49)] [InlineData(1, 1.51)]
+    [InlineData(.39, 1)] [InlineData(1.801, 1)] [InlineData(1, .49)] [InlineData(1, 1.51)]
     [InlineData(double.NaN, 1)] [InlineData(double.PositiveInfinity, 1)]
     public void Invalid_preferences_cannot_be_serialized(double scale, double spacing) =>
         Assert.Throws<ArgumentException>(() => PosterPresentationPolicy.Serialize(PosterPresentationPolicy.Defaults() with { Preferences = new(scale, spacing) }));
@@ -70,7 +116,7 @@ public sealed class UxContentPreferenceTests
         var next = old with { LayoutParametersJson = PosterPresentationPolicy.Serialize(p, old.LayoutParametersJson) };
         Assert.Null(PosterPresentationPolicy.ValidateEdit(old, next));
         Assert.Contains("preserve", next.LayoutParametersJson);
-        string bad = next.LayoutParametersJson.Replace("\"mappingVersion\":1", "\"mappingVersion\":99");
+        string bad = next.LayoutParametersJson.Replace("\"mappingVersion\":2", "\"mappingVersion\":99");
         Assert.False(PosterPresentationPolicy.Resolve(next with { LayoutParametersJson = bad }).CanEdit);
         Assert.False(PosterPresentationPolicy.Resolve(next with { LayoutParametersJson = "{\"schemaVersion\":999}" }).CanEdit);
     }

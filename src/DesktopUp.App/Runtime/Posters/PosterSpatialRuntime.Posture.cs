@@ -231,6 +231,7 @@ internal sealed partial class PosterSpatialRuntime
             RecoveryRequired?.Invoke();
         }
         run.Completed(result);
+        ActivityChanged?.Invoke();
         if (!_suspended && run.Owner.WindowHandle != 0) run.Owner.SpatialDispatcher.TryEnqueue(DrainPostures);
     }
 

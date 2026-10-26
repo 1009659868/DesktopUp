@@ -1,12 +1,12 @@
 # DesktopUp V2 V3 技术路线与总体架构 V1
 
-状态：当前职责基线＋后续目标，2026-10-23对齐。实际进度见[CURRENT_STATUS](../../00_Catalog/CURRENT_STATUS.md)。下文涉及热度、完整模板、AI和独立在线更新器的设计不是已实现能力。
+状态：当前职责基线＋后续目标，2026-10-26对齐。真实热度消费／纯策略／安全点接线已在功能分支实现并验收，正与拖动优化整合；当前schema27，portable／content／presentation版本独立。进度见[CURRENT_STATUS](../../00_Catalog/CURRENT_STATUS.md)。完整模板、AI及在线更新器仍是后续目标；进程隔离不是权限沙箱。
 
 ## 0. 当前实现与目标的分界
 
 - 已验基础架构R1～R8、P1～P3已集成；真实内容、原生拖放、生命周期、单一归属及安装升级的职责见[源码导航](../../../src/README.md)和[最终复审](../40_Implementation/Architecture/FOUNDATION_REMAINDER_PLAN.md#30-p2p3收口后的最终架构与成本复审2026-10-20)。
 - 当前7个生产项目：App、Application、Domain、Infrastructure、Windows、ContentWorker，加后续安装事务Setup。原2026-10-20“六程序集”图是当时业务边界快照，未画后来新增的Setup。
-- 热度已有成功打开事实、作者布局与提案会话；尚缺增量聚合、正式评分／连续映射及生产发布时机。旧五档注入路径不是正式热度。
+- 热度复用成功事实，Application组织事件式消费／提案，Infrastructure负责schema27原子聚合，Domain提供纯评分与连续尺寸，App沿既有交互／版本／空间安全点发布。旧五档仅为注入兼容，不是生产热度；详细证据归[V3-06](../40_Implementation/V3-06/REAL_ACTIVITY_DELIVERY.md)。
 - Lamp／Rain等是编译期内置模块；标题等组件可配置不等于运行时任意风格模板平台。AI和在线更新器尚未实现。
 - 普通点击穿透和共享内容引用已撤销；本文正文按现行合同修正，不要求为旧方案重新做P0探针。已有SQL迁移不可改写，文件安全与CAS保持。
 - 具体产品行为／验收状态分别归需求与C层；不在此累积每次候选数字。历史架构来源可由Git追溯；旧图保留其日期边界。
@@ -235,7 +235,7 @@ Domain／Application／Infrastructure／Windows是逻辑程序集，不是每海
 
 当前ContentLayoutDocument／纯布局帧／PosterContentSession及同代Presenter已接真实内容，已验连续视口、手动让位、图钉、小数尺寸与增量呈现。成功打开经ContentActionService／IContentOpenJournal持久化；正式聚合／评分仍未实现。ContentHeatSession和Domain提案路径存在旧五档量化适配，真实热度接入时要替换生产映射并保留必要历史兼容，不得将其当作用户要求的连续热度。
 
-后续链路：事实 → Application幂等消费与协调 → Domain纯策略 → 版本化连续提案 → 会话安全时点 → Presenter／同代命中。具体待裁决和性能约束见[工作流§7.1](../30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md#71-2026-10-21-真实热度准备未实施)。以下策略名表示职责，不要求另建同名类。
+现有链路：事实 → Application幂等消费与协调 → Domain纯策略 → 版本化连续提案 → 会话安全时点 → Presenter／同代命中。已批准规则和仍待测量的成本见[工作流§7.1](../30_Plans/V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md#71-2026-10-21-真实热度准备未实施)。以下策略名表示职责，不要求另建同名类。
 
 - `ActivityScoringPolicy` 根据需求公式计算分数，不直接操作 XAML；
 - `ItemLayoutPolicy` 接收 viewport、内容参数、固定项和排序结果，输出稳定布局快照；
