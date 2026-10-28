@@ -77,7 +77,7 @@ public sealed class VisualRegionNativeReadbackTests
         var root = new DirectoryInfo(AppContext.BaseDirectory);
         while (root is not null && !File.Exists(Path.Combine(root.FullName, "Directory.Build.props"))) root = root.Parent;
         Assert.NotNull(root);
-        string source = File.ReadAllText(Path.Combine(root.FullName, "src/DesktopUp.Windows/DesktopLayerAttachment.cs"));
+        string source = File.ReadAllText(Path.Combine(root.FullName, "src/DesktopUp.Windows/Desktop/DesktopLayerAttachment.cs"));
         string reader = source.Split("internal sealed class DesktopWindowNativeApi")[1]
             .Split("public DesktopVisualSurfaceReadback InspectVisualSurface")[1].Split("private static DesktopPixelRect Pixels")[0];
         Assert.Contains("GetWindowRgnBox(window", reader);

@@ -22,14 +22,15 @@
   </ItemGroup>
   <ItemGroup>
     <Using Include="Xunit" />
+    <Compile Include="../../tools/review/App/LegacyCanvasSamples.cs" Link="Canvas/LegacyCanvasSamples.cs" />
     <Compile Include="../Shared/DragProbe/*.cs" Link="DragProbe/%(Filename)%(Extension)" />
     <Compile Include="../Shared/MultiPosterFixtureData.cs" Link="MultiPosterFixtureData.cs" />
     <Compile Include="../Shared/MeasurementFixtureData.cs" Link="MeasurementFixtureData.cs" />
     <Compile Include="../../scripts/MeasurementMath.cs" Link="MeasurementMath.cs" />
     <Compile Include="../../scripts/M08MeasurementRules.cs" Link="M08MeasurementRules.cs" />
-    <Compile Include="../../src/DesktopUp.App/PresentationReadbackEquality.cs" Link="PresentationReadbackEquality.cs" />
+    <Compile Include="../../src/DesktopUp.App/Presentation/PresentationReadbackEquality.cs" Link="PresentationReadbackEquality.cs" />
     <Compile Include="../../src/DesktopUp.App/Runtime/Posters/PosterDragFrameScheduler.cs" Link="PosterDragFrameScheduler.cs" />
-    <Compile Include="../../src/DesktopUp.ContentWorker/ShellIconQuality.cs" Link="ShellIconQuality.cs" />
+    <Compile Include="../../src/DesktopUp.ContentWorker/Icons/ShellIconQuality.cs" Link="ShellIconQuality.cs" />
     <None Include="../../scripts/fixtures/portable-p4-pending.desktopup.json" Link="Fixtures/portable-p4-pending.desktopup.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="../../packaging/preview/package-settings.json" Link="Fixtures/preview-package-settings.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>

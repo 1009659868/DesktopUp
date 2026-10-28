@@ -188,6 +188,7 @@ public interface IStateProjectionCoordinator
 
 public interface IStateCommandService
 {
+    StateCommandResult Execute(CanvasDesignCommand command) => throw new NotSupportedException("Canvas design commands are unavailable.");
     StateCommandResult ExecutePortable(PortableImportCommand command) => throw new NotSupportedException("Portable commands are unavailable.");
     StateCommandResult Execute(ContentIconCommand command, CancellationToken cancellation) => throw new NotSupportedException("Icon commands are unavailable.");
     StateCommandResult Execute(ContentReferenceCommand command) => throw new NotSupportedException("Reference commands are unavailable.");

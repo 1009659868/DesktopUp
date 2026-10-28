@@ -49,7 +49,8 @@ internal sealed class PosterContentPresenter(Action<Border, bool, Grid?> paintSc
         Surface.Clip = new RectangleGeometry { Rect = new global::Windows.Foundation.Rect(0, 0, viewport.WidthDip, viewport.HeightDip) };
         var doc = frame.Document;
         // Lamp paint and host title ink never invalidate card identity or solver geometry.
-        var cardPresentation = frame.Presentation with { Parameters = frame.Presentation.Parameters with { Lamp = null, TitleColors = null, ShowTitle = null } };
+        var cardPresentation = frame.Presentation with { Parameters = frame.Presentation.Parameters with { Lamp = null, TitleColors = null, ShowTitle = null, Canvas = null,
+            Theme = frame.Presentation.Parameters.Theme with { Foreground = frame.Presentation.EffectiveContentForeground } } };
         // Retain cards in their visual parent. Only ephemeral grid/gesture overlays are rebuilt.
         var existingCards = Cards.Values.ToHashSet();
         foreach (var child in Surface.Children.Where(child => child is not FrameworkElement element || !existingCards.Contains(element)).ToArray())
@@ -202,7 +203,7 @@ internal sealed class PosterContentPresenter(Action<Border, bool, Grid?> paintSc
         paintSceneCard(card, selected, null);
         cell.Children.Add(card);
         var name = new TextBlock { Text=item.Name + (item.IsAvailable ? "" : " · 暂不可用"), FontSize=frame.Presentation.EffectiveContent.LabelFontSizeDip, MaxLines=1, TextTrimming=TextTrimming.CharacterEllipsis,
-            VerticalAlignment=VerticalAlignment.Center, Foreground=ColorBrush(frame.Presentation.Parameters.Theme.Foreground,210) };
+            VerticalAlignment=VerticalAlignment.Center, Foreground=ColorBrush(frame.Presentation.EffectiveContentForeground,210) };
         Grid.SetRow(name,1); cell.Children.Add(name);
         if (frame.NamingItem == item.ItemId) name.Visibility = Visibility.Collapsed;
         if (frame.Document.ShowSpanLabels)
@@ -253,7 +254,7 @@ internal sealed class PosterContentPresenter(Action<Border, bool, Grid?> paintSc
             { SetHover(key); return; }
         SetHover(null);
     }
-    private SolidColorBrush HoverBrush() => ColorBrush(_frame!.Presentation.Parameters.Theme.Foreground, 36);
+    private SolidColorBrush HoverBrush() => ColorBrush(_frame!.Presentation.EffectiveContentForeground, 36);
     public void SetNameVisible(string itemId, bool visible)
     {
         foreach (var entry in Cards)

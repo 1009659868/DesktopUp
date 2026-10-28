@@ -1,0 +1,23 @@
+{
+  "format": "desktopup.canvas-draft.design",
+  "protocolVersion": "0.1-draft",
+  "requestId": "fixture-request-2",
+  "draftId": "fixture-draft-1",
+  "draftRevision": 2,
+  "target": {
+    "containerId": "fixture-container-1",
+    "expectedDesignRevision": 7
+  },
+  "capabilityRevision": "j0-catalog-1",
+  "candidate": {
+    "recipeId": "rainy-desk",
+    "recipeVersion": 1,
+    "sha256": "fb54919f7788ad140182a6d0c814116e18adca944746618111809979e2cf14c6",
+    "overrides": {
+      "lampIntensity": 0.4,
+      "rainIntensity": 0.2,
+      "showCaption": false
+    }
+  },
+  "requestedBy": "ai"
+}

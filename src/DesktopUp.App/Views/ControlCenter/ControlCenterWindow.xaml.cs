@@ -42,7 +42,7 @@ public sealed partial class ControlCenterWindow : Window
             LocateNotice.Visibility = string.IsNullOrEmpty(LocateNotice.Text) ? Visibility.Collapsed : Visibility.Visible);
         InitializeEditing();
         InitializeSettings();
-        InitializeUiCSample();
+        InitializeResponsiveLayout();
         InitializeTemplateParameters();
         InitializeTitleColors();
         InitializeSurfaceControls();

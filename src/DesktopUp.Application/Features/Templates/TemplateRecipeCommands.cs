@@ -28,7 +28,8 @@ internal static class TemplateRecipeCommandPolicy
             var presentation = PosterPresentationPolicy.Resolve(target);
             if (!presentation.CanEdit) throw new ArgumentException("Unsupported poster parameters cannot be overwritten.");
             var desired = target with { TemplateKey = recipe.Id,
-                LayoutParametersJson = PosterPresentationPolicy.Serialize(TemplateRecipeInstancePolicy.Select(presentation.Parameters, recipe), target.LayoutParametersJson) };
+                LayoutParametersJson = PosterPresentationPolicy.Serialize(TemplateRecipeInstancePolicy.Select(presentation.Parameters, recipe) with
+                { Canvas = presentation.Parameters.Canvas is { Current: not null } canvas ? new(checked(canvas.Revision + 1), null, canvas.Current, true, command.RequestId) : presentation.Parameters.Canvas }, target.LayoutParametersJson) };
             if (PosterPresentationPolicy.ValidateEdit(target, desired) is { } error) throw new ArgumentException(error);
             updates = [desired];
         }

@@ -1,0 +1,98 @@
+{
+  "phase": "before-move",
+  "pureMoveVerification": {
+    "files": 514,
+    "byteIdentical": true,
+    "verifiedBeforeReferenceEdits": true
+  },
+  "projects": [
+    {
+      "project": "src/DesktopUp.App/DesktopUp.App.csproj",
+      "counts": {
+        "Compile": 113,
+        "Page": 1,
+        "ApplicationDefinition": 1,
+        "ProjectReference": 5,
+        "EmbeddedResource": 0
+      },
+      "mappedInputSetSha256": "d6c6793061b59ad1a048d3b9fad282c6bbb3b6f9043812e5a34bff6ca327c626"
+    },
+    {
+      "project": "src/DesktopUp.Application/DesktopUp.Application.csproj",
+      "counts": {
+        "Compile": 171,
+        "Page": 0,
+        "ApplicationDefinition": 0,
+        "ProjectReference": 1,
+        "EmbeddedResource": 0
+      },
+      "mappedInputSetSha256": "70d7708fe2e341bec580fcfde05157012105736ab85c8e46cbf7885f358ec53d"
+    },
+    {
+      "project": "src/DesktopUp.Domain/DesktopUp.Domain.csproj",
+      "counts": {
+        "Compile": 51,
+        "Page": 0,
+        "ApplicationDefinition": 0,
+        "ProjectReference": 0,
+        "EmbeddedResource": 0
+      },
+      "mappedInputSetSha256": "31445e9ee9750c1b7a3617192117cfceab2b868cc31c7eeebb58d1170f914d82"
+    },
+    {
+      "project": "src/DesktopUp.Infrastructure/DesktopUp.Infrastructure.csproj",
+      "counts": {
+        "Compile": 77,
+        "Page": 0,
+        "ApplicationDefinition": 0,
+        "ProjectReference": 3,
+        "EmbeddedResource": 28
+      },
+      "mappedInputSetSha256": "f04c9c91c7a5217907c0474353fb00165c994f183a197b940022211e2fd615ce"
+    },
+    {
+      "project": "src/DesktopUp.Windows/DesktopUp.Windows.csproj",
+      "counts": {
+        "Compile": 35,
+        "Page": 0,
+        "ApplicationDefinition": 0,
+        "ProjectReference": 2,
+        "EmbeddedResource": 0
+      },
+      "mappedInputSetSha256": "b51d0d22b38d30c42cba45ef7fe7e4f6415e7b0e79195b9da717e5366f5fa2be"
+    },
+    {
+      "project": "src/DesktopUp.ContentWorker/DesktopUp.ContentWorker.csproj",
+      "counts": {
+        "Compile": 9,
+        "Page": 0,
+        "ApplicationDefinition": 0,
+        "ProjectReference": 2,
+        "EmbeddedResource": 0
+      },
+      "mappedInputSetSha256": "badea1d44a6c12270a629084e993c322b354cfa0e6ac5b4fec4fa16c60ad34ac"
+    },
+    {
+      "project": "src/DesktopUp.Setup/DesktopUp.Setup.csproj",
+      "counts": {
+        "Compile": 5,
+        "Page": 0,
+        "ApplicationDefinition": 0,
+        "ProjectReference": 0,
+        "EmbeddedResource": 0
+      },
+      "mappedInputSetSha256": "8451d49d241ad6f6e6c3336820b549d2d894da9824ec013bca55a274f900ce5b"
+    },
+    {
+      "project": "tests/DesktopUp.Contracts.Tests/DesktopUp.Contracts.Tests.csproj",
+      "counts": {
+        "Compile": 258,
+        "Page": 0,
+        "ApplicationDefinition": 0,
+        "ProjectReference": 8,
+        "EmbeddedResource": 0
+      },
+      "mappedInputSetSha256": "dd45ca4f060b2d05671e1abc0bd80003cdbf23f536b140dbd838f0df98f03c3f"
+    }
+  ]
+}

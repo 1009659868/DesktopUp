@@ -17,4 +17,6 @@
 
 模块删除后其对应验收源不再编译；Lamp/Rain仍以Modules下的生产声明判断是否存在。新验收入口放此处，不再添加到产品源码根目录。
 
+控制中心响应式布局的观察记录与ForProbe方法已归入App/ControlCenterWindow.ResponsiveLayoutProbe.cs；生产布局保留在src/DesktopUp.App/Views/ControlCenter/ControlCenterWindow.ResponsiveLayout.cs，两者按普通／review编译边界分开。
+
 首批精确移动清单和保留例外见[实施计划](../../Docs/A_Project/40_Implementation/Architecture/A_FOUNDATION.md)。

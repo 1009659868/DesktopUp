@@ -46,6 +46,12 @@ public static class ContentFrameMinimumPolicy
             var presentation = PosterPresentationPolicy.Resolve(poster);
             double chromeX = PosterPresentationPolicy.HorizontalPaddingDip * 2 + EditingBorderDip;
             double chromeY = presentation.Metrics.ReservedTopDip + presentation.Metrics.ReservedBottomDip + EditingBorderDip;
+            if (presentation.Parameters.Canvas?.Current is not null)
+            {
+                var area = CanvasPosterGeometry.Content(presentation, poster.WidthDip, poster.ExpandedHeightDip);
+                chromeX = poster.WidthDip - area.Width + EditingBorderDip;
+                chromeY = poster.ExpandedHeightDip - area.Height + EditingBorderDip;
+            }
             var viewport = new ContentLayoutViewport(Math.Max(0, poster.WidthDip - chromeX),
                 Math.Max(0, poster.ExpandedHeightDip - chromeY)).WithPresentation(presentation.Parameters);
             if (heatLowerBound) doc = ContentHeatSizing.LowerBound(doc!, viewport);

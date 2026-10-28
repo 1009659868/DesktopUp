@@ -89,6 +89,7 @@ public partial class App
         DebugSettings.IsXamlResourceReferenceTracingEnabled = true;
         DebugSettings.XamlResourceReferenceFailed += OnXamlResourceReferenceFailed;
         _stateCommands = _composition.Projection;
+        CanvasRegistration.Register(_composition.CanvasImages);
         ConfigurePortableProfiles();
         _stateCoordinator.ProjectionChanged += OnStateProjectionChanged;
         _controlCenter = new ControlCenterService(
@@ -101,7 +102,8 @@ public partial class App
             _transferLocationNotices,_storageLocation, () => _composition.Worker, ContentReturns,
             () => RequestReplacement(true), CreateContentIconSource(), CreateReferenceRepair(_stateCommands),
             new StartupRegistrationService(new WindowsStartupRegistration(AppContext.BaseDirectory,
-                DistributionBuild.IsInstallable, !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DESKTOPUP_V3_TEST_DATA_ROOT")))));
+                DistributionBuild.IsInstallable, !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DESKTOPUP_V3_TEST_DATA_ROOT")))),
+            _composition.CanvasWorkspace, _composition.CanvasImages);
         _tray = new TrayService(_ledger, _log);
         _tray.Create(QueueTrayAction);
         _log.Write("info", "application.started", new

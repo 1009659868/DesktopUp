@@ -186,7 +186,7 @@ internal sealed partial class PosterVisualWindow(
                     // Use the exact solver result that supplied this frame's input regions.
                     // The allocation stays fixed, but the logical composition follows both axes.
                     owner._contentLayout.Adopt(frame.Presentation);
-                    owner.DrawContentSnapshot(frame.Content, frame.ContentViewport);
+                    owner.DrawContentSnapshot(frame.Content, frame.ContentViewport, frame.Bounds);
                 }
                 if (!owner.ApplyTransitionViewport(frame.Bounds)) return false;
                 continue;
@@ -194,7 +194,7 @@ internal sealed partial class PosterVisualWindow(
             if (phase == DesktopFramePhase.Regular && owner.CanReuseTranslatedContent(frame)) continue;
             layouts.Add((root, root.Width, root.Height));
             owner._contentLayout.Adopt(frame.Presentation);
-            owner.DrawContentSnapshot(frame.Content, frame.ContentViewport);
+            owner.DrawContentSnapshot(frame.Content, frame.ContentViewport, frame.Bounds);
             double width = frame.Bounds.Width / owner._monitor.ScaleX, height = frame.Bounds.Height / owner._monitor.ScaleY;
             root.Width = width; root.Height = height;
             root.Measure(new global::Windows.Foundation.Size(width, height));
@@ -1279,7 +1279,7 @@ internal sealed partial class PosterVisualWindow(
         if (!_geometry.IsCollapsed) EnsureContentSnapshot(frame);
         return _inputGeometry.Resolve(checked(++_layoutRevision), frame,
             new(_monitor, _geometry, _presentation, _titlePose, IsEditing, _contentReadOnly, _selectedContentItem,
-                _contentLayout.Current, ContentLeftDip, ContentTopDip, _transitionLayout is not null, ResolveOuterCornerRadiusPixels()));
+                _contentLayout.Current, ContentLeftFor(frame), ContentTopFor(frame), _transitionLayout is not null, ResolveOuterCornerRadiusPixels()));
     }
 
     private Window CreateWindow()
@@ -1605,6 +1605,8 @@ internal sealed partial class PosterVisualWindow(
                 ? Visibility.Collapsed
                 : Visibility.Visible;
         }
+        if (!_geometry.IsCollapsed && CanvasFor(_bounds) is { } canvas && _contentStructure is { } canvasStructure && _itemsGrid is { } canvasItems && _itemsScrollViewer is { } canvasScroll)
+            CanvasContentPlacement.Apply(canvas, canvasStructure, canvasItems, canvasScroll, _metaPanel, _footer);
         if (_collapseGlyph is not null)
         {
             _collapseGlyph.Text = _geometry.IsCollapsed ? "⌃" : "⌄";

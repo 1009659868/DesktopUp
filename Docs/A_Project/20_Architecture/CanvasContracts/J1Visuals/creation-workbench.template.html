@@ -1,0 +1,208 @@
+<div id="du-creation-review" aria-label="DesktopUp 创作工作台设计评审稿">
+  <style>
+    #du-creation-review { --du-bg:light-dark(#f5f3ee,#202325); --du-panel:light-dark(#fffefa,#282c2e); --du-ink:light-dark(#24292c,#eeeae2); --du-muted:light-dark(#676b69,#b3b7b2); --du-line:light-dark(#dedfd8,#444a49); --du-accent:light-dark(#3f6b60,#a9cbb9); --du-tint:light-dark(#e5eee7,#34493f); --du-stage:light-dark(#e6e6df,#1b2022); font-family:'Segoe UI','Microsoft YaHei',sans-serif; font-size:13px; color:var(--du-ink); width:100%; }
+    #du-creation-review * { box-sizing:border-box; }
+    #du-creation-review [hidden] { display:none!important; }
+    #du-creation-review button, #du-creation-review input, #du-creation-review select { font:inherit; color:inherit; }
+    #du-creation-review button { display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:7px 10px; background:var(--du-panel); border:1px solid var(--du-line); border-radius:6px; min-height:33px; }
+    #du-creation-review button:hover { background:var(--du-tint); }
+    #du-creation-review button:disabled { opacity:.45; }
+    #du-creation-review button:focus-visible, #du-creation-review input:focus-visible, #du-creation-review select:focus-visible { outline:2px solid var(--du-accent); outline-offset:2px; }
+    #du-creation-review .du-primary { background:var(--du-accent); color:light-dark(#fff,#1b2c24); border-color:transparent; }
+    #du-creation-review svg { width:16px; height:16px; flex-shrink:0; }
+    #du-creation-review .du-shell { border:1px solid var(--du-line); border-radius:10px; background:var(--du-bg); overflow:hidden; }
+    #du-creation-review .du-top { padding:12px 104px 12px 16px; display:flex; gap:12px; align-items:center; flex-wrap:wrap; background:var(--du-panel); }
+    #du-creation-review .du-brand { font-size:15px; font-weight:600; display:flex; align-items:center; gap:9px; }
+    #du-creation-review .du-mark { width:23px; height:23px; display:grid; place-items:center; background:var(--du-accent); color:var(--du-panel); border-radius:6px; }
+    #du-creation-review .du-mute { color:var(--du-muted); font-size:12px; }
+    #du-creation-review .du-nav { border-top:1px solid var(--du-line); border-bottom:1px solid var(--du-line); display:flex; flex-wrap:wrap; gap:2px; padding:0 10px; }
+    #du-creation-review .du-nav button { border:0; background:none; border-radius:0; min-height:43px; border-bottom:2px solid transparent; }
+    #du-creation-review .du-nav button[aria-pressed=true] { color:var(--du-accent); border-bottom-color:var(--du-accent); background:var(--du-panel); }
+    #du-creation-review .du-toolbar { display:flex; align-items:center; flex-wrap:wrap; gap:6px; padding:9px 12px; background:var(--du-panel); border-bottom:1px solid var(--du-line); }
+    #du-creation-review .du-grow { flex:1; }
+    #du-creation-review .du-work { display:grid; grid-template-columns:178px minmax(0,1fr) 222px; }
+    #du-creation-review .du-left, #du-creation-review .du-inspector { padding:12px; min-width:0; background:var(--du-panel); }
+    #du-creation-review .du-left { border-right:1px solid var(--du-line); }
+    #du-creation-review .du-inspector { border-left:1px solid var(--du-line); }
+    #du-creation-review .du-section { margin:0 0 10px; font-size:12px; color:var(--du-muted); font-weight:500; display:flex; justify-content:space-between; align-items:center; }
+    #du-creation-review .du-side-tabs { display:flex; gap:3px; margin-bottom:12px; }
+    #du-creation-review .du-side-tabs button { flex:1; padding:5px; border:0; }
+    #du-creation-review .du-side-tabs button[aria-pressed=true] { background:var(--du-tint); color:var(--du-accent); }
+    #du-creation-review .du-tree { display:grid; gap:4px; }
+    #du-creation-review .du-tree button { border:0; background:none; justify-content:flex-start; width:100%; padding:7px 6px; text-align:left; }
+    #du-creation-review .du-tree button[aria-pressed=true] { background:var(--du-tint); color:var(--du-accent); }
+    #du-creation-review .du-tree .du-child { padding-left:17px; }
+    #du-creation-review .du-tree button span { overflow-wrap:anywhere; }
+    #du-creation-review .du-separator { height:1px; background:var(--du-line); margin:15px 0; }
+    #du-creation-review .du-resource { padding:9px 0; display:grid; gap:7px; border-bottom:1px solid var(--du-line); }
+    #du-creation-review .du-resource img { width:100%; height:84px; object-fit:cover; border-radius:5px; }
+    #du-creation-review .du-resource button { width:100%; }
+    #du-creation-review .du-asset-spec { display:flex; justify-content:space-between; gap:6px; color:var(--du-muted); font-size:11px; }
+    #du-creation-review .du-stage { min-width:0; padding:12px 16px 20px; background-color:var(--du-stage); background-image:radial-gradient(var(--du-line) .8px,transparent .8px); background-size:16px 16px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; }
+    #du-creation-review .du-stage-head { width:100%; display:flex; align-items:center; justify-content:space-between; gap:8px; color:var(--du-muted); font-size:11px; }
+    #du-creation-review .du-stage-label { background:var(--du-bg); padding:4px 8px; border-radius:4px; }
+    #du-creation-review .du-canvas { width:100%; max-width:430px; aspect-ratio:520/650; position:relative; container-type:inline-size; border-radius:9px; isolation:isolate; }
+    #du-creation-review .du-canvas[data-edit=true] { outline:1px solid color-mix(in srgb,var(--du-muted) 40%,transparent); }
+    #du-creation-review .du-node { position:absolute; transform-origin:center; }
+    #du-creation-review .du-node[data-node] { touch-action:none; }
+    #du-creation-review .du-node.du-selected { outline:1px solid #78b9a7; }
+    #du-creation-review .du-node.du-selected:after { content:''; position:absolute; right:-3px; bottom:-3px; width:6px; height:6px; background:#f4f8f3; border:1px solid #539580; pointer-events:none; }
+    #du-creation-review .du-node.du-selected:before { content:attr(data-label); position:absolute; left:-1px; top:-22px; padding:3px 7px; color:#f9fffa; background:#326d5e; border-radius:3px 3px 0 0; font:11px 'Segoe UI','Microsoft YaHei',sans-serif; white-space:nowrap; pointer-events:none; }
+    #du-creation-review .du-image { width:100%; height:100%; object-fit:cover; display:block; border-radius:inherit; pointer-events:none; }
+    #du-creation-review .du-node-text { white-space:pre-wrap; overflow-wrap:anywhere; line-height:1.35; pointer-events:none; }
+    #du-creation-review .du-host { position:absolute; z-index:100; top:1.8%; left:4.5%; right:4%; display:flex; align-items:center; gap:7px; font-size:12px; color:#e7e8e2; pointer-events:none; }
+    #du-creation-review .du-host[data-palette=light] { color:#4b5451; }
+    #du-creation-review .du-host .du-host-end { margin-left:auto; letter-spacing:4px; }
+    #du-creation-review .du-files { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px 7px; padding:10px 8px; height:100%; align-content:start; }
+    #du-creation-review .du-file { display:flex; flex-direction:column; align-items:center; gap:7px; min-width:0; color:inherit; }
+    #du-creation-review .du-fileicon { width:44px; height:48px; border-radius:8px; background:#f0ede3; color:#62798b; display:grid; place-items:center; box-shadow:0 2px 5px #0002; }
+    #du-creation-review .du-fileicon svg { width:27px; height:27px; }
+    #du-creation-review .du-fileicon.du-folder { background:#d7b978; color:#6a522d; }
+    #du-creation-review .du-fileicon.du-art { background:#adc9bc; color:#365f55; }
+    #du-creation-review .du-filename { font-size:11px; width:100%; text-align:center; overflow-wrap:anywhere; line-height:1.35; }
+    #du-creation-review .du-field { display:flex; flex-direction:column; gap:5px; margin:10px 0; font-size:12px; color:var(--du-muted); }
+    #du-creation-review .du-field input:not([type=range]), #du-creation-review .du-field select { width:100%; background:var(--du-bg); border:1px solid var(--du-line); border-radius:5px; padding:7px; min-width:0; color:var(--du-ink); }
+    #du-creation-review .du-field input[type=range] { width:100%; accent-color:var(--du-accent); }
+    #du-creation-review .du-fields { display:grid; grid-template-columns:1fr 1fr; gap:0 8px; }
+    #du-creation-review .du-actions { display:flex; gap:5px; flex-wrap:wrap; }
+    #du-creation-review .du-type { font-size:11px; display:block; color:var(--du-muted); margin-top:6px; }
+    #du-creation-review .du-inspector strong { font-size:14px; font-weight:600; }
+    #du-creation-review .du-expose { display:flex; gap:8px; align-items:center; font-size:12px; }
+    #du-creation-review .du-expose input { accent-color:var(--du-accent); }
+    #du-creation-review .du-footer { border-top:1px solid var(--du-line); padding:9px 13px; background:var(--du-panel); color:var(--du-muted); display:flex; flex-wrap:wrap; gap:7px 16px; align-items:center; font-size:11px; }
+    #du-creation-review .du-preview { padding:20px; background:var(--du-stage); }
+    #du-creation-review .du-preview-grid { display:grid; grid-template-columns:minmax(0,1fr) 250px; align-items:center; gap:25px; max-width:850px; margin:auto; }
+    #du-creation-review .du-preview .du-canvas { max-width:430px; margin:auto; box-shadow:0 16px 36px #0002; }
+    #du-creation-review .du-preview h2 { font-size:21px; font-weight:500; margin:0 0 14px; }
+    #du-creation-review .du-preview h3 { font-size:12px; font-weight:500; color:var(--du-muted); margin:22px 0 10px; }
+    #du-creation-review .du-preview ul { list-style:none; margin:0; padding:0; display:grid; gap:12px; }
+    #du-creation-review .du-preview li { display:flex; align-items:center; gap:9px; }
+    #du-creation-review .du-preview-note { font-size:12px; color:var(--du-muted); line-height:1.7; margin:14px 0; }
+    #du-creation-review .du-library-thumb { background:#d5ddcf; border-radius:5px; padding:14px; color:#445849; font-size:12px; }
+    #du-creation-review .du-review-switch { display:flex; gap:5px; flex-wrap:wrap; }
+    @media(max-width:820px) { #du-creation-review .du-work { grid-template-columns:155px minmax(0,1fr); } #du-creation-review .du-inspector { grid-column:1/-1; border-left:0; border-top:1px solid var(--du-line); display:grid; grid-template-columns:1fr 1fr; gap:0 20px; } #du-creation-review .du-inspector .du-inspector-title { grid-column:1/-1; } #du-creation-review .du-inspector .du-separator { display:none; } #du-creation-review .du-preview-grid { grid-template-columns:minmax(0,1fr) 210px; } }
+    @media(max-width:570px) { #du-creation-review .du-work { display:flex; flex-direction:column; } #du-creation-review .du-stage { order:0; padding:15px; } #du-creation-review .du-left { order:1; border-right:0; border-top:1px solid var(--du-line); } #du-creation-review .du-tree { grid-template-columns:1fr 1fr; } #du-creation-review .du-inspector { order:2; display:grid; gap:0 12px; } #du-creation-review .du-preview-grid { grid-template-columns:1fr; } #du-creation-review .du-preview { padding:16px; } #du-creation-review .du-nav button { padding:7px; font-size:12px; } #du-creation-review .du-top { padding-right:98px; } #du-creation-review .du-files { gap:9px 5px; padding:8px 5px; } #du-creation-review .du-fileicon { width:34px; height:39px; } #du-creation-review .du-fileicon svg { width:23px; height:23px; } }
+    @media(pointer:coarse) { #du-creation-review button { min-height:44px; } #du-creation-review input { min-height:40px; } }
+    @media(prefers-reduced-motion:reduce) { #du-creation-review * { transition:none!important; } }
+  </style>
+  <div class="du-shell">
+    <header class="du-top"><span class="du-brand"><span class="du-mark"><i data-lucide="panels-top-left" aria-hidden="true"></i></span>DesktopUp <span class="du-mute">/ 创作工坊</span></span><span class="du-mute">视觉与交互设计稿 · 未接入产品</span></header>
+    <nav class="du-nav" aria-label="设计稿视图">
+      <button type="button" data-view="workbench" aria-pressed="true"><i data-lucide="mouse-pointer-2" aria-hidden="true"></i>创作工作台</button>
+      <button type="button" data-view="basic" aria-pressed="false">基础收纳 · 作品预览</button>
+      <button type="button" data-view="rainy" aria-pressed="false">雨夜书桌 · 作品预览</button>
+    </nav>
+    <section data-pane="workbench" aria-label="场景编辑工作台">
+      <div class="du-toolbar">
+        <label class="du-mute" for="du-scene-choice">场景</label><select id="du-scene-choice" aria-label="当前编辑场景"><option value="rainy">雨夜书桌.scene</option><option value="basic">基础收纳.scene</option><option value="blank">空白场景.scene</option></select>
+        <button type="button" data-action="add-text"><i data-lucide="type" aria-hidden="true"></i>文字</button>
+        <button type="button" data-action="add-shape"><i data-lucide="square" aria-hidden="true"></i>形状</button>
+        <button type="button" data-action="import"><i data-lucide="image-plus" aria-hidden="true"></i>导入素材</button>
+        <input id="du-import-file" type="file" accept="image/png,image/jpeg" hidden aria-label="选择本地预览图片">
+        <span class="du-grow"></span><button type="button" data-action="undo" aria-label="撤销本次设计稿编辑"><i data-lucide="undo-2" aria-hidden="true"></i>撤销</button><button type="button" class="du-primary" data-action="preview">预览作品</button>
+      </div>
+      <div class="du-work">
+        <aside class="du-left" aria-label="场景层级与素材">
+          <div class="du-side-tabs"><button type="button" data-side="tree" aria-pressed="true">层级</button><button type="button" data-side="assets" aria-pressed="false">素材</button><button type="button" data-side="scenes" aria-pressed="false">场景</button></div>
+          <div data-side-pane="tree"><div class="du-section">当前场景 <span id="du-node-count"></span></div><div class="du-tree" id="du-node-tree"></div><div class="du-separator"></div><div class="du-actions"><button type="button" data-action="up" aria-label="将所选节点上移一层"><i data-lucide="arrow-up" aria-hidden="true"></i>上移</button><button type="button" data-action="duplicate"><i data-lucide="copy" aria-hidden="true"></i>复制</button></div></div>
+          <div data-side-pane="assets" hidden><div class="du-section">作品素材库</div><div class="du-resource"><img src="__RAIN_DATA_URL__" alt="雨夜窗景背景素材"><span>雨窗与桌面.jpg</span><div class="du-asset-spec"><span>图像资源</span><span>设计稿素材</span></div><button type="button" data-action="add-background">插入图像节点</button></div><div id="du-imported-assets"></div></div>
+          <div data-side-pane="scenes" hidden><div class="du-section">可复用场景</div><div class="du-resource"><div class="du-library-thumb">便签夹.scene<br><span class="du-mute">纸张 + 文字 + 图钉</span></div><span>固定版本 · 实例独立</span><button type="button" data-action="insert-scene">插入便签夹实例</button></div><div id="du-custom-scenes"></div></div>
+        </aside>
+        <main class="du-stage" aria-label="场景画布">
+          <div class="du-stage-head"><span class="du-stage-label" id="du-stage-title">雨夜书桌 / 场景</span><span>适应画布 · 520 × 650</span></div>
+          <div class="du-canvas" id="du-edit-canvas" data-edit="true" aria-label="可选择和移动的场景设计"></div>
+          <div class="du-stage-head"><span id="du-selection-hint">选中节点后可拖动或修改右侧属性</span><span>示例内容</span></div>
+        </main>
+        <aside class="du-inspector" aria-label="所选节点属性">
+          <div class="du-inspector-title"><div class="du-section">属性检查器</div><strong id="du-selected-name">便签夹</strong><span id="du-selected-type" class="du-type">场景实例 · v1</span></div>
+          <div><div class="du-fields"><label class="du-field">X · DIP<input id="du-x" type="number" min="0" max="500" step="1"></label><label class="du-field">Y · DIP<input id="du-y" type="number" min="0" max="630" step="1"></label><label class="du-field">宽度<input id="du-w" type="number" min="50" max="520"></label><label class="du-field">角度<input id="du-angle" type="number" min="-30" max="30"></label></div><label class="du-field">不透明度 <output id="du-opacity-value"></output><input id="du-opacity" type="range" min="10" max="100"></label></div>
+          <div><div class="du-separator"></div><label class="du-field" id="du-text-field">文字／开放参数<input id="du-text" type="text" maxlength="48"></label><label class="du-expose"><input id="du-expose" type="checkbox">在控制中心显示此参数</label><div class="du-separator"></div><div class="du-actions"><button type="button" data-action="save-scene">另存为场景</button><button type="button" data-action="delete" aria-label="从设计草稿删除所选装饰节点">删除节点</button></div><p class="du-mute" id="du-node-boundary">修改此实例，不影响源场景。</p></div>
+        </aside>
+      </div>
+    </section>
+    <section class="du-preview" data-pane="preview" hidden aria-label="作品视觉预览">
+      <div class="du-preview-grid"><div class="du-canvas" id="du-preview-canvas" aria-label="海报作品设计稿"></div><aside><span class="du-mute">DESKTOPUP / SCENE STUDY</span><h2 id="du-preview-name">基础收纳</h2><div id="du-preview-description" class="du-preview-note"></div><h3>作品由这些元素组成</h3><ul id="du-preview-parts"></ul><h3>实例常用参数</h3><div id="du-preview-exposed" class="du-preview-note"></div><button type="button" data-action="edit-current"><i data-lucide="pencil-ruler" aria-hidden="true"></i>进入工作台编辑</button><p class="du-preview-note">示例文件仅用于展示。没有操作真实文件、保存产品配置或验证原生输入。</p></aside></div>
+    </section>
+    <footer class="du-footer"><span id="du-live-status" role="status" aria-live="polite">设计稿 · 本地交互演示，关闭后不保存</span><span class="du-grow"></span><span>素材留在本机 · 无网络请求</span></footer>
+  </div>
+  <script>
+  (()=>{
+    const root=document.getElementById('du-creation-review');
+    const $=s=>root.querySelector(s), $$=s=>[...root.querySelectorAll(s)];
+    const image='__RAIN_DATA_URL__';
+    const files=[['folder','项目资料','folder'],['file-text','设计笔记.txt',''],['image','参考图.png','art'],['file-code','任务清单.md',''],['palette','灵感素材','art'],['file','方案草稿.pdf','']];
+    const clone=v=>JSON.parse(JSON.stringify(v));
+    const noteScene={id:'note-clip',version:1,name:'便签夹',nodes:[{type:'shape',x:0,y:0,w:100,h:100,color:'#f3e7c6',radius:2,shadow:true},{type:'shape',x:40,y:-5,w:22,h:12,color:'#b5c1af',radius:2},{type:'text',x:12,y:22,w:80,h:47,text:'留一点空白',exposedText:true,color:'#4a4f3d',size:16,maxLines:2},{type:'text',x:12,y:78,w:80,h:18,text:'给下一次灵感。',color:'#75765e',size:12,maxLines:1}]};
+    const recipes={
+      basic:{name:'基础收纳',palette:'light',nodes:[{id:'basic-surface',type:'shape',name:'收纳底面',x:0,y:0,w:520,h:650,color:'#efeee6',radius:12,locked:true},{id:'basic-line',type:'shape',name:'细线分隔',x:24,y:50,w:472,h:1,color:'#d6d8cd'},{id:'basic-items',type:'content',name:'内容承载',x:24,y:70,w:472,h:500,color:'#3c4943',protected:true}]},
+      rainy:{name:'雨夜书桌',palette:'dark',nodes:[{id:'night-photo',type:'image',name:'雨窗与桌面',src:image,x:0,y:0,w:520,h:650,radius:12,locked:true},{id:'night-shade',type:'shape',name:'阅读遮罩',x:0,y:0,w:520,h:650,color:'linear-gradient(180deg,rgba(10,27,30,.3),rgba(9,19,20,.08) 35%,rgba(9,19,20,.7) 100%)',radius:12,locked:true},{id:'night-kicker',type:'text',name:'引题',x:35,y:77,w:350,h:22,text:'RAIN ON THE WINDOW',color:'#c6d2c8',size:12,spacing:2},{id:'night-title',type:'text',name:'场景文字',x:34,y:112,w:430,h:62,text:'雨夜书桌',color:'#f3ead4',size:40,font:'serif'},{id:'night-note',type:'instance',name:'便签夹',scene:'note-clip',x:333,y:194,w:145,h:116,angle:5,text:'慢一点，也很好。',expose:true},{id:'night-tray',type:'shape',name:'内容阅读底衬',x:26,y:340,w:468,h:278,color:'rgba(19,33,33,.9)',radius:11},{id:'night-items',type:'content',name:'内容承载',x:32,y:353,w:456,h:252,color:'#ecede1',protected:true}]},
+      blank:{name:'空白场景',palette:'light',nodes:[{id:'blank-surface',type:'shape',name:'画布底面',x:0,y:0,w:520,h:650,color:'#f5f4ef',radius:10,locked:true},{id:'blank-items',type:'content',name:'内容承载',x:30,y:300,w:460,h:290,color:'#37443c',protected:true}]}
+    };
+    let current='rainy',view='workbench',preview='rainy',selected='night-note',serial=0;
+    const history=[], scenes=new Map([['note-clip',noteScene]]), imported=[];
+    const editor=$('#du-edit-canvas');
+    function icon(name){const i=document.createElement('i');i.dataset.lucide=name;i.setAttribute('aria-hidden','true');return i;}
+    function icons(){if(globalThis.lucide)globalThis.lucide.createIcons({attrs:{width:16,height:16}});}
+    function status(message){$('#du-live-status').textContent=message;}
+    function selectedNode(){return recipes[current].nodes.find(n=>n.id===selected);}
+    function snapshot(){history.push({current,recipe:clone(recipes[current]),selected});if(history.length>24)history.shift();}
+    function saveState(){if(window.openai?.setWidgetState)window.openai.setWidgetState({modelContent:{design:'J1创作设计重审',view,scene:current,selectedNode:selectedNode()?.name},privateContent:{view,scene:current}}).catch(()=>{});}
+    function layout(el,n,relative=false){const ww=relative?100:520,hh=relative?100:650;el.style.left=n.x/ww*100+'%';el.style.top=n.y/hh*100+'%';el.style.width=n.w/ww*100+'%';el.style.height=n.h/hh*100+'%';el.style.transform='rotate('+(n.angle||0)+'deg)';el.style.opacity=(n.opacity??100)/100;}
+    function renderNode(n,relative=false){
+      const el=document.createElement('div');el.className='du-node';layout(el,n,relative);el.style.borderRadius=(n.radius||0)+'px';
+      if(n.type==='shape'){el.style.background=n.color;if(n.shadow)el.style.boxShadow='0 5px 12px #0003';}
+      if(n.type==='image'){const img=document.createElement('img');img.className='du-image';img.src=n.src;img.alt=n.name||'场景素材';el.append(img);}
+      if(n.type==='text'){const text=document.createElement('div');text.className='du-node-text';text.textContent=n.text;text.style.color=n.color||'#353e37';text.style.fontFamily=n.font==='serif'?'Georgia,宋体,serif':'inherit';text.style.fontSize='clamp(11px, '+((n.size||18)/520*100)+'cqw, '+(n.size||18)+'px)';text.style.letterSpacing=(n.spacing||0)+'px';if(n.maxLines){text.style.display='-webkit-box';text.style.webkitBoxOrient='vertical';text.style.webkitLineClamp=n.maxLines;text.style.overflow='hidden';}el.append(text);}
+      if(n.type==='instance'){
+        const scene=scenes.get(n.scene);(scene?.nodes||[]).forEach(child=>{const c=clone(child);if(c.exposedText&&n.text)c.text=n.text;el.append(renderNode(c,true));});
+      }
+      if(n.type==='content'){
+        const grid=document.createElement('div');grid.className='du-files';grid.style.color=n.color;files.forEach(([ic,name,style])=>{const file=document.createElement('div');file.className='du-file';const badge=document.createElement('div');badge.className='du-fileicon '+(style?'du-'+style:'');badge.append(icon(ic));const label=document.createElement('div');label.className='du-filename';label.textContent=name;file.append(badge,label);grid.append(file);});el.append(grid);
+      }
+      return el;
+    }
+    function renderCanvas(target,key,editing){target.replaceChildren();target.dataset.edit=String(editing);recipes[key].nodes.forEach(n=>{const el=renderNode(n);el.dataset.node=n.id;el.dataset.label=n.name;if(editing&&n.id===selected)el.classList.add('du-selected');target.append(el);});const host=document.createElement('div');host.className='du-host';host.dataset.palette=recipes[key].palette;host.innerHTML='<span>工作资料</span><span class="du-host-end">⌄ ⋯</span>';target.append(host);}
+    function renderTree(){const tree=$('#du-node-tree');tree.replaceChildren();recipes[current].nodes.forEach(n=>{const b=document.createElement('button');b.type='button';b.className='du-child';b.dataset.select=n.id;b.setAttribute('aria-pressed',String(n.id===selected));b.append(icon(n.type==='instance'?'component':n.type==='content'?'folder-open':n.type==='text'?'type':n.type==='image'?'image':'square'));const label=document.createElement('span');label.textContent=n.name;b.append(label);tree.append(b);});$('#du-node-count').textContent=recipes[current].nodes.length+' 节点';}
+    function inspector(){const n=selectedNode();if(!n)return;$('#du-selected-name').textContent=n.name;$('#du-selected-type').textContent=n.type==='instance'?'场景实例 · '+scenes.get(n.scene)?.name+' · v1':n.type==='content'?'宿主内容 · 不复制文件':n.type==='image'?'图像 · 素材资源':n.type==='text'?'文字 · 独立节点':'形状 · 独立节点';$('#du-x').value=Math.round(n.x);$('#du-y').value=Math.round(n.y);$('#du-w').value=Math.round(n.w);$('#du-angle').value=n.angle||0;$('#du-opacity').value=n.opacity??100;$('#du-opacity-value').textContent=(n.opacity??100)+'%';$('#du-text').value=n.text||'';$('#du-text-field').hidden=!['text','instance'].includes(n.type);$('#du-expose').checked=!!n.expose;$('#du-expose').disabled=!['text','instance'].includes(n.type);$('#du-node-boundary').textContent=n.protected?'内容由宿主管理；演示不允许删除或旋转。':n.locked?'底层节点已锁定；素材和背景仍可选中查看。':n.type==='instance'?'覆盖只改变此实例，不修改源场景。':'草稿修改不会触碰真实文件。';['#du-x','#du-y','#du-w','#du-opacity'].forEach(s=>$(s).disabled=!!n.locked);$('#du-angle').disabled=!!(n.locked||n.protected);$('[data-action=delete]').disabled=!!(n.locked||n.protected);$('[data-action=duplicate]').disabled=!!(n.locked||n.protected);$('[data-action=save-scene]').disabled=!!(n.locked||n.protected);}
+    function renderPreview(){renderCanvas($('#du-preview-canvas'),preview,false);$('#du-preview-name').textContent=recipes[preview].name;$('#du-preview-description').textContent=preview==='basic'?'低干扰、以文件为主。没有副标题、大标题和数量介绍；背景与内容承载都是普通节点。':preview==='blank'?'从空白开始构建。内容承载先保留，装饰与布局由创作者决定。':'冷色雨窗与暖色纸张形成层次。背景是可替换素材，文字、便签实例和内容区分别编辑。';const parts=$('#du-preview-parts');parts.replaceChildren();recipes[preview].nodes.filter(n=>n.type!=='shape'||n.id.includes('surface')||n.id.includes('tray')).forEach(n=>{const li=document.createElement('li');li.append(icon(n.type==='image'?'image':n.type==='instance'?'component':n.type==='content'?'folder-open':n.type==='text'?'type':'square'),document.createTextNode(n.name));parts.append(li);});const exposed=recipes[preview].nodes.filter(n=>n.expose);$('#du-preview-exposed').textContent=exposed.length?exposed.map(n=>n.name+'：'+(n.text||'实例参数')).join('；'):'背景与留白等常用参数由作者选择开放；完整结构在工作台编辑。';}
+    function render(){renderCanvas(editor,current,true);renderTree();inspector();$('#du-stage-title').textContent=recipes[current].name+' / 场景';$('#du-scene-choice').value=current;$('[data-action=undo]').disabled=!history.length;if(view!=='workbench')renderPreview();icons();}
+    function showView(next){view=next;if(next!=='workbench')preview=next;$$('[data-view]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.view===next)));$('[data-pane=workbench]').hidden=next!=='workbench';$('[data-pane=preview]').hidden=next==='workbench';render();saveState();}
+    function side(next){$$('[data-side]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.side===next)));$$('[data-side-pane]').forEach(p=>p.hidden=p.dataset.sidePane!==next);icons();}
+    function add(n){snapshot();n.id='created-'+(++serial);recipes[current].nodes.push(n);selected=n.id;render();saveState();}
+    function insertScene(id){add({type:'instance',name:scenes.get(id).name+' 实例',scene:id,x:310,y:180,w:155,h:125,angle:-3});status('已插入独立场景实例；位置与参数不会影响其他作品。');}
+    root.addEventListener('click',e=>{
+      const b=e.target.closest('button');if(!b||b.disabled)return;
+      if(b.dataset.view){showView(b.dataset.view);return;}if(b.dataset.side){side(b.dataset.side);return;}
+      if(b.dataset.select){selected=b.dataset.select;render();return;}if(b.dataset.scene){insertScene(b.dataset.scene);return;}
+      const action=b.dataset.action,n=selectedNode();
+      if(action==='add-text')add({type:'text',name:'新文字',text:'写下你的想法',x:45,y:210,w:320,h:65,size:28,color:recipes[current].palette==='dark'?'#f0e5cc':'#37493c'});
+      if(action==='add-shape')add({type:'shape',name:'新形状',x:45,y:250,w:180,h:110,color:'#bdcbb8',radius:10});
+      if(action==='add-background')add({type:'image',name:'雨窗素材副本',src:image,x:45,y:200,w:180,h:225,radius:6});
+      if(action==='import')$('#du-import-file').click();
+      if(action==='insert-scene')insertScene('note-clip');
+      if(action==='duplicate'&&n&&!n.protected&&!n.locked){const c=clone(n);c.x=Math.min(c.x+16,520-c.w);c.y=Math.min(c.y+16,650-c.h);c.name+=' 副本';add(c);status('已复制为独立节点／实例；没有复制收纳内容。');}
+      if(action==='delete'&&n&&!n.protected&&!n.locked){snapshot();recipes[current].nodes=recipes[current].nodes.filter(x=>x.id!==selected);selected=recipes[current].nodes.at(-1).id;render();}
+      if(action==='up'&&n&&!n.locked){const a=recipes[current].nodes,i=a.indexOf(n);if(i<a.length-1){snapshot();[a[i],a[i+1]]=[a[i+1],a[i]];render();status('节点上移一层；画布与层级同步。');}}
+      if(action==='undo'&&history.length){const h=history.pop();current=h.current;recipes[current]=h.recipe;selected=h.selected;render();status('已撤销一次草稿编辑。');}
+      if(action==='preview'){preview=current;showView(current);status('作品预览 · 未应用到任何海报。');}
+      if(action==='edit-current'){current=preview;selected=recipes[current].nodes.find(n=>n.type==='instance')?.id||recipes[current].nodes.at(-1).id;showView('workbench');}
+      if(action==='save-scene'&&n&&!n.protected&&!n.locked){const id='saved-scene-'+(++serial);let saved;if(n.type==='instance'){saved=clone(scenes.get(n.scene));saved.nodes.forEach(child=>{if(child.exposedText&&n.text)child.text=n.text;});}else{const c=clone(n);Object.assign(c,{x:0,y:0,w:100,h:100,angle:0});saved={nodes:[c]};}saved.id=id;saved.name=n.name+' 场景';saved.version=1;scenes.set(id,saved);const row=document.createElement('div');row.className='du-resource';const title=document.createElement('span');title.textContent=saved.name+'.scene';const insert=document.createElement('button');insert.type='button';insert.dataset.scene=id;insert.textContent='插入此场景实例';row.append(title,insert);$('#du-custom-scenes').append(row);side('scenes');status('已在本页场景库保存组合；可切到另一作品插入。非磁盘保存。');}
+    });
+    $('#du-scene-choice').addEventListener('change',e=>{current=e.target.value;selected=recipes[current].nodes.find(n=>n.type==='instance')?.id||recipes[current].nodes.at(-1).id;render();saveState();});
+    const fields=[['#du-x','x'],['#du-y','y'],['#du-w','w'],['#du-angle','angle'],['#du-opacity','opacity'],['#du-text','text'],['#du-expose','expose']];
+    fields.forEach(([sel,key])=>$(sel).addEventListener('change',e=>{const n=selectedNode();if(!n)return;snapshot();let v=key==='text'?e.target.value:key==='expose'?e.target.checked:Number(e.target.value);if(typeof v==='number'&&!Number.isFinite(v)){history.pop();return;}if(key==='x')v=Math.max(0,Math.min(520-n.w,v));if(key==='y')v=Math.max(0,Math.min(650-n.h,v));if(key==='w')v=Math.max(50,Math.min(520-n.x,v));if(key==='angle')v=Math.max(-30,Math.min(30,v));n[key]=v;render();saveState();}));
+    let drag=null;
+    editor.addEventListener('pointerdown',e=>{const el=e.target.closest('[data-node]');if(!el)return;const n=recipes[current].nodes.find(x=>x.id===el.dataset.node);if(!n)return;selected=n.id;renderTree();inspector();icons();editor.querySelectorAll('.du-selected').forEach(x=>x.classList.remove('du-selected'));el.classList.add('du-selected');if(n.locked)return;drag={n,el,px:e.clientX,py:e.clientY,x:n.x,y:n.y,moved:false};editor.setPointerCapture(e.pointerId);});
+    editor.addEventListener('pointermove',e=>{if(!drag)return;const r=editor.getBoundingClientRect(),dx=(e.clientX-drag.px)*520/r.width,dy=(e.clientY-drag.py)*650/r.height;if(!drag.moved&&Math.abs(dx)+Math.abs(dy)>2){snapshot();drag.moved=true;}if(!drag.moved)return;drag.n.x=Math.max(0,Math.min(520-drag.n.w,drag.x+dx));drag.n.y=Math.max(0,Math.min(650-drag.n.h,drag.y+dy));layout(drag.el,drag.n);inspector();});
+    function endDrag(e){if(!drag)return;drag=null;if(editor.hasPointerCapture(e.pointerId))editor.releasePointerCapture(e.pointerId);render();saveState();}
+    editor.addEventListener('pointerup',endDrag);editor.addEventListener('pointercancel',endDrag);
+    $('#du-import-file').addEventListener('change',async e=>{const file=e.target.files?.[0];if(!file)return;if(!['image/png','image/jpeg'].includes(file.type)||file.size>8*1024*1024){status('设计稿仅预览8MB以内PNG／JPEG，不上传。');e.target.value='';return;}const url=URL.createObjectURL(file);try{const pic=new Image();pic.src=url;await pic.decode();if(pic.naturalWidth*pic.naturalHeight>24000000)throw new Error('pixel budget');const h=Math.min(280,220*pic.naturalHeight/pic.naturalWidth);imported.push(url);add({type:'image',name:file.name,src:url,x:45,y:190,w:220,h,radius:4});const row=document.createElement('div');row.className='du-resource';row.textContent=file.name+' · 本页素材';$('#du-imported-assets').append(row);side('assets');status('图片仅在本页预览，未上传，也未复制到产品资源库。');}catch{URL.revokeObjectURL(url);status('图片无法解码或超出设计稿像素预算。');}e.target.value='';});
+    window.addEventListener('pagehide',()=>imported.forEach(url=>URL.revokeObjectURL(url)),{once:true});
+    function restorePresentation(snapshot){const s=snapshot?.privateContent;if(!s)return;if(recipes[s.scene]){current=s.scene;selected=recipes[current].nodes.find(n=>n.type==='instance')?.id||recipes[current].nodes.at(-1).id;}if(['workbench','basic','rainy','blank'].includes(s.view)){view=s.view;if(view!=='workbench')preview=view;$$('[data-view]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.view===view)));$('[data-pane=workbench]').hidden=view!=='workbench';$('[data-pane=preview]').hidden=view==='workbench';}}
+    restorePresentation(window.openai?.widgetState);render();
+    window.addEventListener('openai:set_globals',e=>{if(e.detail?.globals?.widgetState){restorePresentation(e.detail.globals.widgetState);render();}});
+    const controls={accent:'#3f6b60'};
+    if(globalThis.Tweak){const t=new Tweak({container:root,onChange:()=>root.style.setProperty('--du-accent',controls.accent)});t.addColorPicker(controls,'accent',{label:'工作台强调色',reference:'--du-accent'});}
+  })();
+  </script>
+</div>

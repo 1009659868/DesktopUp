@@ -18,8 +18,8 @@ public sealed partial class ControlCenterWindow
     private Action? _cancelVisuals;
     private Func<string, string>? _locate;
     private SliderPresetMarks? _scaleMarks, _spacingMarks;
-    internal bool IsSettingsInteractionActive => _lampColorFlyout is not null || _portableBusy || _settings.ProtectsInteraction || _editor.ProtectsInteraction || _catalogDialog is not null || _activityDialog is not null || IsContentFieldDraftActive;
-    internal bool HasPosterDraft(string id) => _lampColorTarget == id || _portableBusy || _settings.OwnsPoster(id) || HasContentFieldDraft(id) ||
+    internal bool IsSettingsInteractionActive => _canvasEditor is not null || _lampColorFlyout is not null || _portableBusy || _settings.ProtectsInteraction || _editor.ProtectsInteraction || _catalogDialog is not null || _activityDialog is not null || IsContentFieldDraftActive;
+    internal bool HasPosterDraft(string id) => _canvasEditor?.PosterId == id || _lampColorTarget == id || _portableBusy || _settings.OwnsPoster(id) || HasContentFieldDraft(id) ||
         _editor.ProtectsInteraction && _editor.PosterId == id || _catalogDialog is not null && _view?.SelectedPosterId == id || _activityPosterId == id;
     private bool DesktopInteractionConflicts(string id) => _contentRuntime?.Invoke()?.IsSpatialBusy == true;
     internal event Action? SettingsInteractionChanged;

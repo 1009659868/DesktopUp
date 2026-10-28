@@ -17,10 +17,10 @@
 
 ## C：实际证据与接手
 
-当前停留`impl/develop`，已验模型与J1性能经223e403／ff4b0a1集成；精简main@43a77e7及preview-20261026.2发布完成，详见[本轮回执](../A_Project/40_Implementation/V3-06/MODEL_PROTOCOL_RELEASE.md)。原[模型验收](../A_Project/40_Implementation/V3-06/PLUGGABLE_MODEL_DELIVERY.md)与[J1／T1证据](../A_Project/40_Implementation/V3-07/JOINT_COST_AND_COMPONENTS.md)保留；未验T1源码只在功能分支61819dd，勿按该原型假设集成线已有v2组件。
+当前在`impl/07-canvas-ai-contracts`：J0及源码目录整理已收口；旧J1原型和前版原生工作台未通过记录保留；新交互稿已认可，按[原生工作台实施清单](../A_Project/40_Implementation/V3-07/CANVAS_J1_STUDIO_IMPLEMENTATION.md)完成画面与功能同步对齐修订，review02待集中人工；起点develop@ecf28fe，不合并。既有模型／性能与main@43a77e7、preview-20261026.2发布见[回执](../A_Project/40_Implementation/V3-06/MODEL_PROTOCOL_RELEASE.md)。原[模型验收](../A_Project/40_Implementation/V3-06/PLUGGABLE_MODEL_DELIVERY.md)与[成本J1／T1证据](../A_Project/40_Implementation/V3-07/JOINT_COST_AND_COMPONENTS.md)保留；未验T1源码只在功能分支61819dd。
 
 依次读[当前交接](../A_Project/40_Implementation/V3-04/HANDOFF.md)、[代码锚点](../A_Project/40_Implementation/V3-04/CODE_ANCHORS.md)、[最新验证记录](../A_Project/40_Implementation/V3-04/VERIFICATION.md)，再打开当前任务的专项记录；不默认重读全库或重跑累计测试。
 
-下一步先读[海报画板引擎设计准备](../A_Project/30_Plans/POSTER_CANVAS_ENGINE_DESIGN_PLAN.md)，明确统一组件／布局／资源／同代命中及最小实施切片，方向确认后再开发。旧preview-20261026.1完整保留；成本与未定因继续携带。
+本次先读[J1未通过记录](../A_Project/40_Implementation/V3-07/CANVAS_J1_KERNEL.md)与[创作设计重审](../A_Project/40_Implementation/V3-07/CANVAS_J1_CREATION_REDESIGN.md)，再读[联合实施计划](../A_Project/30_Plans/POSTER_CANVAS_ENGINE_DESIGN_PLAN.md) → [0.2设计协议](../A_Project/20_Architecture/CanvasContracts/CONTRACT.md)。产品代码位置见[源码导航](../../src/README.md)；当前新增源码按功能归位、不合并，旧发布、成本与未定因继续保留。
 
 旧导航和阶段队列保留在[历史快照](ACTIVE_PATH_HISTORY_20261023.md)，仅用于追溯。

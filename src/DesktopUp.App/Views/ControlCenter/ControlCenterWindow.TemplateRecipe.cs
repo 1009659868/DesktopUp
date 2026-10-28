@@ -12,10 +12,19 @@ namespace DesktopUp;
 public sealed partial class ControlCenterWindow
 {
     private bool _templateReferenceOpen;
+    private CanvasEditor? _canvasEditor;
+    private Func<string, CanvasDesignSession>? _openCanvas;
+    private Action<StateCommandResult>? _canvasCompleted;
+    private CanvasImages? _canvasImages;
+    private Func<string, CanvasContentSnapshot?>? _readCanvasContent;
+    internal void ConfigureCanvas(Func<string, CanvasDesignSession> open, Action<StateCommandResult> completed, CanvasImages? images = null,
+        Func<string, CanvasContentSnapshot?>? readContent = null)
+    { _openCanvas = open; _canvasCompleted = completed; _canvasImages = images; _readCanvasContent = readContent; }
     private Func<string, string?, long, StateCommandResult>? _registerTemplate;
     internal void ConfigureTemplateRegistration(Func<string, string?, long, StateCommandResult> register) => _registerTemplate = register;
     private void InitializeTemplateRecipe()
     {
+        Add(TemplateActionsHost, "画板设计 ↗", ShowCanvasEditor);
         Add(TemplateActionsHost, "装入模板 ↗", () => ShowTemplateImport());
         Add(TemplateActionsHost, "＋ 留一份自己的", ShowSaveTemplate);
         Add(TemplateLibraryActionsHost, "打开模板册 ↗", ShowTemplateBook);
@@ -25,6 +34,17 @@ public sealed partial class ControlCenterWindow
                 Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent), BorderThickness = new Thickness(0) };
             button.Click += (_, _) => action(); host.Children.Add(button);
         }
+    }
+    private async void ShowCanvasEditor()
+    {
+        if (_canvasEditor is not null || _templateReferenceOpen || Content.XamlRoot is null || _openCanvas is null || !TemplateOperationReady()) return;
+        string target = _view!.SelectedPosterId!;
+        using var editor = new CanvasEditor(() => _openCanvas(target), result => _canvasCompleted?.Invoke(result), _canvasImages,
+            () => _readCanvasContent?.Invoke(target));
+        _canvasEditor = editor; SettingsInteractionChanged?.Invoke();
+        try { await editor.ShowAsync(Content.XamlRoot, UiCRoot.ActualHeight); }
+        catch (Exception error) when (error is ArgumentException or InvalidOperationException or IOException or UnauthorizedAccessException or System.Runtime.InteropServices.COMException) { CommonSettingsNotice.Text = error.Message; }
+        finally { _canvasEditor = null; SettingsInteractionChanged?.Invoke(); }
     }
     private bool TemplateOperationReady() => !_editingClosed && _view?.SelectedPoster is { Presentation.CanEdit: true } target &&
         !OtherContentOwner && !IsContentFieldDraftActive && !_settings.ProtectsInteraction && !_editor.ProtectsInteraction &&

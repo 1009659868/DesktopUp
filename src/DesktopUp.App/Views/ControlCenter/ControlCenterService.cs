@@ -15,7 +15,8 @@ internal sealed partial class ControlCenterService(
     Func<ILocalContentWorker?>? iconWorker = null,
     ContentReturnUseCase? contentReturns = null,
     Action? requestRecovery = null, IContentIconSource? iconSource = null,
-    ContentReferenceRepairUseCase? referenceRepair = null, StartupRegistrationService? startup = null) : IDisposable
+    ContentReferenceRepairUseCase? referenceRepair = null, StartupRegistrationService? startup = null,
+    ICanvasWorkspace? canvasWorkspace = null, CanvasImages? canvasImages = null) : IDisposable
 {
     private ControlCenterWindow? _window;
     private IDisposable? _lease;
@@ -106,9 +107,13 @@ internal sealed partial class ControlCenterService(
                     ShowCommandResult(result); return result;
                 });
                 pendingWindow.ConfigureUsability(
+                    // Canvas uses the same authoritative state and native preview owner.
                     edit => spatialRuntime?.Invoke()?.PreviewControlCenterSetting(edit) == true,
                     () => spatialRuntime?.Invoke()?.CancelControlCenterVisuals(),
                     id => spatialRuntime?.Invoke()?.LocateControlCenterPoster(id) ?? "桌面尚未就绪。", ledger);
+                pendingWindow.ConfigureCanvas(id => new CanvasDesignSession(state, commands,
+                    spatialRuntime?.Invoke() ?? throw new InvalidOperationException("海报宿主尚未就绪。"), id, canvasWorkspace), ShowCommandResult, canvasImages,
+                    id => spatialRuntime?.Invoke()?.ReadCanvasContent(id));
                 if (portable is not null && requestRecovery is not null)
                     pendingWindow.ConfigurePortable(portable, ledger, log, requestRecovery);
                 if (transferLocations is not null) pendingWindow.ConfigureTransfers(transferLocations, () => state.Refresh(), storageLocation);

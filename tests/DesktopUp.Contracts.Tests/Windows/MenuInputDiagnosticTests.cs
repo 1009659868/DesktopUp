@@ -23,8 +23,8 @@ public sealed class MenuInputDiagnosticTests
         while (root is not null && !File.Exists(Path.Combine(root.FullName, "Directory.Build.props"))) root = root.Parent;
         Assert.NotNull(root);
         string Read(string path) => File.ReadAllText(Path.Combine(root.FullName, path));
-        string native = Read("src/DesktopUp.Windows/MenuInputDiagnostics.cs");
-        string menu = Read("src/DesktopUp.App/MenuInputDiagnostic.cs");
+        string native = Read("src/DesktopUp.Windows/Diagnostics/MenuInputDiagnostics.cs");
+        string menu = Read("src/DesktopUp.App/Diagnostics/MenuInputDiagnostic.cs");
         foreach (string forbidden in new[] { "SetWindowPos(", "SetWindowLong", "SetCapture(", "SendInput(", "PostMessage(", "SendMessage(", "SetWindowRgn(", "SetWindowsHook" })
             Assert.DoesNotContain(forbidden, native, StringComparison.Ordinal);
         Assert.DoesNotContain(".Handled =", menu, StringComparison.Ordinal);

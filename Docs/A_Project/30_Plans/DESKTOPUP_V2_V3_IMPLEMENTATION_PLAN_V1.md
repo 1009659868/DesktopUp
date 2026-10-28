@@ -18,8 +18,8 @@
 | 海报尺度／悬停／浏览外框修订 | USER PASS，已集成发布 | [尺度专项](../40_Implementation/V3-04/POSTER_SCALE_AND_HOVER.md)与[方向／外框修订](../40_Implementation/V3-04/CONTROL_CENTER_USABILITY_DELIVERY.md#2026-10-23-浏览方向与外框下限统一)，已验规则继续保留 |
 | 海报拖动呈现优化 | USER PASS / CLOSED，已推送并集成develop | [专项记录](../40_Implementation/V3-04/POSTER_DRAG_PRESENTATION.md)；共享按需调度、纯平移复用已验，样例归档清理 |
 | V3-06 真实热度 | **内置接入及可插拔增量已验、已集成发布** | [协议](V3_ACTIVITY_MODEL_PROTOCOL_PLAN.md)、[模型验收](../40_Implementation/V3-06/PLUGGABLE_MODEL_DELIVERY.md)与[20261026.2发布](../40_Implementation/V3-06/MODEL_PROTOCOL_RELEASE.md)，不重复人工 |
-| V3-07 模板／风格 | T1仅功能分支自动通过／人工待验；下一步通用画板引擎设计 | 原型不随本轮集成；按[设计准备](POSTER_CANVAS_ENGINE_DESIGN_PLAN.md)先定边界、成本与切片 |
-| V3-08 AI | 后续 | 稳定协议后接入，不绕过文件和版本保护 |
+| V3-07 模板／风格 | J0及目录整理已验收口；旧J1未通过保留，新工作台集中人工待验 | [联合计划](POSTER_CANVAS_ENGINE_DESIGN_PLAN.md)与[J1记录](../40_Implementation/V3-07/CANVAS_J1_KERNEL.md)；2026-10-28交互稿已认可，原生工作台已实现并完成定向验证；T1仍待验未集成 |
+| V3-08 AI | 与画板联合设计，代码未实施 | 内置独立创作面板，不做通用Agent；同一协议与程序强制边界 |
 | V3-09 安装／卸载／升级 | 已验范围完成 | 同用户唯一安装与迁移升级；真实登录自启仍待验 |
 | V3-10 联合长期／资源认证 | J1短样本已测、局部关系解析已优化；长时认证NOT RUN | 不因无窗口定向样本通过声称UI／整体达标 |
 
@@ -27,7 +27,7 @@
 
 文档对齐、[海报拖动呈现优化](../40_Implementation/V3-04/POSTER_DRAG_PRESENTATION.md)及内置真实热度此前已验集成发布。后续[可插拔模型协议](V3_ACTIVITY_MODEL_PROTOCOL_PLAN.md)两组人工通过，J1测量触发同轮关系解析优化；本轮按用户授权拆分未验组件，仅将模型／性能非快进合入develop并同步精简main，发布preview-20261026.2。准确源码、包与验证见[本轮回执](../40_Implementation/V3-06/MODEL_PROTOCOL_RELEASE.md)，旧发布保留。
 
-用户最新调整：**已验成果先集成，未验T1保留功能分支；下一步准备海报画板通用引擎设计。** 按[设计准备](POSTER_CANVAS_ENGINE_DESIGN_PLAN.md)明确画板／组件／内容槽、统一声明、增量运行与同代命中、资源安全和最小迁移切片，方向确认后再实施。T1原型不默认成为目标结构；J2按真实成本继续，AI仍后续。发布环境余验并行，外部代码热加载与逐帧位移插值另行评审，不重复原人工验收。
+2026-10-27用户认可J0及源码目录整理，两者收口；随后否决J1预设配置器及样例视觉效果。本轮先交付[创作设计重审](../40_Implementation/V3-07/CANVAS_J1_CREATION_REDESIGN.md)：自由组合、素材导入、场景复用和新退出门，后续交互稿已获认可，本轮原生工作台集中待验；原自动结果不覆盖历史人工未通过。之后才进入精简AI、联合闭环与自由外形，不按图表堆新工程。T1仍仅参考；观察成本与发布环境余验继续保留。
 
 模板／AI在后续分批接入；安装维护与环境余验是并行责任，不要求先做完AI才能发布。成本问题按证据触发，既不无限前置架构重做，也不隐去现有未定因。
 
@@ -66,7 +66,7 @@
 
 ## 11. V3-07：模板、风格热替换
 
-前置[模型统一协议](V3_ACTIVITY_MODEL_PROTOCOL_PLAN.md)已两组USER PASS、集成并发布，覆盖可信模型替换、排序／尺寸／位置与受限淡入，宿主保留保护与执行权。T1组件只在功能分支，未验未集成；下一步[画板引擎设计](POSTER_CANVAS_ENGINE_DESIGN_PLAN.md)复用已验模型边界，不将其视为任意模板或外部代码热加载已完成。
+前置[模型统一协议](V3_ACTIVITY_MODEL_PROTOCOL_PLAN.md)已验发布，宿主保留保护与执行权。T1未验未集成；当前[联合J0](POSTER_CANVAS_ENGINE_DESIGN_PLAN.md)复用这些边界，画板以最小语义统一，不预设固定标题栏或矩形外形。
 
 后续按稳定声明schema／组件参数 → 包导入与安全校验 → 候选预览／原子切换／失败保留 → 兼容迁移逐步推进。既有内置Lamp／Rain及基础收纳不等于任意风格平台。非矩形、离散区域作为后续目标，需先明确几何／受保护操作区／同代命中，不能恢复日常点击穿透作为默认前提。
 
@@ -74,7 +74,7 @@
 
 ## 12. V3-08：AI接入
 
-基于稳定参数／命令合同，provider-neutral适配、密钥隔离、发送前隐私范围、带目标和版本的变更计划／diff／确认／撤销。AI不得绕过普通用例、文件安全或模板权限；离线／无Key不影响主程序。细项见[工作流§9](V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md#9-v3-08ai-辅助定制)。
+独立内置海报创作面板，与画板共用声明／能力／草稿协议。模型只做设计决策，不做逐帧或热度计算；提示与Skill之外，宿主强制执行目标、版本、资源及生命周期。BYOK、隐私与凭据隔离保留，精简harness参考方案先测成本；不提供通用Shell／文件操作。顺序归[联合计划](POSTER_CANVAS_ENGINE_DESIGN_PLAN.md)，细项归[工作流§9](V3_GENERAL_CONTENT_MULTI_POSTER_WORKFLOW_V1.md#9-v3-08ai-辅助定制)。
 
 ## 13. V3-09：交付与安装维护
 
@@ -96,4 +96,4 @@ P1～P3优化已验，但并非整体速度／尾延迟认证。残余全局读�
 
 ## 15. 记录与下一步
 
-本轮模型／性能已集成发布，精确回执归MODEL_PROTOCOL_RELEASE；T1原型／候选留存，画板引擎仅设计准备。未定因和成本始终随交接保留；当前状态有变化时原位修订[状态入口](../../00_Catalog/CURRENT_STATUS.md)，详细证据留C层，不从历史“未实施”段落重启已完成工作。
+已验发布基线不变，T1原型／候选留存；本轮J0静态设计与后续门详见[交付](../40_Implementation/V3-07/CANVAS_AI_J0_DESIGN.md)。未定因和成本随交接保留，状态只在[状态入口](../../00_Catalog/CURRENT_STATUS.md)维护，不把设计认可写成运行验收。

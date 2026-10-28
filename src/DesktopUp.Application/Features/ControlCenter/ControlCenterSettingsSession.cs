@@ -51,6 +51,8 @@ public sealed record PosterSettingEdit(PosterSurfaceProjection Basis, PosterSett
                 : TemplateRecipeInstancePolicy.Update(parameters, draft.TemplateKey, Lamp ?? throw new ArgumentException("Missing template parameters.")) },
             _ => throw new ArgumentException("Unknown setting.")
         };
+        if (Setting == PosterSetting.Template && draft.Parameters.Canvas is { Current: not null } canvas)
+            draft = draft with { Parameters = draft.Parameters with { Canvas = new(checked(canvas.Revision + 1), null, canvas.Current, true, requestId) } };
         var command = draft.ToCommand(requestId);
         if ((AuthoritativeStateValidationPolicy.Validate(command.DesiredState) ??
             PosterPresentationPolicy.ValidateEdit(Basis.Poster, command.DesiredState)) is { } error) throw new ArgumentException(error);

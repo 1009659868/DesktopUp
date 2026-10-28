@@ -1,5 +1,34 @@
 # V3-04 代码锚点
 
+## 2026-10-28 J1工作台入口
+
+- 对齐修订：画板变换／继承图层状态在[Domain/Canvas](../../../../src/DesktopUp.Domain/Canvas/README.md)，旋转命中／尺寸在[CanvasEditingGeometry](../../../../src/DesktopUp.Domain/Canvas/CanvasEditingGeometry.cs)；实际宽窄框架、手势、属性和库在Views/Canvas各职责文件。读回图标／统一字形在Presentation/Canvas，不放进大窗口。
+- 新增定向边界：[CanvasEditingAlignmentTests](../../../../tests/DesktopUp.Contracts.Tests/Canvas/CanvasEditingAlignmentTests.cs)。前版人工未通过、新修订待验；不把下方旧交付写成已验。
+- 纯编辑／历史／组合：[CanvasAuthoring](../../../../src/DesktopUp.Domain/Canvas/CanvasAuthoring.cs)。
+- 资源与草稿端口：[CanvasWorkspace](../../../../src/DesktopUp.Application/Features/Canvas/CanvasWorkspace.cs)；[具体资源库与普通样例](../../../../src/DesktopUp.Infrastructure/Canvas/README.md)。
+- 原生工作台：[Views/Canvas](../../../../src/DesktopUp.App/Views/Canvas/README.md)；稳定场景／有界图片：[Presentation/Canvas](../../../../src/DesktopUp.App/Presentation/Canvas/README.md)。
+- 定向验证：[CanvasStudioTests](../../../../tests/DesktopUp.Contracts.Tests/Canvas/CanvasStudioTests.cs)；[交付和人工入口](../V3-07/CANVAS_J1_STUDIO_IMPLEMENTATION.md)。旧工厂仅在tools/review/App/LegacyCanvasSamples.cs，生产没有样例ID开关。
+
+下文2026-10-27代码路径部分仍复用，但当时“仅设计”的状态已被本条替代。
+
+## 2026-10-27 J1最小画板运行入口
+
+- 声明／能力／布局：[Domain/Canvas](../../../../src/DesktopUp.Domain/Canvas/README.md)。
+- 固定目标草稿与提交：[CanvasDesignSession](../../../../src/DesktopUp.Application/Features/Canvas/CanvasDesignSession.cs)、[CanvasDesignCommands](../../../../src/DesktopUp.Application/Features/Canvas/CanvasDesignCommands.cs)，复用State事务和回执。
+- 呈现与内容槽：[CanvasSceneInstance](../../../../src/DesktopUp.App/Presentation/Canvas/CanvasSceneInstance.cs)、[CanvasContentPlacement](../../../../src/DesktopUp.App/Presentation/Canvas/CanvasContentPlacement.cs)。
+- 独立编辑视图：[CanvasEditor](../../../../src/DesktopUp.App/Views/Canvas/CanvasEditor.cs)；窗口仅入口和运行预览接线。
+- 验证：[CanvasKernelTests](../../../../tests/DesktopUp.Contracts.Tests/Canvas/CanvasKernelTests.cs)、[原生组合](../../../../tools/review/App/App.CanvasKernelProbe.cs)、[编辑器真实控件探针](../../../../tools/review/App/CanvasEditor.Probe.cs)。
+
+上述Canvas是人工未通过的受限候选，不是自由创作引擎已验入口。Creation／AI仍预留；本轮仅[设计重审](../V3-07/CANVAS_J1_CREATION_REDESIGN.md)，未变更产品代码入口。范围、生产格式和成本见[J1记录](../V3-07/CANVAS_J1_KERNEL.md)。
+
+## 2026-10-27 目录归位
+
+当前入口以[src目录导航](../../../../src/README.md)为准；[本轮移动清单](../Architecture/SOURCE_LAYOUT_MOVES_20261027.json)记录原路径、目标与纯移动前摘要。下方69个源码／测试链接已指向当前位置，历史叙述和旧移动清单仍保留当时语义。ControlCenterWindow.ResponsiveLayout在Views/ControlCenter，观察partial仅在tools/review；Canvas／Creation／AI目录只有职责导航，不是运行实现。
+
+## 2026-10-27 J0设计入口
+
+本批无运行时类变更。设计字段、目录、两配方／草稿及只读核对器位于`Docs/A_Project/20_Architecture/CanvasContracts/`，详见[协议](../../20_Architecture/CanvasContracts/CONTRACT.md)；它们不进入生产导入或编译。未来接点仍是TemplateRecipes／TemplateRecipeCommands、PosterContentSession、ContentInputGeometry与App组装，不将拟议能力ID当作当前注册实现。结果见[J0交付](../V3-07/CANVAS_AI_J0_DESIGN.md)。
+
 ## 2026-10-26 集成线与原型边界
 
 develop含ContentBehaviorModel／ContentModelRegistry／双模型／ModelTransition及ContentRelationPolicy.ResolveMany批量优化。T1的TemplateHeadingComposition、v2组件配方、角色装配及中心ContentHeading增量仅在功能分支61819dd；下方T1锚点不能用于当前develop／main。main保留产品实现，删除review／SessionFixture入口；精简差异及包绑定见[发布记录](../V3-06/MODEL_PROTOCOL_RELEASE.md)。下一步画板引擎仍是设计准备，无新运行时类。
@@ -40,12 +69,12 @@ App/Runtime/Posters/PosterDragFrameScheduler统一按需Rendering；PosterSpatia
 | [ContentActivityPolicy](../../../../src/DesktopUp.Domain/Content/ContentActivity.cs) / [ContentActivityProducer](../../../../src/DesktopUp.Application/Features/Content/Layout/ContentActivityProducer.cs) | 连续衰减/评分/可配置平滑，生产连续提案v2；算法与I/O分开 |
 | [ContentHeatSession](../../../../src/DesktopUp.Application/Features/Content/Layout/ContentHeatSession.cs) / [ContentHeatSizing](../../../../src/DesktopUp.Domain/Content/ContentHeatSizing.cs) | 保留目标、从作者基准按当前视口限幅；v1旧注入仍兼容五档，不走生产v2 |
 | [PosterVisualWindow.Activity](../../../../src/DesktopUp.App/Views/Poster/PosterVisualWindow.Activity.cs) / [PosterSpatialRuntime.Activity](../../../../src/DesktopUp.App/Runtime/Posters/PosterSpatialRuntime.Activity.cs) | 生产计算、安全时点/版本门与原生扩框；成功打开实时入队，交互保护期间延期，释放后续作；用户resize不重新排名 |
-| [ContentScaleExpansion](../../../../src/DesktopUp.Application/ContentScaleExpansion.cs) / [ContentHeatExpansion](../../../../src/DesktopUp.Application/ContentHeatExpansion.cs) / [ContentFrameMinimumPolicy](../../../../src/DesktopUp.Domain/ContentFrameMinimumPolicy.cs) | 共用空间规划；手动尺度受阻回弹，热度受阻限幅，允许外框降至热度/可读下限 |
-| [ControlCenterWindow.Activity](../../../../src/DesktopUp.App/ControlCenterWindow.Activity.cs) | 行为页海报级倍率/K/尺寸开关；沿既有草稿/CAS，取消无写入 |
+| [ContentScaleExpansion](../../../../src/DesktopUp.Application/Features/Content/Layout/ContentScaleExpansion.cs) / [ContentHeatExpansion](../../../../src/DesktopUp.Application/Features/Content/Layout/ContentHeatExpansion.cs) / [ContentFrameMinimumPolicy](../../../../src/DesktopUp.Domain/Content/Layout/ContentFrameMinimumPolicy.cs) | 共用空间规划；手动尺度受阻回弹，热度受阻限幅，允许外框降至热度/可读下限 |
+| [ControlCenterWindow.Activity](../../../../src/DesktopUp.App/Views/ControlCenter/ControlCenterWindow.Activity.cs) | 行为页海报级倍率/K/尺寸开关；沿既有草稿/CAS，取消无写入 |
 | [PosterContentPresenter](../../../../src/DesktopUp.App/Presentation/PosterContentPresenter.cs) / [App组装](../../../../src/DesktopUp.App/Bootstrap/ApplicationComposition.cs) | 增量呈现/局部悬停及单次组合根；新策略不另造窗口状态库或整表图标重载 |
 | [SqliteStateStore](../../../../src/DesktopUp.Infrastructure/Persistence/State/SqliteStateStore.cs) / [迁移目录](../../../../src/DesktopUp.Infrastructure/Persistence/Migrations/catalog.xml) | 当前schema27；027新增统计队列/游标/聚合与有限历史，001～027及指纹冻结 |
-| [StartupIntent](../../../../src/DesktopUp.Domain/StartupIntent.cs) / [PosterConfigurationFactory](../../../../src/DesktopUp.Domain/PosterConfigurationFactory.cs) / [SqlitePosterCatalogRepository](../../../../src/DesktopUp.Infrastructure/Persistence/State/SqlitePosterCatalogRepository.cs) | `ShouldShowControlCenter`、基础收纳默认与`InitializeEmptyProfile`；登录自启保持后台，普通零海报启动开中心 |
-| [Setup](../../../../src/DesktopUp.Setup/DesktopUp.Setup.csproj) / [UpgradeTransaction](../../../../src/DesktopUp.Setup/UpgradeTransaction.cs) | 独立安装辅助工程，当前单安装/原位/迁移升级共用事务；无业务工程ProjectReference，不是在线Updater |
+| [StartupIntent](../../../../src/DesktopUp.Domain/Lifecycle/StartupIntent.cs) / [PosterConfigurationFactory](../../../../src/DesktopUp.Domain/Posters/Configuration/PosterConfigurationFactory.cs) / [SqlitePosterCatalogRepository](../../../../src/DesktopUp.Infrastructure/Persistence/State/SqlitePosterCatalogRepository.cs) | `ShouldShowControlCenter`、基础收纳默认与`InitializeEmptyProfile`；登录自启保持后台，普通零海报启动开中心 |
+| [Setup](../../../../src/DesktopUp.Setup/DesktopUp.Setup.csproj) / [UpgradeTransaction](../../../../src/DesktopUp.Setup/Upgrade/UpgradeTransaction.cs) | 独立安装辅助工程，当前单安装/原位/迁移升级共用事务；无业务工程ProjectReference，不是在线Updater |
 
 可复用的定向测试入口：`tests/DesktopUp.Contracts.Tests/ContentActivity*Tests.cs`、`RealContentOpenTests.cs`、`ContentHeatSessionTests.cs`、`ContentFrameResizeTests.cs`及`ContentScaleExpansionTests.cs`。本批结果只在V3-06记录登记，未验的原生/人工不在此补PASS。
 
@@ -470,16 +499,16 @@ R1～R8/P1～P3 USER PASS / CLOSED；本轮只更新记录，未修改下列实�
 
 - ContentSelection.Marquee、PosterInputRouter/Contracts：按下时选择集合、相交去重、内容viewport优先级末位；Windows PosterInputIslandManager复用原捕获/阈值/Esc，不新增输入HWND。
 - [PosterVisualWindow.ContentMarquee.cs](../../../../src/DesktopUp.App/Views/Poster/PosterVisualWindow.ContentMarquee.cs)：当前视口框选、取消还原；ContentEditing.HasContentGesture统一保护；Content.DrawContentSnapshot绘制透明框。
-- [NativeContentDragImage.cs](../../../../src/DesktopUp.Windows/NativeContentDragImage.cs)、ContentDragPixels、PosterVisualWindow.ContentDragImage：缓存BGRA/数量、不可命中图像层、内部/外部单一所有者和终态释放；不是通用OLE源。
+- [NativeContentDragImage.cs](../../../../src/DesktopUp.Windows/DragDrop/NativeContentDragImage.cs)、ContentDragPixels、PosterVisualWindow.ContentDragImage：缓存BGRA/数量、不可命中图像层、内部/外部单一所有者和终态释放；不是通用OLE源。
 - `PosterSpatialRuntime.Outgoing.cs`（历史生产入口已退役；旧执行器仅作[开发探针](../../../../tools/review/App/PosterSpatialRuntime.LegacyOutgoingProbe.cs)）、DirectTransferPreparation.OutgoingSources/Outgoing：冻结来源、逐项取出，跨卷复用既有保留源执行器；PosterVisualWindow.TransferConfirmation提供近旁确认。
 - OutgoingTransferIntegrationTests/ContentSelectionTests及App.IncomingProbe `--d5-combined`、CombinedSelectionProbe；入口`scripts/start-incoming-review.ps1 -CombinedD5`。证据见[§9](../V3-05/DIRECT_TRANSFER_DELIVERY.md#9-空白框选d4与d5合包2026-10-13)。
 
 ## 2026-10-13 05-11-A公共移除与外部同步
 
-- [ContentRelationRemoval.cs](../../../../src/DesktopUp.Application/ContentRelationRemoval.cs)：按精确关系ID一次裁剪各海报成员/布局/图钉；ContentDetachPolicy和外部同步复用，原拖出经ContentDetachPolicy保持用户确认/锁定语义。
+- [ContentRelationRemoval.cs](../../../../src/DesktopUp.Application/Features/Content/Catalog/ContentRelationRemoval.cs)：按精确关系ID一次裁剪各海报成员/布局/图钉；ContentDetachPolicy和外部同步复用，原拖出经ContentDetachPolicy保持用户确认/锁定语义。
 - `ManagedContentSynchronizer.cs`（历史门面已替代，当前编排见[ManagedContentSyncUseCase](../../../../src/DesktopUp.Application/Features/Content/Observation/ManagedContentSyncUseCase.cs)）：归属与完整扫描、身份改名、稳定观察、共享范围、CAS提交；只改索引。SqliteStateCommandRepository限制内部观察授权，不能由UI伪造。
-- [ManagedContentObservationStore.cs](../../../../src/DesktopUp.Infrastructure/ManagedContentObservationStore.cs)：schema20本地身份基线；SqliteTransferJournal及IndexRecovery、SqliteStorageRelocationJournal.Transactions在提交时保存身份，旧凭证只作迁移引导。
-- [ManagedContentMonitor.cs](../../../../src/DesktopUp.Infrastructure/ManagedContentMonitor.cs) / [App.Transfers.cs](../../../../src/DesktopUp.App/App.Transfers.cs)：每配置共享监测、2秒合并/30秒补查、启动/恢复/退出生命周期、正式投影刷新。SqliteTransferJournal观察专用短租约不占用扫描等待阶段。
+- [ManagedContentObservationStore.cs](../../../../src/DesktopUp.Infrastructure/ContentObservation/ManagedContentObservationStore.cs)：schema20本地身份基线；SqliteTransferJournal及IndexRecovery、SqliteStorageRelocationJournal.Transactions在提交时保存身份，旧凭证只作迁移引导。
+- [ManagedContentMonitor.cs](../../../../src/DesktopUp.Infrastructure/ContentObservation/ManagedContentMonitor.cs) / [App.Transfers.cs](../../../../src/DesktopUp.App/Features/Content/App.Transfers.cs)：每配置共享监测、2秒合并/30秒补查、启动/恢复/退出生命周期、正式投影刷新。SqliteTransferJournal观察专用短租约不占用扫描等待阶段。
 - PosterVisualWindow.Content裁剪真实选择集合；ManagedContentSyncTests新增隔离边界验证，App.IncomingProbe与smoke-incoming.ps1的`-ManagedSync`复用实际进程链。候选入口增加`-ManagedSyncRevision`，详情见[实施§8](../V3-05/DIRECT_TRANSFER_DELIVERY.md#8-05-11-a最小外部同步与公共移除2026-10-13)。
 
 ## 2026-10-13 DEC-043 全框输入
@@ -494,16 +523,16 @@ R1～R8/P1～P3 USER PASS / CLOSED；本轮只更新记录，未修改下列实�
 
 ## 2026-10-13 原生重复拖动诊断入口
 
-[NativeDragProbeTests.cs](../../../../tests/DesktopUp.Contracts.Tests/NativeDragProbeTests.cs)新增原生COM vtable枚举检查，覆盖Next的FORMATETC/fetched写回与终态；仅定向1项通过，不涉及鼠标或文件。
+[NativeDragProbeTests.cs](../../../../tests/DesktopUp.Contracts.Tests/Content/Transfers/NativeDragProbeTests.cs)新增原生COM vtable枚举检查，覆盖Next的FORMATETC/fetched写回与终态；仅定向1项通过，不涉及鼠标或文件。
 
 [RoutingMechanismProbe.cs](../../../../tests/DesktopUp.NativeDragProbe/RoutingMechanismProbe.cs)与[Program.cs](../../../../tests/DesktopUp.NativeDragProbe/Program.cs)新增`--routing-repeat`，只运行生产组件的连续提交/取消/暂停三组；保留`--routing-auto`静态对照。底板自身维护测试层级，输入前核对实际鼠标和进程，限定采样时间并对无返回的自建测试源以失败码退出。生产代码未改，最新夹具构建及尚未通过的暂停边界见[D3§7.2.1](../V3-05/D3_NATIVE_INGRESS_AND_PLACEMENT.md#721-解锁后复验与夹具整改)。
 
 ## 2026-10-12 输入与拖放组件化
 
-- [PosterInputIslandManager.cs](../../../../src/DesktopUp.Windows/PosterInputIslandManager.cs)：普通输入始终稀疏；InstallDropReceiver注册与几何/暂停/重挂载/释放接线，不再暴露全矩形区域切换。
-- [PosterDropReception.cs](../../../../src/DesktopUp.Windows/PosterDropReception.cs)、[NativeOleDragMonitor.cs](../../../../tests/DesktopUp.NativeDragProbe/NativeOleDragMonitor.cs)：默认空区域的独立接收面、经核验的OLE捕获、捕获/协议结束分离及新会话复位。Windows实现细节兼容边界见[D3§7.1](../V3-05/D3_NATIVE_INGRESS_AND_PLACEMENT.md#71-已实施的组件边界)。（该监测器现仅保留于测试目录，本条描述为历史。）
-- [NativeFileDropTarget.cs](../../../../src/DesktopUp.Windows/NativeFileDropTarget.cs)、[ShellDropImages.cs](../../../../src/DesktopUp.Windows/ShellDropImages.cs)：协议终态通知与独立COM包装；App只持有IPosterDropRegistration，原ticket/文件通道不变。
-- [PosterDropComponentTests.cs](../../../../tests/DesktopUp.Contracts.Tests/PosterDropComponentTests.cs)验证可选组件不改基础区域；[RoutingMechanismProbe.cs](../../../../tests/DesktopUp.NativeDragProbe/RoutingMechanismProbe.cs)用独立底板/OLE源验证实际跨进程命中、取消、暂停、连续会话与资源释放。自建诊断路径，无文件执行器。
+- [PosterInputIslandManager.cs](../../../../src/DesktopUp.Windows/Posters/PosterInputIslandManager.cs)：普通输入始终稀疏；InstallDropReceiver注册与几何/暂停/重挂载/释放接线，不再暴露全矩形区域切换。
+- [PosterDropReception.cs](../../../../src/DesktopUp.Windows/Posters/PosterDropReception.cs)、[NativeOleDragMonitor.cs](../../../../tests/DesktopUp.NativeDragProbe/NativeOleDragMonitor.cs)：默认空区域的独立接收面、经核验的OLE捕获、捕获/协议结束分离及新会话复位。Windows实现细节兼容边界见[D3§7.1](../V3-05/D3_NATIVE_INGRESS_AND_PLACEMENT.md#71-已实施的组件边界)。（该监测器现仅保留于测试目录，本条描述为历史。）
+- [NativeFileDropTarget.cs](../../../../src/DesktopUp.Windows/DragDrop/NativeFileDropTarget.cs)、[ShellDropImages.cs](../../../../src/DesktopUp.Windows/DragDrop/ShellDropImages.cs)：协议终态通知与独立COM包装；App只持有IPosterDropRegistration，原ticket/文件通道不变。
+- [PosterDropComponentTests.cs](../../../../tests/DesktopUp.Contracts.Tests/Posters/PosterDropComponentTests.cs)验证可选组件不改基础区域；[RoutingMechanismProbe.cs](../../../../tests/DesktopUp.NativeDragProbe/RoutingMechanismProbe.cs)用独立底板/OLE源验证实际跨进程命中、取消、暂停、连续会话与资源释放。自建诊断路径，无文件执行器。
 - [修订候选入口](../../../../scripts/start-incoming-review.ps1)：`-ComponentRevision`使用新manifest/profile，旧默认入口保留。当前只完成PrepareOnly，最终原生待解锁，见[D3§7.2](../V3-05/D3_NATIVE_INGRESS_AND_PLACEMENT.md#72-证据与当前验证范围)。
 
 ## 2026-10-12 D3点击穿透回归调查
@@ -512,39 +541,39 @@ R1～R8/P1～P3 USER PASS / CLOSED；本轮只更新记录，未修改下列实�
 
 ## 2026-10-12 D3全区域实际入库
 
-- [IncomingContentPlacement.cs](../../../../src/DesktopUp.Application/IncomingContentPlacement.cs)：原插入顺位/局部让位复用、贴边限制、成功后推进批量位置；SqliteTransferJournal.IndexPlan与关系单revision提交。
-- [IncomingTransferCopies.cs](../../../../src/DesktopUp.Infrastructure/IncomingTransferCopies.cs)：既有receipt内的跨卷创建身份、保留源复制与受限收尾；LocalTransferExecutor及AutomaticTransferCompletion复用重启/取消流程，schema19不变。
+- [IncomingContentPlacement.cs](../../../../src/DesktopUp.Application/Features/Content/Transfers/IncomingContentPlacement.cs)：原插入顺位/局部让位复用、贴边限制、成功后推进批量位置；SqliteTransferJournal.IndexPlan与关系单revision提交。
+- [IncomingTransferCopies.cs](../../../../src/DesktopUp.Infrastructure/ContentTransfers/IncomingTransferCopies.cs)：既有receipt内的跨卷创建身份、保留源复制与受限收尾；LocalTransferExecutor及AutomaticTransferCompletion复用重启/取消流程，schema19不变。
 - [PosterSpatialRuntime.Incoming.cs](../../../../src/DesktopUp.App/Runtime/Posters/PosterSpatialRuntime.Incoming.cs)、[PosterVisualWindow.Transfers.cs](../../../../src/DesktopUp.App/Views/Poster/PosterVisualWindow.Transfers.cs)：生产全区域启用、最终ticket、逐项执行、近旁反馈、目标占用与退出取消。
-- [MissingSourceDragImage.cs](../../../../src/DesktopUp.Windows/MissingSourceDragImage.cs)：仅缺源图像格式时采用系统文档图标，结束释放；有图沿Shell helper。
-- [IncomingTransferIntegrationTests.cs](../../../../tests/DesktopUp.Contracts.Tests/IncomingTransferIntegrationTests.cs)、App.IncomingProbe.cs、scripts/smoke-incoming.ps1：本批事务/跨卷故障与同包门；[人工启动器](../../../../scripts/start-incoming-review.ps1)。当前证据及待验归[D3§4.2/§5](../V3-05/D3_NATIVE_INGRESS_AND_PLACEMENT.md#42-d3完整接线与集中验证)，以下D3-01为历史。
+- [MissingSourceDragImage.cs](../../../../src/DesktopUp.Windows/DragDrop/MissingSourceDragImage.cs)：仅缺源图像格式时采用系统文档图标，结束释放；有图沿Shell helper。
+- [IncomingTransferIntegrationTests.cs](../../../../tests/DesktopUp.Contracts.Tests/Content/Transfers/IncomingTransferIntegrationTests.cs)、App.IncomingProbe.cs、scripts/smoke-incoming.ps1：本批事务/跨卷故障与同包门；[人工启动器](../../../../scripts/start-incoming-review.ps1)。当前证据及待验归[D3§4.2/§5](../V3-05/D3_NATIVE_INGRESS_AND_PLACEMENT.md#42-d3完整接线与集中验证)，以下D3-01为历史。
 
 ## 2026-10-12 D3-01接收基础与默认关闭的原生能力
 
-- [IncomingDropSession.cs](../../../../src/DesktopUp.Application/IncomingDropSession.cs)：冻结路径、坐标/代次依据，最后物理点，单次消费；标题无伪网格，循环归一化。未产生布局或文件提交。
-- [ContentScreenCoordinates.cs](../../../../src/DesktopUp.Domain/ContentScreenCoordinates.cs)：共享屏幕换算；PosterVisualWindow.ContentEditing.cs仅将原内拖换算迁入此函数。
-- [PosterDropSurfacePolicy.cs](../../../../src/DesktopUp.Application/PosterDropSurfacePolicy.cs)/PosterInputIslandManager.cs：OLE矩形与稀疏普通命中分离；TrySetFullAreaDropReception默认关闭且无产品调用。
-- [NativeIncomingDropSession.cs](../../../../src/DesktopUp.Windows/NativeIncomingDropSession.cs)/[ShellDropImages.cs](../../../../src/DesktopUp.Windows/ShellDropImages.cs)/NativeFileDropTarget.cs：新ticket构造入口、Shell图像四回调、失败/重入/退出清理；旧路径构造入口保持兼容。缺源图像的兜底仍待做。
-- [IncomingDropSessionTests.cs](../../../../tests/DesktopUp.Contracts.Tests/IncomingDropSessionTests.cs)/[IncomingDropNativeTests.cs](../../../../tests/DesktopUp.Contracts.Tests/IncomingDropNativeTests.cs)：39项新增；完整3236合同，4个生产命令/Canvas回归，证据范围见[D3§4](../V3-05/D3_NATIVE_INGRESS_AND_PLACEMENT.md#4-实现与验证记录)。
+- [IncomingDropSession.cs](../../../../src/DesktopUp.Application/Features/Content/Transfers/IncomingDropSession.cs)：冻结路径、坐标/代次依据，最后物理点，单次消费；标题无伪网格，循环归一化。未产生布局或文件提交。
+- [ContentScreenCoordinates.cs](../../../../src/DesktopUp.Domain/Content/Layout/ContentScreenCoordinates.cs)：共享屏幕换算；PosterVisualWindow.ContentEditing.cs仅将原内拖换算迁入此函数。
+- [PosterDropSurfacePolicy.cs](../../../../src/DesktopUp.Application/Features/Posters/Input/PosterDropSurfacePolicy.cs)/PosterInputIslandManager.cs：OLE矩形与稀疏普通命中分离；TrySetFullAreaDropReception默认关闭且无产品调用。
+- [NativeIncomingDropSession.cs](../../../../src/DesktopUp.Windows/DragDrop/NativeIncomingDropSession.cs)/[ShellDropImages.cs](../../../../src/DesktopUp.Windows/DragDrop/ShellDropImages.cs)/NativeFileDropTarget.cs：新ticket构造入口、Shell图像四回调、失败/重入/退出清理；旧路径构造入口保持兼容。缺源图像的兜底仍待做。
+- [IncomingDropSessionTests.cs](../../../../tests/DesktopUp.Contracts.Tests/Content/Transfers/IncomingDropSessionTests.cs)/[IncomingDropNativeTests.cs](../../../../tests/DesktopUp.Contracts.Tests/Content/Transfers/IncomingDropNativeTests.cs)：39项新增；完整3236合同，4个生产命令/Canvas回归，证据范围见[D3§4](../V3-05/D3_NATIVE_INGRESS_AND_PLACEMENT.md#4-实现与验证记录)。
 
 下一步D3-02落点进入原关系/布局单事务，再D3-03逐项跨卷和D3-04产品准入；D2-04人工已收口。
 
 ## 2026-10-12 D2-04默认根与位置设置
 
 - `ManagedStorageService.cs`（历史门面已退役，当前迁移编排见[StorageRelocationUseCase](../../../../src/DesktopUp.Application/Features/Content/Storage/StorageRelocationUseCase.cs)）：产品门面；只读位置、按需创建/物理身份回执、旧根选择、负载数量预览、真实迁移和启动收尾；UI不提供文件证明。SqliteStateStore仅增加内部配置路径，不改schema19。
-- App.Transfers.cs/App.xaml.cs：通道/隔离基目录与启动收尾，共用同一服务；PosterSpatialRuntime.Transfers.cs不再按集合数猜测选址。ControlCenterService.cs传递服务；[ControlCenterWindow.Transfers.cs](../../../../src/DesktopUp.App/ControlCenterWindow.Transfers.cs)/xaml接全局位置窗口、打开、确认、进度取消、结果。读取中退出检查防止迟到弹窗；取消并等待沿原生命周期通道。
-- [ManagedStorageServiceTests.cs](../../../../tests/DesktopUp.Contracts.Tests/ManagedStorageServiceTests.cs)：22项；[App.StorageSettingsProbe.cs](../../../../tools/review/App/App.StorageSettingsProbe.cs)只接受out/drop-d2带哨兵自建配置，程序驱动同包7流程及seed，不执行用户文件。原生鼠标不冒称覆盖。
+- App.Transfers.cs/App.xaml.cs：通道/隔离基目录与启动收尾，共用同一服务；PosterSpatialRuntime.Transfers.cs不再按集合数猜测选址。ControlCenterService.cs传递服务；[ControlCenterWindow.Transfers.cs](../../../../src/DesktopUp.App/Views/ControlCenter/ControlCenterWindow.Transfers.cs)/xaml接全局位置窗口、打开、确认、进度取消、结果。读取中退出检查防止迟到弹窗；取消并等待沿原生命周期通道。
+- [ManagedStorageServiceTests.cs](../../../../tests/DesktopUp.Contracts.Tests/Storage/ManagedStorageServiceTests.cs)：22项；[App.StorageSettingsProbe.cs](../../../../tools/review/App/App.StorageSettingsProbe.cs)只接受out/drop-d2带哨兵自建配置，程序驱动同包7流程及seed，不执行用户文件。原生鼠标不冒称覆盖。
 - [smoke-storage-location.ps1](../../../../scripts/smoke-storage-location.ps1)、smoke-native-picker.ps1、[start-storage-location-review.ps1](../../../../scripts/start-storage-location-review.ps1)：7设置＋4目录选择器流程、源码/产物/TRX指纹绑定和人工入口；Start-DesktopUpFixtureProcess.ps1为测试显式注入同级存储根。
 
 当前证据和人工清单见[D2§10](../V3-05/D2_STORAGE_LOCATION_AND_MIGRATION.md#10-d2-04默认位置与设置接线)。D3全区域/跨卷逐项入库仍未接；下方“尚无App调用”为历史范围。
 
 ## 2026-10-12 D2-03真实保留源文件通道
 
-- [StorageRelocationFiles.cs](../../../../src/DesktopUp.Infrastructure/StorageRelocationFiles.cs)：内部真实Prepare/Verify/Execute，源清单先行、归属准备、只读源复制、完整路径/内容/身份/文件元数据证明；源/目标句柄跨SQLite提交持有。没有App生产调用。
-- [StorageRelocationFiles.Recovery.cs](../../../../src/DesktopUp.Infrastructure/StorageRelocationFiles.Recovery.cs)：可信收据决定提交前后分支；精确前缀证明清理半成品，提交后仅清已核实旧负载，外来/替换/损坏证据保留，取消停止后续删除，不递归清空选定根。
-- [StorageCopyLedger.cs](../../../../src/DesktopUp.Infrastructure/StorageCopyLedger.cs)：state/storage-relocations下只写一次且刷盘的库存、创建/目标/结束证据；绑定物理配置/提案/DB意图，验证版本、相对路径、数量和连续回执；不是可移植配置或用户任务表。
-- [LocalTransferFiles.Storage.cs](../../../../src/DesktopUp.Infrastructure/LocalTransferFiles.Storage.cs)：CreateNew复制、原生身份/句柄锁、SHA256、时间/常见属性、逐个按句柄删除、拒绝ADS/硬链接/不支持文件属性；旧Move逻辑未替换。
+- [StorageRelocationFiles.cs](../../../../src/DesktopUp.Infrastructure/StorageLocation/StorageRelocationFiles.cs)：内部真实Prepare/Verify/Execute，源清单先行、归属准备、只读源复制、完整路径/内容/身份/文件元数据证明；源/目标句柄跨SQLite提交持有。没有App生产调用。
+- [StorageRelocationFiles.Recovery.cs](../../../../src/DesktopUp.Infrastructure/StorageLocation/StorageRelocationFiles.Recovery.cs)：可信收据决定提交前后分支；精确前缀证明清理半成品，提交后仅清已核实旧负载，外来/替换/损坏证据保留，取消停止后续删除，不递归清空选定根。
+- [StorageCopyLedger.cs](../../../../src/DesktopUp.Infrastructure/StorageLocation/StorageCopyLedger.cs)：state/storage-relocations下只写一次且刷盘的库存、创建/目标/结束证据；绑定物理配置/提案/DB意图，验证版本、相对路径、数量和连续回执；不是可移植配置或用户任务表。
+- [LocalTransferFiles.Storage.cs](../../../../src/DesktopUp.Infrastructure/ContentTransfers/Files/LocalTransferFiles.Storage.cs)：CreateNew复制、原生身份/句柄锁、SHA256、时间/常见属性、逐个按句柄删除、拒绝ADS/硬链接/不支持文件属性；旧Move逻辑未替换。
 - StorageBundleOwnership.cs新增准备对象创建回执；SqliteStorageRelocationJournal.cs公开内部现有源租约/当前计划复核；SqliteStateStore.cs仅加sidecar位置，schema19不变。首次默认根/设置/启动收尾仍归D2-04。
-- [StorageRelocationFilesTests.cs](../../../../tests/DesktopUp.Contracts.Tests/StorageRelocationFilesTests.cs)及[.Recovery.cs](../../../../tests/DesktopUp.Contracts.Tests/StorageRelocationFilesTests.Recovery.cs)：新增46项；[StorageCopyCrashFixture.cs](../../../../tests/DesktopUp.TransferFixture/StorageCopyCrashFixture.cs)在带哨兵的自建数据执行10个独立进程退出点；Program.cs入口先路由该夹具。真实不同卷与Windows快捷方式均不操作用户内容。
+- [StorageRelocationFilesTests.cs](../../../../tests/DesktopUp.Contracts.Tests/Storage/StorageRelocationFilesTests.cs)及[.Recovery.cs](../../../../tests/DesktopUp.Contracts.Tests/Storage/StorageRelocationFilesTests.Recovery.cs)：新增46项；[StorageCopyCrashFixture.cs](../../../../tests/DesktopUp.TransferFixture/StorageCopyCrashFixture.cs)在带哨兵的自建数据执行10个独立进程退出点；Program.cs入口先路由该夹具。真实不同卷与Windows快捷方式均不操作用户内容。
 
 最终完整3175通过，App独立构建0警告/错误；证据与支持矩阵归[D2§9](../V3-05/D2_STORAGE_LOCATION_AND_MIGRATION.md#9-d2-03保留源复制与故障验证)。下方“没有文件执行器/待实现”为D2-02历史快照。
 
@@ -957,17 +986,17 @@ DEC-019只读核查补充：`PosterVisualWindow.ContentEditing.HandleContentInpu
 
 当前事实与15个隔离用例见[审查](CONTENT_LAYOUT_REVIEW_2026-09-23.md)，整改后的职责分工为[设计V2](../../20_Architecture/CONTENT_LAYOUT_REMEDIATION_DESIGN_V2.md)草案，不把它当已有代码。
 
-- [Solver](../../../../src/DesktopUp.Domain/ContentLayoutSolver.cs)的ResolveHorizontalLoop/Reclip、[Flow](../../../../src/DesktopUp.Domain/ContentLayoutFlow.cs)和[内容宿主](../../../../src/DesktopUp.App/Views/Poster/PosterVisualWindow.Content.cs)的ScrollItems/EnsureContentSnapshot：轴/循环、容量/区域、高度失效和可达性问题。
-- [Editing](../../../../src/DesktopUp.Domain/ContentLayoutEditing.cs)、[生产编辑](../../../../src/DesktopUp.App/Views/Poster/PosterVisualWindow.ContentEditing.cs)、[FlowPolicy](../../../../src/DesktopUp.Application/ContentLayoutFlowPolicy.cs)与[Command](../../../../src/DesktopUp.Application/ContentLayoutCommand.cs)：纯模型/鼠标门分叉、恢复自动、切轴+2与单版本校验。
-- [PortableContentLayout](../../../../src/DesktopUp.Application/PortableContentLayout.cs)的留白清空；[ResolveHeat](../../../../src/DesktopUp.Domain/ContentLayoutProposals.cs)缺少新尺寸开关；[FlowTests](../../../../tests/DesktopUp.Contracts.Tests/ContentLayoutFlowTests.cs)与[PolicyTests](../../../../tests/DesktopUp.Contracts.Tests/ContentLayoutFlowPolicyTests.cs)为未提交测试，不足以证明生产链正确。
+- [Solver](../../../../src/DesktopUp.Domain/Content/Layout/ContentLayoutSolver.cs)的ResolveHorizontalLoop/Reclip、[Flow](../../../../src/DesktopUp.Domain/Content/Layout/ContentLayoutFlow.cs)和[内容宿主](../../../../src/DesktopUp.App/Views/Poster/PosterVisualWindow.Content.cs)的ScrollItems/EnsureContentSnapshot：轴/循环、容量/区域、高度失效和可达性问题。
+- [Editing](../../../../src/DesktopUp.Domain/Content/Layout/ContentLayoutEditing.cs)、[生产编辑](../../../../src/DesktopUp.App/Views/Poster/PosterVisualWindow.ContentEditing.cs)、[FlowPolicy](../../../../src/DesktopUp.Application/Features/Content/Layout/ContentLayoutFlowPolicy.cs)与[Command](../../../../src/DesktopUp.Application/Features/Content/Layout/ContentLayoutCommand.cs)：纯模型/鼠标门分叉、恢复自动、切轴+2与单版本校验。
+- [PortableContentLayout](../../../../src/DesktopUp.Application/Features/Configuration/PortableContentLayout.cs)的留白清空；[ResolveHeat](../../../../src/DesktopUp.Domain/Content/Layout/ContentLayoutProposals.cs)缺少新尺寸开关；[FlowTests](../../../../tests/DesktopUp.Contracts.Tests/Content/Layout/ContentLayoutFlowTests.cs)与[PolicyTests](../../../../tests/DesktopUp.Contracts.Tests/Content/Layout/ContentLayoutFlowPolicyTests.cs)为未提交测试，不足以证明生产链正确。
 - 下方schema10/便携v2/R4记录只属于09-17基线；当前wb实验包含schema11/布局v2/便携v3，不据版本号推定兼容或验收完成。
 
 ## 2026-09-17：04-L跨格实现入口（L01～06自动通过，L07待人工）
 
-- [ContentLayout](../../../../src/DesktopUp.Domain/ContentLayout.cs)、[Solver](../../../../src/DesktopUp.Domain/ContentLayoutSolver.cs)、[Editing](../../../../src/DesktopUp.Domain/ContentLayoutEditing.cs)：稳定身份/跨度/三样例，区域留白、有界求解/裁切/锚，纯编辑与事务确认后移动的RAM历史。
-- [ContentLayoutCommand](../../../../src/DesktopUp.Application/ContentLayoutCommand.cs)、[事务](../../../../src/DesktopUp.Application/StateProjectionCoordinator.ContentLayout.cs)、[PortableContentLayout](../../../../src/DesktopUp.Application/PortableContentLayout.cs)：单revision/full CAS、成员和放置版本、schema10载荷及便携v2映射。内部布局不写外框LayoutGeneration或空间连续关系。
-- [生产内容呈现](../../../../src/DesktopUp.App/Views/Poster/PosterVisualWindow.Content.cs)、[输入编辑](../../../../src/DesktopUp.App/Views/Poster/PosterVisualWindow.ContentEditing.cs)、[中心桥接](../../../../src/DesktopUp.App/ControlCenterWindow.ContentLayout.cs)：同一Snapshot供Canvas/裁切/输入区域；捕获稳定ID，16ms最新输入合并/边缘滚动、release flush/CAS、Esc/失效取消。
-- [提案](../../../../src/DesktopUp.Domain/ContentLayoutProposals.cs)、[生产安全点](../../../../src/DesktopUp.App/Views/Poster/PosterVisualWindow.ContentProposals.cs)、[素材预算](../../../../src/DesktopUp.Application/ContentAssetCache.cs)：热度5档/人工保护/最新合并、主题last-good、Null provider与有界缓存；不统计热度或读取文件。
+- [ContentLayout](../../../../src/DesktopUp.Domain/Content/Layout/ContentLayout.cs)、[Solver](../../../../src/DesktopUp.Domain/Content/Layout/ContentLayoutSolver.cs)、[Editing](../../../../src/DesktopUp.Domain/Content/Layout/ContentLayoutEditing.cs)：稳定身份/跨度/三样例，区域留白、有界求解/裁切/锚，纯编辑与事务确认后移动的RAM历史。
+- [ContentLayoutCommand](../../../../src/DesktopUp.Application/Features/Content/Layout/ContentLayoutCommand.cs)、[事务](../../../../src/DesktopUp.Application/Features/State/StateProjectionCoordinator.ContentLayout.cs)、[PortableContentLayout](../../../../src/DesktopUp.Application/Features/Configuration/PortableContentLayout.cs)：单revision/full CAS、成员和放置版本、schema10载荷及便携v2映射。内部布局不写外框LayoutGeneration或空间连续关系。
+- [生产内容呈现](../../../../src/DesktopUp.App/Views/Poster/PosterVisualWindow.Content.cs)、[输入编辑](../../../../src/DesktopUp.App/Views/Poster/PosterVisualWindow.ContentEditing.cs)、[中心桥接](../../../../src/DesktopUp.App/Views/ControlCenter/ControlCenterWindow.ContentLayout.cs)：同一Snapshot供Canvas/裁切/输入区域；捕获稳定ID，16ms最新输入合并/边缘滚动、release flush/CAS、Esc/失效取消。
+- [提案](../../../../src/DesktopUp.Domain/Content/Layout/ContentLayoutProposals.cs)、[生产安全点](../../../../src/DesktopUp.App/Views/Poster/PosterVisualWindow.ContentProposals.cs)、[素材预算](../../../../src/DesktopUp.Application/Features/Content/Icons/ContentAssetCache.cs)：热度5档/人工保护/最新合并、主题last-good、Null provider与有界缓存；不统计热度或读取文件。
 - [进程门](../../../../tools/review/App/App.ContentLayoutSmoke.cs)、[控件/输入读回](../../../../tools/review/App/PosterVisualWindow.ContentSmoke.cs)、[同包脚本](../../../../scripts/smoke-content-layout.ps1)、[人工入口](../../../../scripts/start-content-layout-manual.ps1)：14布局门＋21相关回归，25文件指纹绑定R4；native/pixel标志false。R4异步ready中间帧和暂停恢复均保留实际观测检查。
 
 当前状态只归[CONTENT_LAYOUT_DELIVERY](CONTENT_LAYOUT_DELIVERY.md)，下面开工盘点是历史，不再将其中“待冻结/schema9”当作当前实现。
@@ -978,12 +1007,12 @@ DEC-019只读核查补充：`PosterVisualWindow.ContentEditing.HandleContentInpu
 
 | 现有入口 | L阶段复用与边界 |
 | --- | --- |
-| [PosterContentPreferences](../../../../src/DesktopUp.Domain/PosterContentPreferences.cs)、[PosterPresentationParameters](../../../../src/DesktopUp.Domain/PosterPresentationParameters.cs) | 已有宏观尺度/疏密、RelativeScale/Order输入与参数版本；不是热度评分器或跨格占位求解器 |
+| [PosterContentPreferences](../../../../src/DesktopUp.Domain/Posters/Configuration/PosterContentPreferences.cs)、[PosterPresentationParameters](../../../../src/DesktopUp.Domain/Posters/Presentation/PosterPresentationParameters.cs) | 已有宏观尺度/疏密、RelativeScale/Order输入与参数版本；不是热度评分器或跨格占位求解器 |
 | [PosterVisualWindow](../../../../src/DesktopUp.App/Views/Poster/PosterVisualWindow.cs)、[Transition](../../../../src/DesktopUp.App/Views/Poster/PosterVisualWindow.Transition.cs) | 现有DEMO六卡、视口/滚动、输入布局与R4预布局/恢复；L04接统一内容快照，不新建宿主或第二空间所有者 |
-| [ScopedStateContracts](../../../../src/DesktopUp.Application/ScopedStateContracts.cs)、[StateProjectionCoordinator](../../../../src/DesktopUp.Application/StateProjectionCoordinator.cs) | 已有目标化命令、读集CAS与权威投影；L01冻结新布局命令语义，L03才接持久化 |
-| [SqliteStateStore](../../../../src/DesktopUp.Infrastructure/Persistence/State/SqliteStateStore.cs)、[PortableProfileCodec](../../../../src/DesktopUp.Application/PortableProfileCodec.cs)、[PortableProfilePlanner](../../../../src/DesktopUp.Application/PortableProfilePlanner.cs) | 当前schema9与便携v1；L03扩展载荷/迁移/ID映射，不从v8重复创建数据库或导入服务 |
-| [ControlCenterSettingsSession](../../../../src/DesktopUp.Application/ControlCenterSettingsSession.cs)、[ControlCenterService](../../../../src/DesktopUp.App/ControlCenterService.cs) | 现有目标设置/关闭释放；新增编辑保护和暂态不能绕过同一生命周期 |
-| [PosterSessionRegistry](../../../../src/DesktopUp.Application/PosterSessionRegistry.cs)、[App退出](../../../../src/DesktopUp.App/App.xaml.cs) | 逐海报会话及共享退出/恢复已有；L新增资源只做对应增量验证，历史分项测试不冒充新功能已通过 |
+| [ScopedStateContracts](../../../../src/DesktopUp.Application/Ports/State/ScopedStateContracts.cs)、[StateProjectionCoordinator](../../../../src/DesktopUp.Application/Features/State/StateProjectionCoordinator.cs) | 已有目标化命令、读集CAS与权威投影；L01冻结新布局命令语义，L03才接持久化 |
+| [SqliteStateStore](../../../../src/DesktopUp.Infrastructure/Persistence/State/SqliteStateStore.cs)、[PortableProfileCodec](../../../../src/DesktopUp.Application/Features/Configuration/PortableProfileCodec.cs)、[PortableProfilePlanner](../../../../src/DesktopUp.Application/Features/Configuration/PortableProfilePlanner.cs) | 当前schema9与便携v1；L03扩展载荷/迁移/ID映射，不从v8重复创建数据库或导入服务 |
+| [ControlCenterSettingsSession](../../../../src/DesktopUp.Application/Features/ControlCenter/ControlCenterSettingsSession.cs)、[ControlCenterService](../../../../src/DesktopUp.App/Views/ControlCenter/ControlCenterService.cs) | 现有目标设置/关闭释放；新增编辑保护和暂态不能绕过同一生命周期 |
+| [PosterSessionRegistry](../../../../src/DesktopUp.Application/Features/Posters/Lifecycle/PosterSessionRegistry.cs)、[App退出](../../../../src/DesktopUp.App/App.xaml.cs) | 逐海报会话及共享退出/恢复已有；L新增资源只做对应增量验证，历史分项测试不冒充新功能已通过 |
 
 BUG-007已获R3用户复验通过，下面代码修订记录保留；旧失败/待验描述按当时版本理解。当前工作/延期状态只查计划及HANDOFF，不在代码锚点另建验收台账。
 
@@ -1269,7 +1298,7 @@ BUG-007已获R3用户复验通过，下面代码修订记录保留；旧失败/�
 
 ## M08-01 纯模型（合同已冻结）
 
-- [Application/AutoPostureModel](../../../../src/DesktopUp.Application/AutoPostureModel.cs)：策略/观察/不可变状态、全目录版本门、真实边界证据、保护/候选仲裁、请求与取消精确回执；无HWND、真实计时器或持久化。
+- [Application/AutoPostureModel](../../../../src/DesktopUp.Application/Features/Posters/AutoPosture/AutoPostureModel.cs)：策略/观察/不可变状态、全目录版本门、真实边界证据、保护/候选仲裁、请求与取消精确回执；无HWND、真实计时器或持久化。
 - `tests/DesktopUp.Contracts.Tests/AutoPostureModelTests.cs`、`AutoPostureLifetimeTests.cs`、`AutoPostureSequenceTests.cs`：虚拟时钟/保护/失败/恢复/长序列，复用现有SpatialContinuityTests.Model验证连续归位。
 - [实际合同与证据](M08_AUTO_POSTURE_MODEL.md)：TBD-017已由用户确认，手动收起后须真正离开再进入，原测试保留并去掉Proposed标记。
 
@@ -1312,7 +1341,7 @@ M07已收口；前两项[按需优化](../../30_Plans/ON_DEMAND_OPTIMIZATIONS.md
 ## M06 当前代码锚点
 
 - [MultiPosterFixtureData](../../../../tests/Shared/MultiPosterFixtureData.cs)：A游戏/B文件/C应用的三套模板/参数/状态；Contracts.Tests与SessionFixture通过Compile Link复用，不影响生产默认。`tests/DesktopUp.SessionFixture/Program.cs`新增`--multi-instance`，要求新隔离目录/3张。
-- [PosterSessionRegistryTests.M06](../../../../tests/DesktopUp.Contracts.Tests/PosterSessionRegistryTests.M06.cs)：新增10项，复用M03私有Fixture/Factory；原测试类改为partial并加可控FailApply，不另造业务注册表。完整405/405。
+- [PosterSessionRegistryTests.M06](../../../../tests/DesktopUp.Contracts.Tests/Posters/PosterSessionRegistryTests.M06.cs)：新增10项，复用M03私有Fixture/Factory；原测试类改为partial并加可控FailApply，不另造业务注册表。完整405/405。
 - [App.MultiInstanceSmoke](../../../../tools/review/App/App.MultiInstanceSmoke.cs)：显式隔离CLI驱动真实命令/query/会话/XAML，9个exercise快照＋restart，字段白名单、取消/CAS与读回按原路径执行；不合成鼠标、不重启Explorer。
 - `PosterSpatialRuntime.PresentationSmoke.cs`复用M05的XAML校验并给出只读物理快照；`ControlCenterService.Smoke.cs`/`ControlCenterWindow.xaml.cs`读实际列表与revision，`TrayService.cs`读托盘revision和能力。`App.xaml.cs`加独立数据根与互斥smoke开关保护。
 - [smoke-multi-instance.ps1](../../../../scripts/smoke-multi-instance.ps1)：Exercise/Restart、同一PID证据、单实例短进程、中心顺序关闭重开、最终目录完整对照和台账clean0。2026-09-09 PID44928/48160/47076实际通过；M05参数两轮/空间尾门同步通过。
@@ -1321,11 +1350,11 @@ M07已收口；前两项[按需优化](../../30_Plans/ON_DEMAND_OPTIMIZATIONS.md
 
 ## M05 基础代码锚点
 
-- [Domain/PosterPresentationParameters](../../../../src/DesktopUp.Domain/PosterPresentationParameters.cs)：版本化声明参数、模板默认/范围/组合/颜色校验、legacy保留/未知只读fallback、列数/行高/ContentMetrics。没有执行主题代码或读取文件。
-- [Application/PosterPresentationDraft](../../../../src/DesktopUp.Application/PosterPresentationDraft.cs)、`StateCommandPolicy.cs`、`StateProjectionContracts.cs`：绑定目标与实体版本的不可变草稿、SetPresentation白名单、投影解析，复用原SQLite命令事务，无新schema。
+- [Domain/PosterPresentationParameters](../../../../src/DesktopUp.Domain/Posters/Presentation/PosterPresentationParameters.cs)：版本化声明参数、模板默认/范围/组合/颜色校验、legacy保留/未知只读fallback、列数/行高/ContentMetrics。没有执行主题代码或读取文件。
+- [Application/PosterPresentationDraft](../../../../src/DesktopUp.Application/Features/Posters/Presentation/PosterPresentationDraft.cs)、`StateCommandPolicy.cs`、`StateProjectionContracts.cs`：绑定目标与实体版本的不可变草稿、SetPresentation白名单、投影解析，复用原SQLite命令事务，无新schema。
 - `Application/SpatialPostureCommit.cs`、`EffectivePosterLayouts.cs`与`App/PosterSpatialRuntime.Effective.cs/.Posture.cs`：目标内容度量参与展开/恢复重算；外框兼容时缓存不因颜色或参数变化主动重排，重新绑定度量身份。
 - [App/PosterVisualWindow.Presentation](../../../../src/DesktopUp.App/Views/Poster/PosterVisualWindow.Presentation.cs)、`PosterVisualWindow.cs`：独立文本/颜色/图标与格子参数，basic-box/night-ops内置结构；只重建本实例XAML，不换HWND。命中/滚动复用同源度量；中心`PresentationDetailText`仅只读摘要。
-- [PosterPresentationParameterTests](../../../../tests/DesktopUp.Contracts.Tests/PosterPresentationParameterTests.cs)：39个新增自动用例；完整395/395。`ArchitectureTests`仅替换背景写死RGB的旧断言，保留prepared bounds/erase/no-copy检查。
+- [PosterPresentationParameterTests](../../../../tests/DesktopUp.Contracts.Tests/Posters/PosterPresentationParameterTests.cs)：39个新增自动用例；完整395/395。`ArchitectureTests`仅替换背景写死RGB的旧断言，保留prepared bounds/erase/no-copy检查。
 - [PresentationSmoke](../../../../tools/review/App/PosterSpatialRuntime.PresentationSmoke.cs)、[脚本](../../../../scripts/smoke-presentation.ps1)：明确CLI＋隔离profile/互斥smoke保护，检查三实例实际XAML、同HWND/同bounds/独立身份与非法草稿不写库；M05两次及空间尾门已于2026-09-09通过。
 
 参数精确语义见[M05合同](M05_PRESENTATION_PARAMETERS.md)，结果/指纹见[VERIFICATION](VERIFICATION.md)。下方均为M04历史锚点，不覆盖顶部当前项。

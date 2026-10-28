@@ -16,7 +16,8 @@ public sealed record PosterSurfaceAppearance(string Color, double OpacityPercent
 public sealed record PosterPresentationParameters(PosterContentParameters Content, PosterThemeParameters Theme,
     PosterContentPreferences? Preferences = null, LampTemplateParameters? Lamp = null,
     IReadOnlyDictionary<string, TemplateRecipeInstance>? RecipeInstances = null, PosterTitleColors? TitleColors = null,
-    bool? ShowTitle = null, TemplateHeadingVisibility? HeadingVisibility = null, PosterSurfaceAppearance? Surface = null)
+    bool? ShowTitle = null, TemplateHeadingVisibility? HeadingVisibility = null, PosterSurfaceAppearance? Surface = null,
+    CanvasDesignState? Canvas = null)
 {
     // Absent in older configurations: preserve the original visible title without a write.
     public bool IsTitleVisible => ShowTitle ?? true;
@@ -30,12 +31,13 @@ public sealed record ResolvedPosterPresentation(string EffectiveTemplateKey, Pos
     public LampTemplateParameters TemplateParameters => TemplateRecipeInstancePolicy.Current(Parameters, SelectedRecipeId ?? EffectiveTemplateKey);
     public bool IsFallback => !CanEdit;
     public PosterContentParameters EffectiveContent => PosterContentPreferencePolicy.Resolve(Parameters.Content, Parameters.Preferences);
-    public SceneCapabilityDefinition? SceneCapability => SceneCapabilityRegistry.Find(
+    public string EffectiveContentForeground => Parameters.Canvas?.Current?.Recipe.ContentForeground ?? Parameters.Theme.Foreground;
+    public SceneCapabilityDefinition? SceneCapability => Parameters.Canvas?.Current is not null ? null : SceneCapabilityRegistry.Find(
         TemplateRecipeInstancePolicy.RecipeFor(Parameters, SelectedRecipeId ?? EffectiveTemplateKey)?.Schema.RendererCapability ?? "");
     public PosterTitleChromeKind TitleChrome => SceneCapability?.TitleChrome ?? PosterTitleChromeKind.Basic;
     public double HeaderHeightDip => TitleChrome == PosterTitleChromeKind.Cloud
         ? PosterTitleChromePolicy.ExpandedCloudHeightDip : PosterTitleBarLayoutPolicy.HeaderHeightDip;
-    public bool CanShowContentHeading => TitleChrome != PosterTitleChromeKind.Cloud && SceneCapability?.ReplacesMetaText != true &&
+    public bool CanShowContentHeading => Parameters.Canvas?.Current is null && TitleChrome != PosterTitleChromeKind.Cloud && SceneCapability?.ReplacesMetaText != true &&
         TemplateRecipeInstancePolicy.RecipeFor(Parameters, SelectedRecipeId ?? EffectiveTemplateKey)?.Base.Heading == true;
     public bool IsContentHeadingVisible
     {
@@ -52,7 +54,7 @@ public sealed record ResolvedPosterPresentation(string EffectiveTemplateKey, Pos
 public static class PosterPresentationPolicy
 {
     public const string AdaptiveGridLayout = "adaptive-grid";
-    public const int SchemaVersion = 8;
+    public const int SchemaVersion = 9;
     public const int MaximumJsonLength = 2 * 1024 * 1024;
     public const double HorizontalPaddingDip = 28;
     public static bool IsBuiltIn(string? key) => key is "night-ops" or "basic-box" or LampTemplatePolicy.TemplateKey || SceneCapabilityRegistry.Templates.Any(r => r.Id == key);
@@ -66,6 +68,11 @@ public static class PosterPresentationPolicy
         if (PosterContentPreferencePolicy.Validate(value.Preferences) is { } preferenceError) return preferenceError;
         if (LampTemplatePolicy.Validate(value.Lamp) is { } lampError) return lampError;
         if (TemplateRecipeInstancePolicy.Validate(value.RecipeInstances) is { } recipeError) return recipeError;
+        if (value.Canvas is { } canvas)
+        {
+            try { CanvasDeclaration.ValidateState(canvas); }
+            catch (ArgumentException error) { return error.Message; }
+        }
         if (!In(c.ItemWidthDip, 72, 320) || !In(c.ItemHeightDip, 48, 240) ||
             !In(c.IconSizeDip, 16, 128) || !In(c.GapDip, 0, 40) ||
             !In(c.LabelFontSizeDip, 9, 24) || !In(c.TitleFontSizeDip, 18, 48))
@@ -190,7 +197,7 @@ public static class PosterPresentationPolicy
                         TitleColors = value.TitleColors ?? retained.TitleColors,
                         ShowTitle = value.ShowTitle ?? retained.ShowTitle,
                         HeadingVisibility = value.HeadingVisibility ?? retained.HeadingVisibility,
-                        Surface = value.Surface ?? retained.Surface };
+                        Surface = value.Surface ?? retained.Surface, Canvas = value.Canvas ?? retained.Canvas };
                 }
             }
             catch (Exception e) when (e is JsonException or InvalidOperationException or OverflowException or KeyNotFoundException)
@@ -202,7 +209,7 @@ public static class PosterPresentationPolicy
         {
             // Explicit visibility edits use v6; untouched older payloads keep their format.
             // Older readers must refuse v6 instead of silently discarding hidden-title intent.
-            writer.WriteStartObject(); writer.WriteNumber("schemaVersion", value.Surface is not null ? SchemaVersion : value.HeadingVisibility is not null ? 7 : value.ShowTitle is not null ? 6 : value.TitleColors is not null ? 5 :
+            writer.WriteStartObject(); writer.WriteNumber("schemaVersion", value.Canvas is not null ? SchemaVersion : value.Surface is not null ? 8 : value.HeadingVisibility is not null ? 7 : value.ShowTitle is not null ? 6 : value.TitleColors is not null ? 5 :
                 value.RecipeInstances is not null || value.Lamp is not null ? 4 : value.Preferences is null ? 1 : 2);
             writer.WritePropertyName("content"); writer.WriteStartObject();
             writer.WriteNumber("itemWidthDip", value.Content.ItemWidthDip);
@@ -217,6 +224,12 @@ public static class PosterPresentationPolicy
             writer.WriteString("foreground", value.Theme.Foreground.ToUpperInvariant());
             writer.WriteString("accent", value.Theme.Accent.ToUpperInvariant());
             writer.WriteEndObject();
+            if (value.Canvas is { } canvas)
+            {
+                writer.WritePropertyName("canvas");
+                using var design = JsonDocument.Parse(CanvasDeclaration.Serialize(canvas));
+                design.RootElement.WriteTo(writer);
+            }
             if (value.ShowTitle is { } showTitle) writer.WriteBoolean("showTitle", showTitle);
             if (value.Surface is { } surface)
             {
@@ -343,7 +356,8 @@ public static class PosterPresentationPolicy
         else if (v == 5) Members(root, "schemaVersion", "content", "theme", "legacy", "preferences", "templates", "recipes", "titleColors");
         else if (v == 6) Members(root, "schemaVersion", "content", "theme", "legacy", "preferences", "templates", "recipes", "titleColors", "showTitle");
         else if (v == 7) Members(root, "schemaVersion", "content", "theme", "legacy", "preferences", "templates", "recipes", "titleColors", "showTitle", "headingVisibility");
-        else Members(root, "schemaVersion", "content", "theme", "legacy", "preferences", "templates", "recipes", "titleColors", "showTitle", "headingVisibility", "surface");
+        else if (v == 8) Members(root, "schemaVersion", "content", "theme", "legacy", "preferences", "templates", "recipes", "titleColors", "showTitle", "headingVisibility", "surface");
+        else Members(root, "schemaVersion", "content", "theme", "legacy", "preferences", "templates", "recipes", "titleColors", "showTitle", "headingVisibility", "surface", "canvas");
         if (root.TryGetProperty("legacy", out var retained) && retained.ValueKind != JsonValueKind.Object)
             throw new ArgumentException("Legacy payload must be an object.");
         if (v == 4 && !root.TryGetProperty("templates", out _) && !root.TryGetProperty("recipes", out _))
@@ -426,14 +440,22 @@ public static class PosterPresentationPolicy
                 Boolean(node, p.Name, true))));
         }
         PosterSurfaceAppearance? surface = null;
-        if (v >= 8)
+        if (v == 8 || v >= 9 && root.TryGetProperty("surface", out _))
         {
             if (!root.TryGetProperty("surface", out var node) || !node.TryGetProperty("color", out _) || !node.TryGetProperty("opacityPercent", out _))
                 throw new ArgumentException("Missing v8 surface appearance.");
             Members(node, "color", "opacityPercent");
             surface = new(Text(node, "color", ""), Number(node, "opacityPercent", 100));
         }
-        return new(c, t, preferences, lamp, recipes, titleColors, showTitle, heading, surface);
+        CanvasDesignState? canvas = null;
+        if (v >= 9)
+        {
+            canvas = CanvasDeclaration.Read<CanvasDesignState>(root.GetProperty("canvas").GetRawText());
+            CanvasDeclaration.ValidateState(canvas);
+            canvas = canvas with { Current = canvas.Current is { } current ? CanvasDeclaration.Freeze(current) : null,
+                Previous = canvas.Previous is { } prior ? CanvasDeclaration.Freeze(prior) : null };
+        }
+        return new(c, t, preferences, lamp, recipes, titleColors, showTitle, heading, surface, canvas);
     }
 
     private static LampTemplateParameters ReadLamp(JsonElement node)

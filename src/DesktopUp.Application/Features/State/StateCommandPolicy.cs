@@ -31,6 +31,14 @@ internal static class StateCommandPolicy
             if (command.ReadSet is null || command.SpatialGesture is not null || command.SpatialPosture is not null)
                 return Invalid("Presentation edit requires entity CAS and cannot contain a spatial gesture.");
             if (PosterPresentationPolicy.ValidateEdit(current, command.DesiredState) is { } error) return Invalid(error);
+            var oldCanvas = PosterPresentationPolicy.Resolve(current).Parameters.Canvas;
+            var newCanvas = PosterPresentationPolicy.Resolve(command.DesiredState).Parameters.Canvas;
+            if (CanvasDeclaration.Serialize(oldCanvas) != CanvasDeclaration.Serialize(newCanvas))
+            {
+                var legacySelection = oldCanvas is { Current: not null } ? new CanvasDesignState(checked(oldCanvas.Revision + 1), null, oldCanvas.Current, true, command.RequestId) : null;
+                if (legacySelection is null || CanvasDeclaration.Serialize(legacySelection) != CanvasDeclaration.Serialize(newCanvas))
+                    return Invalid("Canvas changes require the dedicated design command.");
+            }
             var recipeInstances = PosterPresentationPolicy.Resolve(command.DesiredState).Parameters.RecipeInstances;
             if (recipeInstances is not null)
             {

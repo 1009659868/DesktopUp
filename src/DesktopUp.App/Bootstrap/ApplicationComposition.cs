@@ -18,6 +18,10 @@ internal sealed class ApplicationComposition : IDisposable
     internal ISettingsRepository Settings => _settings ??= new SqliteSettingsRepository(Store, Log);
     internal IStateCommandRepository Repository => _repository ??= new SqliteStateCommandRepository(Store);
     internal StateProjectionCoordinator Projection => _projection ??= new StateProjectionCoordinator(Repository, Log);
+    internal ICanvasWorkspace CanvasWorkspace => _canvasWorkspace ??= new CanvasWorkspace(Paths);
+    internal CanvasImages CanvasImages => _canvasImages ??= new CanvasImages(CanvasWorkspace);
+    private ICanvasWorkspace? _canvasWorkspace;
+    private CanvasImages? _canvasImages;
     internal IDesktopShellLocator Shell => _shell ??= new ExplorerDesktopLocator();
     internal IDisplayTopologyService Displays => _displays ??= new DisplayTopologyService();
     internal IDesktopLayerAttachment Attachment => _attachment ??= new DesktopLayerAttachment();

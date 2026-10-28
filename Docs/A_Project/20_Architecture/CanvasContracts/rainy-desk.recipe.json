@@ -1,0 +1,282 @@
+{
+  "format": "desktopup.canvas-recipe.design",
+  "protocolVersion": "0.1-draft",
+  "id": "rainy-desk",
+  "version": 1,
+  "name": "雨夜书桌",
+  "requires": [
+    "surface.regions@1",
+    "layout.canvas@1",
+    "draw.panel@1",
+    "draw.ellipse@1",
+    "draw.text@1",
+    "content.slot@1",
+    "host.action@1",
+    "effect.rain@1"
+  ],
+  "regions": [
+    {
+      "id": "lamp",
+      "shape": "ellipse",
+      "bounds": [
+        0.7,
+        0,
+        0.28,
+        0.14
+      ]
+    },
+    {
+      "id": "desk",
+      "shape": "roundedRect",
+      "bounds": [
+        0,
+        0.18,
+        1,
+        0.82
+      ],
+      "radiusDip": 20
+    }
+  ],
+  "nodes": [
+    {
+      "id": "root",
+      "parent": null,
+      "type": "layout.canvas@1",
+      "props": {}
+    },
+    {
+      "id": "desk",
+      "parent": "root",
+      "type": "draw.panel@1",
+      "region": "desk",
+      "props": {
+        "box": [
+          0,
+          0,
+          1,
+          1
+        ],
+        "fill": {
+          "param": "background"
+        },
+        "opacity": {
+          "param": "backgroundOpacity"
+        }
+      }
+    },
+    {
+      "id": "rain",
+      "parent": "desk",
+      "type": "effect.rain@1",
+      "props": {
+        "box": [
+          0,
+          0,
+          1,
+          1
+        ],
+        "intensity": {
+          "param": "rainIntensity"
+        }
+      }
+    },
+    {
+      "id": "caption",
+      "parent": "desk",
+      "type": "draw.text@1",
+      "props": {
+        "box": [
+          0.06,
+          0.03,
+          0.7,
+          0.08
+        ],
+        "text": {
+          "param": "caption"
+        },
+        "color": {
+          "param": "textColor"
+        },
+        "fontSizeDip": 20,
+        "visible": {
+          "param": "showCaption"
+        }
+      }
+    },
+    {
+      "id": "items",
+      "parent": "desk",
+      "type": "content.slot@1",
+      "props": {
+        "box": [
+          0.06,
+          0.16,
+          0.88,
+          0.78
+        ],
+        "gapDip": {
+          "param": "gap"
+        }
+      }
+    },
+    {
+      "id": "menu",
+      "parent": "desk",
+      "type": "host.action@1",
+      "props": {
+        "box": [
+          0.86,
+          0.02,
+          0.1,
+          0.08
+        ],
+        "action": "host-menu"
+      }
+    },
+    {
+      "id": "lamp",
+      "parent": "root",
+      "type": "draw.ellipse@1",
+      "region": "lamp",
+      "props": {
+        "box": [
+          0,
+          0,
+          1,
+          1
+        ],
+        "fill": {
+          "param": "lampColor"
+        },
+        "opacity": {
+          "param": "lampIntensity"
+        }
+      }
+    }
+  ],
+  "parameters": [
+    {
+      "key": "background",
+      "label": "书桌底色",
+      "type": "color",
+      "default": "#20383D",
+      "group": "appearance"
+    },
+    {
+      "key": "backgroundOpacity",
+      "label": "背景不透明度",
+      "type": "number",
+      "default": 0.94,
+      "group": "appearance",
+      "min": 0,
+      "max": 1
+    },
+    {
+      "key": "gap",
+      "label": "内容间距",
+      "type": "number",
+      "default": 16,
+      "group": "content",
+      "min": 0,
+      "max": 48
+    },
+    {
+      "key": "caption",
+      "label": "标题文字",
+      "type": "string",
+      "default": "雨夜书桌",
+      "group": "text",
+      "maxLength": 120
+    },
+    {
+      "key": "textColor",
+      "label": "文字颜色",
+      "type": "color",
+      "default": "#E2ECE7",
+      "group": "text"
+    },
+    {
+      "key": "showCaption",
+      "label": "显示文字",
+      "type": "boolean",
+      "default": true,
+      "group": "text"
+    },
+    {
+      "key": "rainIntensity",
+      "label": "雨效强度",
+      "type": "number",
+      "default": 0.35,
+      "group": "weather",
+      "min": 0,
+      "max": 1
+    },
+    {
+      "key": "lampColor",
+      "label": "灯光颜色",
+      "type": "color",
+      "default": "#F7C674",
+      "group": "lamp"
+    },
+    {
+      "key": "lampIntensity",
+      "label": "灯光强度",
+      "type": "number",
+      "default": 0.7,
+      "group": "lamp",
+      "min": 0,
+      "max": 1
+    }
+  ],
+  "resources": [],
+  "contentSlots": [
+    {
+      "id": "members",
+      "node": "items"
+    }
+  ],
+  "operationAnchors": [
+    {
+      "action": "move",
+      "node": "desk"
+    },
+    {
+      "action": "host-menu",
+      "node": "menu"
+    }
+  ],
+  "editor": {
+    "groups": [
+      {
+        "id": "appearance",
+        "label": "外观",
+        "collapsed": false,
+        "whenNode": "desk"
+      },
+      {
+        "id": "content",
+        "label": "内容布局",
+        "collapsed": false,
+        "whenNode": "items"
+      },
+      {
+        "id": "text",
+        "label": "文字",
+        "collapsed": true,
+        "whenNode": "caption"
+      },
+      {
+        "id": "weather",
+        "label": "雨效",
+        "collapsed": true,
+        "whenNode": "rain"
+      },
+      {
+        "id": "lamp",
+        "label": "灯光",
+        "collapsed": true,
+        "whenNode": "lamp"
+      }
+    ]
+  }
+}

@@ -1,0 +1,158 @@
+{
+  "format": "desktopup.canvas-capabilities.design",
+  "protocolVersion": "0.1-draft",
+  "revision": "j0-catalog-1",
+  "status": "proposed",
+  "budgets": {
+    "recipeBytes": 262144,
+    "nodes": 128,
+    "depth": 16,
+    "regions": 8,
+    "parameters": 64,
+    "resources": 16
+  },
+  "surfaceShapes": [
+    "roundedRect",
+    "ellipse"
+  ],
+  "commonProperties": {
+    "box": {
+      "type": "rect"
+    },
+    "opacity": {
+      "type": "number",
+      "min": 0,
+      "max": 1
+    },
+    "visible": {
+      "type": "boolean"
+    }
+  },
+  "capabilities": [
+    {
+      "id": "surface.regions@1",
+      "kind": "surface"
+    },
+    {
+      "id": "layout.canvas@1",
+      "kind": "node",
+      "children": true,
+      "properties": {},
+      "invalidates": "structure"
+    },
+    {
+      "id": "draw.panel@1",
+      "kind": "node",
+      "children": true,
+      "properties": {
+        "fill": {
+          "type": "color"
+        }
+      },
+      "invalidates": "paint"
+    },
+    {
+      "id": "draw.ellipse@1",
+      "kind": "node",
+      "children": false,
+      "properties": {
+        "fill": {
+          "type": "color"
+        }
+      },
+      "invalidates": "paint"
+    },
+    {
+      "id": "draw.text@1",
+      "kind": "node",
+      "children": false,
+      "properties": {
+        "text": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "color": {
+          "type": "color"
+        },
+        "fontSizeDip": {
+          "type": "number",
+          "min": 12,
+          "max": 48
+        }
+      },
+      "invalidates": "measure"
+    },
+    {
+      "id": "content.slot@1",
+      "kind": "node",
+      "children": false,
+      "properties": {
+        "gapDip": {
+          "type": "number",
+          "min": 0,
+          "max": 48
+        }
+      },
+      "invalidates": "content-layout"
+    },
+    {
+      "id": "host.action@1",
+      "kind": "node",
+      "children": false,
+      "properties": {
+        "action": {
+          "type": "enum",
+          "values": [
+            "host-menu"
+          ]
+        }
+      },
+      "invalidates": "input"
+    },
+    {
+      "id": "effect.rain@1",
+      "kind": "node",
+      "children": false,
+      "properties": {
+        "intensity": {
+          "type": "number",
+          "min": 0,
+          "max": 1
+        }
+      },
+      "invalidates": "decoration"
+    }
+  ],
+  "commands": {
+    "ai": [
+      "readCapabilities",
+      "readDesign",
+      "createDraft",
+      "reviseDraft",
+      "preparePreview",
+      "discardDraft"
+    ],
+    "user": [
+      "applyDraft",
+      "undoDesign"
+    ],
+    "forbidden": [
+      "shell",
+      "file.move",
+      "file.delete",
+      "executeCode",
+      "setEndpoint"
+    ]
+  },
+  "hostInvariants": [
+    "single-content-ownership",
+    "same-generation-input",
+    "fresh-check-before-commit",
+    "manual-overrides-first",
+    "protected-operations-reachable"
+  ],
+  "notes": [
+    "目录用于设计核对，不注册生产能力。",
+    "单项失效由属性描述进一步细化，invalidates为能力默认值；box变化总触发布局。"
+  ]
+}

@@ -6,6 +6,7 @@ public sealed record SceneRenderParameters(string Capability, SceneSurfacePaint 
     IReadOnlyDictionary<string, TemplateParameterValue> Bindings)
 {
     public bool ReplacesMetaText { get; init; }
+    public CanvasDesign? Canvas { get; init; }
 }
 
 /// <summary>Read-only generic projection. Unknown modules never execute or overwrite saved values.</summary>
@@ -14,6 +15,8 @@ public static class ScenePresentationAdapter
     public static SceneRenderParameters Resolve(ResolvedPosterPresentation presentation)
     {
         ArgumentNullException.ThrowIfNull(presentation);
+        if (presentation.Parameters.Canvas?.Current is { } canvas)
+            return new("canvas.paint@1", new("#20282D", 0, null), new Dictionary<string, TemplateParameterValue>()) { Canvas = canvas };
         string id = presentation.SelectedRecipeId ?? presentation.EffectiveTemplateKey;
         var recipe = TemplateRecipeInstancePolicy.RecipeFor(presentation.Parameters, id);
         var values = presentation.TemplateValues;

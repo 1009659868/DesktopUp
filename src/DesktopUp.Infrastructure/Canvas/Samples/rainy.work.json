@@ -1,0 +1,307 @@
+{
+  "id": "builtin-rainy",
+  "name": "雨夜书桌",
+  "libraryGroups": ["note"],
+  "design": {
+    "recipe": {
+      "id": "rainy-desk",
+      "version": 1,
+      "name": "雨夜书桌",
+      "format": "desktopup.canvas-recipe",
+      "protocolVersion": 2,
+      "parameters": [],
+      "nodes": [
+        {
+          "id": "root",
+          "type": "layout.canvas@1",
+          "box": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "properties": {}
+        },
+        {
+          "id": "rain-window",
+          "parent": "root",
+          "type": "draw.image@1",
+          "name": "雨窗与桌面",
+          "box": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "properties": {
+            "asset": {
+              "text": "31773a1811ca9c5ba7b0697f31b89c526ed79b1ddde4a23dba12ecd0777b1e34"
+            },
+            "opacity": {
+              "number": 1
+            }
+          },
+          "locked": true
+        },
+        {
+          "id": "shade",
+          "parent": "root",
+          "type": "draw.panel@1",
+          "name": "暗部衬底",
+          "box": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "properties": {
+            "fill": {
+              "text": "#0D282B"
+            },
+            "opacity": {
+              "number": 0.28
+            },
+            "radius": {
+              "number": 12
+            }
+          },
+          "locked": true
+        },
+        {
+          "id": "kicker",
+          "parent": "root",
+          "type": "draw.text@1",
+          "name": "上方小字",
+          "box": {
+            "x": 0.04883720930232558,
+            "y": 0.07258064516129033,
+            "width": 0.5232558139534884,
+            "height": 0.04032258064516129
+          },
+          "properties": {
+            "text": {
+              "text": "AFTER HOURS / PERSONAL SPACE"
+            },
+            "fontSize": {
+              "number": 11
+            },
+            "color": {
+              "text": "#E5D9B5"
+            }
+          },
+          "typography": {
+            "family": "sans",
+            "letterSpacing": 2
+          }
+        },
+        {
+          "id": "heading",
+          "parent": "root",
+          "type": "draw.text@1",
+          "name": "作品标题",
+          "box": {
+            "x": 0.04883720930232558,
+            "y": 0.13870967741935483,
+            "width": 0.5813953488372093,
+            "height": 0.10967741935483871
+          },
+          "properties": {
+            "text": {
+              "text": "雨夜书桌"
+            },
+            "fontSize": {
+              "number": 48
+            },
+            "color": {
+              "text": "#F1EEE2"
+            }
+          },
+          "typography": {
+            "family": "serif",
+            "letterSpacing": 0
+          }
+        },
+        {
+          "id": "subtitle",
+          "parent": "root",
+          "type": "draw.text@1",
+          "name": "一句话",
+          "box": {
+            "x": 0.05232558139534884,
+            "y": 0.25967741935483873,
+            "width": 0.5232558139534884,
+            "height": 0.06451612903225806
+          },
+          "properties": {
+            "text": {
+              "text": "把未完成的灵感，留在光里。"
+            },
+            "fontSize": {
+              "number": 15
+            },
+            "color": {
+              "text": "#D7E0D9"
+            }
+          }
+        },
+        {
+          "id": "note",
+          "parent": "root",
+          "type": "layout.group@1",
+          "name": "桌边便签",
+          "box": {
+            "x": 0.6651162790697674,
+            "y": 0.10483870967741936,
+            "width": 0.26046511627906976,
+            "height": 0.3064516129032258
+          },
+          "properties": {},
+          "rotation": -6
+        },
+        {
+          "id": "note-paper",
+          "parent": "note",
+          "type": "draw.panel@1",
+          "name": "便签纸",
+          "box": {
+            "x": 0,
+            "y": 0.08,
+            "width": 1,
+            "height": 0.92
+          },
+          "properties": {
+            "fill": {
+              "text": "#F1E3B9"
+            },
+            "opacity": {
+              "number": 1
+            },
+            "radius": {
+              "number": 3
+            }
+          }
+        },
+        {
+          "id": "note-tape",
+          "parent": "note",
+          "type": "draw.panel@1",
+          "name": "半透明胶带",
+          "rotation": 4,
+          "box": {
+            "x": 0.33,
+            "y": 0.02,
+            "width": 0.32,
+            "height": 0.13
+          },
+          "properties": {
+            "fill": {
+              "text": "#C8B992"
+            },
+            "opacity": {
+              "number": 0.75
+            },
+            "radius": {
+              "number": 1
+            }
+          }
+        },
+        {
+          "id": "note-small",
+          "parent": "note",
+          "type": "draw.text@1",
+          "name": "便签标记",
+          "box": {
+            "x": 0.09,
+            "y": 0.22,
+            "width": 0.82,
+            "height": 0.14
+          },
+          "properties": {
+            "text": {
+              "text": "A LITTLE NOTE"
+            },
+            "fontSize": {
+              "number": 10
+            },
+            "color": {
+              "text": "#80714C"
+            }
+          },
+          "typography": {
+            "family": "sans",
+            "letterSpacing": 1.6
+          }
+        },
+        {
+          "id": "note-text",
+          "parent": "note",
+          "type": "draw.text@1",
+          "name": "便签文字",
+          "box": {
+            "x": 0.09,
+            "y": 0.4,
+            "width": 0.82,
+            "height": 0.5
+          },
+          "properties": {
+            "text": {
+              "text": "留一点空白，\n给今晚的灵感。"
+            },
+            "fontSize": {
+              "number": 20
+            },
+            "color": {
+              "text": "#4A4436"
+            }
+          },
+          "typography": {
+            "family": "serif",
+            "letterSpacing": 0
+          }
+        },
+        {
+          "id": "tray",
+          "parent": "root",
+          "type": "draw.panel@1",
+          "name": "收纳区底衬",
+          "box": {
+            "x": 0.044186046511627906,
+            "y": 0.4806451612903226,
+            "width": 0.9116279069767442,
+            "height": 0.44193548387096776
+          },
+          "properties": {
+            "fill": {
+              "text": "#18312E"
+            },
+            "opacity": {
+              "number": 0.9
+            },
+            "radius": {
+              "number": 18
+            }
+          }
+        },
+        {
+          "id": "files",
+          "parent": "root",
+          "type": "content.slot@1",
+          "name": "今晚的文件",
+          "box": {
+            "x": 0.06511627906976744,
+            "y": 0.5096774193548387,
+            "width": 0.8697674418604651,
+            "height": 0.38387096774193546
+          },
+          "properties": {}
+        }
+      ],
+      "artboard": {
+        "width": 860,
+        "height": 620
+      },
+      "contentForeground": "#E8E6D8"
+    },
+    "overrides": {}
+  }
+}

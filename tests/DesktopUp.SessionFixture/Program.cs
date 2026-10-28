@@ -50,9 +50,9 @@ if (args.Length == 2 && args[1] == "--architecture-references")
     ReferenceRepairReviewFixture.Create(args[0]);
     return;
 }
-if (args.Length == 2 && args[1] == "--architecture-icons")
+if (args.Length == 2 && args[1] is "--architecture-icons" or "--canvas-kernel")
 {
-    UninstallContentFixture.Create(args[0], title: "图标 · 自建样例");
+    UninstallContentFixture.Create(args[0], title: args[1] == "--canvas-kernel" ? "画板 · 自建样例" : "图标 · 自建样例", canvas: args[1] == "--canvas-kernel");
     return;
 }
 if (args.Length == 2 && args[1] == "--architecture-storage")

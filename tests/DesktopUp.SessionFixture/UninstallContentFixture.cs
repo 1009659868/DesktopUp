@@ -4,7 +4,7 @@ using DesktopUp.Infrastructure;
 
 internal static class UninstallContentFixture
 {
-    internal static void Create(string requested, string title = "卸载归还 · 自建样例")
+    internal static void Create(string requested, string title = "卸载归还 · 自建样例", bool canvas = false)
     {
         string profile=Path.GetFullPath(requested),root=Path.GetDirectoryName(profile)!;
         string repo=AppContext.BaseDirectory;
@@ -12,7 +12,9 @@ internal static class UninstallContentFixture
         if(!profile.StartsWith(Path.Combine(repo,"out","drop-d3")+Path.DirectorySeparatorChar,StringComparison.OrdinalIgnoreCase)||Path.GetFileName(profile)!="profile" ||
             Directory.Exists(profile)||!File.Exists(Path.Combine(root,".uninstall-fixture")))throw new IOException("New owned fixture required.");
         using var store=new SqliteStateStore(new UserDataPaths(profile));var initialized=store.Initialize();if(!initialized.Succeeded)throw new IOException(initialized.Error);
-        var repository=new SqliteStateCommandRepository(store);repository.EnsureInitialized(PosterConfigurationFactory.NewBasicBox(title,"DISPLAY1") with{PosterId=BuiltInStateIdentities.PrimaryPosterId});
+        var seed = PosterConfigurationFactory.NewBasicBox(title,"DISPLAY1") with { PosterId=BuiltInStateIdentities.PrimaryPosterId };
+        if (canvas) seed = seed with { WidthDip = 540, ExpandedHeightDip = 720 };
+        var repository=new SqliteStateCommandRepository(store);repository.EnsureInitialized(seed);
         string storage=Path.Combine(root,"storage"),origin=Path.Combine(root,"original");Directory.CreateDirectory(storage);Directory.CreateDirectory(origin);
         var provisioner=new ManagedStorageProvisioner(store);var preview=provisioner.Preview(storage);var registration=provisioner.Confirm(preview,preview.Fingerprint);
         foreach(string name in new[]{"return-file.txt","return-folder"})

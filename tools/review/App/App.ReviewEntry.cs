@@ -9,6 +9,8 @@ public partial class App
     {
         if (_composition is null || _log is null || _dispatcher is null ||
             _controlCenter is null || _spatialRuntime is null || _ledger is null) return;
+        if (_startupIntent.Arguments.Contains("--canvas-kernel-probe", StringComparer.Ordinal))
+        { RunCanvasKernelProbe(_composition.Paths.Root); return; }
         if(_startupIntent.Arguments.Contains("--real-activity-probe",StringComparer.Ordinal))
         { RunRealActivityRuntimeProbe(_composition.Paths.Root);return; }
         if(_startupIntent.Arguments.Contains("--content-raster-posture-probe",StringComparer.Ordinal))

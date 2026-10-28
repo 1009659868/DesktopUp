@@ -8,11 +8,23 @@ internal sealed partial class PosterVisualWindow
 {
     private PosterContentPresenter? _presenter;
     private PosterContentPresenter Presenter => _presenter ??= new(ApplyTemplateCardPaint);
+    internal CanvasContentSnapshot? ReadCanvasContent() => _presenter is null ? null : CanvasContentSnapshot.Read(_presenter);
     private ContentLayoutDocument? _contentDocument;
     private string? _contentRaw, _contentOwner, _selectedContentItem;
     private bool _contentReadOnly;
     private bool _contentParseReadOnly;
     private readonly ContentPresentationLayout _contentLayout = new();
+    private readonly CanvasLayoutCache _canvasLayout = new();
+    private CanvasLayoutResult? CanvasFor(DesktopPixelRect frame)
+    {
+        if (_presentation.Parameters.Canvas?.Current is not { } design) return null;
+        double height = frame.Height / (_monitor?.ScaleY ?? 1);
+        // A posture lease clips a fixed expanded composition; it does not resize the design.
+        if (_transitionLayout?.Surface is { } surface) height = surface.Height / (_monitor?.ScaleY ?? 1);
+        else if (_geometry.IsCollapsed || _contentSession.ActiveCommand is not null && _transitionLayout is null)
+            height = Math.Max(height, _geometry.ExpandedHeightDip);
+        return _canvasLayout.Resolve(design, frame.Width / (_monitor?.ScaleX ?? 1), height);
+    }
     private ContentPresentationFrame? _paintedContentFrame;
     private bool CanReuseTranslatedContent(PreparedSpatialFrame frame) =>
         _bounds.Width == frame.Bounds.Width && _bounds.Height == frame.Bounds.Height &&
@@ -40,13 +52,19 @@ internal sealed partial class PosterVisualWindow
             return _contentSession.Draft ?? _contentDocument;
         }
     }
-    private double ContentLeftDip => HorizontalPaddingDip + (_surface?.BorderThickness.Left ?? 0);
-    private double ContentTopDip => HeaderHeightDip + MetaHeightDip + ItemsTopInsetDip + (_surface?.BorderThickness.Top ?? 0);
+    private double ContentLeftDip => ContentLeftFor(_bounds);
+    private double ContentTopDip => ContentTopFor(_bounds);
+    private double ContentLeftFor(DesktopPixelRect frame) => (CanvasFor(frame)?.Content.X ?? HorizontalPaddingDip) + (_surface?.BorderThickness.Left ?? 0);
+    private double ContentTopFor(DesktopPixelRect frame) => (CanvasFor(frame)?.Content.Y ?? HeaderHeightDip + MetaHeightDip + ItemsTopInsetDip) + (_surface?.BorderThickness.Top ?? 0);
     private ContentLayoutViewport ContentViewportFor(DesktopPixelRect frame)
     {
         double sx = _monitor?.ScaleX ?? 1, sy = _monitor?.ScaleY ?? 1;
         double borderX = (_surface?.BorderThickness.Left ?? 0) + (_surface?.BorderThickness.Right ?? 0);
         double borderY = (_surface?.BorderThickness.Top ?? 0) + (_surface?.BorderThickness.Bottom ?? 0);
+        if (CanvasFor(frame) is { } canvas)
+            return new ContentLayoutViewport(Math.Max(0, canvas.Content.Width - borderX),
+                Math.Max(0, Math.Min(canvas.Content.Bottom, frame.Height / sy) - canvas.Content.Y - borderY),
+                _contentScrollX, _itemScrollOffsetDip, _contentLayout.Generation).WithPresentation(_presentation.Parameters);
         return new ContentLayoutViewport(Math.Max(0, frame.Width / sx - HorizontalPaddingDip * 2 - borderX),
             Math.Max(0, frame.Height / sy - HeaderHeightDip - MetaHeightDip - ItemsTopInsetDip - FooterHeightDip - borderY),
             _contentScrollX, _itemScrollOffsetDip, _contentLayout.Generation).WithPresentation(_presentation.Parameters);
@@ -59,9 +77,10 @@ internal sealed partial class PosterVisualWindow
         if (_contentParseReadOnly || _contentLayout.HasFault ||
             !ContentFrameMinimumPolicy.TryForPoster(_authoritativePoster, out var authored, out _,
                 heatLowerBound: _contentSession.HasContinuousHeat)) return false;
+        var canvas = CanvasFor(_bounds);
         var effective = ContentFrameMinimumPolicy.FromSnapshot(snapshot,
-            HorizontalPaddingDip * 2 + ContentFrameMinimumPolicy.EditingBorderDip,
-            HeaderHeightDip + MetaHeightDip + ItemsTopInsetDip + FooterHeightDip + ContentFrameMinimumPolicy.EditingBorderDip);
+            (canvas is null ? HorizontalPaddingDip * 2 : canvas.Width - canvas.Content.Width) + ContentFrameMinimumPolicy.EditingBorderDip,
+            (canvas is null ? HeaderHeightDip + MetaHeightDip + ItemsTopInsetDip + FooterHeightDip : canvas.Height - canvas.Content.Height) + ContentFrameMinimumPolicy.EditingBorderDip);
         // A currently accepted heat projection may have larger cards than its author basis.
         (width, height) = (_contentSession.HasContinuousHeat ? authored! :
             new ContentFrameMinimum(Math.Max(authored!.WidthDip, effective.WidthDip),
@@ -95,9 +114,11 @@ internal sealed partial class PosterVisualWindow
         return snapshot;
     }
 
-    private void DrawContentSnapshot(ContentLayoutSnapshot snapshot, ContentLayoutViewport viewport)
+    private void DrawContentSnapshot(ContentLayoutSnapshot snapshot, ContentLayoutViewport viewport, DesktopPixelRect? frame = null)
     {
         if (_itemsGrid is null) return;
+        if (CanvasFor(frame ?? _bounds) is { } canvas && !_geometry.IsCollapsed && _contentStructure is { } structure && _itemsScrollViewer is { } scroll)
+            CanvasContentPlacement.Apply(canvas, structure, _itemsGrid, scroll, _metaPanel, _footer);
         var doc = ContentDocument;
         var views = ReadContentViews();
         var incoming = IncomingPaintPreview(viewport);

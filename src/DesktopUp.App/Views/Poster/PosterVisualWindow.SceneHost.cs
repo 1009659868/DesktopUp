@@ -66,6 +66,8 @@ internal sealed partial class PosterVisualWindow
             { HeaderBottom = HeaderHeightDip, ContentTop = ContentTopDip, FooterTop = Math.Max(0, root.ActualHeight - FooterHeightDip),
                 TitleChrome = _presentation.TitleChrome, TitleMotionPaused = _inputIsland?.CanAnimateTitle != true ||
                     _transitionLayout is not null || _spatialGesture is not null };
+            if (_sceneInstance is CanvasSceneInstance && frame.Width > 0 && CanvasFor(_bounds) is { } canvas)
+                frame = frame with { Width = canvas.Width, Height = canvas.Height };
             _sceneInstance.Update(CurrentSceneParameters, frame);
             if (_sceneInstance is IPosterTitleMotion motion) TryPaintTitleMotion(motion.TitlePose);
         })) PaintSceneCards();

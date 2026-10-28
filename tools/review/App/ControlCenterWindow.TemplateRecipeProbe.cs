@@ -45,7 +45,7 @@ public sealed partial class ControlCenterWindow
     internal void OpenTemplateDialogForProbe(string kind)
     {
         if (_templateReferenceOpen) throw new InvalidOperationException("A recipe dialog is already open.");
-        if (kind == "import") InvokeRecipeButton(TemplateActionsHost.Children.OfType<Button>().First());
+        if (kind == "import") InvokeRecipeButton(TemplateActionsHost.Children.OfType<Button>().Single(b => b.Content?.ToString() == "装入模板 ↗"));
         else if (kind == "copy") InvokeRecipeButton(TemplateActionsHost.Children.OfType<Button>().Last());
         else if (kind == "book") InvokeRecipeButton(TemplateLibraryActionsHost.Children.OfType<Button>().Single());
         else if (kind == "theme") InvokeRecipeButton(UiCThemeButton);

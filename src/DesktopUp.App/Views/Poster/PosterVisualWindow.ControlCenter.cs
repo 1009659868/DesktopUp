@@ -56,10 +56,14 @@ internal sealed partial class PosterVisualWindow
             ContentLayoutCommandPolicy.ValidateAuthoring(ContentDocument, preferences.Scale, preferences.Spacing);
             var frame = bounds ?? _bounds;
             if (_authoritativePoster?.IsVisible == true && !_geometry.IsCollapsed && _monitor is not null && frame.IsUsable)
+            {
+                var currentArea = CanvasPosterGeometry.Content(_presentation, frame.Width / _monitor.ScaleX, frame.Height / _monitor.ScaleY);
+                var nextArea = CanvasPosterGeometry.Content(next, frame.Width / _monitor.ScaleX, frame.Height / _monitor.ScaleY);
                 RequireWritableContentProjection(EffectiveContentDocument, ContentViewportFor(frame).WithPresentation(next.Parameters) with
                     {
-                      HeightDip = Math.Max(0, ContentViewportFor(frame).HeightDip + _presentation.MetaHeightDip - next.MetaHeightDip
-                          + _presentation.HeaderHeightDip - next.HeaderHeightDip) });
+                      WidthDip = Math.Max(0, ContentViewportFor(frame).WidthDip + nextArea.Width - currentArea.Width),
+                      HeightDip = Math.Max(0, ContentViewportFor(frame).HeightDip + nextArea.Height - currentArea.Height) });
+            }
             return null;
         }
         catch (ArgumentException error) { return error.Message; }

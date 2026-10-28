@@ -23,18 +23,23 @@ try {
     $scope='DesktopUp.SingleInstallReview'
     $product='DesktopUp SingleInstall Review'
     $state='InstallerSingleReview'
-    $inputHashes=@(Get-ChildItem (Join-Path $repo 'src/DesktopUp.Setup') -Filter '*.cs' | ForEach-Object { [ordered]@{Name=$_.Name;SHA256=(Get-FileHash -LiteralPath $_.FullName).Hash} })
+    $setupRoot=Join-Path $repo 'src/DesktopUp.Setup'
+    $setupSources=@(Get-ChildItem -LiteralPath $setupRoot -Filter '*.cs' -File -Recurse |
+        Where-Object { $_.FullName -notmatch '[\\/](bin|obj)[\\/]' } | Sort-Object FullName)
+    $inputHashes=@($setupSources | ForEach-Object { [ordered]@{Name=[IO.Path]::GetRelativePath($setupRoot,$_.FullName).Replace('\','/');SHA256=(Get-FileHash -LiteralPath $_.FullName).Hash} })
     if(!$Legacy){
         $helper=Join-Path $output 'helper-source'
         New-Item -ItemType Directory -Path $helper|Out-Null
-        foreach($file in Get-ChildItem (Join-Path $repo 'src/DesktopUp.Setup') -Filter '*.cs'){
+        foreach($file in $setupSources){
             $text=[IO.File]::ReadAllText($file.FullName)
             if($file.Name -eq 'InstallationMetadata.cs'){
                 $text=$text.Replace('StableId = "DesktopUp"','StableId = "'+$scope+'"').Replace('LegacyPrefix = "DesktopUp.Preview."','LegacyPrefix = "'+$scope+'.Preview."')
                 $text=$text.Replace('DesktopUp Preview',$product).Replace('"Installer"','"'+$state+'"')
             }
             if($file.Name -eq 'InstallationIdentity.cs'){$text=$text.Replace('"DesktopUp"','"'+$scope+'"')}
-            Write-Generated (Join-Path $helper $file.Name) $text
+            $helperFile=Join-Path $helper ([IO.Path]::GetRelativePath($setupRoot,$file.FullName))
+            New-Item -ItemType Directory -Path (Split-Path -Parent $helperFile) -Force | Out-Null
+            Write-Generated $helperFile $text
         }
         Write-Generated (Join-Path $helper 'Fixture.csproj') '<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><AssemblyName>DesktopUp.Setup</AssemblyName><RuntimeIdentifier>win-x64</RuntimeIdentifier><SelfContained>true</SelfContained></PropertyGroup></Project>'
         & $fixtureTools.DotNet publish (Join-Path $helper 'Fixture.csproj') -c Release -p:Platform=x64 -p:DebugType=none -p:DebugSymbols=false -p:NuGetAudit=false "-p:RestoreConfigFile=$($fixtureTools.OfflineConfig)" "-p:PublishDir=$output/helper-publish/" *> (Join-Path $output 'helper-build.log')

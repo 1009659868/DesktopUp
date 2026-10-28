@@ -15,6 +15,8 @@ internal sealed partial class PosterVisualWindow
     private double ItemGapDip => ContentParameters.GapDip;
     private double ItemCardHeightDip => ContentParameters.ItemHeightDip;
     private double ItemRowHeightDip => ContentParameters.RowHeightDip;
+    internal bool CanvasPresentationReady => _presentation.Parameters.Canvas?.Current is null ||
+        _sceneInstance is CanvasSceneInstance && _sceneFailure.Failure is null;
     private void ApplyPresentation(ResolvedPosterPresentation next)
     {
         if (_centerPresentation is not null)
@@ -23,6 +25,7 @@ internal sealed partial class PosterVisualWindow
             else { _centerPresentation = null; _centerBounds = null; _centerGenerations = null; }
         }
         var previous = _presentation;
+        bool canvasToCanvas = previous.Parameters.Canvas?.Current is not null && next.Parameters.Canvas?.Current is not null;
         bool paintOnlyTemplate = TemplatePresentationRefreshPolicy.CanPaint(previous, next,
             _renderedTitle, _authoritativePoster?.Title, _renderedSubtitle, _authoritativePoster?.Subtitle);
         bool changed = _presentation != next || _renderedTitle != _authoritativePoster?.Title ||
@@ -31,6 +34,13 @@ internal sealed partial class PosterVisualWindow
         _renderedTitle = _authoritativePoster?.Title;
         _renderedSubtitle = _authoritativePoster?.Subtitle;
         if (!changed || _window is null) return;
+        if (canvasToCanvas && _sceneInstance is CanvasSceneInstance && _sceneFailure.Failure is null)
+        {
+            // Keep content controls and warm rasters while updating stable decorative nodes.
+            ApplyWindowBackdrop(_window); RefreshTitleChrome(); UpdateScene();
+            _window.Title = "DesktopUp V3 · " + _renderedTitle;
+            return;
+        }
         if (paintOnlyTemplate)
         {
             ApplyWindowBackdrop(_window); RefreshTemplatePaint();
@@ -67,9 +77,11 @@ internal sealed partial class PosterVisualWindow
         static bool XamlNumber(double actual,double expected)=>double.IsFinite(actual) && double.IsFinite(expected) &&
             (actual==expected || actual==(double)(float)expected);
         var expected=target.Presentation;
+        double expectedMeta = target.Poster.IsCollapsed ? 0 : CanvasFor(_bounds) is { } canvas
+            ? Math.Max(0, canvas.Content.Y - CanvasLayout.Header) : expected.MetaHeightDip;
         if(!PresentationReadbackEquality.Same(_presentation,expected) || _renderedTitle!=target.Poster.Title || _window?.Title!="DesktopUp V3 · "+target.Poster.Title ||
             !VerifyWindowBackdrop() || _surface?.Child is not Grid structure ||
-            !XamlNumber(structure.RowDefinitions[1].Height.Value,target.Poster.IsCollapsed?0:expected.MetaHeightDip) ||
+            !XamlNumber(structure.RowDefinitions[1].Height.Value,expectedMeta) ||
             Presenter.Surface is null || _itemsGrid?.Children.Contains(Presenter.Surface)!=true || _contentLayout.Snapshot is not { } snapshot ||
             snapshot.PosterId!=target.Poster.PosterId || snapshot.DocumentVersion!=ContentDocument.DocumentVersion) return false;
         foreach(var pair in Presenter.Cards)

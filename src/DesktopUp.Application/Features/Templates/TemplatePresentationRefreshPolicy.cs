@@ -8,6 +8,7 @@ public static class TemplatePresentationRefreshPolicy
     public static bool CanPaint(ResolvedPosterPresentation previous, ResolvedPosterPresentation next,
         string? previousTitle, string? nextTitle, string? previousSubtitle, string? nextSubtitle)
     {
+        if (previous.Parameters.Canvas?.Current is not null || next.Parameters.Canvas?.Current is not null) return false;
         if (previousTitle != nextTitle || previousSubtitle != nextSubtitle ||
             previous.EffectiveTemplateKey is not (LampTemplatePolicy.TemplateKey or "night-ops" or "basic-box") ||
             previous with { Parameters = next.Parameters } != next) return false;

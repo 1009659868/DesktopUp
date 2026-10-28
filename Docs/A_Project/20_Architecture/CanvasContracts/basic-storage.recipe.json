@@ -1,0 +1,145 @@
+{
+  "format": "desktopup.canvas-recipe.design",
+  "protocolVersion": "0.1-draft",
+  "id": "basic-storage",
+  "version": 1,
+  "name": "基础收纳",
+  "requires": [
+    "surface.regions@1",
+    "layout.canvas@1",
+    "draw.panel@1",
+    "content.slot@1",
+    "host.action@1"
+  ],
+  "regions": [
+    {
+      "id": "body",
+      "shape": "roundedRect",
+      "bounds": [
+        0,
+        0,
+        1,
+        1
+      ],
+      "radiusDip": 12
+    }
+  ],
+  "nodes": [
+    {
+      "id": "root",
+      "parent": null,
+      "type": "layout.canvas@1",
+      "props": {}
+    },
+    {
+      "id": "body",
+      "parent": "root",
+      "type": "draw.panel@1",
+      "region": "body",
+      "props": {
+        "box": [
+          0,
+          0,
+          1,
+          1
+        ],
+        "fill": {
+          "param": "background"
+        },
+        "opacity": {
+          "param": "backgroundOpacity"
+        }
+      }
+    },
+    {
+      "id": "items",
+      "parent": "body",
+      "type": "content.slot@1",
+      "props": {
+        "box": [
+          0.03,
+          0.1,
+          0.94,
+          0.87
+        ],
+        "gapDip": {
+          "param": "gap"
+        }
+      }
+    },
+    {
+      "id": "menu",
+      "parent": "body",
+      "type": "host.action@1",
+      "props": {
+        "box": [
+          0.88,
+          0.01,
+          0.1,
+          0.07
+        ],
+        "action": "host-menu"
+      }
+    }
+  ],
+  "parameters": [
+    {
+      "key": "background",
+      "label": "背景颜色",
+      "type": "color",
+      "default": "#282B30",
+      "group": "appearance"
+    },
+    {
+      "key": "backgroundOpacity",
+      "label": "背景不透明度",
+      "type": "number",
+      "default": 0.96,
+      "group": "appearance",
+      "min": 0,
+      "max": 1
+    },
+    {
+      "key": "gap",
+      "label": "内容间距",
+      "type": "number",
+      "default": 12,
+      "group": "content",
+      "min": 0,
+      "max": 48
+    }
+  ],
+  "resources": [],
+  "contentSlots": [
+    {
+      "id": "members",
+      "node": "items"
+    }
+  ],
+  "operationAnchors": [
+    {
+      "action": "move",
+      "node": "body"
+    },
+    {
+      "action": "host-menu",
+      "node": "menu"
+    }
+  ],
+  "editor": {
+    "groups": [
+      {
+        "id": "appearance",
+        "label": "外观",
+        "collapsed": false,
+        "whenNode": "body"
+      },
+      {
+        "id": "content",
+        "label": "内容布局",
+        "collapsed": false,
+        "whenNode": "items"
+      }
+    ]
+  }
+}

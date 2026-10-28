@@ -66,7 +66,7 @@ public sealed partial class ControlCenterWindow
         _styleCancel.Click += (_, _) => { _editor.Cancel(); RenderEditing(); };
         AutomationProperties.SetAutomationId(_geometryApply, "ApplyGeometry");
         AutomationProperties.SetAutomationId(_styleApply, "ApplyPresentation");
-        Closed += (_, _) => { _editingClosed = true; _catalogDialog?.Hide(); _activityDialog?.Hide(); _editor.Close(); };
+        Closed += (_, _) => { _editingClosed = true; _canvasEditor?.Dispose(); _catalogDialog?.Hide(); _activityDialog?.Hide(); _editor.Close(); };
     }
 
     private StackPanel Section(string title, bool collapsed = false)

@@ -5,7 +5,9 @@
 | 文档 | 角色／当前使用方式 |
 | --- | --- |
 | [模型／性能发布](../A_Project/40_Implementation/V3-06/MODEL_PROTOCOL_RELEASE.md) | preview-20261026.2：精确拆分、集成／发布、安装验证和清理回执；T1排除 |
-| [画板引擎设计准备](../A_Project/30_Plans/POSTER_CANVAS_ENGINE_DESIGN_PLAN.md) | 下一步设计顺序与退出门，尚未实施，不预设原型就是通用方案 |
+| [画板与AI联合计划](../A_Project/30_Plans/POSTER_CANVAS_ENGINE_DESIGN_PLAN.md) / [J1内核](../A_Project/40_Implementation/V3-07/CANVAS_J1_KERNEL.md) / [创作重审与视觉稿](../A_Project/40_Implementation/V3-07/CANVAS_J1_CREATION_REDESIGN.md) | J0已收口；旧J1未通过记录保留，新工作台设计已认可、原生候选集中待验；[实施交付](../A_Project/40_Implementation/V3-07/CANVAS_J1_STUDIO_IMPLEMENTATION.md)；J2～J4未实施 |
+| [源码目录整理](../A_Project/40_Implementation/Architecture/SOURCE_LAYOUT_20261027.md) / [源码导航](../../src/README.md) | 514份纯移动及独立review清理，用户已验收口；旧样例和候选核验归档后清理 |
+| [联合协议与样例](../A_Project/20_Architecture/CanvasContracts/CONTRACT.md) / [J0交付](../A_Project/40_Implementation/V3-07/CANVAS_AI_J0_DESIGN.md) | 最小容器语义、能力目录、设计草稿和中心编辑；静态证据不替代运行验收 |
 | [联合成本与模板计划](../A_Project/30_Plans/JOINT_COST_AND_TEMPLATE_PLAN.md) / [首批交付](../A_Project/40_Implementation/V3-07/JOINT_COST_AND_COMPONENTS.md) | J1测量／优化已集成；T1自动通过但人工待验，源码仅功能分支 |
 | [模型协议计划](../A_Project/30_Plans/V3_ACTIVITY_MODEL_PROTOCOL_PLAN.md) / [本批模型交付](../A_Project/40_Implementation/V3-06/PLUGGABLE_MODEL_DELIVERY.md) | 可信注册、四类建议，两组USER PASS / CLOSED，后续已集成发布 |
 | [需求索引](REQUIREMENTS_INDEX.md) | A 层七份需求及后续用户决定；旧共享／穿透规则不得复活 |

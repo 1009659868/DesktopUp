@@ -1,0 +1,70 @@
+{
+  "id": "builtin-basic",
+  "name": "基础收纳",
+  "design": {
+    "recipe": {
+      "id": "basic-storage",
+      "version": 1,
+      "name": "基础收纳",
+      "format": "desktopup.canvas-recipe",
+      "protocolVersion": 2,
+      "parameters": [],
+      "nodes": [
+        {
+          "id": "root",
+          "type": "layout.canvas@1",
+          "box": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 1
+          },
+          "properties": {}
+        },
+        {
+          "id": "paper",
+          "parent": "root",
+          "type": "draw.panel@1",
+          "name": "柔和背板",
+          "box": {
+            "x": 0.034782608695652174,
+            "y": 0.044444444444444446,
+            "width": 0.9304347826086956,
+            "height": 0.9111111111111111
+          },
+          "properties": {
+            "fill": {
+              "text": "#F0EFE7"
+            },
+            "opacity": {
+              "number": 1
+            },
+            "radius": {
+              "number": 22
+            }
+          },
+          "locked": true
+        },
+        {
+          "id": "files",
+          "parent": "root",
+          "type": "content.slot@1",
+          "name": "工作文件",
+          "box": {
+            "x": 0.06956521739130435,
+            "y": 0.08888888888888889,
+            "width": 0.8608695652173913,
+            "height": 0.8222222222222222
+          },
+          "properties": {}
+        }
+      ],
+      "contentForeground": "#444D49",
+      "artboard": {
+        "width": 690,
+        "height": 540
+      }
+    },
+    "overrides": {}
+  }
+}
