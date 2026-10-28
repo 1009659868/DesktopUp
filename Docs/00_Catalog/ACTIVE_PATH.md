@@ -21,6 +21,8 @@
 
 依次读[当前交接](../A_Project/40_Implementation/V3-04/HANDOFF.md)、[代码锚点](../A_Project/40_Implementation/V3-04/CODE_ANCHORS.md)、[最新验证记录](../A_Project/40_Implementation/V3-04/VERIFICATION.md)，再打开当前任务的专项记录；不默认重读全库或重跑累计测试。
 
+2026-10-28按用户授权仅同步本功能分支，源码检查点`d1af0e5`已推送（纯移动另存`2016668`）；不合并、不发布，也不把Git同步视为J1人工通过。远端已建立同名跟踪分支，下文旧“未提交”属于同步前时点。
+
 本次先读[J1未通过记录](../A_Project/40_Implementation/V3-07/CANVAS_J1_KERNEL.md)与[创作设计重审](../A_Project/40_Implementation/V3-07/CANVAS_J1_CREATION_REDESIGN.md)，再读[联合实施计划](../A_Project/30_Plans/POSTER_CANVAS_ENGINE_DESIGN_PLAN.md) → [0.2设计协议](../A_Project/20_Architecture/CanvasContracts/CONTRACT.md)。产品代码位置见[源码导航](../../src/README.md)；当前新增源码按功能归位、不合并，旧发布、成本与未定因继续保留。
 
 旧导航和阶段队列保留在[历史快照](ACTIVE_PATH_HISTORY_20261023.md)，仅用于追溯。

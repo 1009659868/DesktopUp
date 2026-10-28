@@ -1,6 +1,16 @@
 # J1 创作工作台：实施与集中验收
 
-2026-10-28，用户认可 `desktopup-canvas-studio.html` 的交互设计，并授权继续实现。原预设配置器的 USER FAIL 记录保留；本次是设计通过，不是产品验收通过。分支 `impl/07-canvas-ai-contracts`，不提交或合并。
+2026-10-28，用户认可 `desktopup-canvas-studio.html` 的交互设计，并授权继续实现。原预设配置器的 USER FAIL 记录保留；本次是设计通过，不是产品验收通过。分支 `impl/07-canvas-ai-contracts`，本轮随后仅授权Git同步，不合并。
+
+## 2026-10-28 功能分支同步（不合并）
+
+用户授权提交并推送当前状态，未授权合并或发布。纯目录移动单独提交`2016668`（514项R100、内容零增删）；J0协议、路径引用修订、J1实现／对齐、文档与测试提交`d1af0e5`。后者已正常推送并回读确认远端同名分支一致，后续文档提交只补本次同步记录。没有强推、PR合并、tag或release修改。
+
+- `impl/develop`仍为`ecf28fe`，`impl/main`仍为`43a77e7`，本地及远端均核对不变；当前分支设置跟踪`origin/impl/07-canvas-ai-contracts`。
+- 本轮仅Git／交接操作，复用上一轮85项定向、普通构建和原生闭环证据；另核对暂存范围、空白差异、1055份源码文本与27份冻结迁移，不重跑人工矩阵。
+- `out/`候选、隔离配置、日志／测试现场及本地可视化输出不上传。生产内置样例、协议样例与必要设计素材属于源码提交。旧人工数据未清理或覆盖。
+- 拉取后从该分支继续，先读CURRENT_STATUS、本记录和Views/Canvas导航；需要重建普通候选时执行`powershell.exe -NoProfile -File scripts/build.ps1 -Offline -OutputDirectory out/canvas-studio-alignment-20261028/candidate`（需已有离线工具链）。随后按下文普通权限入口创建独立验收配置。
+- **J1仍HUMAN REVIEW PENDING**，前两次USER FAIL保留，不因同步补记通过。剩余成本、锁冲突及历史卸载首因继续OPEN。下方“未提交／推送”是实现时点记录，现由本节接续。
 
 ## 2026-10-28 原生工作台验收未通过：视觉与操作同步对齐
 

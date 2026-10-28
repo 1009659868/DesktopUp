@@ -8,7 +8,7 @@
 | --- | --- |
 | 实际仓库 | `G:\A_\Tools\DesktopUp_V2`；与旧 `DesktopUp` 仓库不同 |
 | 开发集成线 | `impl/develop@ecf28fe`；已验模型／性能经`ff4b0a1`集成，发布和文档已同步；本轮fetch核对与远端一致 |
-| 当前功能分支 | `impl/07-canvas-ai-contracts`从上述基线派生；目录整理已验收口；J1前版原生偏离设计被否决，对齐修订候选review02集中人工待验，不提交／推送／合并 |
+| 当前功能分支 | `impl/07-canvas-ai-contracts`从上述基线派生；目录整理已验收口；J1对齐修订候选review02仍集中人工待验。按本轮授权已提交推送：纯移动`2016668`、功能检查点`d1af0e5`；未合并，后续提交仅补同步记录 |
 | 最新已验功能 | 可插拔热度／布局模型两组人工已通过，本轮收口；此前拖动优化、内置真实热度及桌面标准尺度已集成发布 |
 | 保留功能分支 | `impl/06-pluggable-activity-model@61819dd`已推送；已验模型／性能与T1拆为两提交，仅前者进入集成线，T1仍待人工验收 |
 | 热度来源 | `origin/impl/06-real-activity@6bbfcfc`，功能`8156b73`；共同基线`d922669`；经`impl/06-activity-drag-integration`保留双方历史集成 |
