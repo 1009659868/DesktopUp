@@ -1,7 +1,46 @@
 # V3-04 代码锚点
 
+## 2026-10-29 同源整改的现有缺口与Review诊断（未产品修复）
+
+- `CanvasScriptRuntime.Fire`→`CanvasSceneInstance.InvokeToggle`→`CanvasEditor.RunClick`／`PosterVisualWindow.HandleInvocation`：无绑定false被当成legacy回退，待分离设计归属与动作结果。
+- `PosterConfigurationFactory.NewBasicBox`／`PosterSpatialRuntime.ControlCenter`→`CanvasPosterDraft.Read`／`CanvasBehaviorPrefabs.ForEditing`：新增仍走legacy，打开编辑时才转换；待变成完整模板实例化与版本化兼容读取。
+- `CanvasTitleControls`目前是派生子矩形，`MoreButton`直接`ShowPosterMenu`；新节点／菜单声明尚未实现。`PosterVisualWindow.BeginPosturePreview/UpdateVisualState`→`BackdropColor`→`PaintSceneMotion`是已捕获透明帧的背景交接链；`TitleChrome.RefreshTitleChrome`收起切旧样式已复现；`Transition.BeginTransitionLayout/RestoreTransitionLayout`换父级独立影响待查。
+- `tools/review/App/PosterVisualWindow.CanvasTitleDiagnostic.cs`记录状态、样式、同代坐标及Loaded／Unloaded；`App.CanvasKernelProbe`分发`--canvas-title-diagnostic`；复用`App.BackdropContinuousProbe`捕获本窗口帧，新增可选元数据标记采集起点。`Test-CanvasPosterSurface.ps1 -TitleDiagnostic`使用全新隔离配置／内容指纹／退出资源核验。诊断完成不等于产品PASS，生产构建不加载探针。
+- 后续落点与退出证据见[同源整改计划顶部](../../30_Plans/POSTER_CANVAS_ENGINE_DESIGN_PLAN.md)，不新增大窗口业务分支或并行模板权威。
+
+## 2026-10-29 行为预制体（替代旧规则表单入口）
+
+- review07新增`Domain/Canvas/CanvasTitleControls`和`Views/Canvas/CanvasEditor.TitleControls`：从原生标题布局派生独立子控件／选择／v面板；`CanvasSceneDescription.HostControls`供AI同代读取。`CanvasScript.NormalizeLineEndings`统一编译与编辑保存的换行语义；ScriptEditor先启多行再赋值，保存经workspace落盘，不应用桌面。
+- `Domain/Canvas/Behaviors/CanvasScript`、`CanvasBehaviorPrefabs`、`CanvasScriptRuntime`：语法编译、绑定／锁校验、顺序执行与预算。旧CanvasBehaviorRuntime只留属性／Tween，不再维护第二套事件调度。
+- `Views/Canvas/CanvasEditor.Behavior`／`ScriptEditor`／`Run`：行为列表与图层绑定、代码编辑、画板本地运行；组合保存经CanvasAuthoring.ExportBehavior/Insert与ICanvasWorkspace保存快照。
+- `Presentation/Canvas/CanvasSceneInstance.Behavior`：工作台／桌面共用执行器；`PosterVisualWindow.SceneHost`→`PosterSpatialRuntime.Posture.SetCanvasCollapsed`请求现有收展用例。
+- `PosterVisualWindow.CanvasSurface`和`ContentInputGeometry.CanvasCompositionHeight`：标题与内容共用展开构图尺寸；`PosterInputRouter`保证右键／滚轮忽略设计单击层且保留版本拒绝。
+- [本轮精简验收及证据](../V3-07/CANVAS_BEHAVIOR_PREFABS.md)，原生探针继续使用`Test-CanvasPosterSurface -ContextTools`，不增加生产测试入口。
+
+## 2026-10-29 画面上下文、受控工具与事件行为
+
+- [CanvasDraftTools](../../../../src/DesktopUp.Application/Features/Canvas/CanvasDraftTools.cs)：单目标、有界原子增量、版本／摘要／幂等；没有Apply／文件／网络命令。
+- [CanvasContentObservation](../../../../src/DesktopUp.Application/Features/Canvas/CanvasContentObservation.cs)及[宿主读回](../../../../src/DesktopUp.App/Views/Poster/PosterVisualWindow.CanvasObservation.cs)：成功发布的同代匿名几何；过期／忙碌不拼接。
+- [CanvasBehavior](../../../../src/DesktopUp.Domain/Canvas/CanvasBehavior.cs)、[运行状态](../../../../src/DesktopUp.Domain/Canvas/CanvasBehaviorRuntime.cs)、[呈现适配](../../../../src/DesktopUp.App/Presentation/Canvas/CanvasSceneInstance.Behavior.cs)：有界事件／动作、共享时钟、仅RAM装饰状态；收起底色在Backdrop读取状态样式。
+- 工作台[行为表单](../../../../src/DesktopUp.App/Views/Canvas/CanvasEditor.Behavior.cs)与[素材说明／设计数据](../../../../src/DesktopUp.App/Views/Canvas/CanvasEditor.Context.cs)。原生工具／状态检查复用Test-CanvasPosterSurface的`-ContextTools`，没有新增生产测试入口。
+
+## 2026-10-29 当前海报读取与结构说明
+
+- [CanvasPosterDraft](../../../../src/DesktopUp.Application/Features/Canvas/CanvasPosterDraft.cs)：同源读取宿主背景／标题／内容布局；不再用Blank代替当前海报，不覆盖已有Canvas的有意透明。
+- [CanvasSceneDescription](../../../../src/DesktopUp.Application/Features/Canvas/CanvasSceneDescription.cs)：有界结构包、注册能力与含义对照；[CanvasDesignSession](../../../../src/DesktopUp.Application/Features/Canvas/CanvasDesignSession.cs)负责目标新鲜版本检查。尚未接网络／AI工具分发。
+- 原生定向入口为Test-CanvasPosterSurface的`-CurrentPoster`；协议及下一切片见[CONTRACT](../../20_Architecture/CanvasContracts/CONTRACT.md)。
+
+## 2026-10-29 整张画板、标题与外形
+
+- 纯协议／外形／标题命中／语义区保护：[CanvasSurfaceGeometry](../../../../src/DesktopUp.Domain/Canvas/CanvasSurfaceGeometry.cs)，版本字段在CanvasDeclaration；旧v1/v2不自动写回。
+- 外框尺寸提交与撤销：[CanvasDesignCommands](../../../../src/DesktopUp.Application/Features/Canvas/CanvasDesignCommands.cs)，保留PreviousFrame；等比例手柄与必要扩框：[CanvasFrameResize](../../../../src/DesktopUp.Application/Features/Canvas/CanvasFrameResize.cs)。
+- 工作台外形与标题预览：[CanvasEditor.PosterSurface](../../../../src/DesktopUp.App/Views/Canvas/CanvasEditor.PosterSurface.cs)；宿主预览及真实外形：[PosterVisualWindow.CanvasSurface](../../../../src/DesktopUp.App/Views/Poster/PosterVisualWindow.CanvasSurface.cs)。
+- 可见／输入HWND共用创建器：[NativeSurfaceRegion](../../../../src/DesktopUp.Windows/Desktop/NativeSurfaceRegion.cs)。不用透明像素推断输入穿透；原生文件拖放和安全保护仍由原宿主负责。
+- [定向合同](../../../../tests/DesktopUp.Contracts.Tests/Canvas/CanvasPosterSurfaceTests.cs)、[原生自动入口](../../../../tests/Canvas/Test-CanvasPosterSurface.ps1)、[人工启动](../../../../scripts/Canvas/Start-StudioReview.ps1)。
+
 ## 2026-10-28 J1工作台入口
 
+- 验收启动：[Start-StudioReview](../../../../scripts/Canvas/Start-StudioReview.ps1)；2026-10-29改为[实际进程权限只读对比](../../../../scripts/Canvas/Get-StudioLaunchPermission.ps1)，不按管理员身份硬拦截；[PS5.1定向验证](../../../../tests/Canvas/Test-StudioLaunchPermission.ps1)。
 - 对齐修订：画板变换／继承图层状态在[Domain/Canvas](../../../../src/DesktopUp.Domain/Canvas/README.md)，旋转命中／尺寸在[CanvasEditingGeometry](../../../../src/DesktopUp.Domain/Canvas/CanvasEditingGeometry.cs)；实际宽窄框架、手势、属性和库在Views/Canvas各职责文件。读回图标／统一字形在Presentation/Canvas，不放进大窗口。
 - 新增定向边界：[CanvasEditingAlignmentTests](../../../../tests/DesktopUp.Contracts.Tests/Canvas/CanvasEditingAlignmentTests.cs)。前版人工未通过、新修订待验；不把下方旧交付写成已验。
 - 纯编辑／历史／组合：[CanvasAuthoring](../../../../src/DesktopUp.Domain/Canvas/CanvasAuthoring.cs)。

@@ -2,6 +2,8 @@
 
 本页只导航；当前进度、下一步和携带项以 [CURRENT_STATUS](CURRENT_STATUS.md)为准。不要把旧阶段的“下一步”当成当前授权。
 
+2026-10-29后续：review04背景读取已验；review07 USER FAIL保留。先读[失败／隔离帧诊断／同步回执](../A_Project/40_Implementation/V3-07/CANVAS_BEHAVIOR_PREFABS.md)→[联合协议顶部同源设计](../A_Project/20_Architecture/CanvasContracts/CONTRACT.md)→[四阶段任务与退出标准](../A_Project/30_Plans/POSTER_CANVAS_ENGINE_DESIGN_PLAN.md)。已复现背景交接透明帧及标题状态回退；本轮细化方案、诊断并同步功能分支，产品修复尚未实施，不执行旧“强制保留收展／菜单救援”方案，不合并、不补记PASS。
+
 ## A：需求和职责
 
 1. [需求索引](REQUIREMENTS_INDEX.md) → 本次受影响的需求章节与[决定／未决项](../A_Project/10_Requirements/REQUIREMENTS_RISKS_AND_OPEN_QUESTIONS.md)。
@@ -17,7 +19,7 @@
 
 ## C：实际证据与接手
 
-当前在`impl/07-canvas-ai-contracts`：J0及源码目录整理已收口；旧J1原型和前版原生工作台未通过记录保留；新交互稿已认可，按[原生工作台实施清单](../A_Project/40_Implementation/V3-07/CANVAS_J1_STUDIO_IMPLEMENTATION.md)完成画面与功能同步对齐修订，review02待集中人工；起点develop@ecf28fe，不合并。既有模型／性能与main@43a77e7、preview-20261026.2发布见[回执](../A_Project/40_Implementation/V3-06/MODEL_PROTOCOL_RELEASE.md)。原[模型验收](../A_Project/40_Implementation/V3-06/PLUGGABLE_MODEL_DELIVERY.md)与[成本J1／T1证据](../A_Project/40_Implementation/V3-07/JOINT_COST_AND_COMPONENTS.md)保留；未验T1源码只在功能分支61819dd。
+当前在`impl/07-canvas-ai-contracts`：J0及目录整理已收口，review04背景读取已验，review07未通过；具体缺口、诊断边界及本轮功能分支同步见行为预制体记录。不重复已通过文件矩阵。起点develop@ecf28fe，本轮不合并；既有发布main@43a77e7、preview-20261026.2不变，回执见[发布记录](../A_Project/40_Implementation/V3-06/MODEL_PROTOCOL_RELEASE.md)。未验T1仍只在独立功能分支61819dd。
 
 依次读[当前交接](../A_Project/40_Implementation/V3-04/HANDOFF.md)、[代码锚点](../A_Project/40_Implementation/V3-04/CODE_ANCHORS.md)、[最新验证记录](../A_Project/40_Implementation/V3-04/VERIFICATION.md)，再打开当前任务的专项记录；不默认重读全库或重跑累计测试。
 
