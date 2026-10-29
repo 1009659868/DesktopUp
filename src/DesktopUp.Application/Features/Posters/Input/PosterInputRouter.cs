@@ -1,3 +1,5 @@
+using DesktopUp.Domain;
+
 namespace DesktopUp.Application;
 
 public readonly record struct PosterInputSessionKey(string PosterId, long Epoch);
@@ -60,7 +62,7 @@ public sealed class PosterInputRouter
     // Caller supplies actual visual HWND order; database stack order is not physical evidence.
     // The first containing poster owns the whole frame. Blank space blocks lower posters
     // with the content viewport as the last, explicit marquee target.
-    public PosterInputHit? Resolve(int screenX, int screenY, IEnumerable<PosterInputSessionKey> frontToBack)
+    public PosterInputHit? Resolve(int screenX, int screenY, IEnumerable<PosterInputSessionKey> frontToBack, bool includeCanvasActions = true)
     {
         if (_suspended || Capture is not null) return null;
         foreach (var key in frontToBack)
@@ -70,7 +72,7 @@ public sealed class PosterInputRouter
             if (!PosterDropSurfacePolicy.ReceivesOle(s.Frame, new(screenX, screenY))) continue;
             if (PosterInputGeometry.InsideRoundedFrame(x, y, layout))
                 foreach (var r in layout.Regions)
-                    if (PosterInputGeometry.CapturesPointer(r) && Contains(r.Bounds, x, y)) return new(key, layout.Revision, s.Frame, r);
+                    if ((includeCanvasActions || r.Kind != PosterInputTargetKind.CanvasAction) && PosterInputGeometry.CapturesPointer(r) && PosterInputGeometry.Contains(r, x, y)) return new(key, layout.Revision, s.Frame, r);
             return null;
         }
         return null;
@@ -87,8 +89,8 @@ public sealed class PosterInputRouter
         if (press.Region.Kind is not (PosterInputTargetKind.ContentItem or PosterInputTargetKind.ContentViewport) ||
             !PosterContentInputPolicy.HasValidIdentity(press.Region) ||
             !IsCurrent(press.Session, press.LayoutRevision) ||
-            Resolve(release.X, release.Y, order) != press ||
-            (pressScreenPoint is { } start && Resolve(start.X, start.Y, order) != press)) return null;
+            Resolve(release.X, release.Y, order, includeCanvasActions: false) != press ||
+            (pressScreenPoint is { } start && Resolve(start.X, start.Y, order, includeCanvasActions: false) != press)) return null;
         return new(press, release) { PressScreenPoint = pressScreenPoint };
     }
 
@@ -103,7 +105,7 @@ public sealed class PosterInputRouter
         _surfaces.TryGetValue(token.Press.Session.PosterId, out var s) && s.Key == token.Press.Session && s.Layout is not null;
     public bool CanInvoke(PosterInputCapture token, int x, int y) => Owns(token) &&
         IsCurrent(token.Press.Session, token.Press.LayoutRevision) &&
-        Contains(token.Press.Region.Bounds, x - token.Press.Frame.X, y - token.Press.Frame.Y);
+        PosterInputGeometry.Contains(token.Press.Region, x - token.Press.Frame.X, y - token.Press.Frame.Y);
     public void End(PosterInputCapture? token) { if (token is not null && Capture == token) Capture = null; }
     public void Invalidate(PosterInputSessionKey key)
     {
@@ -118,7 +120,6 @@ public sealed class PosterInputRouter
     }
     public void Suspend() { _suspended = true; Capture = null; }
     public void Resume() => _suspended = false;
-    private static bool Contains(DesktopPixelRect r, int x, int y) => x >= r.X && y >= r.Y && x < r.Right && y < r.Bottom;
 }
 
 public sealed record PosterInputSurfaceSnapshot(PosterInputSessionKey Session, DesktopPixelRect Frame,
@@ -129,6 +130,9 @@ public static class PosterInputGeometry
 {
     // Regions are priority ordered: controls/items precede the blank-content viewport.
     public static bool CapturesPointer(PosterInputRegion region) => true;
+    public static bool Contains(PosterInputRegion region, int x, int y) =>
+        x >= region.Bounds.X && y >= region.Bounds.Y && x < region.Bounds.Right && y < region.Bounds.Bottom &&
+        (region.CanvasAction is not { } action || CanvasEditingGeometry.Hit(action.Box, action.Rotation, x / action.ScaleX, y / action.ScaleY));
 
     public static bool Contains(PosterInputSurfaceSnapshot surface, PointerScreenPoint point) =>
         InsideRoundedFrame(point.X - surface.Frame.X, point.Y - surface.Frame.Y, surface.Layout);
@@ -139,7 +143,7 @@ public static class PosterInputGeometry
         int x = point.X - surface.Frame.X, y = point.Y - surface.Frame.Y;
         // Same ordered regions as actual routing; buttons and resize edges precede TitleBar.
         foreach (var region in surface.Layout.Regions)
-            if (CapturesPointer(region) && x >= region.Bounds.X && y >= region.Bounds.Y && x < region.Bounds.Right && y < region.Bounds.Bottom)
+            if (CapturesPointer(region) && Contains(region, x, y))
                 return region.Kind == PosterInputTargetKind.TitleBar;
         return false;
     }
@@ -147,6 +151,8 @@ public static class PosterInputGeometry
     public static bool InsideRoundedFrame(int x, int y, PosterInputLayoutSnapshot layout)
     {
         if (x < 0 || y < 0 || x >= layout.FrameWidth || y >= layout.FrameHeight) return false;
+        if (layout.Surface is { } surface)
+            return CanvasSurfaceGeometry.Contains(surface, layout.FrameWidth, layout.FrameHeight, x + .5, y + .5);
         double radius = Math.Min(layout.OuterCornerRadius, Math.Min(layout.FrameWidth, layout.FrameHeight) / 2d);
         double dx = Math.Max(Math.Max(radius - (x + .5), x + .5 - (layout.FrameWidth - radius)), 0);
         double dy = Math.Max(Math.Max(radius - (y + .5), y + .5 - (layout.FrameHeight - radius)), 0);

@@ -764,6 +764,9 @@ internal sealed partial class PosterVisualWindow(
             args.DeltaX,
             args.DeltaY,
             _monitor, _spatialGesture.MinimumWidth, _spatialGesture.MinimumHeight);
+        if (!_geometry.IsCollapsed && _presentation.Parameters.Canvas?.Current?.Recipe is { Surface: not null, Artboard: { } art })
+            candidate = CanvasFrameResize.Resolve(art, gesture, args.InitialFrame, args.DeltaX, args.DeltaY, _monitor.WorkArea,
+                _spatialGesture.MinimumWidth, _spatialGesture.MinimumHeight, _monitor.ScaleX, _monitor.ScaleY);
         if (args.EventKind == PosterInputEventKind.GesturePreview)
         {
             ScheduleGestureFrame(candidate);
@@ -874,6 +877,11 @@ internal sealed partial class PosterVisualWindow(
     {
         switch (args.TargetKind)
         {
+            case PosterInputTargetKind.CanvasAction:
+                if (_sceneInstance is CanvasSceneInstance scene && _presentation.Parameters.Canvas?.Current is { } canvas &&
+                    args.TargetIndex >= 0 && args.TargetIndex < canvas.Recipe.Nodes.Count && !_geometry.IsCollapsed && !IsEditing)
+                { scene.InvokeSource(canvas.Recipe.Nodes[args.TargetIndex].Id, spatial.CanAnimateContent(SpatialDispatcher)); UpdateScene(); }
+                break;
             case PosterInputTargetKind.ContentBrowseNavigation:
                 BrowseRestrictedContent(args.TargetIndex);
                 break;
@@ -881,7 +889,7 @@ internal sealed partial class PosterVisualWindow(
                 ToggleLocked("legacy-button");
                 break;
             case PosterInputTargetKind.CollapseButton:
-                ToggleCollapsed();
+                if (!InvokeCanvasToggle()) ToggleCollapsed();
                 break;
             case PosterInputTargetKind.MoreButton:
                 ShowPosterMenu();
@@ -1257,6 +1265,8 @@ internal sealed partial class PosterVisualWindow(
         if (!ClearExposedVisualBackground(regionBefore)) return false;
 
         _bounds = frame;
+        if (CanvasSurfaceGeometry.IsWholePoster(_presentation.Parameters.Canvas?.Current))
+            RefreshTitleChrome(frame.Width / (_monitor?.ScaleX ?? 1));
         return ApplyContentFrame(frame, inputLayout);
     }
 
@@ -1264,9 +1274,9 @@ internal sealed partial class PosterVisualWindow(
     {
         if (_appliedVisualRegion is not { } current || current.WindowHandle != _windowHandle) return false;
         var before = previous is { } old && old.WindowHandle == _windowHandle
-            ? new DesktopRoundedRegion(old.Width, old.Height, old.CornerRadius) : default;
+            ? new DesktopRoundedRegion(old.Width, old.Height, old.CornerRadius, old.Shape) : default;
         bool cleared = attachment.ClearExposedVisualBackground(_windowHandle, before,
-            new(current.Width, current.Height, current.CornerRadius));
+            new(current.Width, current.Height, current.CornerRadius, current.Shape));
         // A failed erase must not become an equal-region cache hit on recovery. The
         // next frame reasserts the clip and clears the entire visible base instead.
         if (!cleared) _appliedVisualRegion = null;
@@ -1279,7 +1289,7 @@ internal sealed partial class PosterVisualWindow(
         if (!_geometry.IsCollapsed) EnsureContentSnapshot(frame);
         return _inputGeometry.Resolve(checked(++_layoutRevision), frame,
             new(_monitor, _geometry, _presentation, _titlePose, IsEditing, _contentReadOnly, _selectedContentItem,
-                _contentLayout.Current, ContentLeftFor(frame), ContentTopFor(frame), _transitionLayout is not null, ResolveOuterCornerRadiusPixels()));
+                _contentLayout.Current, ContentLeftFor(frame), ContentTopFor(frame), _transitionLayout is not null, ResolveOuterCornerRadiusPixels(), CanvasFor(frame)?.Height));
     }
 
     private Window CreateWindow()
@@ -1578,6 +1588,7 @@ internal sealed partial class PosterVisualWindow(
 
     private void UpdateVisualState()
     {
+        if (_window is not null) ApplyWindowBackdrop(_window);
         RefreshTitleChrome();
         UpdateScene();
         if (_surface is null)
@@ -1615,7 +1626,7 @@ internal sealed partial class PosterVisualWindow(
         _surface.BorderBrush = _contentSession.Mode == PosterOperatingMode.Editing
             ? ColorBrush(_presentation.Parameters.Theme.Accent, 230)
             : Brush(0, 0, 0, 0);
-        _surface.BorderThickness = _contentSession.Mode == PosterOperatingMode.Editing
+        _surface.BorderThickness = _contentSession.Mode == PosterOperatingMode.Editing && !CanvasSurfaceGeometry.IsWholePoster(_presentation.Parameters.Canvas?.Current)
             ? new Thickness(1)
             : new Thickness(0);
     }
@@ -1625,23 +1636,19 @@ internal sealed partial class PosterVisualWindow(
         DesktopPixelRect frame,
         bool force = false)
     {
-        int cornerRadius = ResolveOuterCornerRadiusPixels();
+        var region = CanvasVisualRegion(frame);
         var requested = new VisualRegionState(
             windowHandle,
             frame.Width,
             frame.Height,
-            cornerRadius);
+            region.CornerRadius, region.Shape);
         if (!force && _appliedVisualRegion == requested)
         {
             return true;
         }
 
         bool applied = windowHandle != 0 &&
-            attachment.ApplyRoundedRegion(
-                windowHandle,
-                frame.Width,
-                frame.Height,
-                cornerRadius);
+            attachment.ApplySurfaceRegion(windowHandle, region);
         if (applied)
         {
             _appliedVisualRegion = requested;
@@ -1930,5 +1937,5 @@ internal sealed partial class PosterVisualWindow(
         nint WindowHandle,
         int Width,
         int Height,
-        int CornerRadius);
+        int CornerRadius, string Shape);
 }

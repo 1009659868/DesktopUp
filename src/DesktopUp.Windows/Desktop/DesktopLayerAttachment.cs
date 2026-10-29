@@ -5,6 +5,8 @@ namespace DesktopUp.Windows;
 
 internal interface IDesktopWindowApi
 {
+    bool ApplySurfaceRegion(nint window, DesktopRoundedRegion region) => region.Shape != "ellipse" &&
+        ApplyRoundedRegion(window, region.Width, region.Height, region.CornerRadius);
     bool IsWindow(nint windowHandle);
     nint GetOwner(nint windowHandle);
     nint SetOwner(nint windowHandle, nint ownerHandle);
@@ -34,6 +36,8 @@ internal interface IDesktopWindowApi
 
 public sealed class DesktopLayerAttachment : IDesktopLayerAttachment
 {
+    public bool ApplySurfaceRegion(nint window, DesktopRoundedRegion region)
+    { lock (_gate) return _windows.IsWindow(window) && region.IsValid && _windows.ApplySurfaceRegion(window, region); }
     private const long WsCaption = 0x00C00000L;
     private const long WsBorder = 0x00800000L;
     private const long WsDlgFrame = 0x00400000L;
@@ -452,34 +456,19 @@ internal sealed class DesktopWindowNativeApi : IDesktopWindowApi
     public bool ApplyInputTransparentComposition(nint windowHandle) =>
         SetLayeredWindowAttributes(windowHandle, 0, 255, LwaAlpha);
 
+    public bool ApplySurfaceRegion(nint windowHandle, DesktopRoundedRegion shape)
+    {
+        nint region = NativeSurfaceRegion.Create(shape);
+        if (region == 0) return false;
+        if (SetWindowRgn(windowHandle, region, redraw: false) != 0) return true;
+        _ = DeleteObject(region); return false;
+    }
+
     public bool ApplyRoundedRegion(
         nint windowHandle,
         int width,
         int height,
-        int cornerRadius)
-    {
-        int diameter = checked(cornerRadius * 2);
-        nint region = CreateRoundRectRgn(
-            0,
-            0,
-            checked(width + 1),
-            checked(height + 1),
-            diameter,
-            diameter);
-        if (region == 0)
-        {
-            return false;
-        }
-
-        if (SetWindowRgn(windowHandle, region, redraw: false) != 0)
-        {
-            // A successful SetWindowRgn transfers region ownership to Windows.
-            return true;
-        }
-
-        _ = DeleteObject(region);
-        return false;
-    }
+        int cornerRadius) => ApplySurfaceRegion(windowHandle, new(width, height, cornerRadius));
 
     public bool ApplyPreparedBounds(
         nint windowHandle,
@@ -531,9 +520,7 @@ internal sealed class DesktopWindowNativeApi : IDesktopWindowApi
         nint before = 0, after = 0, exposed = 0;
         try
         {
-            static nint Region(DesktopRoundedRegion value) => value.IsEmpty ? CreateRectRgn(0, 0, 0, 0) :
-                CreateRoundRectRgn(0, 0, checked(value.Width + 1), checked(value.Height + 1),
-                    checked(value.CornerRadius * 2), checked(value.CornerRadius * 2));
+            static nint Region(DesktopRoundedRegion value) => NativeSurfaceRegion.Create(value);
             before = Region(previous); after = Region(current); exposed = CreateRectRgn(0, 0, 0, 0);
             if (before == 0 || after == 0 || exposed == 0) return false;
             int kind = CombineRgn(exposed, after, before, 4 /* RGN_DIFF */);
@@ -645,15 +632,6 @@ internal sealed class DesktopWindowNativeApi : IDesktopWindowApi
         nint windowHandle,
         nint region,
         [MarshalAs(UnmanagedType.Bool)] bool redraw);
-
-    [DllImport("gdi32.dll", SetLastError = true)]
-    private static extern nint CreateRoundRectRgn(
-        int left,
-        int top,
-        int right,
-        int bottom,
-        int ellipseWidth,
-        int ellipseHeight);
 
     [DllImport("gdi32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]

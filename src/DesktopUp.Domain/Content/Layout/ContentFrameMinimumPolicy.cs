@@ -55,7 +55,10 @@ public static class ContentFrameMinimumPolicy
             var viewport = new ContentLayoutViewport(Math.Max(0, poster.WidthDip - chromeX),
                 Math.Max(0, poster.ExpandedHeightDip - chromeY)).WithPresentation(presentation.Parameters);
             if (heatLowerBound) doc = ContentHeatSizing.LowerBound(doc!, viewport);
-            minimum = FromSnapshot(ContentLayoutSolver.Resolve(doc!, viewport), chromeX, chromeY);
+            var resolved = ContentLayoutSolver.Resolve(doc!, viewport);
+            minimum = CanvasSurfaceGeometry.IsWholePoster(presentation.Parameters.Canvas?.Current)
+                ? CanvasSurfaceGeometry.Minimum(CanvasLayout.Resolve(presentation.Parameters.Canvas!.Current!, poster.WidthDip, poster.ExpandedHeightDip), resolved)
+                : FromSnapshot(resolved, chromeX, chromeY);
             return true;
         }
         catch (ArgumentException ex) { error = ex.Message; return false; }

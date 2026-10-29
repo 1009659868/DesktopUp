@@ -44,6 +44,7 @@ internal sealed partial class CanvasEditor
         shell.KeyDown += (_, e) =>
         {
             if (IsTextInput(e.OriginalSource)) return;
+            if (IsStudioRunning) { if (e.Key == VirtualKey.Escape) { StopStudioRun(); Render(); e.Handled = true; } return; }
             bool ctrl = Down(VirtualKey.Control), shift = Down(VirtualKey.Shift);
             if (e.Key == VirtualKey.Escape)
             {
@@ -109,6 +110,8 @@ internal sealed partial class CanvasEditor
             }
             else
             {
+                if (SelectTitleControlAt(press)) { e.Handled = true; return; }
+                selectedTitleControl = null;
                 var hit = Hit(press); marquee = hit is null;
                 if (!Down(VirtualKey.Shift) && (hit is null || !selected.Contains(hit.Id))) selected.Clear();
                 initialSelection.Clear(); initialSelection.UnionWith(selected);
@@ -167,6 +170,7 @@ internal sealed partial class CanvasEditor
     }
     private CanvasDesign MoveSelection(double x, double y, bool snap)
     {
+        if (SelectedTitleControl is not null) return document.Design;
         var chosen = document.Design.Recipe.Nodes.Where(n => selected.Contains(n.Id) && !layerState.Locked.Contains(n.Id)).ToArray();
         if (chosen.Length == 0) return document.Design;
         var parent = ContextBounds;
@@ -248,22 +252,23 @@ internal sealed partial class CanvasEditor
         text.LostFocus += (_, _) => { if (!closed && !rebuildingProperties) End(true); };
         text.Focus(FocusState.Programmatic); text.SelectAll();
     }
-    private void DeleteSelection() => Edit(() => { document.Delete(selected); selected.Clear(); });
-    private void GroupSelection() => Edit(() => Select(document.Group(selected)));
+    private void DeleteSelection() => Edit(() => { RequireWholeLayerSelection(); document.Delete(selected); selected.Clear(); });
+    private void GroupSelection() => Edit(() => { RequireWholeLayerSelection(); Select(document.Group(selected)); });
     private void UngroupSelection() => Edit(() =>
     {
-        if (selected.Count != 1) return; var children = document.Ungroup(selected.Single()); selected.Clear(); selected.UnionWith(children);
+        RequireWholeLayerSelection(); if (selected.Count != 1) return; var children = document.Ungroup(selected.Single()); selected.Clear(); selected.UnionWith(children);
     });
     private void Nudge(double dx, double dy) => Edit(() => document.Set(MoveSelection(dx, dy, false)));
     private void Duplicate() => Edit(() =>
     {
         if (selected.Count == 0) return;
+        RequireWholeLayerSelection();
         if (selected.Any(layerState.Locked.Contains)) throw new ArgumentException("请先解锁对象。");
         // Compose all copies before publishing one immutable edit / one undo boundary.
         var next = new CanvasAuthoring(document.Design); var copies = new List<string>();
         foreach (string id in selected)
         {
-            var source = document.Export(id); copies.Add(next.Insert(source, context, source[0].Box.X + .03, source[0].Box.Y + .03));
+            var source = document.Export(id); copies.Add(next.Insert(source, context, source[0].Box.X + .03, source[0].Box.Y + .03, document.ExportBehavior(id)));
         }
         document.Set(next.Design); selected.Clear(); selected.UnionWith(copies);
     });

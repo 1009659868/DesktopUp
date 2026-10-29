@@ -46,7 +46,27 @@ public sealed class CanvasWorkspace : ICanvasWorkspace
         if (Hash(bytes) != id) throw new IOException("设计图片摘要不符，原设计保留。");
         ImageSize(bytes); return bytes;
     }
-    public IReadOnlyList<CanvasAsset> Assets() => List<CanvasAsset>("*.asset.json");
+    public IReadOnlyList<CanvasAsset> Assets()
+    {
+        var assets = List<CanvasAsset>("*.asset.json");
+        foreach (var asset in assets) ValidateAsset(asset);
+        return assets;
+    }
+    public CanvasAsset DescribeAsset(string id, string description, long expectedRevision)
+    {
+        if (!CanvasDeclaration.Accepts("asset", new(Text: id))) throw new ArgumentException("无效素材摘要。");
+        var asset = CanvasDeclaration.Read<CanvasAsset>(System.Text.Encoding.UTF8.GetString(Read(Location(id + ".asset.json"), 8192)));
+        ValidateAsset(asset);
+        if (asset.Id != id || asset.DescriptionRevision != expectedRevision) throw new ArgumentException("素材说明已变化，请重新读取。");
+        var next = asset with { Description = description, DescriptionRevision = checked(expectedRevision + 1) };
+        ValidateAsset(next); Write(id + ".asset.json", next); return next;
+    }
+    private static void ValidateAsset(CanvasAsset asset)
+    {
+        if (!CanvasDeclaration.Accepts("asset", new(Text: asset.Id)) || asset.Width is < 1 or > 8192 || asset.Height is < 1 or > 8192 ||
+            asset.DescriptionRevision < 0 || asset.Description is { } text && (text.Length > 512 || text.Any(c => char.IsControl(c) && c is not ('\r' or '\n' or '\t'))))
+            throw new ArgumentException("素材元数据或说明不合法；说明最多512字符。");
+    }
     public IReadOnlyList<CanvasWork> Works()
     {
         var assembly = typeof(CanvasWorkspace).Assembly;
@@ -79,9 +99,9 @@ public sealed class CanvasWorkspace : ICanvasWorkspace
         {
             Key(combination.Id); Name(combination.Name);
             ValidateSize(combination.Size);
-            if (combination.Nodes is null || CanvasCombination.Digest(combination.Nodes, combination.Size) != combination.Id)
+            if (combination.Nodes is null || CanvasCombination.Digest(combination.Nodes, combination.Size, combination.Behavior) != combination.Id)
                 throw new ArgumentException("组合内容摘要不符，未载入。");
-            var check = new CanvasAuthoring(CanvasAuthoring.Blank()); check.Insert(combination.Nodes, "root");
+            var check = new CanvasAuthoring(CanvasAuthoring.NewArtwork()); check.Insert(combination.Nodes, "root", behavior: combination.Behavior);
         }
         return combinations;
     }
@@ -91,9 +111,9 @@ public sealed class CanvasWorkspace : ICanvasWorkspace
     {
         Key(combination.Id); Name(combination.Name);
         ValidateSize(combination.Size);
-        var check = new CanvasAuthoring(CanvasAuthoring.Blank());
-        check.Insert(combination.Nodes, "root"); Verify(check.Design);
-        string digest = CanvasCombination.Digest(combination.Nodes, combination.Size);
+        var check = new CanvasAuthoring(CanvasAuthoring.NewArtwork());
+        check.Insert(combination.Nodes, "root", behavior: combination.Behavior); Verify(check.Design);
+        string digest = CanvasCombination.Digest(combination.Nodes, combination.Size, combination.Behavior);
         if (combination.Id != digest) throw new ArgumentException("组合身份必须为内容摘要。");
         string path = Location(digest + ".combo.json");
         if (!File.Exists(path)) Write(digest + ".combo.json", combination);
@@ -108,6 +128,17 @@ public sealed class CanvasWorkspace : ICanvasWorkspace
     {
         CanvasDeclaration.Validate(design);
         foreach (var id in design.Recipe.Nodes.Where(n => n.Type == "draw.image@1").Select(n => CanvasDeclaration.Property(design, n, "asset").Text!).Distinct()) ReadAsset(id);
+    }
+    public IReadOnlyList<CanvasBehaviorPrefab> Behaviors()
+    {
+        var values = List<CanvasBehaviorPrefab>("*.behavior.json");
+        foreach (var value in values) CanvasBehaviorPrefabs.ValidatePrefab(value);
+        return values;
+    }
+    public void SaveBehavior(CanvasBehaviorPrefab prefab)
+    {
+        Key(prefab.Id); CanvasBehaviorPrefabs.ValidatePrefab(prefab);
+        Write(prefab.Id + ".behavior.json", prefab);
     }
     private T[] List<T>(string pattern)
     {

@@ -17,6 +17,7 @@ internal sealed partial class CanvasEditor
         try
         {
             inspector.Children.Clear(); inspector.Orientation = narrow ? Orientation.Horizontal : Orientation.Vertical;
+            if (SelectedTitleControl is { } control) { TitleControlProperties(control); return; }
             var head = new StackPanel { Spacing = 6, Width = narrow ? 120 : double.NaN };
             var title = new TextBox { Text = selected.Count == 1 ? Current(selected.Single()).Name ?? Label(Current(selected.Single()).Type) : names[current],
                 MaxLength = 64, FontSize = 13, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, BorderThickness = new(0), Background = null, Padding = new(0, 4, 0, 4), MinWidth = 0 };
@@ -36,12 +37,20 @@ internal sealed partial class CanvasEditor
             fieldCount = 0; inspector.Children.Add(fields);
             var actions = new StackPanel { Spacing = 7, Width = narrow ? 200 : double.NaN };
             actions.Children.Add(new TextBlock { Text = "排列与复用", FontSize = 11, Foreground = Ink("#ADB1B0") }); inspector.Children.Add(actions);
+            if (selected.Count == 0 || selected.Count == 1 && CanvasBehaviorPrefabs.CanBind(Current(selected.Single())))
+            {
+                var bindings = new StackPanel { Spacing = 8, Width = narrow ? 220 : double.NaN }; inspector.Children.Add(bindings);
+                string source = selected.Count == 0 ? "poster" : selected.Single();
+                BehaviorBindings(bindings, source);
+            }
             if (selected.Count != 1)
             {
                 if (selected.Count == 0)
                 {
                     Number("画板宽", board.Width, 240, 2048, null, v => SetArtboardSize(v, board.Height));
                     Number("画板高", board.Height, 240, 2048, null, v => SetArtboardSize(board.Width, v));
+                    SurfaceProperties();
+                    CollapsedStyleProperties();
                 }
                 if (selected.Count > 1)
                 {
@@ -57,6 +66,8 @@ internal sealed partial class CanvasEditor
                 return;
             }
             var node = Current(selected.Single()); bool editable = !layerState.Locked.Contains(node.Id);
+            if (node.Type == "host.title@1")
+                actions.Children.Add(Command("编辑 v 按钮行为", "", () => SelectTitleControl(TitleControls(node).Single(c => c.Role == "toggle"))));
             var parent = geometry!.Nodes.First(p => p.Node.Id == node.Parent).Bounds;
             Number("X", node.Box.X * parent.Width, 0, parent.Width, node.Id, v => Box(node.Id, b => b with { X = v / parent.Width }));
             Number("Y", node.Box.Y * parent.Height, 0, parent.Height, node.Id, v => Box(node.Id, b => b with { Y = v / parent.Height }));
@@ -67,7 +78,7 @@ internal sealed partial class CanvasEditor
             foreach (var property in CanvasCapabilities.Find(node.Type)!.Properties.OrderBy(p => p.Key == "opacity" ? 0 : p.Key == "fill" ? 1 : 2))
             {
                 string key = property.Key; var value = CanvasDeclaration.Property(document.Design, node, key);
-                string label = key switch { "fill" => "填色", "color" => "文字颜色", "opacity" => "不透明度 %", "radius" => "圆角", "fontSize" => "字号", "text" => "文字", _ => key };
+                string label = key switch { "fill" => "填色", "color" => "文字颜色", "actions" => "按钮颜色", "opacity" => "不透明度 %", "radius" => "圆角", "fontSize" => "字号", "text" => "文字", _ => key };
                 if (property.Value.Kind == "number")
                 {
                     double scale = key == "opacity" ? 100 : 1;
@@ -83,9 +94,10 @@ internal sealed partial class CanvasEditor
                     AddField(label, text, true);
                 }
             }
+            if (node.Type == "draw.image@1") AssetDescription(node);
             if (node.Type == "content.slot@1")
                 ColorField("文件名称颜色", document.Design.Recipe.ContentForeground ?? "#F2F2F2", node.Id,
-                    color => document.Set(document.Design with { Recipe = document.Design.Recipe with { ContentForeground = color, ProtocolVersion = 2 } }));
+                    color => document.Set(document.Design with { Recipe = document.Design.Recipe with { ContentForeground = color } }));
             if (node.Type == "draw.text@1")
             {
                 var font = new ComboBox { MinWidth = 0, MinHeight = 30, FontSize = 11, Padding = new(5), HorizontalAlignment = HorizontalAlignment.Stretch };
@@ -103,7 +115,7 @@ internal sealed partial class CanvasEditor
             ActionRow(actions, ("上移一层", () => Edit(() => Reorder(node.Id, 1))), ("下移一层", () => Edit(() => Reorder(node.Id, -1))));
             if (node.Type == "layout.group@1")
                 ActionRow(actions, ("进入组合", () => { context = node.Id; selected.Clear(); Render(); }), ("拆分组合", UngroupSelection));
-            if (!document.Subtree([node.Id]).Any(n => n.Type == "content.slot@1"))
+            if (!document.Subtree([node.Id]).Any(n => n.Type is "content.slot@1" or "host.title@1"))
             {
                 ActionRow(actions, ("复制", Duplicate), ("保存组合", SaveCombinationPrompt));
                 ActionRow(actions, ("删除对象", DeleteSelection));
@@ -117,7 +129,7 @@ internal sealed partial class CanvasEditor
         && document.Design.Recipe.Nodes.Any(n => n.Id == id) && !layerState.Locked.Contains(id);
     private void SetArtboardSize(double width, double height)
     {
-        document.Set(document.Design with { Recipe = document.Design.Recipe with { Artboard = new(width, height), ProtocolVersion = 2 } });
+        document.Set(document.Design with { Recipe = document.Design.Recipe with { Artboard = new(width, height) } });
         UpdateArtboard(); Fit();
     }
     private void AddField(string label, FrameworkElement control, bool wide = false)
@@ -145,7 +157,7 @@ internal sealed partial class CanvasEditor
         field.KeyDown += (_, e) => { if (e.Key == global::Windows.System.VirtualKey.Enter) { CommitField(); viewport.Focus(FocusState.Programmatic); e.Handled = true; } };
         AddField(label, field);
     }
-    private void ColorField(string label, string value, string id, Action<string> set)
+    private void ColorField(string label, string value, string? id, Action<string> set)
     {
         var b = new Button { HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Stretch, MinWidth = 0, MinHeight = 30, Padding = new(5), Background = Ink("#34373B") };
         var swatch = new Border { Height = 17, Background = Ink(value), CornerRadius = new(2) }; b.Content = swatch;
@@ -155,7 +167,7 @@ internal sealed partial class CanvasEditor
         var flyout = new Flyout { Content = content };
         content.Children.Add(Command("应用颜色", "", () =>
         {
-            if (!CanEditField(id)) { flyout.Hide(); return; }
+            if (id is null ? selected.Count != 0 : !CanEditField(id)) { flyout.Hide(); return; }
             var color = picker.Color; string hex = $"#{color.R:X2}{color.G:X2}{color.B:X2}";
             flyout.Hide(); if (!string.Equals(hex, value, StringComparison.OrdinalIgnoreCase)) Edit(() => set(hex));
         }));
@@ -171,7 +183,7 @@ internal sealed partial class CanvasEditor
     {
         Try(() =>
         {
-            if (selected.Count == 0 || selected.Any(layerState.Locked.Contains) || document.Subtree(selected).Any(n => n.Type == "content.slot@1"))
+            if (selected.Count == 0 || selected.Any(layerState.Locked.Contains) || document.Subtree(selected).Any(n => n.Type is "content.slot@1" or "host.title@1"))
                 throw new ArgumentException("请选择未锁定的装饰对象；不保存真实文件区域。");
             var selection = selected.ToArray(); string work = current;
             var panel = new StackPanel { Spacing = 10, Width = 240 };
@@ -197,7 +209,8 @@ internal sealed partial class CanvasEditor
         var nodes = source.Export(root);
         var box = CanvasLayout.ForAuthoring(source.Design, board.Width, board.Height).Nodes.Single(n => n.Node.Id == root).Bounds;
         var size = new CanvasCombinationSize(box.Width, box.Height);
-        workspace.SaveCombination(new(CanvasCombination.Digest(nodes, size), name, nodes, size)); groupsLibrary = true; RefreshLibrary();
+        var behavior = source.ExportBehavior(root);
+        workspace.SaveCombination(new(CanvasCombination.Digest(nodes, size, behavior), name, nodes, size, behavior)); groupsLibrary = true; RefreshLibrary();
         notice.Text = "“" + name + "”已存入组合库 · 可切换作品拖入，实例互不影响。";
     }
     private CanvasNode Current(string id) => document.Design.Recipe.Nodes.First(n => n.Id == id);

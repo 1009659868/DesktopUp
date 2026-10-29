@@ -5,7 +5,7 @@ namespace DesktopUp.Application;
 public sealed record PosterInputGeometryContext(DisplayMonitorSnapshot Monitor, PosterFrameGeometry Geometry,
     ResolvedPosterPresentation Presentation, TitleCloudPose TitlePose, bool Editing, bool ReadOnly,
     string? SelectedItem, ContentPresentationFrame? Content, double ContentLeft, double ContentTop,
-    bool Transition, int CornerRadius);
+    bool Transition, int CornerRadius, double? CanvasCompositionHeight = null);
 
 // Local hit geometry does not depend on screen position. Each publication still gets
 // a fresh revision: an old hit cannot remain valid after its surface has moved.
@@ -32,7 +32,9 @@ public static class ContentInputGeometry
     public static PosterInputLayoutSnapshot Resolve(long revision, DesktopPixelRect frame, PosterInputGeometryContext context)
     {
         double scaleX = context.Monitor.ScaleX;
-        var titleBar = PosterTitleChromePolicy.Resolve(frame.Width / scaleX, context.Geometry.IsCollapsed, context.Presentation.TitleChrome);
+        var design = context.Presentation.Parameters.Canvas?.Current;
+        var titleBar = CanvasSurfaceGeometry.Title(design, frame.Width / scaleX, context.CanvasCompositionHeight ?? frame.Height / context.Monitor.ScaleY,
+            context.Geometry.IsCollapsed, context.Presentation.TitleChrome);
         DesktopPixelRect ToTitlePixels(TitleChromeRect rect) => new(checked((int)Math.Round(rect.X * context.Monitor.ScaleX)), checked((int)Math.Round(rect.Y * context.Monitor.ScaleY)),
             Math.Max(1, ToPhysicalX(rect.Width, context.Monitor)), Math.Max(1, ToPhysicalY(rect.Height, context.Monitor)));
         DesktopPixelRect collapseBounds = ToTitlePixels(titleBar.Collapse);
@@ -126,12 +128,44 @@ public static class ContentInputGeometry
         else foreach (var band in titleBar.GripBands)
             regions.Add(new PosterInputRegion(PosterInputTargetKind.TitleBar, -1, ToTitlePixels(band)));
 
+        if (design is not null && !context.Geometry.IsCollapsed && !context.Editing && !context.Transition)
+        {
+            // Real items and protected title controls win. Design UI precedes only blank space.
+            var blanks = regions.Where(r => r.Kind == PosterInputTargetKind.ContentViewport).ToArray();
+            regions.RemoveAll(r => r.Kind == PosterInputTargetKind.ContentViewport);
+            AddCanvasActions(design, frame, context, regions);
+            regions.AddRange(blanks);
+        }
         return new PosterInputLayoutSnapshot(
             revision,
             frame.Width,
             frame.Height,
             PosterInputRegionClipPolicy.Clip(frame.Width, frame.Height, regions),
-            context.CornerRadius) { ContentSnapshotGeneration = context.Content?.Snapshot.ViewportGeneration ?? 0 };
+            context.CornerRadius) { ContentSnapshotGeneration = context.Content?.Snapshot.ViewportGeneration ?? 0,
+                Surface = !context.Geometry.IsCollapsed && design?.Recipe.Surface is { } surface
+                    ? surface with { Radius = Math.Round(surface.Radius * Math.Min(frame.Width / design.Recipe.Artboard!.Width, frame.Height / design.Recipe.Artboard.Height)) } : null };
+    }
+
+    private static void AddCanvasActions(CanvasDesign design, DesktopPixelRect frame, PosterInputGeometryContext context, List<PosterInputRegion> regions)
+    {
+        var sources = (design.Recipe.Behavior?.Bindings ?? []).Where(b => b.Enabled && b.Event == "pointer.click").Select(b => b.Source).ToHashSet();
+        var indices = design.Recipe.Nodes.Select((node, index) => (node, index)).Where(p => sources.Contains(p.node.Id) && CanvasBehaviorPrefabs.CanBind(p.node)).ToDictionary(p => p.node.Id, p => p.index);
+        if (indices.Count == 0) return;
+        var hidden = CanvasLayerState.Resolve(design).Hidden;
+        var layout = CanvasLayout.Resolve(design, frame.Width / context.Monitor.ScaleX, context.CanvasCompositionHeight ?? frame.Height / context.Monitor.ScaleY, false);
+        foreach (var placement in layout.Nodes.Reverse().Where(p => sources.Contains(p.Node.Id) && !hidden.Contains(p.Node.Id)))
+        {
+            var box = placement.Bounds;
+            var corners = new[] { (-box.Width / 2, -box.Height / 2), (box.Width / 2, -box.Height / 2), (box.Width / 2, box.Height / 2), (-box.Width / 2, box.Height / 2) }
+                .Select(p => CanvasEditingGeometry.Rotate(p.Item1, p.Item2, placement.Rotation)).ToArray();
+            int left = (int)Math.Floor((box.X + box.Width / 2 + corners.Min(p => p.X)) * context.Monitor.ScaleX),
+                top = (int)Math.Floor((box.Y + box.Height / 2 + corners.Min(p => p.Y)) * context.Monitor.ScaleY),
+                right = (int)Math.Ceiling((box.X + box.Width / 2 + corners.Max(p => p.X)) * context.Monitor.ScaleX),
+                bottom = (int)Math.Ceiling((box.Y + box.Height / 2 + corners.Max(p => p.Y)) * context.Monitor.ScaleY);
+            int index = indices[placement.Node.Id];
+            regions.Add(new(PosterInputTargetKind.CanvasAction, index, new(left, top, right - left, bottom - top))
+            { CanvasAction = new(box, placement.Rotation, context.Monitor.ScaleX, context.Monitor.ScaleY) });
+        }
     }
 
 

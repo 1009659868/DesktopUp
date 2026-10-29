@@ -78,7 +78,7 @@ internal sealed partial class PosterVisualWindow
             (actual==expected || actual==(double)(float)expected);
         var expected=target.Presentation;
         double expectedMeta = target.Poster.IsCollapsed ? 0 : CanvasFor(_bounds) is { } canvas
-            ? Math.Max(0, canvas.Content.Y - CanvasLayout.Header) : expected.MetaHeightDip;
+            ? Math.Max(0, canvas.Content.Y - (CanvasSurfaceGeometry.IsWholePoster(expected.Parameters.Canvas?.Current) ? 0 : CanvasLayout.Header)) : expected.MetaHeightDip;
         if(!PresentationReadbackEquality.Same(_presentation,expected) || _renderedTitle!=target.Poster.Title || _window?.Title!="DesktopUp V3 · "+target.Poster.Title ||
             !VerifyWindowBackdrop() || _surface?.Child is not Grid structure ||
             !XamlNumber(structure.RowDefinitions[1].Height.Value,expectedMeta) ||

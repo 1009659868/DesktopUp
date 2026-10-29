@@ -46,6 +46,8 @@ public static class ContentScaleExpansion
         var min = minimum.Pixels(env.DpiX, env.DpiY);
         int width = Math.Max(source.Bounds.Width, min.Width);
         int height = Math.Max(current.IsCollapsed ? source.ExpandedHeight : source.Bounds.Height, min.Height);
+        if (PosterPresentationPolicy.Resolve(presentation).Parameters.Canvas?.Current?.Recipe is { Surface: not null, Artboard: { } art })
+            (width, height) = CanvasFrameResize.Enclose(art, width, height, env.DpiX / 96d, env.DpiY / 96d);
         if (width == source.Bounds.Width && height == (current.IsCollapsed ? source.ExpandedHeight : source.Bounds.Height))
             return new(presentation, [], []);
         if (current.IsLocked || current.IsCollapsed)

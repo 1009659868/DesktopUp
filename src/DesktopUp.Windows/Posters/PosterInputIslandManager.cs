@@ -330,7 +330,10 @@ public sealed class PosterInputIslandManager : IInputRegionHost
             frame.Height,
             SwpNoZOrder | SwpNoActivate);
         // Verify the LIVE rectangular region: a native reset must not become a cache hit.
-        bool sameRegion = moved && GetWindowRgnBox(WindowHandle, out var box) == 2 &&
+        int nativeRegionKind = GetWindowRgnBox(WindowHandle, out var box);
+        bool sameRegion = moved && (layout.Surface is null ? nativeRegionKind == 2 :
+            layout.Surface == _layout?.Surface && _layout.FrameWidth == frame.Width && _layout.FrameHeight == frame.Height &&
+            nativeRegionKind == (layout.Surface.Shape == "rectangle" ? 2 : 3)) &&
             box.Left == 0 && box.Top == 0 && box.Right == frame.Width && box.Bottom == frame.Height;
         nint region = moved && !sameRegion ? BuildWindowRegion(layout) : 0;
         if (!moved || !sameRegion && (region == 0 || SetWindowRgn(WindowHandle, region, redraw: true) == 0))
@@ -559,7 +562,7 @@ public sealed class PosterInputIslandManager : IInputRegionHost
             _contextDesktopHost is not { } host || !_attachment.IsAttached(WindowHandle, host) ||
             !_contextNative.IsDesktopReceiver(host.Identity.ContainerHandle, host) ||
             !_contextNative.IsSurfaceCurrent(_visualHandle, WindowHandle, _frame) ||
-            ResolveRoute(new NativePoint { X = point.X, Y = point.Y }) is not { } route ||
+            ResolveRoute(new NativePoint { X = point.X, Y = point.Y }, includeCanvasActions: false) is not { } route ||
             !ReferenceEquals(route.Owner, this) || route.Hit.Region.Kind is not (PosterInputTargetKind.ContentItem or PosterInputTargetKind.ContentViewport) ||
             !PosterContentInputPolicy.HasValidIdentity(route.Hit.Region) ||
             _contextNative.ReadWindowOrder() is not { } order) return false;
@@ -722,7 +725,7 @@ public sealed class PosterInputIslandManager : IInputRegionHost
             X = GetSignedLowWord(lParam),
             Y = GetSignedHighWord(lParam)
         };
-        if (ResolveRoute(point) is not { } route ||
+        if (ResolveRoute(point, includeCanvasActions: false) is not { } route ||
             route.Hit.Region.Kind is not (PosterInputTargetKind.Item or
                 PosterInputTargetKind.ItemScroll or PosterInputTargetKind.ContentItem or
                 PosterInputTargetKind.ContentSpanHandle or PosterInputTargetKind.ContentViewport))
@@ -851,7 +854,7 @@ public sealed class PosterInputIslandManager : IInputRegionHost
                 _layout?.Revision ?? 0,
                 wheelDelta) { Session = _session });
 
-    private (PosterInputIslandManager Owner, PosterInputHit Hit)? ResolveRoute(NativePoint point)
+    private (PosterInputIslandManager Owner, PosterInputHit Hit)? ResolveRoute(NativePoint point, bool includeCanvasActions = true)
     {
         // Defense against a queued pre-menu message. Native transparency supplies actual
         // Popup delivery; merely dropping this route would not fix hover.
@@ -865,7 +868,7 @@ public sealed class PosterInputIslandManager : IInputRegionHost
         for (nint hwnd = GetTopWindow(0); hwnd != 0 && seen.Count < 4096 && seen.Add(hwnd); hwnd = GetWindow(hwnd, 2))
             if (visuals.TryGetValue(hwnd, out var owner) && IsWindowVisible(hwnd) && IsWindowVisible(owner.WindowHandle))
                 order.Add(owner._session);
-        var hit = _router.Resolve(point.X, point.Y, order);
+        var hit = _router.Resolve(point.X, point.Y, order, includeCanvasActions);
         var receiver = hit is null ? null : candidates.FirstOrDefault(i => i._session == hit.Session);
         return receiver is null || hit is null ? null : (receiver, hit);
     }
@@ -947,7 +950,10 @@ public sealed class PosterInputIslandManager : IInputRegionHost
     // Material transparency does not imply input transparency. Blank areas belong
     // to the poster too; logical regions still decide whether a command may run.
     internal static nint BuildWindowRegion(PosterInputLayoutSnapshot layout) =>
-        CreateRectRgn(0, 0, layout.FrameWidth, layout.FrameHeight);
+        layout.Surface is { } shape
+            ? NativeSurfaceRegion.Create(new(layout.FrameWidth, layout.FrameHeight,
+                (int)Math.Min(shape.Radius, Math.Min(layout.FrameWidth, layout.FrameHeight) / 2d), shape.Shape))
+            : CreateRectRgn(0, 0, layout.FrameWidth, layout.FrameHeight);
 
     private static void ConstrainZOrder(nint lParam)
     {
@@ -1196,15 +1202,6 @@ public sealed class PosterInputIslandManager : IInputRegionHost
 
     [DllImport("gdi32.dll", SetLastError = true)]
     private static extern nint CreateRectRgn(int left, int top, int right, int bottom);
-
-    [DllImport("gdi32.dll", SetLastError = true)]
-    private static extern nint CreateRoundRectRgn(
-        int left,
-        int top,
-        int right,
-        int bottom,
-        int ellipseWidth,
-        int ellipseHeight);
 
     [DllImport("gdi32.dll", SetLastError = true)]
     private static extern int CombineRgn(nint destination, nint first, nint second, int mode);

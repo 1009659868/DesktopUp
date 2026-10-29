@@ -10,6 +10,7 @@ namespace DesktopUp;
 internal sealed partial class PosterVisualWindow
 {
     private Canvas? _titleCanvas;
+    private Grid? _titleHeader;
     private Border? _titleName, _titleCollapse, _titleMore;
     private Microsoft.UI.Xaml.Shapes.Path? _titleCloud;
     private Canvas? _titleCloudGroup;
@@ -61,19 +62,23 @@ internal sealed partial class PosterVisualWindow
     {
         if (_monitor is null || inputRouter.ReadSurface(inputSession) is not { } surface ||
             _titleName is null || _titleCollapse is null || _titleMore is null) return false;
-        var layout = PosterTitleChromePolicy.Resolve(surface.Frame.Width / _monitor.ScaleX, _geometry.IsCollapsed, _presentation.TitleChrome);
+        var layout = ResolveTitleLayout(surface.Frame.Width / _monitor.ScaleX, surface.Frame.Height / _monitor.ScaleY);
         bool Place(FrameworkElement element, TitleChromeRect rect) => Math.Abs(Canvas.GetLeft(element) - rect.X) < .01 &&
             Math.Abs(Canvas.GetTop(element) - rect.Y) < .01 && Math.Abs(element.ActualWidth - rect.Width) < .01 && Math.Abs(element.ActualHeight - rect.Height) < .01;
         bool Input(PosterInputTargetKind kind, TitleChromeRect rect) => surface.Layout.Regions.Any(r => r.Kind == kind &&
             r.Bounds.X == (int)Math.Round(rect.X * _monitor.ScaleX) && r.Bounds.Y == (int)Math.Round(rect.Y * _monitor.ScaleY) &&
             r.Bounds.Width == (int)Math.Round(rect.Width * _monitor.ScaleX) && r.Bounds.Height == (int)Math.Round(rect.Height * _monitor.ScaleY));
+        var expectedInk = _presentation.Parameters.TitleColors ?? new();
+        if (!_geometry.IsCollapsed && _presentation.Parameters.Canvas?.Current is { } canvas &&
+            canvas.Recipe.Nodes.FirstOrDefault(n => n.Type == "host.title@1") is { } title)
+            expectedInk = expectedInk with { Text = CanvasDeclaration.Property(canvas, title, "color").Text!, Actions = CanvasDeclaration.Property(canvas, title, "actions").Text! };
         return Place(_titleName, layout.Name) && Place(_titleCollapse, layout.Collapse) && Place(_titleMore, layout.More) &&
             Input(PosterInputTargetKind.CollapseButton, layout.Collapse) && Input(PosterInputTargetKind.MoreButton, layout.More) &&
             _titleName.Background is null && _titleCollapse.Background is null && _titleMore.Background is null &&
             _titleName.Child is TextBlock name && name.Foreground is SolidColorBrush text &&
             _collapseGlyph?.Foreground is SolidColorBrush actions && _moreGlyph?.Foreground is SolidColorBrush more &&
-            text.Color == ColorBrush((_presentation.Parameters.TitleColors ?? new()).Text).Color &&
-            actions.Color == ColorBrush((_presentation.Parameters.TitleColors ?? new()).Actions).Color && more.Color == actions.Color;
+            text.Color == ColorBrush(expectedInk.Text).Color &&
+            actions.Color == ColorBrush(expectedInk.Actions).Color && more.Color == actions.Color;
     }
     internal void ShowPosturePending(bool pending)
     {
@@ -93,7 +98,7 @@ internal sealed partial class PosterVisualWindow
 
     private Grid CreateTitleChrome()
     {
-        var header = new Grid();
+        var header = _titleHeader = new Grid();
         _titleCanvas = new Canvas { IsHitTestVisible = false };
         header.Children.Add(_titleCanvas);
         _titleTransform = new();
@@ -121,7 +126,10 @@ internal sealed partial class PosterVisualWindow
     {
         if (_titleCanvas is null || _titleCloud is null || _titleName is null || _titleCollapse is null || _titleMore is null) return;
         double width = Math.Max(PosterFrameGeometryPolicy.MinimumWidthDip, actualWidth ?? (_titlePaintWidth > 0 ? _titlePaintWidth : _geometry.WidthDip));
-        var layout = PosterTitleChromePolicy.Resolve(width, _geometry.IsCollapsed, _presentation.TitleChrome);
+        var layout = ResolveTitleLayout(width);
+        var canvasDesign = !_geometry.IsCollapsed ? _presentation.Parameters.Canvas?.Current : null;
+        var titleNode = canvasDesign?.Recipe.Nodes.FirstOrDefault(n => n.Type == "host.title@1");
+        if (_titleHeader is not null) Grid.SetRowSpan(_titleHeader, titleNode is not null ? 4 : 1);
         if (_titleCanvas.Clip is not RectangleGeometry clip) _titleCanvas.Clip = clip = new();
         clip.Rect = new(0, 0, width, layout.Height);
         void Place(FrameworkElement element, TitleChromeRect rect)
@@ -131,10 +139,14 @@ internal sealed partial class PosterVisualWindow
         Place(_titleName, layout.Name); Place(_titleCollapse, layout.Collapse); Place(_titleMore, layout.More);
         bool cloud = layout.Kind == PosterTitleChromeKind.Cloud;
         var ink = _presentation.Parameters.TitleColors ?? new();
+        if (titleNode is not null) ink = ink with { Text = CanvasDeclaration.Property(canvasDesign!, titleNode, "color").Text!,
+            Actions = CanvasDeclaration.Property(canvasDesign!, titleNode, "actions").Text! };
         _collapseGlyph!.Foreground = ColorBrush(ink.Actions); _moreGlyph!.Foreground = ColorBrush(ink.Actions);
         if (_titleName.Child is TextBlock name)
-        { name.Text = _authoritativePoster?.Title ?? "Desktop collection"; name.Padding = new(3, 1, 3, 0); name.Foreground = ColorBrush(ink.Text);
-            name.Opacity = _presentation.Parameters.IsTitleVisible ? 1 : 0; }
+        { name.Text = titleNode is null ? _authoritativePoster?.Title ?? "Desktop collection" : CanvasDeclaration.Property(canvasDesign!, titleNode, "text").Text;
+            name.FontSize = titleNode is null ? 14 : CanvasDeclaration.Property(canvasDesign!, titleNode, "fontSize").Number!.Value * (CanvasFor(_bounds)?.Scale ?? 1);
+            name.Padding = new(3, 1, 3, 0); name.Foreground = ColorBrush(ink.Text);
+            name.Opacity = titleNode is not null || _presentation.Parameters.IsTitleVisible ? 1 : 0; }
         if (_metaPanel?.Children.ElementAtOrDefault(1) is TextBlock metaTitle)
             metaTitle.Opacity = _presentation.Parameters.IsTitleVisible ? 1 : 0;
         _titleCloudGroup!.Visibility = cloud ? Visibility.Visible : Visibility.Collapsed;

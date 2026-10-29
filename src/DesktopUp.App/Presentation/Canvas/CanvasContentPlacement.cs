@@ -12,8 +12,9 @@ internal static class CanvasContentPlacement
         // Normalized design coordinates may be fractional DIP. Preserve them through XAML;
         // the existing input boundary performs the single final conversion to device pixels.
         structure.UseLayoutRounding = false; items.UseLayoutRounding = false; scroll.UseLayoutRounding = false;
-        structure.RowDefinitions[0].Height = new(CanvasLayout.Header);
-        structure.RowDefinitions[1].Height = new(Math.Max(0, area.Y - CanvasLayout.Header));
+        double header = layout.Nodes.Any(p => p.Node.Type == "host.title@1") ? 0 : CanvasLayout.Header;
+        structure.RowDefinitions[0].Height = new(header);
+        structure.RowDefinitions[1].Height = new(Math.Max(0, area.Y - header));
         structure.RowDefinitions[3].Height = new(Math.Max(0, layout.Height - area.Bottom));
         items.Margin = new(area.X, 0, Math.Max(0, layout.Width - area.Right), 0);
         scroll.Margin = new(0);

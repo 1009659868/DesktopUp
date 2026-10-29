@@ -112,7 +112,8 @@ internal sealed partial class ControlCenterService(
                     () => spatialRuntime?.Invoke()?.CancelControlCenterVisuals(),
                     id => spatialRuntime?.Invoke()?.LocateControlCenterPoster(id) ?? "桌面尚未就绪。", ledger);
                 pendingWindow.ConfigureCanvas(id => new CanvasDesignSession(state, commands,
-                    spatialRuntime?.Invoke() ?? throw new InvalidOperationException("海报宿主尚未就绪。"), id, canvasWorkspace), ShowCommandResult, canvasImages,
+                    spatialRuntime?.Invoke() ?? throw new InvalidOperationException("海报宿主尚未就绪。"), id, canvasWorkspace,
+                    target => spatialRuntime?.Invoke()?.ReadCanvasObservation(target)), ShowCommandResult, canvasImages,
                     id => spatialRuntime?.Invoke()?.ReadCanvasContent(id));
                 if (portable is not null && requestRecovery is not null)
                     pendingWindow.ConfigurePortable(portable, ledger, log, requestRecovery);

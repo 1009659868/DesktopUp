@@ -23,6 +23,16 @@ internal sealed partial class PosterSpatialRuntime
                 log.Write(result.Succeeded ? "info" : "warning", "spatial.posture_result", new { result.RequestId, result.Status, result.Error }));
     }
 
+    internal void SetCanvasCollapsed(PosterVisualWindow window, bool collapsed, Action<bool> completed)
+    {
+        if (!state.TryGetCurrent(out var current) || current?.PostersById.GetValueOrDefault(window.PosterId ?? "") is not { } target)
+        { completed(false); return; }
+        SetCollapsed(new("canvas-posture-" + Guid.NewGuid().ToString("N"), StateCommandSource.Poster, PosterStateCommandKind.SetCollapsed,
+            current.Revision, target.Poster.PosterId, target.Poster with { IsCollapsed = collapsed })
+            { ReadSet = StateReadSet.ForPoster(target.Poster.PosterId, target.EntityVersion) }, result =>
+                { log.Write(result.Succeeded ? "info" : "warning", "canvas.posture_result", new { result.RequestId, result.Status, result.Error }); completed(result.Succeeded); });
+    }
+
     public void SetCollapsed(PosterStateCommand request, Action<StateCommandResult> completed)
     {
         if (HasCenterDraft(request.PosterId) || IsFileTransferActive(request.PosterId))

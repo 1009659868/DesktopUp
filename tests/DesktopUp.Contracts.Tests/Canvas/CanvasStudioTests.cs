@@ -111,6 +111,20 @@ public sealed class CanvasStudioTests
         File.WriteAllText(path, File.ReadAllText(path).Replace("\"fontSize\":{\"number\":18}", "\"fontSize\":{\"number\":20}"));
         Assert.Throws<ArgumentException>(() => ws.Combinations());
     }
+    [Fact]
+    public void Asset_semantics_are_bounded_revision_checked_and_do_not_mutate_pixels()
+    {
+        using var fixture = new WorkspaceFixture(); var ws = fixture.Store; ws.Works();
+        var asset = ws.Assets().Single(); var bytes = ws.ReadAsset(asset.Id);
+        Assert.Null(asset.Description);
+        var next = ws.DescribeAsset(asset.Id, "雨夜窗边，蓝色城市，底部木桌；用户描述", 0);
+        Assert.Equal(1, next.DescriptionRevision);
+        Assert.Equal(next, fixture.Store.Assets().Single());
+        Assert.Throws<ArgumentException>(() => ws.DescribeAsset(asset.Id, "旧版本", 0));
+        Assert.Throws<ArgumentException>(() => ws.DescribeAsset(asset.Id, new string('x', 513), 1));
+        Assert.Throws<ArgumentException>(() => ws.DescribeAsset("../outside", "x", 0));
+        Assert.Equal(bytes, ws.ReadAsset(asset.Id)); Assert.Equal(next, ws.Assets().Single());
+    }
     private sealed class WorkspaceFixture : IDisposable
     {
         public string Path { get; } = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "DesktopUp.Canvas.Studio.Tests", Guid.NewGuid().ToString("N"));

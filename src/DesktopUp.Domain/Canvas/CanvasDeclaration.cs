@@ -9,6 +9,7 @@ namespace DesktopUp.Domain;
 public sealed record CanvasValue(string? Text = null, double? Number = null, bool? Boolean = null, string? Parameter = null);
 public sealed record CanvasBox(double X = 0, double Y = 0, double Width = 1, double Height = 1);
 public sealed record CanvasArtboard(double Width, double Height);
+public sealed record CanvasSurface(string Shape = "rectangle", double Radius = 24);
 public sealed record CanvasTextStyle(string Family = "sans", double LetterSpacing = 0);
 public sealed record CanvasParameter(string Key, string Label, string Group, string Kind, CanvasValue Default,
     double Minimum = 0, double Maximum = 1, int MaxLength = 120);
@@ -19,17 +20,18 @@ public sealed record CanvasNode(string Id, string? Parent, string Type, CanvasBo
     CanvasTextStyle? Typography = null);
 public sealed record CanvasRecipe(string Id, int Version, string Name, IReadOnlyList<CanvasNode> Nodes,
     IReadOnlyList<CanvasParameter> Parameters, [property: JsonRequired] string Format = CanvasDeclaration.Format,
-    [property: JsonRequired] int ProtocolVersion = 1, string? ContentForeground = null, CanvasArtboard? Artboard = null);
+    [property: JsonRequired] int ProtocolVersion = 1, string? ContentForeground = null, CanvasArtboard? Artboard = null,
+    CanvasSurface? Surface = null, CanvasBehavior? Behavior = null);
 public sealed record CanvasDesign(CanvasRecipe Recipe, IReadOnlyDictionary<string, CanvasValue> Overrides);
 public sealed record CanvasDesignState(long Revision, CanvasDesign? Current, CanvasDesign? Previous,
-    bool CanUndo, string RequestId);
+    bool CanUndo, string RequestId, CanvasArtboard? PreviousFrame = null);
 public sealed record CanvasProperty(string Kind, double Minimum = 0, double Maximum = 1);
 public sealed record CanvasCapability(string Id, bool Children, IReadOnlyDictionary<string, CanvasProperty> Properties);
 
 /// <summary>The actual bounded runtime capability catalog, shared by validation and the editor.</summary>
 public static class CanvasCapabilities
 {
-    public const string Revision = "canvas-j1-2.1";
+    public const string Revision = "canvas-j1-3.3";
     private static IReadOnlyDictionary<string, CanvasProperty> Props(params (string, CanvasProperty)[] values) =>
         new System.Collections.ObjectModel.ReadOnlyDictionary<string, CanvasProperty>(values.ToDictionary(x => x.Item1, x => x.Item2));
     public static IReadOnlyList<CanvasCapability> All { get; } = Array.AsReadOnly(new CanvasCapability[]
@@ -42,6 +44,8 @@ public static class CanvasCapabilities
         new("draw.ellipse@1", false, Props(("fill", new("color")), ("opacity", new("number")))),
         new("draw.text@1", false, Props(("text", new("string")), ("color", new("color")), ("fontSize", new("number", 10, 96)))),
         new("content.slot@1", false, Props()),
+        new("host.title@1", false, Props(("text", new("string")), ("color", new("color")),
+            ("actions", new("color")), ("fontSize", new("number", 10, 32)))),
         new("effect.rain@1", false, Props(("intensity", new("number"))))
     });
     public static CanvasCapability? Find(string id) => All.FirstOrDefault(x => x.Id == id);
@@ -77,7 +81,11 @@ public static class CanvasDeclaration
         {
             Nodes = Array.AsReadOnly(copy.Recipe.Nodes.Select(n => n with { Properties =
                 new System.Collections.ObjectModel.ReadOnlyDictionary<string, CanvasValue>(n.Properties.ToDictionary(x => x.Key, x => x.Value)) }).ToArray()),
-            Parameters = Array.AsReadOnly(copy.Recipe.Parameters.ToArray())
+            Parameters = Array.AsReadOnly(copy.Recipe.Parameters.ToArray()),
+            Behavior = copy.Recipe.Behavior is { } behavior ? behavior with {
+                Rules = behavior.Rules is null ? null : Array.AsReadOnly(behavior.Rules.ToArray()),
+                Prefabs = behavior.Prefabs is null ? null : Array.AsReadOnly(behavior.Prefabs.ToArray()),
+                Bindings = behavior.Bindings is null ? null : Array.AsReadOnly(behavior.Bindings.ToArray()) } : null
         };
         return copy with { Recipe = recipe, Overrides = new System.Collections.ObjectModel.ReadOnlyDictionary<string, CanvasValue>(copy.Overrides.ToDictionary(x => x.Key, x => x.Value)) };
     }
@@ -88,10 +96,16 @@ public static class CanvasDeclaration
     public static void Validate(CanvasDesign design)
     {
         if (design?.Recipe is not { } recipe || design.Overrides is null || recipe.Nodes is null || recipe.Parameters is null ||
-            recipe.Format != Format || recipe.ProtocolVersion is not (1 or 2) || !Key(recipe.Id) || recipe.Version < 1 ||
+            recipe.Format != Format || recipe.ProtocolVersion is not (1 or 2 or 3) || !Key(recipe.Id) || recipe.Version < 1 ||
             !Text(recipe.Name, 64) || recipe.Nodes.Count is < 2 or > 128 || recipe.Parameters.Count > 64 ||
             Encoding.UTF8.GetByteCount(Serialize(recipe)) > MaximumBytes) throw new ArgumentException("不支持或不完整的画板声明。");
+        if (recipe.Behavior is not null && recipe.ProtocolVersion < 3) throw new ArgumentException("状态行为需要整张画板协议。");
         var ids = new HashSet<string>(StringComparer.Ordinal);
+        if (recipe.Surface is { } surface && (recipe.ProtocolVersion < 3 || recipe.Artboard is null ||
+            surface.Shape is not ("rectangle" or "rounded" or "ellipse") || !In(surface.Radius, 0, 512)))
+            throw new ArgumentException("海报外形或画板版本无效。");
+        if (recipe.ProtocolVersion == 3 && (recipe.Surface is null || recipe.Nodes.Count(n => n?.Type == "host.title@1") != 1))
+            throw new ArgumentException("画板海报需保留外形声明和唯一标题操作区。");
         if (recipe.Artboard is { } artboard && (recipe.ProtocolVersion < 2 || !In(artboard.Width, 240, 2048) || !In(artboard.Height, 240, 2048)))
             throw new ArgumentException("设计画板尺寸需为240～2048 DIP。");
         if (recipe.ContentForeground is { } foreground && (recipe.ProtocolVersion < 2 || !Accepts("color", new(Text: foreground))))
@@ -130,9 +144,11 @@ public static class CanvasDeclaration
             if (n.Parent is null && n.Hidden || recipe.ProtocolVersion == 1 && (n.Hidden || n.Locked))
                 throw new ArgumentException("根画板不能隐藏，图层状态需使用新版声明。");
             if (!In(n.Rotation, -180, 180) || n.Name is not null && !Text(n.Name, 64) ||
-                n.Rotation != 0 && (n.Type is "layout.canvas@1" or "layout.stack@1" or "content.slot@1") ||
+                n.Rotation != 0 && (n.Type is "layout.canvas@1" or "layout.stack@1" or "content.slot@1" or "host.title@1") ||
                 recipe.ProtocolVersion == 1 && (n.Rotation != 0 || n.Type is "layout.group@1" or "draw.image@1"))
                 throw new ArgumentException("节点变换或版本不受支持。真实内容保持轴对齐，装饰与组合可旋转。");
+            if (n.Type == "host.title@1" && (recipe.ProtocolVersion < 3 || n.Parent != recipe.Nodes[0].Id || n.Hidden))
+                throw new ArgumentException("标题操作区保持根画板坐标且不能隐藏；可清空标题文字。");
             if (n.Properties.Count != capability.Properties.Count) throw new ArgumentException("节点属性缺失或多余。");
             foreach (var (key, value) in n.Properties)
             {
@@ -155,6 +171,7 @@ public static class CanvasDeclaration
             }
         }
         if (slots != 1) throw new ArgumentException("必须保留一个且仅一个内容槽。");
+        CanvasBehaviorPolicy.Validate(recipe.Behavior, recipe.Nodes);
         if (recipe.Nodes.Where(n => n.Type == "draw.image@1").Select(n => Property(design, n, "asset").Text).Distinct().Count() > 8)
             throw new ArgumentException("单个作品最多使用 8 份不同图片，重复实例共享资源。");
         // Stacks are measured flow containers. Only text plus one final content slot are supported.
@@ -170,6 +187,8 @@ public static class CanvasDeclaration
         if (state.Revision < 1 || !Text(state.RequestId, 128)) throw new ArgumentException("画板版本无效。");
         if (state.Current is { } current) Validate(current);
         if (state.Previous is { } previous) Validate(previous);
+        if (state.PreviousFrame is { } frame && (!In(frame.Width, 1, 16384) || !In(frame.Height, 1, 16384)))
+            throw new ArgumentException("撤销外框尺寸无效。");
     }
     public static bool Accepts(string kind, CanvasValue? value, double min = 0, double max = 1, int length = 120)
     {

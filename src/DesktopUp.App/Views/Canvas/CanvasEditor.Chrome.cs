@@ -47,6 +47,7 @@ internal sealed partial class CanvasEditor
         var docs = TwoColumns();
         docs.Children.Add(new ScrollViewer { Content = documentTabs, HorizontalScrollBarVisibility = ScrollBarVisibility.Hidden, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled });
         var publish = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 3 };
+        runButton = Command("运行画板", "play", ToggleStudioRun); publish.Children.Add(runButton);
         publish.Children.Add(Command("预览作品", "play", Preview));
         StyleButton(apply); apply.Background = Ink("#334D47"); apply.Foreground = Ink("#7BC9AD"); apply.Click += (_, _) => Try(Commit); publish.Children.Add(apply);
         StyleButton(previewCancel); previewCancel.Click += (_, _) => CancelPreview(); publish.Children.Add(previewCancel);
@@ -62,6 +63,8 @@ internal sealed partial class CanvasEditor
         Tool(tools, "文字", "text", "draw.text@1", "添加文字 · T");
         Tool(tools, "收纳区", "grid", "content.slot@1", "重新绘制唯一收纳区域 · C；不会复制真实文件");
         tools.Children.Add(Command("导入素材", "image", ImportPicker));
+        behaviorLauncher = Command("行为", "", ShowBehaviorEditor); tools.Children.Add(behaviorLauncher);
+        tools.Children.Add(Command("设计数据", "", CopySceneData));
         toolbar.Children.Add(tools);
         var history = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 3 };
         undoButton = Command("撤销", "undo", () => Edit(document.Undo), true); history.Children.Add(undoButton);
@@ -77,7 +80,11 @@ internal sealed partial class CanvasEditor
         left.RowDefinitions.Add(new() { Height = new(1, GridUnitType.Star) }); left.RowDefinitions.Add(new() { Height = new(1, GridUnitType.Star) });
         var layerArea = new Grid { Padding = new(8) };
         layerArea.RowDefinitions.Add(new() { Height = new(28) }); layerArea.RowDefinitions.Add(new() { Height = new(1, GridUnitType.Star) });
-        var layerHeader = new Grid(); layerHeader.Children.Add(new TextBlock { Text = "图层", FontSize = 11, Foreground = Ink("#ADB1B0") }); layerHeader.Children.Add(layerCount); layerArea.Children.Add(layerHeader);
+        var layerHeader = new Grid();
+        var layerTabs = new StackPanel { Orientation = Orientation.Horizontal };
+        layerTabs.Children.Add(Command("图层", "", () => { StopStudioRun(); behaviorTree = false; CloseScriptEditor(); RefreshLayers(); }));
+        layerTabs.Children.Add(Command("行为", "", () => { StopStudioRun(); behaviorTree = true; RefreshLayers(); }));
+        layerHeader.Children.Add(layerTabs); layerArea.Children.Add(layerHeader);
         var layerScroll = new ScrollViewer { Content = layers }; Grid.SetRow(layerScroll, 1); layerArea.Children.Add(layerScroll); left.Children.Add(layerArea);
         var libArea = new Grid { Padding = new(8), BorderBrush = Ink("#414448"), BorderThickness = new(0, 1, 0, 0) };
         libArea.RowDefinitions.Add(new() { Height = GridLength.Auto }); libArea.RowDefinitions.Add(new() { Height = new(1, GridUnitType.Star) });
@@ -192,7 +199,7 @@ internal sealed partial class CanvasEditor
     }
     private void UpdateArtboard()
     {
-        double width = document.Design.Recipe.Artboard?.Width ?? session!.Width, height = document.Design.Recipe.Artboard?.Height ?? session!.Height - CanvasLayout.Header;
+        double width = document.Design.Recipe.Artboard!.Width, height = document.Design.Recipe.Artboard.Height;
         if (board.Width == width && board.Height == height) return;
         board.Width = width; board.Height = height; world.Width = width + 96; world.Height = height + 96; BuildCheckerboard();
     }

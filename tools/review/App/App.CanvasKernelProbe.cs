@@ -37,6 +37,36 @@ public partial class App
                 window.VerifyCanvasOriginForProbe();
                 await window.CapturePosterXamlForProbeAsync(Path.Combine(dataRoot, name + ".png"));
             }
+            if (_startupIntent.Arguments.Contains("--canvas-title-diagnostic"))
+            {
+                stage = "title-diagnostic";
+                await DiagnoseCanvasTitleForProbe(dataRoot, id, window, cancellation.Token);
+                _log!.Write("info", "canvas.kernel_observed", new { passed = true, stage, diagnosisOnly = true,
+                    productFixVerified = false, nativeMouse = false, FilesUnchanged = true });
+                return;
+            }
+            if (_startupIntent.Arguments.Contains("--canvas-context-probe"))
+            {
+                stage = "context-tools-behavior";
+                await VerifyCanvasContextProbe(dataRoot, id, window, cancellation.Token, Observe);
+                _log!.Write("info", "canvas.kernel_observed", new { passed = true, stage, nativeMouse = false,
+                    nativeKeyboard = false, FilesUnchanged = true, anonymousFrame = true, controlledTools = true, behavior = true });
+                return;
+            }
+            if (_startupIntent.Arguments.Contains("--canvas-current-probe"))
+            {
+                stage = "current-poster-background";
+                Require(commands.Execute(new PosterSettingEdit(state.Refresh().PostersById[id], PosterSetting.Surface,
+                    Surface: new("#000000", 43)).Command("owned-current-background")).Succeeded, "Background setup failed.");
+                await Task.Delay(180, cancellation.Token);
+                window.VerifyCurrentBackgroundForProbe(false);
+                _controlCenter!.Show(); await Task.Delay(150, cancellation.Token);
+                await _controlCenter.SettingsWindowForContractProbe!.VerifyCurrentCanvasEditorForProbe(dataRoot, cancellation.Token,
+                    async name => { await Observe(name); window.VerifyCurrentBackgroundForProbe(name is not "current-cancelled" and not "current-undone"); });
+                _log!.Write("info", "canvas.kernel_observed", new { passed = true, stage, nativeMouse = false, nativeKeyboard = false,
+                    FilesUnchanged = true, currentBackground = "#000000", opacityPercent = 43, scenePacket = true });
+                return;
+            }
             stage = "restart";
             if (_startupIntent.Arguments.Contains("--canvas-restart"))
             {

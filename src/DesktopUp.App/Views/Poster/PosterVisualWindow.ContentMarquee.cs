@@ -54,6 +54,7 @@ internal sealed partial class PosterVisualWindow
             _contentSelection = gesture.Control || gesture.Shift ? gesture.Before : ContentSelection.Empty;
         if (args.EventKind is PosterInputEventKind.GestureCompleted or PosterInputEventKind.Invoked)
         { _contentMarquee=null; _contentSession.SetInteraction(PosterContentInteraction.Marquee, false);gesture.Lease.Dispose();QueueContentProposalDrain(); }
+        if (args.EventKind == PosterInputEventKind.Invoked) CanvasBlankClick(args.LatestPoint);
         _selectedContentItem=_contentSelection.Focus;
         RefreshContentSurface();spatial.NotifyContentEditorChanged(PosterId);
         return true;

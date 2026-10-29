@@ -81,6 +81,8 @@ internal sealed partial class PosterVisualWindow
         var effective = ContentFrameMinimumPolicy.FromSnapshot(snapshot,
             (canvas is null ? HorizontalPaddingDip * 2 : canvas.Width - canvas.Content.Width) + ContentFrameMinimumPolicy.EditingBorderDip,
             (canvas is null ? HeaderHeightDip + MetaHeightDip + ItemsTopInsetDip + FooterHeightDip : canvas.Height - canvas.Content.Height) + ContentFrameMinimumPolicy.EditingBorderDip);
+        if (canvas is not null && CanvasSurfaceGeometry.IsWholePoster(_presentation.Parameters.Canvas?.Current))
+            effective = CanvasSurfaceGeometry.Minimum(canvas, snapshot);
         // A currently accepted heat projection may have larger cards than its author basis.
         (width, height) = (_contentSession.HasContinuousHeat ? authored! :
             new ContentFrameMinimum(Math.Max(authored!.WidthDip, effective.WidthDip),

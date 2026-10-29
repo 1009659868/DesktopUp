@@ -12,6 +12,7 @@ internal sealed partial class PosterVisualWindow
     private PointerScreenPoint? _lastScenePointer;
     private double _lastSceneSeconds;
     private bool _lastSceneCanAnimate;
+    private string? _lastCanvasScriptError;
 
     private FrameworkElement? CreateScene()
     {
@@ -22,6 +23,8 @@ internal sealed partial class PosterVisualWindow
         {
             _sceneInstance = SceneModuleRegistry.Create(CurrentSceneParameters.Capability);
             if (_sceneInstance is null) return;
+            if (_sceneInstance is CanvasSceneInstance canvas) canvas.ConfigureHost(
+                () => _authoritativePoster?.IsCollapsed ?? _geometry.IsCollapsed, RequestCanvasPosture);
             root = _sceneInstance.Root;
             root.IsHitTestVisible = false;
             root.SizeChanged += SceneSizeChanged;
@@ -39,8 +42,9 @@ internal sealed partial class PosterVisualWindow
         if (_sceneInstance is null) return;
         // A content repaint/press is not a leave event. Reuse only the last shared sample
         // until the next tick (33ms), in screen coordinates so movement cannot shift the aim.
-        PaintSceneMotion(_lastSceneSeconds, _lastScenePointer, _lastSceneCanAnimate);
-        bool visible = !_disposed && _window is not null && !_geometry.IsCollapsed && !_contentSession.IsSuspended;
+        PaintSceneMotion(_lastSceneSeconds, _lastScenePointer,
+            _sceneInstance is CanvasSceneInstance ? spatial.CanAnimateContent(SpatialDispatcher) : _lastSceneCanAnimate);
+        bool visible = !_disposed && _window is not null && (!_geometry.IsCollapsed || HasActiveCanvasScripts) && !_contentSession.IsSuspended;
         bool requested = false;
         RunScene(() => requested = _sceneInstance?.WantsMotion == true);
         spatial.SetSceneMotionDemand(this, visible && !IsEditing && requested &&
@@ -69,8 +73,42 @@ internal sealed partial class PosterVisualWindow
             if (_sceneInstance is CanvasSceneInstance && frame.Width > 0 && CanvasFor(_bounds) is { } canvas)
                 frame = frame with { Width = canvas.Width, Height = canvas.Height };
             _sceneInstance.Update(CurrentSceneParameters, frame);
+            if (_sceneInstance is CanvasSceneInstance canvasScene && canvasScene.ScriptError != _lastCanvasScriptError)
+            {
+                _lastCanvasScriptError = canvasScene.ScriptError;
+                if (_lastCanvasScriptError is not null) log.Write("warning", "canvas.behavior_stopped", new { PosterId, Message = _lastCanvasScriptError });
+            }
             if (_sceneInstance is IPosterTitleMotion motion) TryPaintTitleMotion(motion.TitlePose);
         })) PaintSceneCards();
+        if (_sceneInstance is CanvasSceneInstance { WantsMotion: false }) spatial.SetSceneMotionDemand(this, false, inputRouter);
+    }
+
+    internal bool ObservesCanvasPointer => _sceneInstance is CanvasSceneInstance { ObservesPointer: true };
+    internal bool HasActiveCanvasScripts => _sceneInstance is CanvasSceneInstance { HasActiveScripts: true };
+    private Task<bool> RequestCanvasPosture(bool collapsed)
+    {
+        var result = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var scene = _sceneInstance;
+        // Leave rendering/input callbacks before entering the existing transactional posture use case.
+        if (!SpatialDispatcher.TryEnqueue(() =>
+        {
+            if (_disposed || !ReferenceEquals(scene, _sceneInstance) || _contentSession.IsSuspended || IsEditing)
+            { result.TrySetResult(false); return; }
+            spatial.SetCanvasCollapsed(this, collapsed, success => result.TrySetResult(success));
+        })) result.TrySetResult(false);
+        return result.Task;
+    }
+    private bool InvokeCanvasToggle()
+    {
+        if (_sceneInstance is not CanvasSceneInstance scene) return false;
+        bool handled = scene.InvokeToggle(spatial.CanAnimateContent(SpatialDispatcher)); UpdateScene(); return handled;
+    }
+    private void CanvasBlankClick(PointerScreenPoint point)
+    {
+        if (_sceneInstance is not CanvasSceneInstance scene || _monitor is null || IsEditing || _geometry.IsCollapsed) return;
+        RunScene(() => scene.Click(new((point.X - _bounds.X) / _monitor.ScaleX,
+            (point.Y - _bounds.Y) / _monitor.ScaleY), spatial.CanAnimateContent(SpatialDispatcher)));
+        UpdateScene();
     }
 
     private bool RunScene(Action action)

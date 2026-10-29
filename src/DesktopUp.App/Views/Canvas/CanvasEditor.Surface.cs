@@ -21,6 +21,7 @@ internal sealed partial class CanvasEditor
     {
         var design = Shown; geometry = CanvasLayout.ForAuthoring(design, board.Width, board.Height);
         layerState = CanvasLayerState.Resolve(design);
+        if (SelectedTitleControl is null) selectedTitleControl = null;
         if (!design.Recipe.Nodes.Any(n => n.Id == context)) context = design.Recipe.Nodes[0].Id;
         ClearAdorners();
         var retained = new HashSet<string>(); int z = 0;
@@ -38,11 +39,13 @@ internal sealed partial class CanvasEditor
                     "draw.ellipse@1" => new Ellipse(),
                     "draw.image@1" => new Image { Stretch = Stretch.UniformToFill },
                     "content.slot@1" => ContentGuide(),
+                    "host.title@1" => TitleGuide(),
                     _ => new Border()
                 };
                 e.Tag = n.Type; e.IsHitTestVisible = false; views[n.Id] = e; board.Children.Add(e);
             }
             CanvasValue P(string key) => CanvasDeclaration.Property(design, n, key);
+            if (n.Type == "host.title@1" && e is Microsoft.UI.Xaml.Controls.Canvas title) PaintTitleGuide(title, design, n, p.Bounds);
             if (n.Type == "draw.panel@1" && e is Border panel)
             { panel.Background = Ink(P("fill").Text!); panel.CornerRadius = new(P("radius").Number!.Value); panel.Opacity = P("opacity").Number!.Value; }
             if (e is Ellipse ellipse) { ellipse.Fill = Ink(P("fill").Text!); ellipse.Opacity = P("opacity").Number!.Value; }
@@ -58,11 +61,17 @@ internal sealed partial class CanvasEditor
             Place(e, p.Bounds); RotateView(e, p.Rotation); Microsoft.UI.Xaml.Controls.Canvas.SetZIndex(e, z++);
         }
         foreach (var id in views.Keys.Where(id => !retained.Contains(id)).ToArray()) { board.Children.Remove(views[id]); views.Remove(id); }
+        PaintSurfaceMask(design);
         foreach (var id in selected.ToArray())
         {
             var p = geometry.Nodes.FirstOrDefault(p => p.Node.Id == id);
             if (p is null) { selected.Remove(id); continue; }
             if (layerState.Hidden.Contains(id)) continue;
+            if (SelectedTitleControl is { } control)
+            {
+                Adorn(new Border { BorderBrush = Ink("#438CFF"), BorderThickness = new(1.5), IsHitTestVisible = false }, control.BoundsDip);
+                continue;
+            }
             var outline = new Border { BorderBrush = Ink(layerState.Locked.Contains(id) ? "#ADB1B0" : "#438CFF"), BorderThickness = new(1.5), IsHitTestVisible = false };
             Adorn(outline, p.Bounds); RotateView(outline, p.Rotation); selectionVisuals.Add((id, outline, 0, 0, "outline"));
             if (selected.Count == 1 && pending is null && !layerState.Locked.Contains(id)) Handles(p);
@@ -113,16 +122,18 @@ internal sealed partial class CanvasEditor
     { foreach (var e in adorners) board.Children.Remove(e); adorners.Clear(); selectionVisuals.Clear(); }
     private void RefreshLayers()
     {
+        if (behaviorTree) { RefreshBehaviorTree(); return; }
         layers.Children.Clear();
         var nodes = document.Design.Recipe.Nodes.Where(n => n.Parent == context).Reverse().ToArray();
         layerCount.Text = nodes.Length.ToString();
         foreach (var n in nodes)
         {
-            var row = new Grid { CornerRadius = new(5), Background = selected.Contains(n.Id) ? Ink("#334D47") : null, Opacity = n.Hidden ? .5 : 1 };
+            var row = new Grid { CornerRadius = new(5), Background = selected.Contains(n.Id) && SelectedTitleControl is null ? Ink("#334D47") : null, Opacity = n.Hidden ? .5 : 1 };
             row.ColumnDefinitions.Add(new() { Width = new(1, GridUnitType.Star) });
             row.ColumnDefinitions.Add(new() { Width = new(24) }); row.ColumnDefinitions.Add(new() { Width = new(24) });
             var select = Command(n.Name ?? Label(n.Type), TypeIcon(n.Type), () =>
             {
+                selectedTitleControl = null;
                 if (!Down(global::Windows.System.VirtualKey.Shift)) selected.Clear();
                 if (!selected.Add(n.Id)) selected.Remove(n.Id);
                 Render();
@@ -132,22 +143,23 @@ internal sealed partial class CanvasEditor
             { caption.MaxWidth = narrow ? 48 : 76; caption.TextTrimming = TextTrimming.CharacterEllipsis; caption.FontSize = 11; }
             row.Children.Add(select);
             var visibility = Command(n.Hidden ? "显示图层" : "隐藏图层", n.Hidden ? "eye-off" : "eye", () => Edit(() => document.Replace(Current(n.Id) with { Hidden = !Current(n.Id).Hidden })), true);
-            visibility.Padding = new(3); visibility.IsEnabled = !document.Subtree([n.Id]).Any(p => p.Type == "content.slot@1");
+            visibility.Padding = new(3); visibility.IsEnabled = !document.Subtree([n.Id]).Any(p => p.Type is "content.slot@1" or "host.title@1");
             Grid.SetColumn(visibility, 1); row.Children.Add(visibility);
             var locked = Command(n.Locked ? "解锁图层" : "锁定图层", n.Locked ? "lock" : "unlock", () => Edit(() => document.Replace(Current(n.Id) with { Locked = !Current(n.Id).Locked })), true);
             locked.Padding = new(3); Grid.SetColumn(locked, 2); row.Children.Add(locked); layers.Children.Add(row);
+            if (n.Type == "host.title@1") TitleControlRows(n);
         }
         back.Content = "画布 / " + (document.Design.Recipe.Nodes.First(n => n.Id == context).Name ?? "组合") + "  ↑";
         back.Visibility = context == document.Design.Recipe.Nodes[0].Id ? Visibility.Collapsed : Visibility.Visible;
     }
     private static string TypeIcon(string type) => type switch { "draw.text@1" => "text", "draw.image@1" => "image", "draw.ellipse@1" => "circle", "layout.group@1" => "group", "content.slot@1" => "grid", _ => "square" };
-    private static string Label(string type) => type switch { "draw.text@1" => "文字", "draw.panel@1" => "矩形", "draw.ellipse@1" => "椭圆", "draw.image@1" => "图片", "content.slot@1" => "收纳区域", "layout.group@1" => "组合", _ => type };
-    private void Select(string id) { selected.Clear(); selected.Add(id); }
+    private static string Label(string type) => type switch { "host.title@1" => "标题与操作区", "draw.text@1" => "文字", "draw.panel@1" => "矩形", "draw.ellipse@1" => "椭圆", "draw.image@1" => "图片", "content.slot@1" => "收纳区域", "layout.group@1" => "组合", _ => type };
+    private void Select(string id) { selectedTitleControl = null; selected.Clear(); selected.Add(id); }
     private void RefreshContext()
     {
-        contextTools.Children.Clear(); contextBar.Visibility = selected.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
+        contextTools.Children.Clear(); contextBar.Visibility = selected.Count == 0 || SelectedTitleControl is not null ? Visibility.Collapsed : Visibility.Visible;
         bool editable = selected.Count > 0 && !selected.Any(layerState.Locked.Contains);
-        bool decor = editable && !document.Subtree(selected).Any(n => n.Type == "content.slot@1");
+        bool decor = editable && !document.Subtree(selected).Any(n => n.Type is "content.slot@1" or "host.title@1");
         void Add(string label, string icon, Action action, bool enabled)
         { var b = Command(label, icon, action, label is "复制" or "删除"); b.IsEnabled = enabled; contextTools.Children.Add(b); }
         Add("复制", "copy", Duplicate, decor);
@@ -213,7 +225,11 @@ internal sealed partial class CanvasEditor
         var layout = CanvasLayout.ForAuthoring(Shown, board.Width, board.Height);
         foreach (var p in layout.Nodes)
         {
-            if (views.TryGetValue(p.Node.Id, out var e)) { Place(e, p.Bounds); RotateView(e, p.Rotation); }
+            if (views.TryGetValue(p.Node.Id, out var e))
+            {
+                Place(e, p.Bounds); RotateView(e, p.Rotation);
+                if (p.Node.Type == "host.title@1" && e is Microsoft.UI.Xaml.Controls.Canvas title) PaintTitleGuide(title, Shown, p.Node, p.Bounds);
+            }
             foreach (var a in selectionVisuals.Where(a => a.Id == p.Node.Id))
             {
                 if (a.Kind == "outline") { Place(a.View, p.Bounds); RotateView(a.View, p.Rotation); }

@@ -13,7 +13,7 @@ internal static class CanvasRegistration
 }
 
 /// <summary>Stable-ID decorative nodes only. The host retains content, input and one shared clock.</summary>
-internal sealed class CanvasSceneInstance(CanvasImages images) : IPosterSceneInstance
+internal sealed partial class CanvasSceneInstance(CanvasImages images) : IPosterSceneInstance
 {
     private readonly Microsoft.UI.Xaml.Controls.Canvas root = new() { IsHitTestVisible = false };
     private readonly Dictionary<string, FrameworkElement> visuals = new(StringComparer.Ordinal);
@@ -24,11 +24,24 @@ internal sealed class CanvasSceneInstance(CanvasImages images) : IPosterSceneIns
     private bool running;
     private CanvasLayerState? layerState;
     public FrameworkElement Root => root;
-    public bool WantsMotion => design is not null && design.Recipe.Nodes.Any(n => n.Type == "effect.rain@1" && layerState?.Hidden.Contains(n.Id) != true && CanvasDeclaration.Property(design, n, "intensity").Number > 0);
+    public bool WantsMotion => scripts?.Active == true || ObservesPointer || !ReadCollapsed() && design is not null && design.Recipe.Nodes.Any(n => n.Type == "effect.rain@1" && layerState?.Hidden.Contains(n.Id) != true && CanvasDeclaration.Property(design, n, "intensity").Number > 0);
     public void Update(SceneRenderParameters parameters, SceneFrameContext frame)
     {
-        if (!frame.Visible) { running = false; return; }
         if (parameters.Canvas is not { } next || frame.Width <= 0 || frame.Height <= CanvasLayout.Header) return;
+        if (!ReferenceEquals(scriptDesign, next))
+        {
+            // State publication may deserialize the same design after a posture commit. It must
+            // not cancel a sequence waiting for that commit. Hash only on reference changes.
+            if (scriptDesign is null || CanvasDeclaration.Digest(scriptDesign) != CanvasDeclaration.Digest(next))
+            { scripts?.Stop(); scripts = new(next, () => ReadCollapsed(), value => RequestPosture(value)); behaviorVisible = false; behaviorCollapsed = ReadCollapsed(); }
+            scriptDesign = next;
+        }
+        if (!frame.Visible)
+        {
+            running = false;
+            if (ReadCollapsed()) { UpdateBehavior(frame); return; }
+            scripts?.Stop(); behaviorVisible = false; return;
+        }
         var resolved = cache.Resolve(next, frame.Width, frame.Height);
         if (!ReferenceEquals(design, next) || !ReferenceEquals(layout, resolved))
         {
@@ -39,7 +52,7 @@ internal sealed class CanvasSceneInstance(CanvasImages images) : IPosterSceneIns
             {
                 var n = p.Node;
                 if (layerState.Hidden.Contains(n.Id)) continue;
-                if (n.Type is "layout.canvas@1" or "layout.stack@1" or "layout.group@1" or "content.slot@1") continue;
+                if (n.Type is "layout.canvas@1" or "layout.stack@1" or "layout.group@1" or "content.slot@1" or "host.title@1") continue;
                 retained.Add(n.Id);
                 if (!visuals.TryGetValue(n.Id, out var element) || (string?)element.Tag != n.Type)
                 {
@@ -64,7 +77,9 @@ internal sealed class CanvasSceneInstance(CanvasImages images) : IPosterSceneIns
             }
             foreach (var id in visuals.Keys.Where(id => !retained.Contains(id)).ToArray()) { root.Children.Remove(visuals[id]); visuals.Remove(id); }
             root.Clip = new RectangleGeometry { Rect = new(0, 0, frame.Width, frame.Height) };
+            RebuildBehaviorGeometry();
         }
+        UpdateBehavior(frame);
         bool animate = frame.CanAnimate && WantsMotion;
         if (animate && running) activeSeconds += Math.Clamp(frame.Seconds - lastClock, 0, .1);
         lastClock = frame.Seconds; running = animate;
@@ -108,6 +123,6 @@ internal sealed class CanvasSceneInstance(CanvasImages images) : IPosterSceneIns
     private static SolidColorBrush Brush(string color) => new(global::Windows.UI.Color.FromArgb(255,
         Convert.ToByte(color.Substring(1, 2), 16), Convert.ToByte(color.Substring(3, 2), 16), Convert.ToByte(color.Substring(5, 2), 16)));
     public void PaintCard(SceneCardPaint paint) { }
-    public void StopMotion() => running = false;
-    public void Dispose() { running = false; root.Children.Clear(); visuals.Clear(); design = null; layout = null; }
+    public void StopMotion() { running = false; scripts?.Stop(); PaintBehavior(); }
+    public void Dispose() { running = false; scripts?.Stop(); root.Children.Clear(); visuals.Clear(); design = null; layout = null; }
 }

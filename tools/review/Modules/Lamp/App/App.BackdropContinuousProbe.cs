@@ -71,7 +71,7 @@ internal static partial class BackdropCaptureProbe
     }, cancellation);
 
     internal static async Task CaptureSequenceAsync(nint window, string directory, Task finished,
-        CancellationToken cancellation, bool screenCrop = false)
+        CancellationToken cancellation, bool screenCrop = false, bool startsAfterFirstCommit = true)
     {
         const long budget = 160L * 1024 * 1024;
         const int limit = 240;
@@ -166,7 +166,7 @@ internal static partial class BackdropCaptureProbe
             }
             await File.WriteAllTextAsync(Path.Combine(directory, "frames.json"), JsonSerializer.Serialize(new
             {
-                ownWindowOnly = !screenCrop, screenCropOwnBounds = screenCrop, phasePaced = false, captureStartsAfterFirstCommit = true,
+                ownWindowOnly = !screenCrop, screenCropOwnBounds = screenCrop, phasePaced = false, captureStartsAfterFirstCommit = startsAfterFirstCommit,
                 noAnimationPause = true, allPresentedFramesCertified = false,
                 frequency = Stopwatch.Frequency, bytes, budget, limit, skipped, overBudget, screenOccluded,
                 error = captureError?.ToString(), frames = metadata

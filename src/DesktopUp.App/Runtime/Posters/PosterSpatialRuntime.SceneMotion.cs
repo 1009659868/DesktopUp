@@ -97,7 +97,7 @@ internal sealed partial class PosterSpatialRuntime
     private void ArmSceneMotion()
     {
         bool running = !_suspended && !SceneGlobalMotionPaused && _sceneMotionSurfaces.Count > 0 &&
-            _sceneAnimationsEnabled && !_sceneMotionFaulted;
+            (_sceneAnimationsEnabled || _sceneMotionSurfaces.Any(w => w.ObservesCanvasPointer || w.HasActiveCanvasScripts)) && !_sceneMotionFaulted;
         if (!running)
         {
             if (_sceneMotionTimer is not null)
@@ -144,18 +144,19 @@ internal sealed partial class PosterSpatialRuntime
         if (!ReferenceEquals(sender, _sceneMotionTimer) || _scenePointer is null) return;
         try
         {
-            var owners = _sceneMotionSurfaces.ToArray();
+            var owners = _sceneMotionSurfaces.Where(w => _sceneAnimationsEnabled || w.ObservesCanvasPointer || w.HasActiveCanvasScripts).ToArray();
             var sessions = owners.Select(window => window.ReadPointerTarget().Session).ToHashSet();
             var targets = ReadPointerTargets().Select(target => target with { Enabled = sessions.Contains(target.Session) }).ToArray();
             var sample = _scenePointer.Sample(++_scenePointerSequence, 1, targets, PointerProtection);
             foreach (var window in owners)
             {
                 var observed = sample.Posters.FirstOrDefault(p => p.Session == window.ReadPointerTarget().Session);
-                bool animate = observed is not null && ScenePointerAdmissionPolicy.CanAnimate(
-                    !_suspended && !SceneGlobalMotionPaused && _sceneAnimationsEnabled, observed.Pointer.Presence,
+                bool admitted = observed is not null && ScenePointerAdmissionPolicy.CanAnimate(
+                    !_suspended && !SceneGlobalMotionPaused, observed.Pointer.Presence,
                     sample.SharedProtection | observed.Protection);
-                var point = animate && observed!.Pointer.Presence == AutoPosturePresence.Inside ? _scenePointer.LastPosition : null;
-                window.PaintSceneMotion(_sceneMotionClock.Elapsed.TotalSeconds, point, animate);
+                var point = admitted && observed!.Pointer.Presence == AutoPosturePresence.Inside &&
+                    (_sceneAnimationsEnabled || window.ObservesCanvasPointer) ? _scenePointer.LastPosition : null;
+                window.PaintSceneMotion(_sceneMotionClock.Elapsed.TotalSeconds, point, admitted && _sceneAnimationsEnabled);
             }
             if (ReferenceEquals(sender, _sceneMotionTimer)) sender.Start();
         }

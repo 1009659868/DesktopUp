@@ -16,20 +16,38 @@ public sealed class CanvasDesignSession : IDisposable
     private readonly IStateCommandService commands;
     private readonly ICanvasPreviewHost host;
     private readonly PosterSurfaceProjection basis;
+    private readonly Func<string, CanvasContentObservation?>? readObservation;
     private CanvasDesignCommand? prepared;
+    private CanvasDesign? currentDesign;
     private bool disposed;
     public ICanvasWorkspace? Workspace { get; }
     public double Width => basis.Poster.WidthDip;
     public double Height => basis.Poster.ExpandedHeightDip;
     public string PosterId => basis.Poster.PosterId;
+    public string Title => basis.Poster.Title;
     public CanvasDesign? Design { get; private set; }
     public long DraftRevision { get; private set; }
     public string? PreviewId { get; private set; }
     public string? RequestId => prepared?.RequestId;
     public string CapabilityRevision => CanvasCapabilities.Revision;
-    public CanvasDesignSession(IStateProjectionCoordinator state, IStateCommandService commands, ICanvasPreviewHost host, string posterId, ICanvasWorkspace? workspace = null)
+    public long TargetVersion => basis.EntityVersion;
+    public CanvasDesign ReadCurrentDesign() => currentDesign ??= CanvasPosterDraft.Read(basis);
+    public CanvasScenePacket DescribeScene(bool draft = false)
+    {
+        ObjectDisposedException.ThrowIf(disposed, this);
+        if (state.Refresh().PostersById.GetValueOrDefault(PosterId)?.EntityVersion != basis.EntityVersion)
+            throw new ArgumentException("海报已变化，请重新读取目标，不返回旧会话画面。");
+        var packet = CanvasSceneDescription.Read(draft && Design is not null ? Design : ReadCurrentDesign(), basis.EntityVersion, draft ? DraftRevision : 0);
+        string? digest = draft && Design is not null ? CanvasDeclaration.Digest(Design) :
+            basis.Presentation.Parameters.Canvas?.Current is { } saved ? CanvasDeclaration.Digest(saved) : null;
+        return packet with { Content = CanvasContentContextPolicy.Match(readObservation?.Invoke(PosterId), basis.EntityVersion, digest, packet.ContentAreaDip),
+            AssetDescriptions = Workspace?.Assets().Where(a => packet.Assets.Contains(a.Id)).Select(a => new CanvasAssetMeaning(a.Id, a.Width, a.Height, a.Description ?? "", a.DescriptionRevision)).ToArray() ?? [] };
+    }
+    public CanvasDesignSession(IStateProjectionCoordinator state, IStateCommandService commands, ICanvasPreviewHost host, string posterId, ICanvasWorkspace? workspace = null,
+        Func<string, CanvasContentObservation?>? readObservation = null)
     {
         this.state = state; this.commands = commands; this.host = host;
+        this.readObservation = readObservation;
         Workspace = workspace;
         basis = state.Refresh().PostersById.GetValueOrDefault(posterId) ?? throw new ArgumentException("海报不存在。");
         if (!basis.Presentation.CanEdit || basis.Poster.IsLocked || basis.Poster.IsCollapsed) throw new ArgumentException("请先展开并解除海报锁定。");

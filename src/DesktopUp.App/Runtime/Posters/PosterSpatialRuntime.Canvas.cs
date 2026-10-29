@@ -4,6 +4,8 @@ namespace DesktopUp;
 
 internal sealed partial class PosterSpatialRuntime : ICanvasPreviewHost
 {
+    internal CanvasContentObservation? ReadCanvasObservation(string id) =>
+        _windows.TryGetValue(id, out var window) ? window.ReadCanvasObservation() : null;
     internal CanvasContentSnapshot? ReadCanvasContent(string id) =>
         _windows.TryGetValue(id, out var window) ? window.ReadCanvasContent() : null;
     bool ICanvasPreviewHost.Preview(PosterStateCommand command)
@@ -15,6 +17,13 @@ internal sealed partial class PosterSpatialRuntime : ICanvasPreviewHost
             !_windows.TryGetValue(command.PosterId, out var window) || window.CenterPresentationBaseline is not { } bounds) return false;
         try
         {
+            bounds = window.CanvasPreviewBounds(command.DesiredState, bounds);
+            if (!TrySnapshot(window, out var scene, out _)) return false;
+            // Canvas edits do not move neighbours. A rectangular envelope is conservative
+            // for curved posters and preserves the existing spatial ownership boundary.
+            if (scene!.Posters.Any(p => p.PosterId != command.PosterId && p.IsVisible &&
+                bounds.X < p.Bounds.Right && bounds.Right > p.Bounds.X && bounds.Y < p.Bounds.Bottom && bounds.Bottom > p.Bounds.Y))
+                throw new ArgumentException("画板外框与另一海报重叠；请先调整位置或缩小画板，不会推动其他海报。");
             if (window.PreviewCenterPresentation(command, bounds) && window.CanvasPresentationReady) return true;
             window.ClearCenterPresentation(); return false;
         }

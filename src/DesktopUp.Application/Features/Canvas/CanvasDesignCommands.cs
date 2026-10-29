@@ -24,8 +24,13 @@ public static class CanvasDesignCommands
         var candidate = command.Undo ? prior!.Previous : command.Design;
         if (candidate is not null) candidate = CanvasDeclaration.Freeze(candidate);
         var next = new CanvasDesignState(checked((prior?.Revision ?? 0) + 1), candidate, command.Undo ? null : prior?.Current,
-            !command.Undo, command.RequestId);
+            !command.Undo, command.RequestId, command.Undo ? null : new(poster.WidthDip, poster.ExpandedHeightDip));
         var desired = poster with { LayoutParametersJson = PosterPresentationPolicy.Serialize(presentation.Parameters with { Canvas = next }, poster.LayoutParametersJson) };
+        var frame = command.Undo ? prior?.PreviousFrame : CanvasSurfaceGeometry.IsWholePoster(candidate) ? candidate!.Recipe.Artboard : null;
+        if (frame is not null)
+            desired = desired with { WidthDip = frame.Width, ExpandedHeightDip = frame.Height,
+                NormalizedWidth = poster.NormalizedWidth * frame.Width / poster.WidthDip,
+                NormalizedExpandedHeight = poster.NormalizedExpandedHeight * frame.Height / poster.ExpandedHeightDip };
         if (PosterPresentationPolicy.ValidateEdit(poster, desired) is { } error) throw new ArgumentException(error);
         ValidateSpace(desired);
         return desired;
@@ -40,6 +45,8 @@ public static class CanvasDesignCommands
     }
     public static void ValidateSpace(PosterDefinition poster)
     {
+        if (PosterPresentationPolicy.Resolve(poster).Parameters.Canvas?.Current is { } design)
+            CanvasSurfaceGeometry.ValidateHosting(design, CanvasLayout.Resolve(design, poster.WidthDip, poster.ExpandedHeightDip));
         if (!ContentFrameMinimumPolicy.TryForPoster(poster, out var minimum, out var error) ||
             poster.WidthDip + .01 < minimum!.WidthDip || poster.ExpandedHeightDip + .01 < minimum.HeightDip)
             throw new ArgumentException(error ?? "外框不足以容纳当前内容和组件，请先扩大外框或减少组件。");

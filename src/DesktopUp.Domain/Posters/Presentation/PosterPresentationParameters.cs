@@ -34,7 +34,8 @@ public sealed record ResolvedPosterPresentation(string EffectiveTemplateKey, Pos
     public string EffectiveContentForeground => Parameters.Canvas?.Current?.Recipe.ContentForeground ?? Parameters.Theme.Foreground;
     public SceneCapabilityDefinition? SceneCapability => Parameters.Canvas?.Current is not null ? null : SceneCapabilityRegistry.Find(
         TemplateRecipeInstancePolicy.RecipeFor(Parameters, SelectedRecipeId ?? EffectiveTemplateKey)?.Schema.RendererCapability ?? "");
-    public PosterTitleChromeKind TitleChrome => SceneCapability?.TitleChrome ?? PosterTitleChromeKind.Basic;
+    public PosterTitleChromeKind TitleChrome => CanvasSurfaceGeometry.IsWholePoster(Parameters.Canvas?.Current)
+        ? PosterTitleChromeKind.Basic : SceneCapability?.TitleChrome ?? PosterTitleChromeKind.Basic;
     public double HeaderHeightDip => TitleChrome == PosterTitleChromeKind.Cloud
         ? PosterTitleChromePolicy.ExpandedCloudHeightDip : PosterTitleBarLayoutPolicy.HeaderHeightDip;
     public bool CanShowContentHeading => Parameters.Canvas?.Current is null && TitleChrome != PosterTitleChromeKind.Cloud && SceneCapability?.ReplacesMetaText != true &&

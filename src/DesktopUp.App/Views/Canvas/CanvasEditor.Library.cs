@@ -111,6 +111,6 @@ internal sealed partial class CanvasEditor
             double scale = Math.Min(1, Math.Min(parent.Width / size.Width, parent.Height / size.Height));
             nodes[0] = nodes[0] with { Box = nodes[0].Box with { Width = size.Width * scale / parent.Width, Height = size.Height * scale / parent.Height } };
         }
-        Select(document.Insert(nodes, context, x - nodes[0].Box.Width / 2, y - nodes[0].Box.Height / 2));
+        Select(document.Insert(nodes, context, x - nodes[0].Box.Width / 2, y - nodes[0].Box.Height / 2, combo.Behavior));
     }
 }

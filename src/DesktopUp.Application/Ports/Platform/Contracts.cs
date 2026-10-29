@@ -93,6 +93,8 @@ public interface IDesktopLayerAttachment
         int width,
         int height,
         int cornerRadius);
+    bool ApplySurfaceRegion(nint window, DesktopRoundedRegion region) => region.Shape != "ellipse" &&
+        ApplyRoundedRegion(window, region.Width, region.Height, region.CornerRadius);
     bool ApplyPreparedBounds(
         nint windowHandle,
         DesktopPixelRect bounds);
@@ -200,7 +202,8 @@ public enum PosterInputTargetKind
     ContentItem = 15,
     ContentSpanHandle = 16,
     ContentViewport = 17,
-    ContentBrowseNavigation = 18
+    ContentBrowseNavigation = 18,
+    CanvasAction = 19
 }
 
 public readonly record struct PosterInputRegion(
@@ -210,7 +213,9 @@ public readonly record struct PosterInputRegion(
 {
     public string? ContentItemId { get; init; }
     public long ContentSnapshotGeneration { get; init; }
+    public CanvasActionHit? CanvasAction { get; init; }
 }
+public sealed record CanvasActionHit(CanvasRect Box, double Rotation, double ScaleX, double ScaleY);
 
 public sealed record PosterInputLayoutSnapshot(
     long Revision,
@@ -220,6 +225,7 @@ public sealed record PosterInputLayoutSnapshot(
     int OuterCornerRadius = 0)
 {
     public long ContentSnapshotGeneration { get; init; }
+    public CanvasSurface? Surface { get; init; }
 }
 
 public enum PosterInputEventKind

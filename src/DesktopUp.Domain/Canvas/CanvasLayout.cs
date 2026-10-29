@@ -19,6 +19,8 @@ public static class CanvasLayout
         => ResolveCore(design, width, height, 0, false);
     private static CanvasLayoutResult ResolveCore(CanvasDesign design, double width, double height, double header, bool requireReadableContent)
     {
+        bool whole = CanvasSurfaceGeometry.IsWholePoster(design);
+        if (whole) header = 0;
         if (!double.IsFinite(width) || !double.IsFinite(height) || width < 1 || height <= header)
             throw new ArgumentException("画板尺寸不足。");
         var nodes = design.Recipe.Nodes;
@@ -51,7 +53,8 @@ public static class CanvasLayout
                     (rotation + child.Rotation + 540) % 360 - 180);
             }
         }
-        double rootWidth = design.Recipe.Artboard?.Width * scale ?? width, rootHeight = design.Recipe.Artboard?.Height * scale ?? height - header;
+        double rootWidth = whole ? width : design.Recipe.Artboard?.Width * scale ?? width,
+            rootHeight = whole ? height : design.Recipe.Artboard?.Height * scale ?? height - header;
         Place(nodes[0], new((width - rootWidth) / 2, header + (height - header - rootHeight) / 2, rootWidth, rootHeight), 0);
         var content = placed[nodes.Single(n => n.Type == "content.slot@1").Id];
         if (requireReadableContent && (content.Width < ContentLayoutPolicy.MinimumReadableCardDip || content.Height < ContentLayoutPolicy.MinimumReadableCardDip))

@@ -48,9 +48,17 @@ internal sealed partial class CanvasEditor(Func<CanvasDesignSession> open, Actio
         pictures = images ?? new CanvasImages(workspace); contentSnapshot = readContent?.Invoke();
         foreach (var work in workspace.Works())
         { documents[work.Id] = Authoring(work.Design); names[work.Id] = work.Name; if (!work.ShowContentReference) designOnlyWorks.Add(work.Id); }
-        current = CanvasAuthoring.NewId(); names[current] = "当前海报"; documents[current] = Authoring(session.Design ?? CanvasAuthoring.Blank());
+        current = CanvasAuthoring.NewId(); names[current] = "当前海报";
+        try { documents[current] = Authoring(session.ReadCurrentDesign()); }
+        catch (ArgumentException error)
+        {
+            // No silent blank substitute for a native template we cannot faithfully convert.
+            names.Remove(current); current = CanvasAuthoring.NewId(); names[current] = "空白创作";
+            documents[current] = Authoring(CanvasAuthoring.NewArtwork()); designOnlyWorks.Add(current);
+            showContentReference = false; notice.Text = error.Message;
+        }
         document = documents[current]; context = document.Design.Recipe.Nodes[0].Id;
-        board.Width = document.Design.Recipe.Artboard?.Width ?? session.Width; board.Height = document.Design.Recipe.Artboard?.Height ?? session.Height - CanvasLayout.Header;
+        board.Width = document.Design.Recipe.Artboard!.Width; board.Height = document.Design.Recipe.Artboard.Height;
         window = new Window { Title = "DesktopUp · 创作工作台", Content = shell };
         window.AppWindow.Resize(new(1280, 900));
         Build(); Bind(); RefreshWorks(); Render(); RefreshLibrary();
@@ -74,19 +82,21 @@ internal sealed partial class CanvasEditor(Func<CanvasDesignSession> open, Actio
         }
         documentTabs.Children.Add(Command("空白创作", "plus", NewWork));
     }
-    private CanvasAuthoring Authoring(CanvasDesign design) => new(design.Recipe.Artboard is not null ? design :
-        design with { Recipe = design.Recipe with { Artboard = new(Math.Clamp(session!.Width, 240, 2048),
-            Math.Clamp(session.Height - CanvasLayout.Header, 240, 2048)), ProtocolVersion = 2 } });
+    private CanvasAuthoring Authoring(CanvasDesign design)
+    {
+        design = CanvasSurfaceGeometry.ForEditing(design, session!.Width, session.Height);
+        return new(design with { Recipe = design.Recipe with { Behavior = CanvasBehaviorPrefabs.ForEditing(design) } });
+    }
     private void NewWork()
     {
         if (documents.Count >= 128) { notice.Text = "已达到本轮128份作品预算，请先整理已保存作品。"; return; }
-        string id = CanvasAuthoring.NewId(); names[id] = "空白创作"; documents[id] = new(CanvasAuthoring.NewArtwork()); designOnlyWorks.Add(id);
+        string id = CanvasAuthoring.NewId(); names[id] = "空白创作"; documents[id] = Authoring(CanvasAuthoring.NewArtwork()); designOnlyWorks.Add(id);
         Switch(id); Fit();
     }
     private void Switch(string id)
     {
         if (!documents.TryGetValue(id, out var next)) return;
-        CancelInteraction(); current = id; document = next; context = next.Design.Recipe.Nodes[0].Id;
+        StopStudioRun(); CloseScriptEditor(); CancelInteraction(); current = id; document = next; context = next.Design.Recipe.Nodes[0].Id;
         showContentReference = !designOnlyWorks.Contains(id);
         selected.Clear(); Invalidate(); UpdateArtboard(); RefreshWorks(); Render(); Fit();
     }
@@ -112,7 +122,7 @@ internal sealed partial class CanvasEditor(Func<CanvasDesignSession> open, Actio
         if (!result.Succeeded) throw new ArgumentException(result.Error ?? "应用失败，原设计保留。");
         session.Dispose(); session = open(); contentSnapshot = readContent?.Invoke(); RefreshContentReadback();
         // Keep the independent authoring history. Undoing a published design is a separate use case.
-        document = Authoring(session.Design ?? CanvasAuthoring.Blank()); documents[current] = document; UpdateArtboard();
+        document = Authoring(session.ReadCurrentDesign()); documents[current] = document; UpdateArtboard();
         selected.Clear(); context = document.Design.Recipe.Nodes[0].Id; apply.IsEnabled = false;
         previewCancel.Visibility = Visibility.Collapsed; Render(); notice.Text = "已应用并保存 · 真实文件、卡片身份与使用统计保持不变。";
     }
@@ -143,7 +153,7 @@ internal sealed partial class CanvasEditor(Func<CanvasDesignSession> open, Actio
     {
         apply.IsEnabled = false; previewCancel.Visibility = Visibility.Collapsed; session?.Revise(document.Design);
     }
-    private void Edit(Action action) => Try(() => { CancelGestureFrame(); action(); Invalidate(); UpdateArtboard(); Render(); });
+    private void Edit(Action action) => Try(() => { StopStudioRun(); CancelGestureFrame(); action(); Invalidate(); UpdateArtboard(); Render(); });
     private void Try(Action action)
     {
         try { if (!closed) action(); }
@@ -154,7 +164,7 @@ internal sealed partial class CanvasEditor(Func<CanvasDesignSession> open, Actio
         Convert.ToByte(hex.Substring(1, 2), 16), Convert.ToByte(hex.Substring(3, 2), 16), Convert.ToByte(hex.Substring(5, 2), 16)));
     public void Dispose()
     {
-        if (closed) return; closed = true; CancelGestureFrame(); session?.Dispose(); session = null;
+        if (closed) return; StopStudioRun(); closed = true; CancelGestureFrame(); session?.Dispose(); session = null;
         window?.Close(); window = null; views.Clear(); board.Children.Clear(); documents.Clear(); dismissed.TrySetResult();
     }
 }

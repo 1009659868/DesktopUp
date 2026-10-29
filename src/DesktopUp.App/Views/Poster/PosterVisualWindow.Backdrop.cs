@@ -20,7 +20,7 @@ internal sealed partial class PosterVisualWindow
     {
         var color = BackdropColor();
         if (_windowBackdrop is null) _windowBackdrop = new WinUIEx.TransparentTintBackdrop(color);
-        else _windowBackdrop.TintColor = color;
+        else if (_windowBackdrop.TintColor != color) _windowBackdrop.TintColor = color;
         if (!ReferenceEquals(window.SystemBackdrop, _windowBackdrop)) window.SystemBackdrop = _windowBackdrop;
     }
 
@@ -42,6 +42,13 @@ internal sealed partial class PosterVisualWindow
     }
     private global::Windows.UI.Color BackdropColor()
     {
+        if (_geometry.IsCollapsed && _presentation.Parameters.Canvas?.Current is { } design)
+        {
+            var baseline = _presentation.Parameters.Surface;
+            var collapsed = DesktopUp.Domain.CanvasBehaviorPolicy.Collapsed(design,
+                baseline?.Color ?? _presentation.Parameters.Theme.Background, (baseline?.OpacityPercent ?? 96) / 100);
+            return ColorBrush(collapsed.Color, (byte)Math.Round(collapsed.Opacity * 255)).Color;
+        }
         var paint = CurrentSceneParameters.Surface;
         return ColorBrush(paint.Background, paint.BackgroundAlpha).Color;
     }
